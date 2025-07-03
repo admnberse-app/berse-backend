@@ -1,0 +1,290 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  GENERAL_USER
+  GUIDE
+  MODERATOR
+  ADMIN
+}
+
+enum EventType {
+  SOCIAL
+  SPORTS
+  TRIP
+  ILM
+  CAFE_MEETUP
+  VOLUNTEER
+  MONTHLY_EVENT
+  LOCAL_TRIP
+}
+
+enum RedemptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BadgeType {
+  FIRST_FACE
+  CAFE_FRIEND
+  SUKAN_SQUAD_MVP
+  SOUL_NOURISHER
+  HELPERS_HAND
+  CONNECTOR
+  TOP_FRIEND
+  ICEBREAKER
+  CERTIFIED_HOST
+  STREAK_CHAMP
+  LOCAL_GUIDE
+  KIND_SOUL
+  KNOWLEDGE_SHARER
+  ALL_ROUNDER
+}
+
+enum NotificationType {
+  EVENT
+  MATCH
+  POINTS
+  MESSAGE
+  SYSTEM
+}
+
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum MatchType {
+  SPORTS
+  SOCIAL
+  VOLUNTEER
+  STUDY
+  PROFESSIONAL
+  HOBBY
+}
+
+model User {
+  id                String      @id @default(uuid())
+  email             String      @unique
+  phone             String?     @unique
+  password          String
+  fullName          String
+  profilePicture    String?
+  bio               String?
+  city              String?
+  interests         String[]
+  instagramHandle   String?
+  linkedinHandle    String?
+  referralCode      String      @unique @default(uuid())
+  role              UserRole    @default(GENERAL_USER)
+  isHostCertified   Boolean     @default(false)
+  totalPoints       Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  hostedEvents      Event[]     @relation("EventHost")
+  rsvpEvents        EventRSVP[]
+  attendedEvents    EventAttendance[]
+  referredBy        User?       @relation("Referrals", fields: [referredById], references: [id])
+  referredById      String?
+  referrals         User[]      @relation("Referrals")
+  pointsHistory     PointHistory[]
+  badges            UserBadge[]
+  redemptions       Redemption[]
+  sentFollows       Follow[]    @relation("FollowSender")
+  receivedFollows   Follow[]    @relation("FollowReceiver")
+  sentMessages      Message[]   @relation("MessageSender")
+  receivedMessages  Message[]   @relation("MessageReceiver")
+  notifications     Notification[]
+  sentMatches       Match[]     @relation("MatchSender")
+  receivedMatches   Match[]     @relation("MatchReceiver")
+}
+
+model Event {
+  id                String      @id @default(uuid())
+  title             String
+  description       String?
+  type              EventType
+  date              DateTime
+  location          String
+  mapLink           String?
+  maxAttendees      Int?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  host              User        @relation("EventHost", fields: [hostId], references: [id])
+  hostId            String
+  rsvps             EventRSVP[]
+  attendance        EventAttendance[]
+}
+
+model EventRSVP {
+  id                String      @id @default(uuid())
+  qrCode            String      @unique
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+  event             Event       @relation(fields: [eventId], references: [id])
+  eventId           String
+
+  @@unique([userId, eventId])
+}
+
+model EventAttendance {
+  id                String      @id @default(uuid())
+  checkedInAt       DateTime    @default(now())
+  
+  // Relations
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+  event             Event       @relation(fields: [eventId], references: [id])
+  eventId           String
+
+  @@unique([userId, eventId])
+}
+
+model PointHistory {
+  id                String      @id @default(uuid())
+  points            Int
+  action            String
+  description       String?
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+}
+
+model Badge {
+  id                String      @id @default(uuid())
+  type              BadgeType   @unique
+  name              String
+  description       String
+  criteria          String
+  imageUrl          String?
+  
+  // Relations
+  userBadges        UserBadge[]
+}
+
+model UserBadge {
+  id                String      @id @default(uuid())
+  earnedAt          DateTime    @default(now())
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+  badge             Badge       @relation(fields: [badgeId], references: [id])
+  badgeId           String
+
+  @@unique([userId, badgeId])
+}
+
+model Reward {
+  id                String      @id @default(uuid())
+  title             String
+  description       String
+  pointsRequired    Int
+  category          String
+  partner           String
+  quantity          Int         @default(0)
+  imageUrl          String?
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  redemptions       Redemption[]
+}
+
+model Redemption {
+  id                String      @id @default(uuid())
+  status            RedemptionStatus @default(PENDING)
+  notes             String?
+  redeemedAt        DateTime    @default(now())
+  processedAt       DateTime?
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+  reward            Reward      @relation(fields: [rewardId], references: [id])
+  rewardId          String
+}
+
+model Follow {
+  id                String      @id @default(uuid())
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  follower          User        @relation("FollowSender", fields: [followerId], references: [id])
+  followerId        String
+  following         User        @relation("FollowReceiver", fields: [followingId], references: [id])
+  followingId       String
+
+  @@unique([followerId, followingId])
+}
+
+model Message {
+  id                String      @id @default(uuid())
+  content           String
+  isRead            Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  sender            User        @relation("MessageSender", fields: [senderId], references: [id])
+  senderId          String
+  receiver          User        @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverId        String
+}
+
+model Notification {
+  id                String      @id @default(uuid())
+  type              NotificationType
+  title             String
+  message           String
+  isRead            Boolean     @default(false)
+  actionUrl         String?
+  metadata          Json?
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  user              User        @relation(fields: [userId], references: [id])
+  userId            String
+}
+
+model Match {
+  id                String      @id @default(uuid())
+  type              MatchType
+  status            MatchStatus @default(PENDING)
+  compatibility     Float       // Score between 0 and 1
+  reason            String      // Why they were matched
+  interests         String[]    // Common interests
+  availability      Json?       // Availability preferences
+  location          String?     // Meeting location preference
+  message           String?     // Initial message from sender
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  expiresAt         DateTime    // Match expires after certain time
+
+  // Relations
+  sender            User        @relation("MatchSender", fields: [senderId], references: [id])
+  senderId          String
+  receiver          User        @relation("MatchReceiver", fields: [receiverId], references: [id])
+  receiverId        String
+
+  @@unique([senderId, receiverId, type])
+}

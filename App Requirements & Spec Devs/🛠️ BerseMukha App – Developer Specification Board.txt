@@ -1,0 +1,128 @@
+🛠️ BerseMukha App – Developer Specification Board
+📦 Project Overview
+App Name: BerseMukha MVP Target Launch: August 2025 Platform: Mobile-first (iOS, Android) + Web-based Admin Dashboard
+🔐 Authentication & User Profiles
+Endpoints & Features
+	•	POST /api/register – Create user account (name, email, phone, password, role)
+	•	POST /api/login – Authenticate user
+	•	GET /api/user/profile – Retrieve user profile data
+	•	PUT /api/user/profile – Update user profile fields
+Profile Fields
+	•	Full Name
+	•	Profile Picture
+	•	Bio (Short description)
+	•	City
+	•	Interests (tags)
+	•	Instagram / LinkedIn handles (optional)
+	•	Referral Code (optional)
+	•	Roles: General User / Guide / Moderator / Admin
+📅 Events Module
+Event Object
+	•	ID
+	•	Title
+	•	Host (user ID)
+	•	Type (Social, Sports, Trip, Ilm, Cafe Meetup, Volunteer, etc.)
+	•	Date & Time
+	•	Location (address + map link)
+	•	RSVP List (user IDs)
+	•	QR Code (auto-generated per user)
+	•	Attendance Log (scanned user IDs)
+	•	Notes (walk-in, volunteer, etc.)
+Endpoints
+	•	GET /api/events – List all upcoming events
+	•	POST /api/events – Create event (Admin/Mod only)
+	•	PUT /api/events/:id – Edit event details
+	•	POST /api/events/:id/rsvp – RSVP to event
+	•	POST /api/events/:id/checkin – QR code scan to mark attendance
+	•	GET /api/events/:id – View single event
+🎯 Points System
+Points Rules
+	•	Register: +5 pts
+	•	Attend Event (QR check-in): +10 pts
+	•	Host Event: +15 pts
+	•	Referral: +3 pts
+	•	Join Trip: +5 pts
+	•	Cafe Meetup: +2 pts
+	•	Ilm: +3 pts
+	•	Volunteer: +6 pts
+	•	Donate: +4 pts
+Endpoints
+	•	GET /api/points/user/:id – User point history
+	•	PUT /api/points/manual – Admin override points
+	•	POST /api/refer – Refer user (both users earn points)
+🎁 Rewards System
+Reward Object
+	•	ID
+	•	Title
+	•	Description
+	•	Points Required
+	•	Category
+	•	Partner (name)
+	•	Quantity
+Endpoints
+	•	GET /api/rewards – List available rewards
+	•	POST /api/rewards/redeem – Redeem reward
+	•	GET /api/rewards/user – View redeemed rewards
+	•	PUT /api/rewards/:id/status – Admin approve/reject
+🏅 Badges & Gamification
+Badge Tracker (Auto-assign logic on backend)
+	•	Track milestones (first event, 3+ ilm, 5+ sports, etc.)
+	•	GET /api/badges/user – View badge history
+	•	POST /api/badges/assign – Trigger badge (via logic rule)
+🔍 Search & Social
+Endpoints
+	•	GET /api/users/search?city=&interest= – Search users
+	•	GET /api/users/:id – View public profile
+	•	POST /api/users/follow/:id – Follow/wave user
+	•	GET /api/referrals/tree/:id – Referral network map
+📊 Admin Dashboard
+Admin Roles
+	•	View metrics (users, events, points)
+	•	Export reports
+	•	Review reward redemptions
+	•	Manually update user data
+Key Screens
+	•	Users Table
+	•	Events Table
+	•	Points Overview
+	•	Attendance Logs
+	•	Community Heatmaps
+	•	Redemption Manager
+	•	Badge Manager
+🔗 3rd Party API Integrations
+Partner
+Integration Type
+Purpose
+GoBaraqah
+Donation/Voucher API
+Issue e-vouchers for beneficiaries
+iBantu
+Donation/Voucher API
+Same as above
+Setel
+Points/Payment API
+Redeem points, pay with Setel
+Touch n Go
+Payment + Points
+Redeem + Pay
+Billplz/ToyyibPay
+Gateway API
+Handle event/donation payments
+
+📥 Messaging & Notification (Optional Phase 2)
+	•	Event Reminders
+	•	Reward Unlock Alerts
+	•	Badge Earned
+	•	Community Hub Messages
+🧭 WhatsApp ↔ App Integration Logic
+	•	WhatsApp is used as Broadcast Channel
+	•	App handles engagement, event check-ins, and rewards
+	•	Redirect links in WA push users to RSVP or participate in app
+📌 Notes for Devs
+	•	Use secure auth with refresh tokens
+	•	Firebase for real-time or Supabase for simplified backend
+	•	Responsive layout mandatory
+	•	Admin panel must be web-accessible
+	•	Modularize badge logic and reward redemption to scale
+
+

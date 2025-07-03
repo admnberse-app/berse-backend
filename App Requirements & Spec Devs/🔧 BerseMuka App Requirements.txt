@@ -1,0 +1,404 @@
+MVP v0.1 – Target Launch: August 2025
+1. 🌟 Purpose
+To release a usable MVP that enables:
+Feature
+Description
+✅ User registration & profile
+With optional Instagram/LinkedIn integration
+✅ Event Participation
+Join/RSVP for physical or online events (Discord or BrainsMingle integration)
+✅ User Search & Connection
+Discover and connect with users
+✅ Gamified Points System
+Earn points via participation, hosting, referring
+✅ Points Redemption
+Redeem partner-based rewards
+✅ Verified Event Attendance
+QR code-based check-in to confirm real participation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2. 🧹 Core MVP Features
+✅ Backend (Admin + System Functions)
+👥 User Management
+Role
+Capabilities
+Kenalan Guides
+Host city tours, gatherings. Public profile. Must complete training.
+Community Mods
+Can create official events. Training required.
+General Users
+Browse, RSVP, join events only
+🗕️ Event Management
+Feature
+Details
+Create/Edit Events
+Admin/Mods can create events with fields: title, date, host, type, location
+Event Types
+Small Gathering, Sports Session, Monthly Event, Local Trip
+RSVP + Attendance
+Track attendee list, use QR scanning for verified attendance
+🎮 Points Tracking System
+Action
+Points Awarded
+Register Account
++5 pts
+Attend Event
++10 pts (with QR scan)
+Host Event
++15 pts (certified only)
+Referral
++10 pts (optional add-on)
+Cafe Meetup
++2 pts
+Join Trip
++5 pts
+Ilm Event
++3 pts
+Volunteer
++6 pts
+Donate
++4 pts
+
+
+🏱 Points Redemption System
+Reward Examples
+Notes
+Discounts, Classes, Gear
+Books, cafes, English courses, microgrants, scholarships
+Redemption Flow
+User taps redeem → Admin approves/rejects
+📊 Admin Dashboard
+Feature
+Function
+Metrics Summary
+Total users, events, total points earned
+Attendance Dashboard
+RSVP list, checked-in list, points auto-tracked
+Manual Points Management
+Add/edit/remove points manually
+Host Training Tracker
+Approve training completion + badge granting
+Redemption Request Management
+Review & change redemption status
+Community Heatmap
+Show most active hubs, top hosts, contributors
+🔗 API & Payment Integrations
+Integration Type
+Platform(s)
+Functionality
+E-Voucher / Donation Integration
+GoBaraqah, iBantu
+Microgrant vouchers & donation distribution
+Points + Payment Platform
+Touch 'n Go, Setel
+Earn/redeem points, pay/donate directly via API
+Payment Gateway
+Billplz, ToyyibPay, eGHL
+App-integrated payments for events, donations
+Reward Partner API
+Shopee, Setel, AirAsia, Klook
+External redemption syncing
+
+
+
+
+
+
+✅ Frontend (User Experience)
+🔐 User Registration & Profile
+Feature
+Details
+Sign up/Login
+Quick mobile-first login
+Profile Fields
+Picture, bio, city, interests, social links
+Trust Chain Display
+Mutual friends/community visibility
+🔍 Event Discovery & Participation
+Feature
+Details
+Browse Events
+Filter by type/location
+View Event Details
+Host, attendees, info
+RSVP
+Simple join button with calendar integration
+Share
+IG/WA/LinkedIn
+Event Hosting
+Enabled for trained users only
+🏆 Points System (User View)
+Feature
+Description
+Total Points
+Display with progress bar
+Log
+History of earned points
+Gamification
+Badges, streaks, attendance trophies
+🏱 Points Redemption
+Feature
+Description
+Browse Rewards
+Filterable reward catalog
+Tap to Redeem
+Immediate action + status update
+View Status
+Pending / Approved / Rejected
+
+🧑‍🤝🧑‍ User Search & Social Features
+Feature
+Description
+Search by Criteria
+Interest, city, past event joined
+View Public Profile
+See bios, events joined, roles
+Connect Options
+Follow, wave, message (if enabled)
+Referral Tree
+Visual map of who you’ve connected
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3. 🧪 Extra Notes for Dev & Design
+Area
+Description
+Mobile-First UI
+Responsive for iOS/Android
+Design Style
+Youth-friendly, gamified, clean interface
+Smooth Onboarding
+Optional autofill from Instagram/LinkedIn
+UX/UI Inspiration
+BrainsMingle, Discord Event System
+Notifications
+Event reminders, point achievements, new rewards
+Host Certification System
+Mini-module for scanning, etiquette, and attendance
+In-App Messaging (optional)
+Forums, sub-groups, hub communication
+Admin Web Dashboard
+For all admin approvals, stats, QR logs, heatmaps
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4. 🕍 Strategic Model: WhatsApp vs App Roles
+🔔 WhatsApp = Announcement Board
+	•	Short reminders (e.g., “Event this Saturday! Tap here to RSVP”)
+	•	Push updates (“New Sukan Squad sessions open!”)
+	•	Broadcast across 1,500+ members
+	•	Redirect to take action in app (RSVP, earn, join)
+🏡 App = Community Home
+	•	Forum hubs (Sukan Squad, Kenalan, Ilm, BerseMukha Circle)
+	•	RSVP, check-ins, points, badges
+	•	Messaging, resource sharing
+	•	Full community experience under BerseMukha brand
+🥉 Bonus
+	•	Reduces WhatsApp overload while leveraging its reach
+	•	Merges community control with visibility
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5. 🏅 Badge System & Rewards
+Badge Name
+Criteria
+Reward/Perk
+First Face
+Attend first event
++5 pts, welcome shoutout
+Cafe Friend
+Attend/host 3 Cafe Friend meetups
+Pin, early event access
+Sukan Squad MVP
+Attend 5 sessions / voted MVP
+Sports gear discount
+Soul Nourisher
+Join 3 Ilm events
+Access to private ilm circles
+Helper’s Hand
+Volunteer in 2+ events
+Early volunteer access
+Connector
+Refer 3 active users
++50 pts, leaderboard
+Top Friend
+Top 3 monthly leaderboard
+Free merch, host invite
+Icebreaker
+Facilitate BerseMukha game
+Game Master tag, bonus points
+Certified Host
+Complete training + host
+Microgrant eligible
+Streak Champ
+Attend 3 events in a row
++5 pts, badge
+Local Guide
+Host traveler from another city
+Travel perks, global map
+Kind Soul
+Donate to campaign/fund
+Donor badge, name listed
+Knowledge Sharer
+Give a talk, teach skill
+Speaker badge, highlight
+All-Rounder
+Earn 5 unique badges
+Exclusive merch
+
+
+
+
+
+
+
+
+
+
+
+
+
+6. 🏱 Community Partner Rewards Catalog
+Reward Name
+Category
+Partner/Source
+Points Required
+Tealive Boba Voucher
+Food & Drinks
+Tealive
+8
+Kopikku Drink Voucher
+Food & Drinks
+Kopikku
+7
+Shopee RM5 Voucher
+E-Commerce / Tech
+Shopee
+15
+Setel RM10 Credit
+E-Commerce / Tech
+Setel
+18
+ClassPass Gym Trial
+Wellness & Fitness
+ClassPass
+20
+Wardah Skincare Mini
+Lifestyle
+Wardah
+12
+AirAsia RM50 Travel Voucher
+Travel & Experiences
+AirAsia
+50
+Klook Activity Pass
+Travel & Experiences
+Klook
+40
+BerseMukha Tote Bag
+Lifestyle
+BerseMukha
+10
+BRIGHT English Trial
+Education
+BRIGHT English Centre
+50
+Cafe Mesra Meal
+Food & Drinks
+Cafe Mesra
+9
+Kahf Skincare Kit
+Lifestyle
+Kahf
+15
+BerseMukha Retreat Invite
+
+
+
+

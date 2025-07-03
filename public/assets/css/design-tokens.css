@@ -1,0 +1,203 @@
+/* BerseMuka App Design Tokens */
+
+:root {
+  /* Primary Colors */
+  --color-deep-green: #1C5B46;
+  --color-deep-green-tint-1: #4E7F6F;
+  --color-deep-green-tint-2: #80A398;
+  --color-deep-green-tint-3: #B3C8C1;
+  --color-deep-green-tint-4: #E5ECEA;
+  
+  /* Secondary Colors */
+  --color-muted-navy: #3D4C74;
+  --color-muted-navy-tint-1: #687392;
+  --color-muted-navy-tint-2: #939BB1;
+  --color-muted-navy-tint-3: #BEC3D0;
+  --color-muted-navy-tint-4: #E9EBEF;
+  
+  /* Accent Colors */
+  --color-earthy-red: #A63B35;
+  --color-earthy-red-tint-1: #B96661;
+  --color-earthy-red-tint-2: #CD928E;
+  --color-earthy-red-tint-3: #E1BDBB;
+  --color-earthy-red-tint-4: #F5E9E8;
+  
+  /* Neutral Colors */
+  --color-warm-cream: #F9F3E3;
+  --color-warm-cream-tint-1: #FAF5E9;
+  --color-warm-cream-tint-2: #FBF8EF;
+  --color-warm-cream-tint-3: #FDFBF5;
+  --color-warm-cream-tint-4: #FEFDFB;
+  --color-white: #FFFFFF;
+  --color-gray: #87928F;
+  --color-dark-gray: #404040;
+  
+  /* Gradients */
+  --gradient-points: linear-gradient(to right, #1C5B46, #3D4C74);
+  
+  /* Typography */
+  --font-family: 'Poppins', sans-serif;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  
+  --font-size-display: 64px;
+  --font-size-heading: 18px;
+  --font-size-body: 15px;
+  --font-size-small: 13px;
+  
+  --line-height-display: 1.5em;
+  --line-height-heading: 1.4em;
+  --line-height-body: 1.3em;
+  --line-height-small: 1.2em;
+  
+  /* Spacing */
+  --spacing-thin: 1px;
+  --spacing-thick: 2px;
+  --spacing-half-small: 4px;
+  --spacing-smaller: 6px;
+  --spacing-small: 8px;
+  --spacing-half-medium: 12px;
+  --spacing-medium: 16px;
+  --spacing-large: 24px;
+  --spacing-extra-large: 32px;
+  --spacing-largest: 40px;
+  
+  /* Border Radius */
+  --border-radius-small: 8px;
+  --border-radius-medium: 10px;
+  --border-radius-large: 12px;
+  --border-radius-extra-large: 16px;
+  --border-radius-full: 30px;
+  
+  /* Layout */
+  --screen-width: 393px;
+  --screen-height: 852px;
+  --status-bar-height: 50px;
+  --nav-bar-height: 103px;
+  
+  /* Shadows */
+  --shadow-none: none;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 300ms ease-in-out;
+  --transition-slow: 500ms ease-in-out;
+}
+
+/* Typography Classes */
+.text-display {
+  font-family: var(--font-family);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-display);
+}
+
+.text-heading {
+  font-family: var(--font-family);
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-heading);
+}
+
+.text-body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-body);
+}
+
+.text-small {
+  font-family: var(--font-family);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-small);
+}
+
+/* Button Styles */
+.btn-primary {
+  background-color: var(--color-deep-green);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-medium);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-deep-green-tint-1);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-deep-green);
+  border: 1px solid var(--color-deep-green);
+  border-radius: var(--border-radius-small);
+  padding: var(--spacing-half-medium) var(--spacing-small);
+  font-family: var(--font-family);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-deep-green);
+  color: var(--color-white);
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--color-white);
+  border-radius: var(--border-radius-large);
+  padding: var(--spacing-large);
+  box-shadow: var(--shadow-none);
+}
+
+.card-gradient {
+  background: var(--gradient-points);
+  color: var(--color-white);
+}
+
+/* Background Classes */
+.bg-cream {
+  background-color: var(--color-warm-cream);
+}
+
+.bg-white {
+  background-color: var(--color-white);
+}
+
+.bg-gradient {
+  background: var(--gradient-points);
+}
+
+/* Text Color Classes */
+.text-primary {
+  color: var(--color-deep-green);
+}
+
+.text-secondary {
+  color: var(--color-muted-navy);
+}
+
+.text-accent {
+  color: var(--color-earthy-red);
+}
+
+.text-gray {
+  color: var(--color-gray);
+}
+
+.text-dark {
+  color: var(--color-dark-gray);
+}
+
+.text-white {
+  color: var(--color-white);
+}

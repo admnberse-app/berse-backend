@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix BerseMuka Auth</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: green;
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+            margin-top: 20px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fix BerseMuka Authentication</h1>
+    <p>This page will help you clear any corrupted authentication data.</p>
+    
+    <button onclick="clearAuth()">Clear All Auth Data</button>
+    <button onclick="checkStorage()">Check Current Storage</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function clearAuth() {
+            const authKeys = [
+                'bersemuka_auth_token',
+                'bersemuka_user',
+                'authToken',
+                'auth_token',
+                'token',
+                'user',
+                'undefined'
+            ];
+            
+            // Clear specific keys
+            authKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+            
+            // Clear any malformed values
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    const value = localStorage.getItem(key);
+                    if (value === 'undefined' || value === 'null') {
+                        keysToRemove.push(key);
+                    }
+                }
+            }
+            
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            // Clear cookies
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            document.getElementById('result').innerHTML = 
+                '<div class="success">✅ All authentication data cleared! You can now go back to <a href="http://localhost:5173">the app</a> and login fresh.</div>';
+        }
+        
+        function checkStorage() {
+            const storage = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    storage[key] = localStorage.getItem(key);
+                }
+            }
+            
+            document.getElementById('result').innerHTML = 
+                '<h3>Current localStorage:</h3><pre>' + JSON.stringify(storage, null, 2) + '</pre>';
+        }
+    </script>
+</body>
+</html>
