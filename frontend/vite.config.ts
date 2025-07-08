@@ -16,7 +16,7 @@ export default defineConfig({
       '@contexts': resolve(__dirname, 'src/contexts'),
       '@types': resolve(__dirname, 'src/types'),
       '@styles': resolve(__dirname, 'src/styles'),
-      '@frontend-api': resolve(__dirname, '..', 'frontend-api'),
+      '@frontend-api': resolve(__dirname, 'src', 'frontend-api'),
     },
     preserveSymlinks: true,
   },
@@ -25,6 +25,9 @@ export default defineConfig({
     port: 5173,
     watch: {
       usePolling: true
+    },
+    fs: {
+      allow: ['..']
     },
     proxy: {
       '/api': {

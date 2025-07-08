@@ -5,7 +5,7 @@
 
 export const API_CONFIG = {
   // Base URL for the API - update this based on your environment
-  BASE_URL: (typeof window !== 'undefined' && import.meta.env?.VITE_API_URL) || 'http://localhost:3000/api',
+  BASE_URL: (typeof window !== 'undefined' && import.meta.env?.VITE_API_URL) || '/api',
   
   // Request timeout in milliseconds
   TIMEOUT: 30000,
