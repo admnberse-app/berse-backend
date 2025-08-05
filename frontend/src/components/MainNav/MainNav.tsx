@@ -1,113 +1,148 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
-import { MainNavProps, NavTab } from './MainNav.types';
+import { useNavigate, useLocation } from 'react-router-dom';
+import styled from 'styled-components';
 
-const NavContainer = styled.nav`
+const NavContainer = styled.div`
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 103px;
-  background-color: ${({ theme }) => theme.colors.neutral.white};
-  border-top: 1px solid ${({ theme }) => theme.colors.neutral.lightGray};
+  max-width: 393px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 8px 20px 20px;
+  border-top: 1px solid rgba(229, 229, 229, 0.5);
   display: flex;
-  align-items: flex-start;
   justify-content: space-around;
-  padding: ${({ theme }) => theme.spacing[3]} ${({ theme }) => theme.spacing[4]} ${({ theme }) => theme.spacing[6]};
-  z-index: ${({ theme }) => theme.zIndex.navbar};
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
 `;
 
-const NavItem = styled.button<{ isActive: boolean }>`
+const NavItem = styled.button<{ active: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing[1]};
-  background: transparent;
+  gap: 4px;
+  background: none;
   border: none;
   cursor: pointer;
-  padding: ${({ theme }) => theme.spacing[2]};
-  border-radius: ${({ theme }) => theme.borders.radius.sm};
+  padding: 8px 12px;
+  border-radius: 12px;
   transition: all 0.2s ease;
+  min-width: 60px;
   
-  ${({ isActive, theme }) => isActive && css`
-    color: ${theme.colors.deepGreen.primary};
-  `}
-  
-  ${({ isActive, theme }) => !isActive && css`
-    color: ${theme.colors.neutral.gray};
+  ${({ active, theme }) => active && `
+    background-color: ${theme.colors.deepGreen.quinary};
+    transform: translateY(-2px);
   `}
   
   &:hover {
+    transform: translateY(-1px);
     background-color: ${({ theme }) => theme.colors.deepGreen.quinary};
   }
 `;
 
-const IconWrapper = styled.div`
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+const NavIcon = styled.div<{ active: boolean }>`
+  font-size: 20px;
+  transition: all 0.2s ease;
+  color: ${({ active, theme }) => active ? theme.colors.primary.main : theme.colors.text.secondary};
+  
+  // Add a subtle scale effect for active state
+  ${({ active }) => active && `
+    transform: scale(1.1);
+  `}
 `;
 
-const Label = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.xs};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+const NavLabel = styled.div<{ active: boolean }>`
+  font-size: 10px;
+  font-weight: ${({ active }) => active ? 600 : 500};
+  color: ${({ active, theme }) => active ? theme.colors.primary.main : theme.colors.text.secondary};
+  transition: all 0.2s ease;
 `;
 
-// Icon components
-const HomeIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+interface MainNavProps {
+  activeTab?: string;
+  onTabPress?: (tab: string) => void;
+}
 
-const ConnectIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+export const MainNav: React.FC<MainNavProps> = ({ activeTab, onTabPress }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-const MatchIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+  // Determine active tab from current route if not provided
+  const getCurrentTab = () => {
+    if (activeTab) return activeTab;
+    
+    const path = location.pathname;
+    if (path === '/dashboard' || path === '/') return 'home';
+    if (path === '/connect') return 'connect';
+    if (path === '/match') return 'match';
+    if (path === '/forum') return 'forum';
+    if (path === '/profile') return 'profile';
+    return 'home';
+  };
 
-const ProfileIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="12" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+  const currentTab = getCurrentTab();
 
-const navItems: { tab: NavTab; label: string; Icon: React.FC<{ active: boolean }> }[] = [
-  { tab: 'Home', label: 'Home', Icon: HomeIcon },
-  { tab: 'BerseConnect', label: 'Connect', Icon: ConnectIcon },
-  { tab: 'BerseMatch', label: 'Match', Icon: MatchIcon },
-  { tab: 'Profile', label: 'Profile', Icon: ProfileIcon },
-];
+  const navItems = [
+    { 
+      id: 'home', 
+      icon: '🏠', 
+      label: 'Home',
+      route: '/dashboard'
+    },
+    { 
+      id: 'connect', 
+      icon: '🌟', 
+      label: 'Connect',
+      route: '/connect'
+    },
+    { 
+      id: 'match', 
+      icon: '💫', 
+      label: 'Match',
+      route: '/match'
+    },
+    { 
+      id: 'forum', 
+      icon: '💬', 
+      label: 'Forum',
+      route: '/forum'
+    },
+    { 
+      id: 'profile', 
+      icon: '👤', 
+      label: 'Profile',
+      route: '/profile'
+    }
+  ];
 
-export const MainNav: React.FC<MainNavProps> = ({
-  activeTab = 'Home',
-  onTabClick,
-}) => {
+  const handleTabPress = (item: typeof navItems[0]) => {
+    // Call the onTabPress prop if provided
+    if (onTabPress) {
+      onTabPress(item.id);
+    }
+    
+    // Navigate to the route
+    navigate(item.route);
+  };
+
   return (
     <NavContainer>
-      {navItems.map(({ tab, label, Icon }) => (
+      {navItems.map((item) => (
         <NavItem
-          key={tab}
-          isActive={activeTab === tab}
-          onClick={() => onTabClick?.(tab)}
-          aria-label={`Navigate to ${label}`}
+          key={item.id}
+          active={currentTab === item.id}
+          onClick={() => handleTabPress(item)}
         >
-          <IconWrapper>
-            <Icon active={activeTab === tab} />
-          </IconWrapper>
-          <Label>{label}</Label>
+          <NavIcon active={currentTab === item.id}>
+            {item.icon}
+          </NavIcon>
+          <NavLabel active={currentTab === item.id}>
+            {item.label}
+          </NavLabel>
         </NavItem>
       ))}
     </NavContainer>

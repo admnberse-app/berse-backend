@@ -2,7 +2,7 @@ import React from 'react';
 import styled, { css } from 'styled-components';
 import { StatusBarProps } from './StatusBar.types';
 
-const StatusBarContainer = styled.div<{ showBackground: boolean; darkMode: boolean }>`
+const StatusBarContainer = styled.div<{ $showBackground: boolean; $darkMode: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
@@ -14,14 +14,14 @@ const StatusBarContainer = styled.div<{ showBackground: boolean; darkMode: boole
   padding: 0 ${({ theme }) => theme.spacing[5]};
   z-index: ${({ theme }) => theme.zIndex.statusBar};
   
-  ${({ showBackground, theme }) => showBackground ? css`
+  ${({ $showBackground, theme }) => $showBackground ? css`
     background: ${theme.colors.gradient.fadeToTransparent};
     backdrop-filter: blur(0px);
   ` : css`
     background: transparent;
   `}
   
-  ${({ darkMode, theme }) => darkMode && css`
+  ${({ $darkMode, theme }) => $darkMode && css`
     color: ${theme.colors.neutral.white};
   `}
 `;
@@ -78,7 +78,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   showBackground = true,
 }) => {
   return (
-    <StatusBarContainer showBackground={showBackground} darkMode={darkMode}>
+    <StatusBarContainer $showBackground={showBackground} $darkMode={darkMode}>
       <Time>{time}</Time>
       <Icons>
         <Icon><SignalIcon /></Icon>

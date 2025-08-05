@@ -10,8 +10,9 @@ const startServer = async () => {
 
     // Start server
     const server = app.listen(config.port, () => {
-      console.log(`=€ Server is running on port ${config.port}`);
-      console.log(`< Environment: ${config.nodeEnv}`);
+      console.log(`=ï¿½ Server is running on port ${config.port}`);
+      console.log(`<
+ Environment: ${config.env}`); 
     });
 
     // Graceful shutdown

@@ -2,13 +2,146 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BerseMuka - Connect, Engage, Reward</title>
-    <meta name="description" content="BerseMuka is a community engagement platform that connects people through events, rewards meaningful participation, and builds stronger communities." />
+    
+    <!-- Primary Meta Tags -->
+    <title>BerseMuka - Malaysian Community App</title>
+    <meta name="title" content="BerseMuka - Malaysian Community App" />
+    <meta name="description" content="Connect, meet, and build meaningful relationships in Malaysia. Join Sukan Squad, BerseMukha sessions, and earn rewards through community engagement." />
+    <meta name="keywords" content="malaysia, community, events, social, networking, bersemuka, sukan squad" />
+    <meta name="author" content="BerseMuka Team" />
+    
+    <!-- Viewport & Mobile Optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BerseMuka" />
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#E74C3C" />
+    <meta name="msapplication-TileColor" content="#E74C3C" />
+    <meta name="msapplication-navbutton-color" content="#E74C3C" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="#E74C3C" />
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#E74C3C" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://bersemuka.app/" />
+    <meta property="og:title" content="BerseMuka - Malaysian Community App" />
+    <meta property="og:description" content="Connect, meet, and build meaningful relationships in Malaysia" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:site_name" content="BerseMuka" />
+    <meta property="og:locale" content="en_MY" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://bersemuka.app/" />
+    <meta property="twitter:title" content="BerseMuka - Malaysian Community App" />
+    <meta property="twitter:description" content="Connect, meet, and build meaningful relationships in Malaysia" />
+    <meta property="twitter:image" content="/twitter-image.png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    
+    <!-- Splash Screen Support -->
+    <style>
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #E74C3C, #C0392B);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        font-family: 'Poppins', sans-serif;
+      }
+      
+      #loading-screen .logo {
+        width: 80px;
+        height: 80px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+      }
+      
+      #loading-screen .title {
+        color: white;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      
+      #loading-screen .subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        text-align: center;
+      }
+      
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+      
+      .loading-fade-out {
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+      }
+    </style>
   </head>
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="logo">🤝</div>
+      <div class="title">BerseMuka</div>
+      <div class="subtitle">Loading Malaysian Community...</div>
+    </div>
+    
+    <!-- App Root -->
     <div id="root"></div>
+    
+    <!-- Remove loading screen after app loads -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.classList.add('loading-fade-out');
+            setTimeout(() => {
+              loadingScreen.remove();
+            }, 500);
+          }
+        }, 1000);
+      });
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

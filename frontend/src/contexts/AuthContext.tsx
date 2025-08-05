@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import authService from '@frontend-api/services/auth.service';
-import { User } from '@frontend-api/types';
+import authService from '../services/auth.service';
+import mockAuthService from '../services/mockAuth.service';
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -8,7 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, fullName: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, phoneNumber?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,58 +31,118 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Clean up any old auth token keys to prevent conflicts
-    const oldKeys = ['authToken', 'auth_token', 'token'];
-    oldKeys.forEach(key => {
-      const value = localStorage.getItem(key);
-      if (value !== null) {
-        localStorage.removeItem(key);
-      }
-    });
+    const initializeAuth = async () => {
+      // Clean up any old auth token keys to prevent conflicts
+      const oldKeys = ['authToken', 'auth_token', 'token'];
+      oldKeys.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value !== null) {
+          localStorage.removeItem(key);
+        }
+      });
 
-    // Clean up any malformed values in the correct keys
-    const userStr = localStorage.getItem('bersemuka_user');
-    if (userStr === 'undefined' || userStr === 'null') {
-      localStorage.removeItem('bersemuka_user');
-    }
-
-    // Check if user is already logged in
-    if (authService.isAuthenticated()) {
-      const userData = authService.getCurrentUser();
-      if (userData) {
-        setUser(userData);
+      // Clean up any malformed values in the correct keys
+      const userStr = localStorage.getItem('bersemuka_user');
+      if (userStr === 'undefined' || userStr === 'null') {
+        localStorage.removeItem('bersemuka_user');
       }
-    }
-    setIsLoading(false);
+
+      // Check if user is already logged in (try both services)
+      let userData = null;
+      
+      try {
+        if (authService.isAuthenticated()) {
+          userData = await authService.getCurrentUser();
+        } else if (mockAuthService.isAuthenticated()) {
+          userData = mockAuthService.getCurrentUser(); // This one is sync
+        }
+        
+        if (userData) {
+          console.log('Found existing user session:', userData);
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authService.login({ email, password });
-    if (response.success && response.data) {
-      console.log('Login successful, setting user:', response.data.user);
-      setUser(response.data.user);
-    } else {
-      throw new Error(response.error || 'Login failed');
+    try {
+      // Try real backend first
+      const response = await authService.login({ email, password });
+      if (response.success && response.data) {
+        console.log('Login successful with backend, setting user:', response.data.user);
+        setUser(response.data.user);
+        return;
+      }
+    } catch (error) {
+      console.warn('Backend login failed, falling back to mock service:', error);
+    }
+
+    // Fallback to mock service if backend fails
+    try {
+      const mockResponse = await mockAuthService.login(email, password);
+      if (mockResponse.success && mockResponse.data) {
+        console.log('Login successful with mock service, setting user:', mockResponse.data.user);
+        setUser(mockResponse.data.user);
+        return;
+      } else {
+        throw new Error(mockResponse.error || 'Login failed');
+      }
+    } catch (mockError) {
+      throw new Error('Login failed. Please check your credentials.');
     }
   };
 
   const logout = async () => {
     try {
+      // Try to logout from backend
       await authService.logout();
-      setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
-      // Still clear local state even if API call fails
-      setUser(null);
+      console.warn('Backend logout failed, using mock service:', error);
     }
+
+    try {
+      // Always logout from mock service to clear localStorage
+      await mockAuthService.logout();
+    } catch (error) {
+      console.error('Mock service logout error:', error);
+    }
+
+    // Always clear local state
+    setUser(null);
   };
 
-  const register = async (email: string, password: string, fullName: string) => {
-    const response = await authService.register({ email, password, fullName });
-    if (response.success && response.data) {
-      setUser(response.data.user);
-    } else {
-      throw new Error(response.error || 'Registration failed');
+  const register = async (email: string, password: string, fullName: string, phoneNumber?: string) => {
+    try {
+      // Try real backend first
+      const response = await authService.register({ email, password, fullName, phoneNumber });
+      if (response.success && response.data) {
+        console.log('Registration successful with backend, setting user:', response.data.user);
+        setUser(response.data.user);
+        return;
+      }
+    } catch (error) {
+      console.warn('Backend registration failed, falling back to mock service:', error);
+    }
+
+    // Fallback to mock service if backend fails
+    try {
+      const mockResponse = await mockAuthService.register(email, password, fullName, phoneNumber);
+      if (mockResponse.success && mockResponse.data) {
+        console.log('Registration successful with mock service, setting user:', mockResponse.data.user);
+        setUser(mockResponse.data.user);
+        return;
+      } else {
+        throw new Error(mockResponse.error || 'Registration failed');
+      }
+    } catch (mockError) {
+      throw new Error('Registration failed. Please try again.');
     }
   };
 

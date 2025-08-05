@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BerseMuka Auth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #2D5F4F;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1e3e2f;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d9ff;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 BerseMuka Authentication Test</h1>
+        
+        <div class="status info">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Click "Create Test Session" to simulate a logged-in user</li>
+                <li>Open <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> in a new tab</li>
+                <li>Try accessing <a href="http://localhost:5173/connect" target="_blank">/connect</a> and <a href="http://localhost:5173/profile" target="_blank">/profile</a></li>
+                <li>Use "Check Auth Status" to debug authentication state</li>
+            </ol>
+        </div>
+
+        <div>
+            <button onclick="createTestSession()">🔑 Create Test Session</button>
+            <button onclick="clearSession()">🗑️ Clear Session</button>
+            <button onclick="checkAuthStatus()">🔍 Check Auth Status</button>
+            <button onclick="openApp()">🚀 Open BerseMuka App</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        function createTestSession() {
+            const testUser = {
+                id: "test-user-123",
+                email: "test@bersemuka.com",
+                fullName: "Test User",
+                phoneNumber: "+60123456789",
+                isVerified: true,
+                createdAt: new Date().toISOString(),
+                avatar: "https://via.placeholder.com/150/2D5F4F/FFFFFF?text=TU"
+            };
+
+            const testToken = "test-auth-token-" + Date.now();
+
+            try {
+                localStorage.setItem('bersemuka_user', JSON.stringify(testUser));
+                localStorage.setItem('bersemuka_auth_token', testToken);
+                
+                log('✅ Test session created successfully!', 'success');
+                log(`<pre>User: ${JSON.stringify(testUser, null, 2)}</pre>`, 'info');
+                log(`<strong>Token:</strong> ${testToken}`, 'info');
+                log('🎯 Now try opening the BerseMuka app links above!', 'success');
+            } catch (error) {
+                log(`❌ Error creating test session: ${error.message}`, 'error');
+            }
+        }
+
+        function clearSession() {
+            try {
+                localStorage.removeItem('bersemuka_user');
+                localStorage.removeItem('bersemuka_auth_token');
+                // Clear any old keys too
+                const oldKeys = ['authToken', 'auth_token', 'token', 'user'];
+                oldKeys.forEach(key => localStorage.removeItem(key));
+                
+                log('🗑️ Session cleared successfully!', 'success');
+                log('User should now be redirected to login page.', 'info');
+            } catch (error) {
+                log(`❌ Error clearing session: ${error.message}`, 'error');
+            }
+        }
+
+        function checkAuthStatus() {
+            try {
+                const user = localStorage.getItem('bersemuka_user');
+                const token = localStorage.getItem('bersemuka_auth_token');
+                
+                log('<strong>🔍 Current Authentication Status:</strong>', 'info');
+                
+                if (user && token) {
+                    log('✅ User is authenticated', 'success');
+                    log(`<pre>User Data: ${user}</pre>`, 'info');
+                    log(`<strong>Token:</strong> ${token}`, 'info');
+                } else {
+                    log('❌ User is NOT authenticated', 'error');
+                    log(`User in storage: ${user ? 'Yes' : 'No'}`, 'error');
+                    log(`Token in storage: ${token ? 'Yes' : 'No'}`, 'error');
+                }
+
+                // Check all localStorage keys
+                log('<strong>All localStorage keys:</strong>', 'info');
+                const allKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    allKeys.push(`${key}: ${value?.substring(0, 50)}${value?.length > 50 ? '...' : ''}`);
+                }
+                log(`<pre>${allKeys.join('\\n')}</pre>`, 'info');
+                
+            } catch (error) {
+                log(`❌ Error checking auth status: ${error.message}`, 'error');
+            }
+        }
+
+        function openApp() {
+            window.open('http://localhost:5173', '_blank');
+        }
+
+        // Auto-check status on page load
+        window.onload = function() {
+            log('🎯 BerseMuka Authentication Test Tool Ready!', 'success');
+            checkAuthStatus();
+        };
+    </script>
+</body>
+</html>

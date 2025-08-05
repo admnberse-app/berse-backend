@@ -1,26 +1,262 @@
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
+// Load environment variables
 dotenv.config();
 
+// Validation schema for environment variables
+const envSchema = z.object({
+  // Database
+  DATABASE_URL: z.string().url('Invalid database URL'),
+  DATABASE_MAX_CONNECTIONS: z.string().transform((val) => parseInt(val, 10)).default('20'),
+  
+  // Server
+  PORT: z.string().transform((val) => parseInt(val, 10)).default('3001'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  API_URL: z.string().url().default('http://localhost:3001'),
+  
+  // JWT
+  JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters'),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT refresh secret must be at least 32 characters').optional(),
+  JWT_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  
+  // CORS
+  CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  
+  // Redis
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.string().transform((val) => parseInt(val, 10)).default('6379'),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.string().transform((val) => parseInt(val, 10)).default('0'),
+  
+  // Security
+  COOKIE_SECRET: z.string().min(16, 'Cookie secret must be at least 16 characters'),
+  BCRYPT_ROUNDS: z.string().transform((val) => parseInt(val, 10)).default('12'),
+  
+  // File Upload
+  MAX_FILE_SIZE: z.string().default('10mb'),
+  UPLOAD_DIR: z.string().default('uploads'),
+  
+  // Email
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().transform((val) => parseInt(val, 10)).default('587'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  FROM_EMAIL: z.string().email().optional(),
+  
+  // External APIs
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  
+  // Payment APIs
+  GOBARAQAH_API_KEY: z.string().optional(),
+  IBANTU_API_KEY: z.string().optional(),
+  SETEL_API_KEY: z.string().optional(),
+  TOUCHNGO_API_KEY: z.string().optional(),
+  BILLPLZ_API_KEY: z.string().optional(),
+  TOYYIBPAY_API_KEY: z.string().optional(),
+  
+  // Monitoring
+  SENTRY_DSN: z.string().optional(),
+  GOOGLE_ANALYTICS_ID: z.string().optional(),
+  
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: z.string().transform((val) => parseInt(val, 10)).default('900000'),
+  RATE_LIMIT_MAX_REQUESTS: z.string().transform((val) => parseInt(val, 10)).default('100'),
+  RATE_LIMIT_AUTH_MAX: z.string().transform((val) => parseInt(val, 10)).default('5'),
+  RATE_LIMIT_LOGIN_MAX: z.string().transform((val) => parseInt(val, 10)).default('3'),
+  
+  // Security
+  SESSION_TIMEOUT_MINUTES: z.string().transform((val) => parseInt(val, 10)).default('60'),
+  MAX_LOGIN_ATTEMPTS: z.string().transform((val) => parseInt(val, 10)).default('5'),
+  ACCOUNT_LOCKOUT_MINUTES: z.string().transform((val) => parseInt(val, 10)).default('30'),
+  
+  // Feature Flags
+  ENABLE_REGISTRATION: z.string().transform((val) => val === 'true').default('true'),
+  ENABLE_EMAIL_VERIFICATION: z.string().transform((val) => val === 'true').default('false'),
+  ENABLE_SMS_VERIFICATION: z.string().transform((val) => val === 'true').default('false'),
+  ENABLE_OAUTH: z.string().transform((val) => val === 'true').default('false'),
+  ENABLE_MFA: z.string().transform((val) => val === 'true').default('false'),
+  
+  // Webhooks
+  WEBHOOK_SECRET: z.string().optional(),
+  PAYMENT_WEBHOOK_URL: z.string().default('/api/webhooks/payment'),
+  
+  // Development/Testing
+  TEST_DATABASE_URL: z.string().optional(),
+  ENABLE_DEBUG_LOGS: z.string().transform((val) => val === 'true').default('false'),
+  MOCK_EXTERNAL_APIS: z.string().transform((val) => val === 'true').default('false'),
+});
+
+// Validate and parse environment variables
+let env: z.infer<typeof envSchema>;
+
+try {
+  env = envSchema.parse(process.env);
+} catch (error) {
+  console.error('Environment validation failed:');
+  if (error instanceof z.ZodError) {
+    error.errors.forEach((err) => {
+      console.error(`${err.path.join('.')}: ${err.message}`);
+    });
+  }
+  process.exit(1);
+}
+
+// Helper function to parse file size strings
+const parseFileSize = (size: string): number => {
+  const units: Record<string, number> = {
+    b: 1,
+    kb: 1024,
+    mb: 1024 * 1024,
+    gb: 1024 * 1024 * 1024,
+  };
+  
+  const match = size.toLowerCase().match(/^(\d+)(b|kb|mb|gb)?$/);
+  if (!match) return 10 * 1024 * 1024; // Default 10MB
+  
+  const num = parseInt(match[1]);
+  const unit = match[2] || 'b';
+  return num * units[unit];
+};
+
+// Configuration object
 export const config = {
-  port: parseInt(process.env.PORT || '3000', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
+  // Environment
+  env: env.NODE_ENV,
+  isDevelopment: env.NODE_ENV === 'development',
+  isProduction: env.NODE_ENV === 'production',
+  isTest: env.NODE_ENV === 'test',
   
+  // Server
+  port: env.PORT,
+  apiUrl: env.API_URL,
+  
+  // Database
   database: {
-    url: process.env.DATABASE_URL || '',
+    url: env.DATABASE_URL,
+    maxConnections: env.DATABASE_MAX_CONNECTIONS,
+    testUrl: env.TEST_DATABASE_URL,
   },
   
+  // JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-secret-change-this',
-    expiry: process.env.JWT_EXPIRY || '7d',
+    secret: env.JWT_SECRET,
+    refreshSecret: env.JWT_REFRESH_SECRET || env.JWT_SECRET,
+    expiresIn: env.JWT_EXPIRES_IN,
+    refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
   },
   
+  // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
+    origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
   },
   
+  // Redis
+  redis: {
+    host: env.REDIS_HOST,
+    port: env.REDIS_PORT,
+    password: env.REDIS_PASSWORD,
+    db: env.REDIS_DB,
+  },
+  
+  // Security
+  security: {
+    cookieSecret: env.COOKIE_SECRET,
+    bcryptRounds: env.BCRYPT_ROUNDS,
+    sessionTimeoutMinutes: env.SESSION_TIMEOUT_MINUTES,
+    maxLoginAttempts: env.MAX_LOGIN_ATTEMPTS,
+    accountLockoutMinutes: env.ACCOUNT_LOCKOUT_MINUTES,
+  },
+  
+  // File Upload
   upload: {
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB
-    uploadDir: process.env.UPLOAD_DIR || './uploads',
+    maxFileSize: parseFileSize(env.MAX_FILE_SIZE),
+    uploadDir: env.UPLOAD_DIR,
+  },
+  
+  // Email
+  email: {
+    smtp: {
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS,
+    },
+    fromEmail: env.FROM_EMAIL,
+  },
+  
+  // External APIs
+  apis: {
+    googleMaps: env.GOOGLE_MAPS_API_KEY,
+    cloudinary: {
+      cloudName: env.CLOUDINARY_CLOUD_NAME,
+      apiKey: env.CLOUDINARY_API_KEY,
+      apiSecret: env.CLOUDINARY_API_SECRET,
+    },
+    payments: {
+      gobaraqah: env.GOBARAQAH_API_KEY,
+      ibantu: env.IBANTU_API_KEY,
+      setel: env.SETEL_API_KEY,
+      touchngo: env.TOUCHNGO_API_KEY,
+      billplz: env.BILLPLZ_API_KEY,
+      toyyibpay: env.TOYYIBPAY_API_KEY,
+    },
+  },
+  
+  // Monitoring
+  monitoring: {
+    sentryDsn: env.SENTRY_DSN,
+    googleAnalyticsId: env.GOOGLE_ANALYTICS_ID,
+  },
+  
+  // Rate Limiting
+  rateLimiting: {
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    maxRequests: env.RATE_LIMIT_MAX_REQUESTS,
+    authMax: env.RATE_LIMIT_AUTH_MAX,
+    loginMax: env.RATE_LIMIT_LOGIN_MAX,
+  },
+  
+  // Feature Flags
+  features: {
+    registration: env.ENABLE_REGISTRATION,
+    emailVerification: env.ENABLE_EMAIL_VERIFICATION,
+    smsVerification: env.ENABLE_SMS_VERIFICATION,
+    oauth: env.ENABLE_OAUTH,
+    mfa: env.ENABLE_MFA,
+  },
+  
+  // Webhooks
+  webhooks: {
+    secret: env.WEBHOOK_SECRET,
+    paymentUrl: env.PAYMENT_WEBHOOK_URL,
+  },
+  
+  // Development
+  development: {
+    enableDebugLogs: env.ENABLE_DEBUG_LOGS,
+    mockExternalApis: env.MOCK_EXTERNAL_APIS,
   },
 };
+
+// Validate required configurations based on environment
+if (config.isProduction) {
+  const requiredProdVars = [
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'COOKIE_SECRET',
+  ];
+  
+  const missing = requiredProdVars.filter((key) => !process.env[key]);
+  
+  if (missing.length > 0) {
+    console.error('Missing required production environment variables:', missing);
+    process.exit(1);
+  }
+}
+
+export default config;

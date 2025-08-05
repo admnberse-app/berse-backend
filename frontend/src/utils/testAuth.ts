@@ -1,4 +1,4 @@
-import authService from '@frontend-api/services/auth.service';
+import authService from '../services/auth.service';
 
 export const testLogin = async () => {
   console.log('Starting test login...');

@@ -2,23 +2,24 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { NotificationPanelProps } from './NotificationPanel.types';
 import { useNavigate } from 'react-router-dom';
-import notificationService, { Notification } from '@frontend-api/services/notification.service';
+import notificationService from '../../services/notification.service';
+import { Notification } from '../../types';
 
-const Overlay = styled.div<{ isOpen: boolean }>`
+const Overlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
+  display: ${({ $isOpen }) => ($isOpen ? 'block' : 'none')};
   z-index: 999;
 `;
 
-const PanelContainer = styled.div<{ isOpen: boolean }>`
+const PanelContainer = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
-  right: ${({ isOpen }) => (isOpen ? '0' : '-100%')};
+  right: ${({ $isOpen }) => ($isOpen ? '0' : '-100%')};
   width: 320px;
   height: 100%;
   background-color: ${({ theme }) => theme.colors.background.paper};
@@ -284,8 +285,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
 
   return (
     <>
-      <Overlay isOpen={isOpen} onClick={onClose} />
-      <PanelContainer isOpen={isOpen}>
+      <Overlay $isOpen={isOpen} onClick={onClose} />
+      <PanelContainer $isOpen={isOpen}>
         <Header>
           <Title>Notifications</Title>
           <CloseButton onClick={onClose}>✕</CloseButton>

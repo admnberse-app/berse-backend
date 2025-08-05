@@ -53,7 +53,7 @@ App header with navigation states:
 ### MainNav
 Bottom navigation with 4 tabs:
 ```tsx
-<MainNav 
+<MainNav /> 
   activeTab="Home"
   onTabClick={handleTabChange}
 />

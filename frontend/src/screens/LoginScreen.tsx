@@ -4,13 +4,31 @@ import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
-import { StatusBar } from '../components/StatusBar';
+import { StatusBar } from '../components/StatusBar/StatusBar';
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: ${({ theme }) => theme.colors.background.default};
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: ${({ theme }) => theme.colors.background.default};
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const Content = styled.div`
@@ -96,6 +114,11 @@ export const LoginScreen: React.FC = () => {
   return (
     <Container>
       <StatusBar />
+      <Header>
+        <BackButton onClick={() => navigate('/')}>
+          ← Back
+        </BackButton>
+      </Header>
       <Content>
         <Title>Welcome Back</Title>
         <Subtitle>Login to continue your BerseMuka experience</Subtitle>

@@ -1,52 +1,196 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
-import { verifyToken } from '../utils/auth';
 import { sendError } from '../utils/response';
 import { prisma } from '../config/database';
 import { UserRole } from '@prisma/client';
+import JwtManager from '../utils/jwt';
+import { AuthenticationError, AuthorizationError } from './error';
+import logger from '../utils/logger';
 
-export const authenticate = async (
+export const authenticateToken = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
     
     if (!token) {
-      sendError(res, 'No token provided', 401);
-      return;
+      throw new AuthenticationError('Access token required');
     }
 
-    const decoded = verifyToken(token);
+    // Verify access token
+    const payload = JwtManager.verifyAccessToken(token);
+    
+    // Get user from database
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isHostCertified: true,
+        totalPoints: true,
+      },
     });
 
     if (!user) {
-      sendError(res, 'User not found', 401);
-      return;
+      throw new AuthenticationError('User not found');
     }
 
+    // Add user to request object
     req.user = user;
     next();
   } catch (error) {
-    sendError(res, 'Invalid token', 401);
+    if (error.message === 'Invalid access token' || error.name === 'JsonWebTokenError') {
+      logger.warn('Invalid access token used', {
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+        url: req.url,
+      });
+      sendError(res, 'Invalid or expired token', 401);
+    } else if (error.name === 'TokenExpiredError') {
+      sendError(res, 'Token expired', 401);
+    } else {
+      logger.error('Authentication error', { error: error.message });
+      sendError(res, 'Authentication failed', 401);
+    }
+  }
+};
+
+// Optional authentication - doesn't fail if no token is provided
+export const optionalAuth = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+      // No token provided, continue without user
+      return next();
+    }
+
+    // Verify access token
+    const payload = JwtManager.verifyAccessToken(token);
+    
+    // Get user from database
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isHostCertified: true,
+        totalPoints: true,
+      },
+    });
+
+    if (user) {
+      req.user = user;
+    }
+    
+    next();
+  } catch (error) {
+    // If token is invalid, continue without user
+    next();
   }
 };
 
 export const authorize = (...roles: UserRole[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      sendError(res, 'Unauthorized', 401);
-      return;
+      throw new AuthenticationError('Authentication required');
     }
 
     if (!roles.includes(req.user.role)) {
-      sendError(res, 'Forbidden', 403);
-      return;
+      logger.warn('Authorization failed', {
+        userId: req.user.id,
+        userRole: req.user.role,
+        requiredRoles: roles,
+        url: req.url,
+      });
+      throw new AuthorizationError('Insufficient permissions');
     }
 
     next();
   };
 };
+
+// Middleware to check if user is host certified
+export const requireHostCertification = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    throw new AuthenticationError('Authentication required');
+  }
+
+  if (!req.user.isHostCertified) {
+    throw new AuthorizationError('Host certification required');
+  }
+
+  next();
+};
+
+// Middleware to check if user owns the resource
+export const requireOwnership = (userIdField: string = 'userId') => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    const resourceUserId = req.params[userIdField] || req.body[userIdField];
+    
+    if (resourceUserId !== req.user.id && req.user.role !== UserRole.ADMIN) {
+      logger.warn('Ownership check failed', {
+        userId: req.user.id,
+        resourceUserId,
+        url: req.url,
+      });
+      throw new AuthorizationError('You can only access your own resources');
+    }
+
+    next();
+  };
+};
+
+// Middleware to check rate limiting per user
+export const userRateLimit = (maxRequests: number, windowMs: number) => {
+  const requests = new Map<string, { count: number; resetTime: number }>();
+  
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    const userId = req.user?.id || req.ip;
+    const now = Date.now();
+    
+    const userRequests = requests.get(userId);
+    
+    if (!userRequests || now > userRequests.resetTime) {
+      requests.set(userId, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+    
+    if (userRequests.count >= maxRequests) {
+      logger.warn('User rate limit exceeded', {
+        userId: req.user?.id,
+        ip: req.ip,
+        count: userRequests.count,
+        url: req.url,
+      });
+      sendError(res, 'Rate limit exceeded', 429);
+      return;
+    }
+    
+    userRequests.count++;
+    next();
+  };
+};
+
+// Legacy middleware names for backward compatibility
+export const authenticate = authenticateToken;

@@ -5,21 +5,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { logo } from '../../assets/images';
 
-const Overlay = styled.div<{ isOpen: boolean }>`
+const Overlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
+  display: ${({ $isOpen }) => ($isOpen ? 'block' : 'none')};
   z-index: 999;
 `;
 
-const MenuContainer = styled.div<{ isOpen: boolean }>`
+const MenuContainer = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
-  left: ${({ isOpen }) => (isOpen ? '0' : '-100%')};
+  left: ${({ $isOpen }) => ($isOpen ? '0' : '-100%')};
   width: 280px;
   height: 100%;
   background-color: ${({ theme }) => theme.colors.background.paper};
@@ -221,8 +221,8 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      <Overlay isOpen={isOpen} onClick={onClose} />
-      <MenuContainer isOpen={isOpen}>
+      <Overlay $isOpen={isOpen} onClick={onClose} />
+      <MenuContainer $isOpen={isOpen}>
         <Header>
           <ProfileSection>
             <Avatar>{user?.fullName?.charAt(0).toUpperCase() || 'U'}</Avatar>

@@ -8,8 +8,7 @@ export const GlobalStyles = createGlobalStyle`
     padding: 0;
   }
 
-  /* Import Poppins font */
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+  /* Poppins font is imported in index.html */
 
   html {
     font-size: 16px;
@@ -74,5 +73,18 @@ export const GlobalStyles = createGlobalStyle`
     margin: 0 auto;
     position: relative;
     background-color: ${({ theme }) => theme.colors.warmCream.primary};
+  }
+
+  /* Scanner animation */
+  @keyframes scan {
+    0% {
+      top: 0;
+    }
+    50% {
+      top: calc(100% - 2px);
+    }
+    100% {
+      top: 0;
+    }
   }
 `;
