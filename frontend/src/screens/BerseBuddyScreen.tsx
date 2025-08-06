@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar';
 import { MainNav } from '../components/MainNav';
+import { ProfileSidebar } from '../components/ProfileSidebar';
 
 // EMGS & BrainsMingle Integration
 interface EMGSStudent {
@@ -38,6 +39,7 @@ interface StudySession {
 
 export const BerseBuddyScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [buddyType, setBuddyType] = useState<'findBuddy' | 'becomeBuddy' | 'studyGroups'>('findBuddy');
   const [emgsConnected, setEmgsConnected] = useState(false);
   const [studentProfile, setStudentProfile] = useState<EMGSStudent | null>(null);
@@ -306,15 +308,20 @@ export const BerseBuddyScreen: React.FC = () => {
       </ScrollContent>
 
       <MainNav 
-        activeTab="bersebuddy"
+        activeTab="home"
         onTabPress={(tab) => {
           switch (tab) {
             case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/berseconnect'); break;
+            case 'connect': navigate('/connect'); break;
             case 'match': navigate('/match'); break;
-            case 'profile': navigate('/profile'); break;
+            case 'forum': navigate('/forum'); break;
           }
         }}
+      />
+      
+      <ProfileSidebar 
+        isOpen={showProfileSidebar}
+        onClose={() => setShowProfileSidebar(false)}
       />
     </Container>
   );
@@ -324,7 +331,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -368,7 +375,7 @@ const HeaderSubtext = styled.p`
 const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 0 20px 20px 20px;
+  padding: 0 20px 100px 20px; /* Added extra space for floating nav */
 `;
 
 const EmgsSection = styled.div`

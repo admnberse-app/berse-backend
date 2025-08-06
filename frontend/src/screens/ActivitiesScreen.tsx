@@ -21,12 +21,12 @@ export const ActivitiesScreen: React.FC = () => {
           <ComingSoonText>Recent Activities section is under development</ComingSoonText>
         </ComingSoon>
       </Content>
-      <MainNav activeTab="activities" onTabPress={(tab) => {
+      <MainNav activeTab="home" onTabPress={(tab) => {
         switch (tab) {
           case 'home': navigate('/dashboard'); break;
-          case 'connect': navigate('/berseconnect'); break;
+          case 'connect': navigate('/connect'); break;
           case 'match': navigate('/match'); break;
-          case 'profile': navigate('/profile'); break;
+          case 'forum': navigate('/forum'); break;
         }
       }} />
     </Container>
@@ -37,7 +37,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -72,7 +72,7 @@ const Content = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 20px 20px 100px 20px; /* Added bottom padding for floating nav */
 `;
 
 const ComingSoon = styled.div`

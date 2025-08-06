@@ -11,14 +11,14 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F9F3E3;
 `;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
   padding: 16px 20px;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F5F3EF;
 `;
 
 const BackButton = styled.button`
@@ -325,8 +325,8 @@ export const RegisterScreen: React.FC = () => {
         // Navigate to BerseConnect with event highlighted
         navigate(`/connect?highlight=${eventContext.id}`);
       } else {
-        alert('Registration successful! Please complete your profile for better matching.');
-        navigate('/edit-profile');
+        alert('Registration successful! Welcome to BerseMuka!');
+        navigate('/dashboard');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to register. Please try again.');

@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -42,7 +42,7 @@ const HeaderTitle = styled.h1`
 
 const Content = styled.div`
   flex: 1;
-  padding: 0 20px 80px 20px;
+  padding: 0 20px 100px 20px;
   overflow-y: auto;
 `;
 
@@ -315,7 +315,7 @@ export const SettingsScreen: React.FC = () => {
       
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F5DC',
+        background: '#F5F3EF',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -407,7 +407,25 @@ export const SettingsScreen: React.FC = () => {
         </VersionInfo>
       </Content>
 
-      <BottomNav activeTab="profile" />
+      <MainNav 
+        activeTab="home"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
     </Container>
   );
 };

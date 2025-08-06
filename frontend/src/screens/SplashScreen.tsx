@@ -10,7 +10,7 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   height: 100vh;
-  background-color: ${({ theme }) => theme.colors.primary.main};
+  background-color: #F9F3E3;
   color: ${({ theme }) => theme.colors.common.white};
 `;
 

@@ -45,6 +45,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackAllowlist: [/^(?!\/(api|src|__.*|.*\.(js|css|png|ico|svg|webmanifest)$)).*/],
+        navigateFallbackDenylist: [
+          /^\/__.*$/,
+          /^\/api\/.*$/,
+          /^\/src\/.*$/,
+          /\.tsx?$/,
+          /\/dev-sw\.js$/,
+          /\/registerSW\.js$/,
+          /\/manifest\.webmanifest$/
+        ],
+        maximumFileSizeToCacheInBytes: 5000000, // 5MB limit for large SVG files
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.bersemuka\.com\//,
@@ -61,13 +76,28 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /\.(png|jpg|jpeg|svg|gif)$/,
+            urlPattern: /\.(png|jpg|jpeg|svg|gif|webp)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
               expiration: {
                 maxEntries: 200,
                 maxAgeSeconds: 2592000 // 30 days
+              }
+            }
+          },
+          {
+            urlPattern: /^\/(?!(__.*|api\/|src\/)).*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 86400 // 24 hours
+              },
+              networkTimeoutSeconds: 3,
+              cacheableResponse: {
+                statuses: [0, 200]
               }
             }
           }
@@ -81,7 +111,13 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    headers: {
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin'
+    }
   },
   build: {
     sourcemap: false,

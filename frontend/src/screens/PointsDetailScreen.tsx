@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 import { RedemptionConfirmModal } from '../components/RedemptionConfirmModal';
 import { VoucherDisplayModal } from '../components/VoucherDisplayModal';
 import { Toast } from '../components/Toast';
@@ -39,7 +39,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F5DC;
+  background-color: #F9F3E3;
 `;
 
 const Header = styled.div`
@@ -94,7 +94,7 @@ const UserPoints = styled.div`
 
 const Content = styled.div`
   flex: 1;
-  background: #F5F5DC;
+  background: #F9F3E3;
   padding: 0;
   overflow: hidden;
 `;
@@ -605,7 +605,7 @@ export const PointsDetailScreen: React.FC = () => {
       
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F5DC',
+        background: '#F5F3EF',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -811,7 +811,25 @@ export const PointsDetailScreen: React.FC = () => {
         </TabContent>
       </Content>
       
-      <BottomNav activeTab="home" />
+      <MainNav 
+        activeTab="home"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
       
       {/* Redemption Confirmation Modal */}
       <RedemptionConfirmModal

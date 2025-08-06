@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -52,7 +52,7 @@ const PostButton = styled.button<{ disabled?: boolean }>`
 
 const Content = styled.div`
   flex: 1;
-  padding: 0 20px 40px 20px;
+  padding: 0 20px 100px 20px;
   overflow-y: auto;
 `;
 
@@ -692,7 +692,25 @@ export const CreateForumPostScreen: React.FC = () => {
         </ActionButtons>
       </Content>
       
-      <BottomNav activeTab="forum" />
+      <MainNav 
+        activeTab="forum"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
     </Container>
   );
 };

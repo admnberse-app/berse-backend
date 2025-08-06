@@ -46,7 +46,16 @@
       "Bash(del nul)",
       "Bash(rm:*)",
       "Bash(dir)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mkdir:*)",
+      "Bash(timeout 30s npm run build)",
+      "Bash(sed:*)",
+      "Bash(pkill:*)",
+      "Bash(timeout 8s npm run typecheck)",
+      "Bash(timeout 6s npm run typecheck)",
+      "Bash(timeout 20s npm run build)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar';
 import { MainNav } from '../components/MainNav';
+import { ProfileSidebar } from '../components/ProfileSidebar';
 
 // TalentCorp & BrainsMingle Integration
 interface TalentCorpUser {
@@ -36,6 +37,7 @@ interface BrainsMingleSession {
 
 export const BerseMentorScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [mentorshipType, setMentorshipType] = useState<'findMentor' | 'becomeMentor' | 'networking'>('findMentor');
   const [talentCorpConnected, setTalentCorpConnected] = useState(false);
   const [userProfile, setUserProfile] = useState<TalentCorpUser | null>(null);
@@ -280,15 +282,20 @@ export const BerseMentorScreen: React.FC = () => {
       </ScrollContent>
 
       <MainNav 
-        activeTab="mentor"
+        activeTab="home"
         onTabPress={(tab) => {
           switch (tab) {
             case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/berseconnect'); break;
+            case 'connect': navigate('/connect'); break;
             case 'match': navigate('/match'); break;
-            case 'profile': navigate('/profile'); break;
+            case 'forum': navigate('/forum'); break;
           }
         }}
+      />
+      
+      <ProfileSidebar 
+        isOpen={showProfileSidebar}
+        onClose={() => setShowProfileSidebar(false)}
       />
     </Container>
   );
@@ -298,7 +305,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -387,7 +394,7 @@ const HeaderSubtext = styled.p`
 const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 0 20px 20px 20px;
+  padding: 0 20px 100px 20px; /* Added extra space for floating nav */
 `;
 
 const TalentCorpSection = styled.div`

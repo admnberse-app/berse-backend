@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
+import { ProfileSidebar } from '../components/ProfileSidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { EventRegistrationModal } from '../components/EventRegistrationModal';
 import { SportsEventBookingModal } from '../components/SportsEventBookingModal';
@@ -15,7 +16,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
   position: relative; /* Add this for proper z-index stacking */
@@ -30,7 +31,7 @@ const AvatarImage = styled.img`
 
 const Content = styled.div`
   flex: 1;
-  padding: 0 20px 80px 20px;
+  padding: 0 20px 100px 20px; /* Added extra space for floating nav */
   overflow-y: auto;
   margin-top: -2px;
 `;
@@ -38,12 +39,12 @@ const Content = styled.div`
 const FilterSection = styled.div`
   padding: 8px 20px;
   background-color: transparent;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 `;
 
 const FilterDropdowns = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 `;
 
@@ -106,8 +107,8 @@ const CategoryGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  gap: 12px 8px;
-  margin-bottom: 20px;
+  gap: 8px 6px;
+  margin-bottom: 12px;
   padding: 0 4px;
   justify-items: center;
   align-items: center;
@@ -115,7 +116,7 @@ const CategoryGrid = styled.div`
   /* Ensure equal distribution in 4x2 grid */
   width: 100%;
   max-width: 340px;
-  margin: 0 auto 20px auto;
+  margin: 0 auto 12px auto;
 `;
 
 const CategoryCard = styled.div<{ $isSelected?: boolean }>`
@@ -123,13 +124,13 @@ const CategoryCard = styled.div<{ $isSelected?: boolean }>`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  padding: 8px 4px;
+  padding: 6px 3px;
   border-radius: 12px;
   width: 100%;
-  min-height: 80px;
+  min-height: 68px;
   
   &:hover {
     background-color: rgba(45, 95, 79, 0.05);
@@ -171,7 +172,7 @@ const CategoryLabel = styled.span<{ $isSelected?: boolean }>`
 `;
 
 const ActiveFiltersBar = styled.div`
-  padding: 8px 20px;
+  padding: 6px 20px;
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
   font-size: 12px;
@@ -179,14 +180,14 @@ const ActiveFiltersBar = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 20px;
-  margin-bottom: 16px;
+  min-height: 18px;
+  margin-bottom: 10px;
 `;
 
 const FilterContent = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 `;
 
@@ -218,7 +219,7 @@ const ClearFiltersButton = styled.button`
 `;
 
 const SuggestedEventsSection = styled.div`
-  margin-top: 12px;
+  margin-top: 6px;
 `;
 
 
@@ -226,7 +227,7 @@ const CompactEventCard = styled.div`
   background: #FFFFFF;
   border-radius: 10px;
   padding: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   border: 1px solid #e9ecef;
   width: 100%;
@@ -244,7 +245,7 @@ const CompactEventHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 `;
 
 const HighlightBanner = styled.div`
@@ -292,7 +293,7 @@ const EventTitleRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 `;
 
 const CompactEventTitle = styled.h4`
@@ -314,14 +315,14 @@ const EventBio = styled.div`
   font-size: 12px;
   color: #999;
   line-height: 1.3;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 `;
 
 const EventDetailsRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 6px;
   font-size: 12px;
   color: #666;
   flex-wrap: wrap;
@@ -1265,6 +1266,7 @@ export const BerseConnectScreen: React.FC = () => {
   // Modal state
   const [showSportsModal, setShowSportsModal] = useState(false);
   const [showRegularModal, setShowRegularModal] = useState(false);
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
   const [showJoinConfirmation, setShowJoinConfirmation] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -1779,7 +1781,7 @@ export const BerseConnectScreen: React.FC = () => {
       
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F5DC',
+        background: '#F5F3EF',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -1789,7 +1791,30 @@ export const BerseConnectScreen: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: '12px',
+              padding: '4px 8px 4px 4px',
+              position: 'relative'
+            }}
+            onClick={() => {
+              console.log('Profile icon clicked - opening sidebar');
+              setShowProfileSidebar(true);
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(74, 103, 65, 0.1)';
+              e.currentTarget.style.transform = 'translateX(2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
             <div style={{
               width: '40px',
               height: '40px',
@@ -2045,7 +2070,17 @@ export const BerseConnectScreen: React.FC = () => {
         </SuggestedEventsSection>
       </Content>
 
-      <BottomNav />
+      <MainNav 
+        activeTab="connect"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home': navigate('/dashboard'); break;
+            case 'connect': navigate('/connect'); break;
+            case 'match': navigate('/match'); break;
+            case 'forum': navigate('/forum'); break;
+          }
+        }}
+      />
 
       {/* Sports Event Booking Modal */}
       <SportsEventBookingModal
@@ -2267,6 +2302,10 @@ export const BerseConnectScreen: React.FC = () => {
         </CancelModal>
       </FilterModalOverlay>
 
+      <ProfileSidebar 
+        isOpen={showProfileSidebar}
+        onClose={() => setShowProfileSidebar(false)}
+      />
     </Container>
   );
 };

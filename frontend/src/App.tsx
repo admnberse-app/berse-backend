@@ -22,7 +22,6 @@ import { RegisterScreen } from './screens/RegisterScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { BerseConnectScreen } from './screens/BerseConnectScreen';
 import { BerseMatchScreen } from './screens/BerseMatchScreen';
-import { ProfileScreen } from './screens/ProfileScreen';
 import { PointsDetailScreen } from './screens/PointsDetailScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { EventDetailsScreen } from './screens/EventDetailsScreen';
@@ -33,6 +32,9 @@ import { CreateForumPostScreen } from './screens/CreateForumPostScreen';
 import { BookMeetupScreen } from './screens/BookMeetupScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { MyVouchersScreen } from './screens/MyVouchersScreen';
+import { VouchersScreen } from './screens/VouchersScreen';
+import { MessagesScreen } from './screens/MessagesScreen';
+import { NotificationsScreen } from './screens/NotificationsScreen';
 import { BerseCardGameScreen } from './screens/BerseCardGameScreen';
 import { BerseMukhaEventScreen } from './screens/BerseMukhaEventScreen';
 import { RewardsScreen } from './screens/RewardsScreen';
@@ -173,14 +175,6 @@ function App() {
                 }
               />
               <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfileScreen />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/manage-events"
                 element={
                   <ProtectedRoute>
@@ -280,7 +274,31 @@ function App() {
                 path="/vouchers"
                 element={
                   <ProtectedRoute>
+                    <VouchersScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/my-vouchers"
+                element={
+                  <ProtectedRoute>
                     <MyVouchersScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/messages"
+                element={
+                  <ProtectedRoute>
+                    <MessagesScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <NotificationsScreen />
                   </ProtectedRoute>
                 }
               />

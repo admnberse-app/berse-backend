@@ -329,13 +329,13 @@ export const SukanSquadScreen: React.FC = () => {
       </Content>
 
       <MainNav 
-        activeTab="activities"
+        activeTab="connect"
         onTabPress={(tab) => {
           switch (tab) {
             case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/berseconnect'); break;
+            case 'connect': navigate('/connect'); break;
             case 'match': navigate('/match'); break;
-            case 'profile': navigate('/profile'); break;
+            case 'forum': navigate('/forum'); break;
           }
         }}
       />
@@ -348,15 +348,15 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
 
 const Header = styled.div`
   padding: 16px 20px;
-  background: linear-gradient(135deg, #FF6B35, #F7931E);
-  color: white;
+  background: #F5F3EF;
+  color: #2D5F4F;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -366,7 +366,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: white;
+  color: #2D5F4F;
   cursor: pointer;
 `;
 
@@ -378,22 +378,24 @@ const HeaderTitle = styled.h1`
   font-size: 18px;
   font-weight: bold;
   margin: 0 0 4px 0;
+  color: #2D5F4F;
 `;
 
 const HeaderSubtext = styled.p`
   font-size: 12px;
-  opacity: 0.9;
+  opacity: 0.7;
   margin: 0;
+  color: #666;
 `;
 
 const PartnershipBadge = styled.div`
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: rgba(45, 95, 79, 0.1);
+  color: #2D5F4F;
   padding: 4px 8px;
   border-radius: 8px;
   font-size: 10px;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(45, 95, 79, 0.3);
 `;
 
 const TabNavigation = styled.div`
@@ -421,7 +423,7 @@ const TabButton = styled.button<{ $active: boolean }>`
 const Content = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 80px;
+  padding-bottom: 100px; /* Added extra space for floating nav */
 `;
 
 const SessionsList = styled.div`

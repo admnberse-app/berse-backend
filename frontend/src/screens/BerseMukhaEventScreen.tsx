@@ -355,13 +355,13 @@ export const BerseMukhaEventScreen: React.FC = () => {
       </Content>
 
       <MainNav 
-        activeTab="activities"
+        activeTab="connect"
         onTabPress={(tab) => {
           switch (tab) {
             case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/berseconnect'); break;
+            case 'connect': navigate('/connect'); break;
             case 'match': navigate('/match'); break;
-            case 'profile': navigate('/profile'); break;
+            case 'forum': navigate('/forum'); break;
           }
         }}
       />
@@ -374,7 +374,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -447,7 +447,7 @@ const TabButton = styled.button<{ $active: boolean }>`
 const Content = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 80px;
+  padding-bottom: 100px; /* Added extra space for floating nav */
 `;
 
 const SessionsList = styled.div`

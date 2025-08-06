@@ -324,13 +324,13 @@ export const EventManagementScreen: React.FC = () => {
       </ScrollContent>
 
       <MainNav 
-        activeTab="profile"
+        activeTab="home"
         onTabPress={(tab) => {
           switch (tab) {
             case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/berseconnect'); break;
+            case 'connect': navigate('/connect'); break;
             case 'match': navigate('/match'); break;
-            case 'profile': navigate('/profile'); break;
+            case 'forum': navigate('/forum'); break;
           }
         }}
       />
@@ -343,7 +343,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -422,7 +422,7 @@ const ScrollContent = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  padding-bottom: 80px;
+  padding-bottom: 100px; /* Added extra space for floating nav */
 `;
 
 const DashboardSection = styled.div``;

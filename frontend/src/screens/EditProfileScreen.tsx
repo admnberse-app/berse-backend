@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 
 const Container = styled.div`
   display: flex;
@@ -51,111 +51,146 @@ const SaveButton = styled.button`
 
 const Content = styled.div`
   flex: 1;
-  padding: 0 20px 100px 20px;
+  padding: 16px 20px 100px 20px;
   overflow-y: auto;
 `;
 
-const ProfileImageSection = styled.div`
+// BerseMatch-style Profile Card Components
+const ProfileCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  position: relative;
+`;
+
+const ProfileHeader = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+`;
+
+const ProfileAvatar = styled.div`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 24px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 3px solid white;
+  flex-shrink: 0;
+  cursor: pointer;
+  
+  &:hover {
+    &::after {
+      content: '📷';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 20px;
+    }
+  }
+`;
+
+const ProfileInfo = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-bottom: 32px;
-`;
-
-const ProfileImageContainer = styled.div`
-  position: relative;
-  margin-bottom: 16px;
-`;
-
-const ProfileImage = styled.div`
-  width: 120px;
-  height: 120px;
-  border-radius: 60px;
-  background: linear-gradient(45deg, #2D5F4F, #4A90A4);
-  display: flex;
-  align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 36px;
+`;
+
+const ProfileName = styled.input`
+  margin: 0;
+  font-size: 17px;
   font-weight: bold;
-  position: relative;
-  overflow: hidden;
-`;
-
-const ProfileImageInput = styled.input`
-  display: none;
-`;
-
-const ChangePhotoButton = styled.button`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
-  background-color: #2D5F4F;
-  border: 3px solid white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  color: white;
-`;
-
-const ChangePhotoText = styled.button`
-  background: none;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   border: none;
-  color: #2D5F4F;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+  background: transparent;
+  outline: none;
+  padding: 4px;
+  border-radius: 4px;
+  width: 100%;
+  
+  &:focus {
+    background: rgba(0, 123, 255, 0.1);
+  }
+`;
+
+const ProfileMeta = styled.input`
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #666;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 4px;
+  border-radius: 4px;
+  width: 100%;
+  
+  &:focus {
+    background: rgba(0, 123, 255, 0.1);
+  }
 `;
 
 const FormSection = styled.div`
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #333;
-  margin: 0 0 16px 0;
+  color: #2D5F4F;
+  margin: 0 0 12px 0;
+  padding: 0 4px;
 `;
 
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
+const FormField = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
 `;
 
-const Label = styled.label`
+const FieldLabel = styled.label`
   display: block;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: #333;
   margin-bottom: 8px;
 `;
 
-const Input = styled.input`
+const FieldInput = styled.input`
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border: none;
+  outline: none;
   font-size: 14px;
   color: #333;
-  background: #F8F9FA;
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
   
   &:focus {
-    outline: none;
-    border-color: #2D5F4F;
-    background: white;
+    background: rgba(0, 123, 255, 0.05);
   }
   
   &::placeholder {
@@ -163,129 +198,48 @@ const Input = styled.input`
   }
 `;
 
-const TextArea = styled.textarea`
+const FieldSelect = styled.select`
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border: none;
+  outline: none;
   font-size: 14px;
   color: #333;
-  background: #F8F9FA;
-  min-height: 100px;
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  
+  &:focus {
+    background: rgba(0, 123, 255, 0.05);
+  }
+`;
+
+const FieldTextArea = styled.textarea`
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
   resize: vertical;
+  min-height: 60px;
   font-family: inherit;
   
   &:focus {
-    outline: none;
-    border-color: #2D5F4F;
-    background: white;
+    background: rgba(0, 123, 255, 0.05);
   }
   
   &::placeholder {
     color: #999;
   }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #333;
-  background: #F8F9FA;
-  cursor: pointer;
-  
-  &:focus {
-    outline: none;
-    border-color: #2D5F4F;
-    background: white;
-  }
-`;
-
-const InterestsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-`;
-
-const InterestTag = styled.div<{ selected: boolean }>`
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: 1px solid ${({ selected }) => selected ? '#2D5F4F' : '#E5E5E5'};
-  background-color: ${({ selected }) => selected ? '#2D5F4F' : 'white'};
-  color: ${({ selected }) => selected ? 'white' : '#666'};
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    border-color: #2D5F4F;
-  }
-`;
-
-const SocialLinksContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const SocialLinkRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const SocialIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background-color: #F0F0F0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-`;
-
-const SocialInput = styled(Input)`
-  flex: 1;
-`;
-
-const SaveChangesButton = styled.button`
-  width: 100%;
-  background-color: #2D5F4F;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 24px;
-  
-  &:hover {
-    background-color: #1F4A3A;
-  }
-`;
-
-const CharacterCount = styled.div`
-  font-size: 12px;
-  color: #999;
-  text-align: right;
-  margin-top: 4px;
 `;
 
 export const EditProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Debug: Log when component loads
-  useEffect(() => {
-    console.log('EditProfileScreen loaded successfully');
-  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -294,43 +248,21 @@ export const EditProfileScreen: React.FC = () => {
     phone: user?.phone || '',
     ageRange: '',
     area: '',
-    firstTimeEvent: '',
-    whyJoinBerseMuka: '',
-    profession: '',
-    nationality: '',
-    howConnect: '',
-    howKnowBerseMuka: '',
     gender: '',
     bio: '',
+    profession: '',
+    nationality: '',
     instagram: '',
     linkedin: '',
     twitter: '',
     website: ''
   });
 
-  const [selectedInterests, setSelectedInterests] = useState([
-    'Design', 'Coffee', 'Travel', 'Reading', 'Photography'
-  ]);
-
-  const availableInterests = [
-    'Design', 'Coffee', 'Travel', 'Reading', 'Photography', 'Technology',
-    'Sports', 'Music', 'Art', 'Cooking', 'Fitness', 'Movies', 'Gaming',
-    'Nature', 'Fashion', 'Volunteer Work', 'Learning', 'Networking'
-  ];
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-  };
-
-  const handleInterestToggle = (interest: string) => {
-    setSelectedInterests(prev => 
-      prev.includes(interest)
-        ? prev.filter(i => i !== interest)
-        : [...prev, interest]
-    );
   };
 
   const handlePhotoChange = () => {
@@ -340,20 +272,14 @@ export const EditProfileScreen: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Handle file upload logic here
       console.log('Selected file:', file);
     }
   };
 
   const handleSave = async () => {
     try {
-      // API call to save profile changes
-      console.log('Saving profile:', { ...formData, interests: selectedInterests });
-      
-      // Show success message
+      console.log('Saving profile:', formData);
       alert('Profile updated successfully!');
-      
-      // Navigate back to profile screen
       navigate('/profile');
     } catch (error) {
       console.error('Failed to save profile:', error);
@@ -374,60 +300,70 @@ export const EditProfileScreen: React.FC = () => {
       </Header>
 
       <Content>
-        <ProfileImageSection>
-          <ProfileImageContainer>
-            <ProfileImage>
+        {/* Profile Header Card */}
+        <ProfileCard>
+          <ProfileHeader>
+            <ProfileAvatar
+              style={{
+                background: 'linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%)'
+              }}
+              onClick={handlePhotoChange}
+            >
               {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : 'ZA'}
-              <ChangePhotoButton onClick={handlePhotoChange}>
-                📷
-              </ChangePhotoButton>
-            </ProfileImage>
-            <ProfileImageInput
+            </ProfileAvatar>
+            <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={handleFileChange}
+              style={{ display: 'none' }}
             />
-          </ProfileImageContainer>
-          <ChangePhotoText onClick={handlePhotoChange}>
-            Change Profile Photo
-          </ChangePhotoText>
-        </ProfileImageSection>
+            <ProfileInfo>
+              <ProfileName
+                value={formData.fullName}
+                onChange={(e) => handleInputChange('fullName', e.target.value)}
+                placeholder="Enter your full name"
+              />
+              <ProfileMeta
+                value={formData.bio}
+                onChange={(e) => handleInputChange('bio', e.target.value)}
+                placeholder="Add a bio about yourself"
+              />
+            </ProfileInfo>
+          </ProfileHeader>
+        </ProfileCard>
 
+        {/* Basic Information */}
         <FormSection>
-          <SectionTitle>Basic Information</SectionTitle>
+          <SectionTitle>Contact Information</SectionTitle>
           
-          <FormGroup>
-            <Label>Full Name</Label>
-            <Input
-              value={formData.fullName}
-              onChange={(e) => handleInputChange('fullName', e.target.value)}
-              placeholder="Enter your full name"
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>Email Address</Label>
-            <Input
+          <FormField>
+            <FieldLabel>Email Address</FieldLabel>
+            <FieldInput
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
               placeholder="Enter your email"
             />
-          </FormGroup>
+          </FormField>
 
-          <FormGroup>
-            <Label>Phone Number</Label>
-            <Input
+          <FormField>
+            <FieldLabel>Phone Number</FieldLabel>
+            <FieldInput
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
               placeholder="Enter your phone number"
             />
-          </FormGroup>
+          </FormField>
+        </FormSection>
 
-          <FormGroup>
-            <Label>Age Range</Label>
-            <Select
+        {/* Personal Information */}
+        <FormSection>
+          <SectionTitle>Personal Information</SectionTitle>
+
+          <FormField>
+            <FieldLabel>Age Range</FieldLabel>
+            <FieldSelect
               value={formData.ageRange}
               onChange={(e) => handleInputChange('ageRange', e.target.value)}
             >
@@ -438,27 +374,27 @@ export const EditProfileScreen: React.FC = () => {
               <option value="31-40">31-40</option>
               <option value="41-50">41-50</option>
               <option value="Above 50">Above 50</option>
-            </Select>
-          </FormGroup>
+            </FieldSelect>
+          </FormField>
 
-          <FormGroup>
-            <Label>Which area do you come from?</Label>
-            <Select
+          <FormField>
+            <FieldLabel>Location</FieldLabel>
+            <FieldSelect
               value={formData.area}
               onChange={(e) => handleInputChange('area', e.target.value)}
             >
               <option value="">Select your area</option>
-              <option value="Damansara">Damansara</option>
-              <option value="Ampang">Ampang</option>
-              <option value="Shah Alam">Shah Alam</option>
-              <option value="Bangi">Bangi</option>
+              <option value="Kuala Lumpur">Kuala Lumpur</option>
+              <option value="Selangor">Selangor</option>
+              <option value="Penang">Penang</option>
+              <option value="Johor">Johor</option>
               <option value="Other">Other</option>
-            </Select>
-          </FormGroup>
+            </FieldSelect>
+          </FormField>
 
-          <FormGroup>
-            <Label>Gender</Label>
-            <Select
+          <FormField>
+            <FieldLabel>Gender</FieldLabel>
+            <FieldSelect
               value={formData.gender}
               onChange={(e) => handleInputChange('gender', e.target.value)}
             >
@@ -467,158 +403,80 @@ export const EditProfileScreen: React.FC = () => {
               <option value="Female">Female</option>
               <option value="Other">Other</option>
               <option value="Prefer not to say">Prefer not to say</option>
-            </Select>
-          </FormGroup>
-        </FormSection>
+            </FieldSelect>
+          </FormField>
 
-        <FormSection>
-          <SectionTitle>BerseMuka Profile</SectionTitle>
-          
-          <FormGroup>
-            <Label>First time attending this event?</Label>
-            <Select
-              value={formData.firstTimeEvent}
-              onChange={(e) => handleInputChange('firstTimeEvent', e.target.value)}
-            >
-              <option value="">Select an option</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </Select>
-          </FormGroup>
-
-          <FormGroup>
-            <Label>What made you want to join BerseMuka?</Label>
-            <TextArea
-              value={formData.whyJoinBerseMuka}
-              onChange={(e) => handleInputChange('whyJoinBerseMuka', e.target.value)}
-              placeholder="Tell us what motivated you to join BerseMuka..."
-              maxLength={300}
-            />
-            <CharacterCount>{formData.whyJoinBerseMuka.length}/300</CharacterCount>
-          </FormGroup>
-
-          <FormGroup>
-            <Label>Current Profession/Occupation/Studies</Label>
-            <Input
+          <FormField>
+            <FieldLabel>Profession</FieldLabel>
+            <FieldInput
               value={formData.profession}
               onChange={(e) => handleInputChange('profession', e.target.value)}
-              placeholder="e.g., Software Engineer, Student, Marketing Manager"
+              placeholder="What do you do for work?"
             />
-          </FormGroup>
+          </FormField>
 
-          <FormGroup>
-            <Label>Nationality</Label>
-            <Input
+          <FormField>
+            <FieldLabel>Nationality</FieldLabel>
+            <FieldInput
               value={formData.nationality}
               onChange={(e) => handleInputChange('nationality', e.target.value)}
-              placeholder="Enter your nationality"
+              placeholder="Your nationality"
             />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>How do we connect?</Label>
-            <TextArea
-              value={formData.howConnect}
-              onChange={(e) => handleInputChange('howConnect', e.target.value)}
-              placeholder="Tell us about your interests, hobbies, or what you'd like to connect about..."
-              maxLength={200}
-            />
-            <CharacterCount>{formData.howConnect.length}/200</CharacterCount>
-          </FormGroup>
-
-          <FormGroup>
-            <Label>How did you know about BerseMuka?</Label>
-            <TextArea
-              value={formData.howKnowBerseMuka}
-              onChange={(e) => handleInputChange('howKnowBerseMuka', e.target.value)}
-              placeholder="If from a person, kindly state their name"
-              maxLength={200}
-            />
-            <CharacterCount>{formData.howKnowBerseMuka.length}/200</CharacterCount>
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-              * If from a person, kindly state their name
-            </div>
-          </FormGroup>
+          </FormField>
         </FormSection>
 
+        {/* Social Links */}
         <FormSection>
-          <SectionTitle>About Me (Optional)</SectionTitle>
-          
-          <FormGroup>
-            <Label>Bio</Label>
-            <TextArea
-              value={formData.bio}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
-              placeholder="Tell others about yourself..."
-              maxLength={300}
+          <SectionTitle>Social Media (Optional)</SectionTitle>
+
+          <FormField>
+            <FieldLabel>Instagram</FieldLabel>
+            <FieldInput
+              value={formData.instagram}
+              onChange={(e) => handleInputChange('instagram', e.target.value)}
+              placeholder="@yourusername"
             />
-            <CharacterCount>{formData.bio.length}/300</CharacterCount>
-          </FormGroup>
+          </FormField>
+
+          <FormField>
+            <FieldLabel>LinkedIn</FieldLabel>
+            <FieldInput
+              value={formData.linkedin}
+              onChange={(e) => handleInputChange('linkedin', e.target.value)}
+              placeholder="linkedin.com/in/yourprofile"
+            />
+          </FormField>
+
+          <FormField>
+            <FieldLabel>Website</FieldLabel>
+            <FieldInput
+              value={formData.website}
+              onChange={(e) => handleInputChange('website', e.target.value)}
+              placeholder="https://yourwebsite.com"
+            />
+          </FormField>
         </FormSection>
-
-        <FormSection>
-          <SectionTitle>Interests</SectionTitle>
-          <InterestsContainer>
-            {availableInterests.map((interest) => (
-              <InterestTag
-                key={interest}
-                selected={selectedInterests.includes(interest)}
-                onClick={() => handleInterestToggle(interest)}
-              >
-                {interest}
-              </InterestTag>
-            ))}
-          </InterestsContainer>
-        </FormSection>
-
-        <FormSection>
-          <SectionTitle>Social Links (Optional)</SectionTitle>
-          
-          <SocialLinksContainer>
-            <SocialLinkRow>
-              <SocialIcon>📷</SocialIcon>
-              <SocialInput
-                value={formData.instagram}
-                onChange={(e) => handleInputChange('instagram', e.target.value)}
-                placeholder="Instagram username"
-              />
-            </SocialLinkRow>
-
-            <SocialLinkRow>
-              <SocialIcon>💼</SocialIcon>
-              <SocialInput
-                value={formData.linkedin}
-                onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                placeholder="LinkedIn profile"
-              />
-            </SocialLinkRow>
-
-            <SocialLinkRow>
-              <SocialIcon>🐦</SocialIcon>
-              <SocialInput
-                value={formData.twitter}
-                onChange={(e) => handleInputChange('twitter', e.target.value)}
-                placeholder="Twitter handle"
-              />
-            </SocialLinkRow>
-
-            <SocialLinkRow>
-              <SocialIcon>🌐</SocialIcon>
-              <SocialInput
-                value={formData.website}
-                onChange={(e) => handleInputChange('website', e.target.value)}
-                placeholder="Personal website"
-              />
-            </SocialLinkRow>
-          </SocialLinksContainer>
-        </FormSection>
-
-        <SaveChangesButton onClick={handleSave}>
-          💾 Save Changes
-        </SaveChangesButton>
       </Content>
 
-      <BottomNav activeTab="profile" />
+      <MainNav 
+        activeTab="home"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
     </Container>
   );
 };

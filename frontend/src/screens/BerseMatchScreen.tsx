@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
+import { ProfileSidebar } from '../components/ProfileSidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useMessaging } from '../contexts/MessagingContext';
 import { userProfiles, getRandomProfiles, UserProfile } from '../data/profiles';
@@ -294,14 +295,14 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
 
 const Header = styled.div`
   padding: 16px 20px;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F5F3EF;
 `;
 
 const HeaderTop = styled.div`
@@ -377,7 +378,7 @@ const NotificationBell = styled.div`
 const FilterSection = styled.div`
   padding: 8px 20px;
   background-color: transparent;
-  margin-bottom: 12px;
+  margin-bottom: 2px;
 `;
 
 const FilterDropdowns = styled.div`
@@ -503,8 +504,241 @@ const FilterBadge = styled.span`
 
 const Content = styled.div`
   flex: 1;
-  padding: 0 20px 20px 20px;
+  padding: 0 20px 100px 20px; /* Added extra space for floating nav */
   overflow-y: auto;
+`;
+
+// Updated Filter Grid Layout - 4 on top, 2+1 on bottom (Compact)
+const FilterContainer = styled.div`
+  padding: 12px 16px 16px 16px;
+  margin-bottom: 8px;
+`;
+
+const TopFilterRow = styled.div`
+  display: flex;
+  justify-content: space-evenly;
+  gap: 12px;
+  margin-bottom: 18px;
+  align-items: center;
+`;
+
+const BottomFilterRow = styled.div`
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  max-width: 180px;
+  margin: 0 auto;
+  gap: 16px;
+`;
+
+const FilterButton = styled.button<{ $isActive: boolean; $color?: string }>`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: ${({ $color, $isActive }) => 
+    $isActive 
+      ? `linear-gradient(135deg, ${$color || '#2D5F4F'}, ${$color || '#2D5F4F'}dd)` 
+      : `linear-gradient(135deg, ${$color || '#2D5F4F'}22, ${$color || '#2D5F4F'}44)`
+  };
+  border: 2px solid ${({ $color, $isActive }) => $isActive ? $color || '#2D5F4F' : `${$color || '#2D5F4F'}55`};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const FilterIcon = styled.div<{ $isActive: boolean }>`
+  font-size: 20px;
+  color: ${({ $isActive }) => $isActive ? '#FFFFFF' : '#666666'};
+  z-index: 1;
+`;
+
+const FilterLabel = styled.span<{ $isActive: boolean }>`
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 500;
+  color: #666666;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+// Badge for integration partners
+const IntegrationBadge = styled.div`
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #FFFFFF;
+  color: #333;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 7px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 20px;
+  text-align: center;
+  z-index: 2;
+`;
+
+// AI Match Button Styles
+const AIMatchButton = styled.button`
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #FF4444;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+  position: relative;
+  
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(255, 68, 68, 0.4);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid #FF4444;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1.3);
+      opacity: 0;
+    }
+  }
+`;
+
+const AIIcon = styled.span`
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  z-index: 1;
+`;
+
+// AI Matching Modal
+const AIModal = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+`;
+
+const AIModalContent = styled.div`
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+`;
+
+const AIModalIcon = styled.div`
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 28px;
+`;
+
+const AIModalTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+`;
+
+const AIModalDesc = styled.p`
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+`;
+
+const AIModalButtons = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const AIModalButton = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  ${({ $primary }) => $primary ? `
+    background: #2D5F4F;
+    color: white;
+    border: none;
+    
+    &:hover {
+      background: #1F4A3A;
+    }
+  ` : `
+    background: white;
+    color: #666;
+    border: 1px solid #E0E0E0;
+    
+    &:hover {
+      background: #F5F5F5;
+    }
+  `}
 `;
 
 // Service Category Buttons (with optimized spacing)
@@ -1111,9 +1345,42 @@ const CleanCardUserInfo = styled.div`
   justify-content: center;
 `;
 
-const CleanUserHeader = styled.div`
+// Service Badge Styling
+const ServiceBadge = styled.div<{ $service: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  background: ${({ $service }) => 
+    $service === 'localGuide' ? '#E8F5FF' :
+    $service === 'homestay' ? '#FFF0F5' :
+    $service === 'marketplace' ? '#FFF3E0' :
+    $service === 'openToConnect' ? '#E8F4E8' :
+    $service === 'bersebuddy' ? '#F3E5F5' :
+    $service === 'bersementor' ? '#FFEBEE' :
+    '#F5F5F5'
+  };
+  color: ${({ $service }) => 
+    $service === 'localGuide' ? '#0066CC' :
+    $service === 'homestay' ? '#C2185B' :
+    $service === 'marketplace' ? '#FF9800' :
+    $service === 'openToConnect' ? '#2D5F4F' :
+    $service === 'bersebuddy' ? '#9C27B0' :
+    $service === 'bersementor' ? '#D32F2F' :
+    '#666'
+  };
+`;
+
+const ServiceIcon = styled.span<{ $service: string }>`
+  font-size: 12px;
+`;
+
+const UserHeaderDiv = styled.div`
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
   width: 100%;
 `;
@@ -1139,14 +1406,14 @@ const CleanUserName = styled.h3`
   font-size: 17px;
   font-weight: bold;
   color: #333;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
 `;
 
 const CleanUserMeta = styled.p`
   margin: 0;
   font-size: 13px;
   color: #666;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
 `;
 
 const CompactRating = styled.div`
@@ -1165,7 +1432,7 @@ const CompactLevelBadge = styled.div<{ $color: string }>`
   color: white;
   font-size: 11px;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
@@ -1174,7 +1441,7 @@ const CompactPersonalityBadge = styled.div<{ $temperament: 'NT' | 'NF' | 'SJ' | 
   border-radius: 10px;
   font-size: 10px;
   font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   
   ${({ $temperament }) => {
     switch ($temperament) {
@@ -1211,7 +1478,7 @@ const CleanInterestTag = styled.span<{ $clickable?: boolean }>`
   border-radius: 12px;
   font-size: 10px;
   font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
   transition: all 0.2s ease;
   border: 1px solid #BBDEFB;
@@ -1235,7 +1502,7 @@ const CleanShortBio = styled.p`
   font-size: 13px;
   color: #444;
   line-height: 1.4;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
 `;
 
 const CommunityAffiliationsSection = styled.div`
@@ -1257,7 +1524,7 @@ const CommunityAffiliation = styled.div<{ $type: 'educational' | 'professional' 
   border-radius: 12px;
   font-size: 10px;
   font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
@@ -1312,7 +1579,7 @@ const CleanTrustChain = styled.div`
   transition: all 0.2s ease;
   font-size: 12px;
   color: #666;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   flex: 1;
   
   &:hover {
@@ -1334,7 +1601,7 @@ const LocationLogbookButton = styled.div`
   transition: all 0.2s ease;
   font-size: 12px;
   color: #1976D2;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   flex: 1;
   
   &:hover {
@@ -1706,7 +1973,7 @@ const SendMessageActionButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   
   &:hover {
     background: #1F4A3A;
@@ -1727,7 +1994,7 @@ const ViewProfileActionButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   
   &:hover {
     background: #f5f5f5;
@@ -1765,7 +2032,7 @@ const ServicesLabel = styled.div`
   letter-spacing: 0.5px;
   font-weight: 500;
   margin-bottom: 6px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
 `;
 
 const CleanServicesRow = styled.div`
@@ -1787,7 +2054,7 @@ const CleanServiceTag = styled.div<{ $borderColor: string }>`
   border-top: 1px solid #F0F0F0;
   border-right: 1px solid #F0F0F0;
   border-bottom: 1px solid #F0F0F0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
 `;
 
 const CleanActionButton = styled.button`
@@ -1801,7 +2068,7 @@ const CleanActionButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
   margin-top: 12px;
   
   &:hover {
@@ -1914,21 +2181,6 @@ const FilterRow = styled.div`
   gap: 12px;
 `;
 
-const FilterButton = styled.button<{ hasFilter?: boolean }>`
-  flex: 1;
-  padding: 12px 16px;
-  background: ${({ hasFilter }) => hasFilter ? '#2D5F4F' : 'white'};
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
-  font-size: 14px;
-  color: ${({ hasFilter }) => hasFilter ? 'white' : '#333'};
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    background-color: ${({ hasFilter }) => hasFilter ? '#1F4A3A' : '#f5f5f5'};
-  }
-`;
 
 // Filter Modal Styles
 const FilterModalOverlay = styled.div<{ $isOpen: boolean }>`
@@ -2535,14 +2787,54 @@ const ChatButton = styled.button`
 
 
 
-// Top service category buttons data (matching BerseConnect design)
-const topServiceButtons = [
-  { id: 'local-guides', name: 'Local Guides', icon: '🗺️', color: '#1976D2' },
-  { id: 'homestay', name: 'Homestay', icon: '🏠', color: '#D32F2F' },
-  { id: 'freelance', name: 'Freelance', icon: '💼', color: '#7B1FA2' },
-  { id: 'marketplace', name: 'Marketplace', icon: '⚙️', color: '#F57C00' },
-  { id: 'open-connect', name: 'Open to Connect', icon: '🤝', color: '#388E3C' }
+// Filter buttons configuration with navigation and filtering support
+const filterButtons = [
+  { 
+    id: 'local-guides', 
+    label: 'Local Guides', 
+    icon: '🗺️',
+    filterKey: 'localGuide', // matches user.servicesOffered.localGuide
+    color: '#1976D2'
+  },
+  { 
+    id: 'homestay', 
+    label: 'Homestay', 
+    icon: '🏠',
+    filterKey: 'homestay', // matches user.servicesOffered.homestay
+    color: '#D32F2F'
+  },
+  { 
+    id: 'marketplace', 
+    label: 'Marketplace', 
+    icon: '🛍️',
+    filterKey: 'marketplace', // matches user.servicesOffered.marketplace
+    color: '#F57C00'
+  },
+  { 
+    id: 'open-to-connect', 
+    label: 'Open to Connect', 
+    icon: '🤝',
+    filterKey: 'openToConnect', // matches user.servicesOffered.openToConnect
+    color: '#388E3C'
+  },
+  { 
+    id: 'bersebuddy', 
+    label: 'BerseBuddy', 
+    icon: '👥',
+    screen: '/bersebuddy', // navigates to BerseBuddyScreen
+    color: '#7B1FA2'
+  },
+  { 
+    id: 'bersementor', 
+    label: 'BerseMentor', 
+    icon: '👨‍🏫',
+    screen: '/bersementor', // navigates to BerseMentorScreen
+    color: '#2E7D32'
+  }
 ];
+
+// Legacy support - keep topServiceButtons for existing code compatibility
+const topServiceButtons = filterButtons;
 
 
 // Category Color Function
@@ -2559,10 +2851,12 @@ const getCategoryColor = (category: string) => {
 
 export const BerseMatchScreen: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showDetailedProfile, setShowDetailedProfile] = useState(false);
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showTrustFeedback, setShowTrustFeedback] = useState(false);
   const [selectedTrustUser, setSelectedTrustUser] = useState<UserProfile | null>(null);
@@ -2586,6 +2880,7 @@ export const BerseMatchScreen: React.FC = () => {
   const [activeSearchTerm, setActiveSearchTerm] = useState('');
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   // Enhanced Search State
   const [enhancedSearchOpen, setEnhancedSearchOpen] = useState(false);
@@ -3193,81 +3488,86 @@ export const BerseMatchScreen: React.FC = () => {
     return socialOptions.slice(0, numLinks);
   };
 
-  // Get user offerings (category-based with booking)
+  // Get user offerings (based on actual services offered)
   const getUserOfferings = (user: UserProfile) => {
-    // Sample offering templates for different user types
-    const offeringTemplates = {
-      amina: [
+    if (!user.servicesOffered) return [];
+    
+    const serviceTemplates = {
+      localGuide: [
         {
           category: 'local-guides',
           icon: '🗺️',
           categoryName: 'Local Guides',
-          title: 'Architecture Walking Tours',
-          description: 'Professional guided tours of historic architecture with insider knowledge',
+          title: 'City Walking Tours',
+          description: `Expert guided tours around ${user.location} with local insights and hidden gems`,
           price: 'RM 80/person',
           duration: '3 hours',
           available: true
         },
         {
-          category: 'freelance', 
-          icon: '💼',
-          categoryName: 'Freelance',
-          title: 'Architecture Consultation',
-          description: 'Professional architectural design review and project consultation',
-          price: 'RM 200/hour',
-          duration: 'Flexible',
-          available: true
-        },
-        {
-          category: 'freelance',
-          icon: '💼', 
-          categoryName: 'Freelance',
-          title: 'Photography Services',
-          description: 'Portrait and architectural photography sessions',
-          price: 'RM 150/session',
-          duration: '2-3 hours',
-          available: true
-        },
-        {
-          category: 'marketplace',
-          icon: '⚙️',
-          categoryName: 'Marketplace', 
-          title: 'Travel Photography Prints',
-          description: 'High-quality prints from worldwide architecture photography',
-          price: 'From RM 35',
-          duration: 'Ship in 3-5 days',
-          available: true
-        },
-        {
-          category: 'open-to-connect',
-          icon: '🤝',
-          categoryName: 'Open to Connect',
-          title: 'Coffee & Architecture Chat',
-          description: 'Casual meetup to discuss architecture, photography, and travel experiences',
-          price: 'Free',
-          duration: '1-2 hours',
+          category: 'local-guides',
+          icon: '🗺️',
+          categoryName: 'Local Guides', 
+          title: 'Cultural Heritage Experience',
+          description: `Authentic cultural tours showcasing ${user.location}'s rich history and traditions`,
+          price: 'RM 120/day',
+          duration: '6-8 hours',
           available: true
         }
       ],
-      marwan: [
+      homestay: [
         {
           category: 'homestay',
           icon: '🏠',
           categoryName: 'Homestay',
-          title: 'Muslim Family Homestay',
-          description: 'Comfortable room with halal meals in Malaysian family setting',
+          title: 'Comfortable Home Stay',
+          description: `Welcoming accommodation in ${user.location} with authentic local experience`,
           price: 'RM 180/night',
           duration: 'Per night',
           available: true
         },
         {
-          category: 'local-guides', 
-          icon: '🗺️',
-          categoryName: 'Local Guides',
-          title: 'Cultural Heritage Tours',
-          description: 'Authentic Malaysian cultural experiences with Islamic perspective',
-          price: 'RM 120/day',
-          duration: '6-8 hours',
+          category: 'homestay',
+          icon: '🏠',
+          categoryName: 'Homestay',
+          title: 'Family Homestay Experience',
+          description: 'Comfortable room with home-cooked meals and cultural immersion',
+          price: 'RM 220/night (meals included)',
+          duration: 'Per night',
+          available: true
+        }
+      ],
+      marketplace: [
+        {
+          category: 'marketplace',
+          icon: '🛍️',
+          categoryName: 'Marketplace',
+          title: `${user.profession} Services`,
+          description: `Professional ${user.profession.toLowerCase()} consultation and services`,
+          price: 'RM 150/hour',
+          duration: 'Flexible',
+          available: true
+        },
+        {
+          category: 'marketplace',
+          icon: '🛍️',
+          categoryName: 'Marketplace',
+          title: 'Freelance Projects',
+          description: 'Custom projects and professional services in my area of expertise',
+          price: 'From RM 200',
+          duration: 'Project-based',
+          available: true
+        }
+      ],
+      openToConnect: [
+        {
+          category: 'open-to-connect',
+          icon: '🤝',
+          categoryName: 'Open to Connect',
+          title: 'Coffee Chat & Networking',
+          description: 'Casual conversation over coffee to share experiences and make connections',
+          price: 'Free',
+          duration: '1-2 hours',
           available: true
         },
         {
@@ -3275,86 +3575,84 @@ export const BerseMatchScreen: React.FC = () => {
           icon: '🤝',
           categoryName: 'Open to Connect',
           title: 'Language Exchange',
-          description: 'Practice English/Malay conversation over coffee or meals',
+          description: `Practice languages and learn about ${user.location} culture together`,
           price: 'Free',
-          duration: '1-2 hours',
+          duration: '1 hour',
           available: true
         }
       ],
-      general: [
+      bersebuddy: [
         {
-          category: 'freelance',
-          icon: '💼',
-          categoryName: 'Freelance',
-          title: 'Professional Services',
-          description: 'Consultation and professional guidance in my field of expertise',
-          price: 'RM 100/hour',
+          category: 'bersebuddy',
+          icon: '👥',
+          categoryName: 'BerseBuddy',
+          title: 'Social Companion',
+          description: 'Friendly companion for exploring the city, attending events, or just hanging out',
+          price: 'RM 50/day',
           duration: 'Flexible',
           available: true
         },
         {
-          category: 'local-guides',
-          icon: '🗺️',
-          categoryName: 'Local Guides',
-          title: 'City Tours & Recommendations',
-          description: 'Share local insights and favorite spots around the city',
-          price: 'RM 60/person',
-          duration: '2-3 hours',
+          category: 'bersebuddy',
+          icon: '👥',
+          categoryName: 'BerseBuddy',
+          title: 'Activity Partner',
+          description: 'Join me for hobbies, sports, or social activities around the city',
+          price: 'RM 30/activity',
+          duration: '2-4 hours',
+          available: true
+        }
+      ],
+      bersementor: [
+        {
+          category: 'bersementor',
+          icon: '👨‍🏫',
+          categoryName: 'BerseMentor',
+          title: `${user.profession} Mentoring`,
+          description: `Professional mentorship and career guidance in ${user.profession.toLowerCase()}`,
+          price: 'RM 200/session',
+          duration: '1 hour',
           available: true
         },
         {
-          category: 'open-to-connect',
-          icon: '🤝',
-          categoryName: 'Open to Connect',
-          title: 'Coffee Meetup',
-          description: 'Casual conversation and networking over coffee',
-          price: 'Free',
-          duration: '1 hour',
+          category: 'bersementor',
+          icon: '👨‍🏫',
+          categoryName: 'BerseMentor',
+          title: 'Career Development Coaching',
+          description: 'Personalized career advice and skill development guidance',
+          price: 'RM 250/session',
+          duration: '1.5 hours',
           available: true
         }
       ]
     };
 
-    // Determine user type based on profile characteristics
-    const userSeed = parseInt(user.id) || 1;
-    const firstName = user.firstName.toLowerCase();
+    // Generate offerings based on actual services offered
+    const userOfferings = [];
     
-    let userTemplate = 'general';
-    if (firstName === 'amina' || user.profession.toLowerCase().includes('architect')) {
-      userTemplate = 'amina';
-    } else if (firstName === 'marwan' || user.profession.toLowerCase().includes('host')) {
-      userTemplate = 'marwan';
+    if (user.servicesOffered.localGuide) {
+      userOfferings.push(...serviceTemplates.localGuide);
+    }
+    if (user.servicesOffered.homestay) {
+      userOfferings.push(...serviceTemplates.homestay);
+    }
+    if (user.servicesOffered.marketplace) {
+      userOfferings.push(...serviceTemplates.marketplace);
+    }
+    if (user.servicesOffered.openToConnect) {
+      userOfferings.push(...serviceTemplates.openToConnect);
+    }
+    if (user.servicesOffered.bersebuddy) {
+      userOfferings.push(...serviceTemplates.bersebuddy);
+    }
+    if (user.servicesOffered.bersementor) {
+      userOfferings.push(...serviceTemplates.bersementor);
     }
 
-    // Return 2-4 offerings per user
-    const offerings = offeringTemplates[userTemplate] || offeringTemplates.general;
-    const numOfferings = 2 + (userSeed % 3); // 2-4 offerings
-    const startIndex = userSeed % Math.max(1, offerings.length - numOfferings + 1);
-    
-    return offerings.slice(startIndex, startIndex + numOfferings);
+    // Return all offerings for services they actually offer
+    return userOfferings;
   };
 
-  // Get services offered by user (for elegant service tags)
-  const getUserServices = (user: UserProfile) => {
-    const serviceOptions = [
-      { name: 'Local Guides', borderColor: '#1976D2' },
-      { name: 'Homestay', borderColor: '#D32F2F' },
-      { name: 'Freelance', borderColor: '#7B1FA2' },
-      { name: 'Services', borderColor: '#F57C00' },
-      { name: 'Meetups', borderColor: '#388E3C' }
-    ];
-    
-    // Assign 2-4 services per user based on their ID and profession
-    const numServices = 2 + (parseInt(user.id) % 3);
-    const startIndex = parseInt(user.id) % serviceOptions.length;
-    const userServices = [];
-    
-    for (let i = 0; i < numServices; i++) {
-      userServices.push(serviceOptions[(startIndex + i) % serviceOptions.length]);
-    }
-    
-    return userServices;
-  };
 
   // Load users data
   const loadUsers = async () => {
@@ -3469,10 +3767,17 @@ export const BerseMatchScreen: React.FC = () => {
     setSelectedLocationCity('');
   };
 
-  // Top service category button handler
-  const handleTopServiceCategoryClick = (categoryId: string) => {
-    const isSelecting = selectedTopServiceCategory !== categoryId;
-    setSelectedTopServiceCategory(isSelecting ? categoryId : '');
+  // Enhanced filter handler with navigation and filtering support
+  const handleFilterClick = (filter: any) => {
+    // If filter has a screen property, navigate to that screen
+    if (filter.screen) {
+      navigate(filter.screen);
+      return;
+    }
+    
+    // Otherwise apply the filter
+    const isSelecting = selectedTopServiceCategory !== filter.id;
+    setSelectedTopServiceCategory(isSelecting ? filter.id : '');
     
     if (isSelecting) {
       // Award points for exploring services
@@ -3480,12 +3785,40 @@ export const BerseMatchScreen: React.FC = () => {
       const newPoints = currentPoints + 1;
       localStorage.setItem('user_points', newPoints.toString());
       
-      // Find the service name for feedback
-      const serviceName = topServiceButtons.find(s => s.id === categoryId)?.name || 'Service';
-      
-      // Provide subtle feedback (could be replaced with a toast system)
-      console.log(`✨ Exploring ${serviceName} services! +1 BerseMuka Point`);
+      // Provide subtle feedback
+      console.log(`✨ Exploring ${filter.label} services! +1 BerseMuka Point`);
     }
+  };
+
+  // Legacy support - keep the old function name for existing code
+  const handleTopServiceCategoryClick = handleFilterClick;
+
+  // AI Matching handler
+  const handleAIMatch = () => {
+    setShowAIModal(false);
+    // Navigate to AI matching screen or show AI matching results
+    navigate('/ai-match', { 
+      state: { 
+        matchType: 'similarity',
+        matchCount: 3 
+      }
+    });
+  };
+
+  // Get all services offered by user
+  const getAllUserServices = (servicesOffered?: any) => {
+    if (!servicesOffered) return [];
+    
+    const services = [];
+    
+    if (servicesOffered.localGuide) services.push({ key: 'localGuide', label: 'Local Guide', icon: '🗺️' });
+    if (servicesOffered.homestay) services.push({ key: 'homestay', label: 'Homestay', icon: '🏠' });
+    if (servicesOffered.marketplace) services.push({ key: 'marketplace', label: 'Marketplace', icon: '🛍️' });
+    if (servicesOffered.openToConnect) services.push({ key: 'openToConnect', label: 'Open to Connect', icon: '🤝' });
+    if (servicesOffered.bersebuddy) services.push({ key: 'bersebuddy', label: 'BerseBuddy', icon: '👥' });
+    if (servicesOffered.bersementor) services.push({ key: 'bersementor', label: 'BerseMentor', icon: '👨‍🏫' });
+    
+    return services;
   };
 
   // Clear all filters function
@@ -3527,25 +3860,15 @@ export const BerseMatchScreen: React.FC = () => {
       user.interests.some(userInterest => userInterest.toLowerCase().includes(interest.toLowerCase()))
     );
     
-    // Service category filter
+    // Service category filter - check servicesOffered property
     const matchesServiceCategory = selectedTopServiceCategory === '' || (() => {
-      const service = selectedTopServiceCategory;
-      if (service === 'local-guides') {
-        return user.profession.toLowerCase().includes('guide') || user.interests.some(i => i.toLowerCase().includes('travel') || i.toLowerCase().includes('tour'));
-      }
-      if (service === 'homestay') {
-        return user.profession.toLowerCase().includes('host') || user.interests.some(i => i.toLowerCase().includes('accommodation') || i.toLowerCase().includes('homestay'));
-      }
-      if (service === 'gig-jobs') {
-        return user.profession.toLowerCase().includes('freelance') || user.profession.toLowerCase().includes('photographer') || user.profession.toLowerCase().includes('tutor');
-      }
-      if (service === 'services') {
-        return user.profession.toLowerCase().includes('repair') || user.profession.toLowerCase().includes('cleaning') || user.profession.toLowerCase().includes('support');
-      }
-      if (service === 'open-connect') {
-        return user.interests.some(i => i.toLowerCase().includes('coffee') || i.toLowerCase().includes('hiking') || i.toLowerCase().includes('study'));
-      }
-      return true;
+      if (!user.servicesOffered) return false;
+      
+      const filter = filterButtons.find(btn => btn.id === selectedTopServiceCategory);
+      if (!filter || !filter.filterKey) return true;
+      
+      // Check if user offers this service
+      return user.servicesOffered[filter.filterKey as keyof typeof user.servicesOffered] === true;
     })();
     
     return matchesSearch && matchesCountry && matchesCities && matchesInterests && matchesServiceCategory;
@@ -3602,7 +3925,7 @@ They'll receive your booking request and can coordinate the details with you dir
       <StatusBar />
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F5DC',
+        background: '#F5F3EF',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -3612,7 +3935,30 @@ They'll receive your booking request and can coordinate the details with you dir
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              borderRadius: '12px',
+              padding: '4px 8px 4px 4px',
+              position: 'relative'
+            }}
+            onClick={() => {
+              console.log('Profile icon clicked - opening sidebar');
+              setShowProfileSidebar(true);
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(74, 103, 65, 0.1)';
+              e.currentTarget.style.transform = 'translateX(2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
             <div style={{
               width: '40px',
               height: '40px',
@@ -3692,27 +4038,57 @@ They'll receive your booking request and can coordinate the details with you dir
         </FilterDropdowns>
       </FilterSection>
 
-      {/* Service Category Buttons */}
-      <ServiceButtonsContainer>
-        {topServiceButtons.map((service) => (
-          <ServiceButtonCard
-            key={service.id}
-            $isSelected={selectedTopServiceCategory === service.id}
-            onClick={() => handleTopServiceCategoryClick(service.id)}
-            title={`Select ${service.name} services`}
-          >
-            <ServiceButtonIcon 
-              $color={service.color} 
-              $isSelected={selectedTopServiceCategory === service.id}
+      {/* Enhanced Filter Layout - 4 on top, 2+1 on bottom */}
+      <FilterContainer>
+        {/* Top Row - 4 Filter Buttons */}
+        <TopFilterRow>
+          {filterButtons.slice(0, 4).map((filter) => (
+            <FilterButton
+              key={filter.id}
+              $isActive={selectedTopServiceCategory === filter.id}
+              $color={filter.color}
+              onClick={() => handleFilterClick(filter)}
             >
-              {service.icon}
-            </ServiceButtonIcon>
-            <ServiceButtonLabel $isSelected={selectedTopServiceCategory === service.id}>
-              {service.name}
-            </ServiceButtonLabel>
-          </ServiceButtonCard>
-        ))}
-      </ServiceButtonsContainer>
+              <FilterIcon $isActive={selectedTopServiceCategory === filter.id}>
+                {filter.icon}
+              </FilterIcon>
+              <FilterLabel $isActive={selectedTopServiceCategory === filter.id}>
+                {filter.label}
+              </FilterLabel>
+            </FilterButton>
+          ))}
+        </TopFilterRow>
+
+        {/* Bottom Row - BerseBuddy + AI Button + BerseMentor */}
+        <BottomFilterRow>
+          <FilterButton
+            onClick={() => navigate('/bersebuddy')}
+            style={{ position: 'relative' }}
+            $isActive={false}
+            $color="#7B1FA2"
+          >
+            <IntegrationBadge>EMGS</IntegrationBadge>
+            <FilterIcon $isActive={false}>👥</FilterIcon>
+            <FilterLabel $isActive={false}>BerseBuddy</FilterLabel>
+          </FilterButton>
+
+          {/* AI Matching Button in the middle */}
+          <AIMatchButton onClick={() => setShowAIModal(true)}>
+            <AIIcon>?</AIIcon>
+          </AIMatchButton>
+
+          <FilterButton
+            onClick={() => navigate('/bersementor')}
+            style={{ position: 'relative' }}
+            $isActive={false}
+            $color="#2E7D32"
+          >
+            <IntegrationBadge>TalentCorp</IntegrationBadge>
+            <FilterIcon $isActive={false}>👨‍🏫</FilterIcon>
+            <FilterLabel $isActive={false}>BerseMentor</FilterLabel>
+          </FilterButton>
+        </BottomFilterRow>
+      </FilterContainer>
       
       {/* Active Filters Bar */}
       {(selectedCountry !== 'Malaysia' || !selectedCities.includes('All Cities') || selectedInterests.length > 0 || activeSearchTerm || selectedTopServiceCategory) && (
@@ -3763,7 +4139,6 @@ They'll receive your booking request and can coordinate the details with you dir
           filteredUsers.map((user) => {
             const userInterests = getUserInterests(user);
             const shortBio = getShortBio(user);
-            const userServices = getUserServices(user);
             const userLevel = getUserLevel(user);
             const personalityType = getUserPersonalityType(user);
             const achievements = getUserAchievements(user);
@@ -3779,7 +4154,7 @@ They'll receive your booking request and can coordinate the details with you dir
                     {user.isVerified && <VerifiedBadge />}
                   </CleanUserAvatar>
                   <CleanCardUserInfo>
-                    <CleanUserHeader>
+                    <UserHeaderDiv>
                       <UserNameSection>
                         <CleanUserName>{user.fullName}</CleanUserName>
                         <CleanUserMeta>{user.age} • {user.profession}</CleanUserMeta>
@@ -3798,9 +4173,10 @@ They'll receive your booking request and can coordinate the details with you dir
                           </CompactPersonalityBadge>
                         )}
                       </TopRightInfo>
-                    </CleanUserHeader>
+                    </UserHeaderDiv>
                   </CleanCardUserInfo>
                 </CleanUserCardHeader>
+
 
                 {/* CLEAN INTERESTS SECTION */}
                 <CleanInterestsContainer>
@@ -3865,17 +4241,15 @@ They'll receive your booking request and can coordinate the details with you dir
                   </LocationLogbookButton>
                 </DualButtonContainer>
                 
-                {/* CLEAN SERVICES SECTION */}
+                {/* SERVICE BADGES SECTION */}
                 <CleanServicesSection>
                   <ServicesLabel>Services Offered:</ServicesLabel>
                   <CleanServicesRow>
-                    {userServices.map((service, index) => (
-                      <CleanServiceTag
-                        key={index}
-                        $borderColor={service.borderColor}
-                      >
-                        {service.name}
-                      </CleanServiceTag>
+                    {getAllUserServices(user.servicesOffered).map((service, index) => (
+                      <ServiceBadge key={index} $service={service.key}>
+                        <ServiceIcon $service={service.key}>{service.icon}</ServiceIcon>
+                        {service.label}
+                      </ServiceBadge>
                     ))}
                   </CleanServicesRow>
                 </CleanServicesSection>
@@ -4517,7 +4891,42 @@ They'll receive your booking request and can coordinate the details with you dir
       </EnhancedSearchModal>
 
 
-      <BottomNav activeTab="match" />
+      <MainNav 
+        activeTab="match"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home': navigate('/dashboard'); break;
+            case 'connect': navigate('/connect'); break;
+            case 'match': navigate('/match'); break;
+            case 'forum': navigate('/forum'); break;
+          }
+        }}
+      />
+      
+      {/* AI Matching Modal */}
+      <AIModal $isOpen={showAIModal}>
+        <AIModalContent>
+          <AIModalIcon>🤖</AIModalIcon>
+          <AIModalTitle>AI-Powered Matching</AIModalTitle>
+          <AIModalDesc>
+            Would you like our AI to match you with 3 profiles that are similar to yours? 
+            We'll analyze your interests, skills, and preferences to find the best connections for you.
+          </AIModalDesc>
+          <AIModalButtons>
+            <AIModalButton onClick={() => setShowAIModal(false)}>
+              No, thanks
+            </AIModalButton>
+            <AIModalButton $primary onClick={handleAIMatch}>
+              Yes, match me!
+            </AIModalButton>
+          </AIModalButtons>
+        </AIModalContent>
+      </AIModal>
+
+      <ProfileSidebar 
+        isOpen={showProfileSidebar}
+        onClose={() => setShowProfileSidebar(false)}
+      />
     </Container>
   );
 };

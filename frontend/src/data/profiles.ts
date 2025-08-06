@@ -35,6 +35,15 @@ export interface UserProfile {
   lookingFor?: string[];
   photos?: string[];
   compatibility?: number;
+  // Services offered
+  servicesOffered?: {
+    localGuide?: boolean;
+    homestay?: boolean;
+    marketplace?: boolean;
+    openToConnect?: boolean;
+    bersebuddy?: boolean;
+    bersementor?: boolean;
+  };
 }
 
 export const userProfiles: UserProfile[] = [
@@ -69,7 +78,11 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Architect at ArchDesign Studio',
     relationshipStatus: 'Single',
     lookingFor: ['Friendship', 'Professional Network', 'Travel Partner'],
-    compatibility: 85
+    compatibility: 85,
+    servicesOffered: {
+      localGuide: true,
+      openToConnect: true
+    }
   },
   {
     id: '2',
@@ -99,7 +112,12 @@ export const userProfiles: UserProfile[] = [
     work: 'Freelance Photographer & Video Producer',
     relationshipStatus: 'Single',
     lookingFor: ['Friendship', 'Business Network', 'Travel Partner'],
-    compatibility: 78
+    compatibility: 78,
+    servicesOffered: {
+      marketplace: true,
+      bersementor: true,
+      openToConnect: true
+    }
   },
   {
     id: '3',
@@ -128,7 +146,12 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Engineer at Swiss Infrastructure Ltd',
     relationshipStatus: 'Married',
     lookingFor: ['Friendship', 'Family Network', 'Professional Network'],
-    compatibility: 72
+    compatibility: 72,
+    servicesOffered: {
+      homestay: true,
+      localGuide: true,
+      bersementor: true
+    }
   },
   {
     id: '4',
@@ -186,7 +209,11 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Developer at TechMalaysia',
     relationshipStatus: 'Single',
     lookingFor: ['Friendship', 'Food Partners', 'Professional Network'],
-    compatibility: 82
+    compatibility: 82,
+    servicesOffered: {
+      bersebuddy: true,
+      marketplace: true
+    }
   },
   {
     id: '6',
@@ -216,7 +243,12 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Data Analyst at DataTech Istanbul',
     relationshipStatus: 'Single',
     lookingFor: ['Friendship', 'Professional Network', 'Travel Partner'],
-    compatibility: 75
+    compatibility: 75,
+    servicesOffered: {
+      bersementor: true,
+      marketplace: true,
+      openToConnect: true
+    }
   },
   {
     id: '7',
@@ -245,7 +277,11 @@ export const userProfiles: UserProfile[] = [
     work: 'Student & Volunteer at Cairo Medical Center',
     relationshipStatus: 'Single',
     lookingFor: ['Friendship', 'Study Group', 'Professional Network'],
-    compatibility: 90
+    compatibility: 90,
+    servicesOffered: {
+      openToConnect: true,
+      bersementor: true
+    }
   },
   {
     id: '8',
@@ -275,7 +311,15 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Software Engineer at Islamic Finance Hub',
     relationshipStatus: 'Married',
     lookingFor: ['Professional Network', 'Innovation Partners', 'Mentorship'],
-    compatibility: 68
+    compatibility: 68,
+    servicesOffered: {
+      localGuide: true,
+      homestay: true,
+      marketplace: true,
+      openToConnect: true,
+      bersebuddy: true,
+      bersementor: true
+    }
   },
   {
     id: '9',
@@ -304,7 +348,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Founder & CEO of Modest Threads',
     relationshipStatus: 'Single',
     lookingFor: ['Business Network', 'Mentorship', 'Friendship'],
-    compatibility: 83
+    compatibility: 83,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '10',
@@ -333,7 +380,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Owner of Teranga Restaurant',
     relationshipStatus: 'Married',
     lookingFor: ['Business Network', 'Cultural Exchange', 'Food Enthusiasts'],
-    compatibility: 71
+    compatibility: 71,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '11',
@@ -363,7 +413,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Health Officer at WHO',
     relationshipStatus: 'Single',
     lookingFor: ['Professional Network', 'Research Collaboration', 'Mentorship'],
-    compatibility: 77
+    compatibility: 77,
+    servicesOffered: {
+      bersementor: true
+    }
   },
   {
     id: '12',
@@ -392,7 +445,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Program Coordinator at UNHCR Jordan',
     relationshipStatus: 'Single',
     lookingFor: ['Professional Network', 'Humanitarian Partners', 'Friendship'],
-    compatibility: 86
+    compatibility: 86,
+    servicesOffered: {
+      openToConnect: true
+    }
   },
   // LOCAL GUIDES PROFILES (4 profiles)
   {
@@ -425,7 +481,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Cultural Heritage Guide & Tour Operator',
     relationshipStatus: 'Married',
     lookingFor: ['Local Guides', 'Open to Connect', 'Cultural Exchange'],
-    compatibility: 92
+    compatibility: 92,
+    servicesOffered: {
+      localGuide: true
+    }
   },
   {
     id: '14',
@@ -458,7 +517,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Adventure Tour Guide & Environmental Educator',
     relationshipStatus: 'Single',
     lookingFor: ['Local Guides', 'Services', 'Adventure Partners'],
-    compatibility: 87
+    compatibility: 87,
+    servicesOffered: {
+      localGuide: true
+    }
   },
   {
     id: '15',
@@ -490,7 +552,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Food Tour Guide & Culinary Consultant',
     relationshipStatus: 'Married',
     lookingFor: ['Local Guides', 'Food Network', 'Cultural Exchange'],
-    compatibility: 79
+    compatibility: 79,
+    servicesOffered: {
+      localGuide: true
+    }
   },
   {
     id: '16',
@@ -522,7 +587,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Freelance Architect & City Guide',
     relationshipStatus: 'Single',
     lookingFor: ['Local Guides', 'Freelance', 'Creative Network'],
-    compatibility: 91
+    compatibility: 91,
+    servicesOffered: {
+      localGuide: true
+    }
   },
   // HOMESTAY PROFILES (4 profiles)
   {
@@ -556,7 +624,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Homestay Owner & Traditional Cook',
     relationshipStatus: 'Married',
     lookingFor: ['Homestay', 'Services', 'Cultural Exchange'],
-    compatibility: 84
+    compatibility: 84,
+    servicesOffered: {
+      homestay: true
+    }
   },
   {
     id: '18',
@@ -588,7 +659,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Property Manager & Homestay Operator',
     relationshipStatus: 'Single',
     lookingFor: ['Homestay', 'Open to Connect', 'Business Network'],
-    compatibility: 76
+    compatibility: 76,
+    servicesOffered: {
+      homestay: true
+    }
   },
   {
     id: '19',
@@ -620,7 +694,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Cultural Homestay Host & Cooking Instructor',
     relationshipStatus: 'Married',
     lookingFor: ['Homestay', 'Local Guides', 'Cultural Exchange'],
-    compatibility: 89
+    compatibility: 89,
+    servicesOffered: {
+      homestay: true
+    }
   },
   {
     id: '20',
@@ -653,7 +730,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Eco-Homestay Owner & Environmental Consultant',
     relationshipStatus: 'Married',
     lookingFor: ['Homestay', 'Services', 'Environmental Network'],
-    compatibility: 73
+    compatibility: 73,
+    servicesOffered: {
+      homestay: true
+    }
   },
   // GIG JOBS PROFILES (4 profiles)
   {
@@ -686,7 +766,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Full-Stack Developer & Freelance Consultant',
     relationshipStatus: 'Single',
     lookingFor: ['Freelance', 'Services', 'Tech Network'],
-    compatibility: 85
+    compatibility: 85,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '22',
@@ -718,7 +801,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Freelance Designer & Portrait Photographer',
     relationshipStatus: 'Single',
     lookingFor: ['Freelance', 'Open to Connect', 'Creative Network'],
-    compatibility: 93
+    compatibility: 93,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '23',
@@ -751,7 +837,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Senior Business Consultant & Startup Advisor',
     relationshipStatus: 'Married',
     lookingFor: ['Freelance', 'Services', 'Business Network'],
-    compatibility: 78
+    compatibility: 78,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '24',
@@ -783,7 +872,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Freelance Content Writer & Professional Translator',
     relationshipStatus: 'Single',
     lookingFor: ['Freelance', 'Writing Network', 'Language Exchange'],
-    compatibility: 88
+    compatibility: 88,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   // SERVICES PROFILES (4 profiles)
   {
@@ -816,7 +908,10 @@ export const userProfiles: UserProfile[] = [
     work: 'IT Support Specialist & Computer Repair Technician',
     relationshipStatus: 'Married',
     lookingFor: ['Services', 'Freelance', 'Tech Network'],
-    compatibility: 81
+    compatibility: 81,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '26',
@@ -849,7 +944,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Professional Cleaner & Home Organization Specialist',
     relationshipStatus: 'Married',
     lookingFor: ['Services', 'Open to Connect', 'Family Network'],
-    compatibility: 86
+    compatibility: 86,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '27',
@@ -881,7 +979,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Master Automotive Mechanic & Mobile Repair Service',
     relationshipStatus: 'Married',
     lookingFor: ['Services', 'Automotive Network', 'Professional Network'],
-    compatibility: 74
+    compatibility: 74,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   {
     id: '28',
@@ -913,7 +1014,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Certified Personal Trainer & Nutrition Coach',
     relationshipStatus: 'Single',
     lookingFor: ['Services', 'Open to Connect', 'Health Network'],
-    compatibility: 90
+    compatibility: 90,
+    servicesOffered: {
+      marketplace: true
+    }
   },
   // OPEN TO CONNECT PROFILES (4 profiles)
   {
@@ -946,7 +1050,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Student & Part-time Cultural Exchange Coordinator',
     relationshipStatus: 'Single',
     lookingFor: ['Open to Connect', 'Local Guides', 'Cultural Exchange'],
-    compatibility: 95
+    compatibility: 95,
+    servicesOffered: {
+      openToConnect: true
+    }
   },
   {
     id: '30',
@@ -979,7 +1086,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Marketing Manager & Professional Networker',
     relationshipStatus: 'Single',
     lookingFor: ['Open to Connect', 'Freelance', 'Business Network'],
-    compatibility: 83
+    compatibility: 83,
+    servicesOffered: {
+      openToConnect: true
+    }
   },
   {
     id: '31',
@@ -1011,7 +1121,10 @@ export const userProfiles: UserProfile[] = [
     work: 'Community Development Officer & Business Mentor',
     relationshipStatus: 'Married',
     lookingFor: ['Open to Connect', 'Services', 'Entrepreneurship Network'],
-    compatibility: 87
+    compatibility: 87,
+    servicesOffered: {
+      openToConnect: true
+    }
   },
   {
     id: '32',
@@ -1043,7 +1156,10 @@ export const userProfiles: UserProfile[] = [
     work: 'NGO Coordinator & Social Impact Consultant',
     relationshipStatus: 'Single',
     lookingFor: ['Open to Connect', 'Volunteer', 'Environmental Network'],
-    compatibility: 92
+    compatibility: 92,
+    servicesOffered: {
+      openToConnect: true
+    }
   }
 ];
 

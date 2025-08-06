@@ -13,13 +13,13 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F5DC;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
 
 const Header = styled.div`
-  background: #F5F5DC;
+  background: #F5F3EF;
   width: 100%;
   padding: 12px 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -29,16 +29,28 @@ const Header = styled.div`
 `;
 
 const BackButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
   background: none;
   border: none;
-  font-size: 24px;
-  color: #333;
+  color: #2D5F4F;
+  font-size: 16px;
   cursor: pointer;
-  padding: 4px;
+  padding: 8px;
   
   &:hover {
-    color: #2D5F4F;
+    opacity: 0.7;
   }
+`;
+
+const BackIcon = styled.span`
+  font-size: 20px;
+`;
+
+const BackLabel = styled.span`
+  font-size: 14px;
+  font-weight: 500;
 `;
 
 const HeaderText = styled.div`
@@ -62,7 +74,7 @@ const Content = styled.div`
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-  margin-bottom: 80px;
+  margin-bottom: 100px; /* Added extra space for floating nav */
   height: calc(100vh - 200px);
   
   /* Custom scrollbar styling */
@@ -1007,7 +1019,10 @@ export const BerseCardGameScreen: React.FC = () => {
       <StatusBar />
       
       <Header>
-        <BackButton onClick={() => navigate('/profile')}>←</BackButton>
+        <BackButton onClick={() => navigate(-1)}>
+          <BackIcon>←</BackIcon>
+          <BackLabel>Back</BackLabel>
+        </BackButton>
         <HeaderText>
           <HeaderTitle>BerseCardGame</HeaderTitle>
           <HeaderSubtitle>Interactive conversation starter</HeaderSubtitle>
@@ -1059,13 +1074,13 @@ export const BerseCardGameScreen: React.FC = () => {
       </Content>
 
       <MainNav 
-        activeTab="profile"
+        activeTab="home"
         onTabPress={(tab) => {
           switch (tab) {
             case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/berseconnect'); break;
+            case 'connect': navigate('/connect'); break;
             case 'match': navigate('/match'); break;
-            case 'profile': navigate('/profile'); break;
+            case 'forum': navigate('/forum'); break;
           }
         }}
       />

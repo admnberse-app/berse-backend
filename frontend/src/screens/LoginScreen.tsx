@@ -10,14 +10,14 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F9F3E3;
 `;
 
 const Header = styled.div`
   display: flex;
   align-items: center;
   padding: 16px 20px;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F5F3EF;
 `;
 
 const BackButton = styled.button`

@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { useMessaging } from '../contexts/MessagingContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav/MainNav';
 import { GoogleFormsIntegration } from '../components/GoogleFormsIntegration';
 import { RegistrationTracker } from '../components/RegistrationTracker';
 import { ChatGroupManager } from '../components/ChatGroupManager';
@@ -13,9 +13,27 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F5DC;
+  background-color: #F5F3EF;
   max-width: 393px;
   margin: 0 auto;
+  
+  /* Page flip animation */
+  animation: pageFlipIn 0.6s ease-out;
+  transform-origin: left center;
+  
+  @keyframes pageFlipIn {
+    0% {
+      transform: perspective(600px) rotateY(-90deg);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      transform: perspective(600px) rotateY(0deg);
+      opacity: 1;
+    }
+  }
 `;
 
 const Content = styled.div`
@@ -5560,15 +5578,6 @@ export const ProfileScreen: React.FC = () => {
             <MenuArrow>→</MenuArrow>
           </ProfileMenuItem>
 
-          {/* 5. BerseCardGame */}
-          <ProfileMenuItem onClick={() => navigate('/bersecardgame')}>
-            <MenuIcon>🃏</MenuIcon>
-            <MenuContent>
-              <MenuTitle>BerseCardGame</MenuTitle>
-              <MenuSubtitle>Interactive conversation starter</MenuSubtitle>
-            </MenuContent>
-            <MenuArrow>→</MenuArrow>
-          </ProfileMenuItem>
 
           {/* 6. Manage Events (Admin) */}
           {mockProfile.isAdmin && (
@@ -7653,7 +7662,25 @@ export const ProfileScreen: React.FC = () => {
         </ModalOverlay>
       )}
 
-      <BottomNav activeTab="profile" />
+      <MainNav 
+        activeTab="home"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
     </Container>
   );
 };

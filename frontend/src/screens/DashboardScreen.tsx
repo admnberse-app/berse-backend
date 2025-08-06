@@ -9,13 +9,14 @@ import { Points } from '../components/Points';
 import { Button } from '../components/Button';
 import { SideMenu } from '../components/SideMenu';
 import { NotificationPanel } from '../components/NotificationPanel';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 import { QRCodeGenerator } from '../components/QRCode';
 import { DualQRModal } from '../components/DualQRModal';
 import { ManagePassModal } from '../components/ManagePassModal';
 import { RedemptionConfirmModal } from '../components/RedemptionConfirmModal';
 import { VoucherDisplayModal } from '../components/VoucherDisplayModal';
 import { Toast } from '../components/Toast';
+import { ProfileSidebar } from '../components/ProfileSidebar';
 import { getUserPoints, updateUserPoints } from '../utils/initializePoints';
 import { voucherService } from '../services/voucherService';
 import { useUniversalRedemption } from '../hooks/useUniversalRedemption';
@@ -25,13 +26,13 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F9F3E3;
 `;
 
 const Content = styled.div`
   flex: 1;
   padding: ${({ theme }) => theme.spacing.md};
-  padding-bottom: 80px; // Space for nav
+  padding-bottom: 100px; // Space for floating nav
   overflow-y: auto;
   max-width: 393px;
   width: 100%;
@@ -94,6 +95,7 @@ export const DashboardScreen: React.FC = () => {
   // Filter state for bottom panel system
   const [activeFilter, setActiveFilter] = useState<string | null>('featured-rewards');
   const [showBottomPanel, setShowBottomPanel] = useState(false);
+  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
 
   // Use universal redemption hook
   const {
@@ -416,33 +418,6 @@ export const DashboardScreen: React.FC = () => {
           </ActivitiesContainer>
         );
 
-      case 'bersementor':
-        return (
-          <MentorContainer>
-            <IntegrationPrompt>
-              <PromptIcon>🔗</PromptIcon>
-              <PromptText>
-                <PromptTitle>Connect with TalentCorp</PromptTitle>
-                <PromptDesc>Access professional mentorship through MyHeart and MyMahir</PromptDesc>
-              </PromptText>
-              <FilterConnectButton onClick={() => navigate('/bersementor')}>Connect</FilterConnectButton>
-            </IntegrationPrompt>
-          </MentorContainer>
-        );
-
-      case 'bersebuddy':
-        return (
-          <BuddyContainer>
-            <IntegrationPrompt>
-              <PromptIcon>🎓</PromptIcon>
-              <PromptText>
-                <PromptTitle>Connect with EMGS</PromptTitle>
-                <PromptDesc>Find study buddies through your student profile</PromptDesc>
-              </PromptText>
-              <FilterConnectButton onClick={() => navigate('/bersebuddy')}>Connect</FilterConnectButton>
-            </IntegrationPrompt>
-          </BuddyContainer>
-        );
 
 
       default:
@@ -497,7 +472,7 @@ export const DashboardScreen: React.FC = () => {
       <StatusBar />
       {/* Standardized Header */}
 <div style={{
-  background: '#F5F5DC',
+  background: '#F5F3EF',
   width: '100%',
   padding: '12px 16px',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -507,7 +482,30 @@ export const DashboardScreen: React.FC = () => {
     alignItems: 'center',
     justifyContent: 'space-between'
   }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div 
+      style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '12px',
+        cursor: 'pointer',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        borderRadius: '12px',
+        padding: '4px 8px 4px 4px',
+        position: 'relative'
+      }}
+      onClick={() => {
+        console.log('Profile icon clicked - opening sidebar');
+        setShowProfileSidebar(true);
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(74, 103, 65, 0.1)';
+        e.currentTarget.style.transform = 'translateX(2px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+        e.currentTarget.style.transform = 'translateX(0)';
+      }}
+    >
       <div style={{
         width: '40px',
         height: '40px',
@@ -518,7 +516,10 @@ export const DashboardScreen: React.FC = () => {
         fontWeight: 'bold',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        boxShadow: '0 2px 8px rgba(74, 103, 65, 0.3)',
+        border: '2px solid white',
+        transition: 'transform 0.3s ease'
       }}>
         {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : 'ZM'}
       </div>
@@ -874,20 +875,12 @@ export const DashboardScreen: React.FC = () => {
               <FeatureTitle>Recent Activities</FeatureTitle>
             </FeatureButton>
 
-            <FeatureButton onClick={() => handleFilterClick('bersementor')}>
-              <FeatureIconContainer $bgColor="#F0E8FF" $active={activeFilter === 'bersementor'}>
-                <FeatureIcon>👨‍🏫</FeatureIcon>
+            {/* NEW: BerseCardGame button */}
+            <FeatureButton onClick={() => navigate('/bersecardgame')}>
+              <FeatureIconContainer $bgColor="#FFE8E8" $active={false}>
+                <FeatureIcon>🃏</FeatureIcon>
               </FeatureIconContainer>
-              <FeatureTitle>BerseMentor</FeatureTitle>
-              <IntegrationBadge>TalentCorp</IntegrationBadge>
-            </FeatureButton>
-
-            <FeatureButton onClick={() => handleFilterClick('bersebuddy')}>
-              <FeatureIconContainer $bgColor="#E8F8E8" $active={activeFilter === 'bersebuddy'}>
-                <FeatureIcon>🤝</FeatureIcon>
-              </FeatureIconContainer>
-              <FeatureTitle>BerseBuddy</FeatureTitle>
-              <IntegrationBadge>EMGS</IntegrationBadge>
+              <FeatureTitle>Card Game</FeatureTitle>
             </FeatureButton>
           </FeaturesGrid>
         </FeaturesSection>
@@ -900,7 +893,25 @@ export const DashboardScreen: React.FC = () => {
         )}
       </Content>
 
-      <BottomNav activeTab="home" />
+      <MainNav 
+        activeTab="home"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
       
       <SideMenu
         isOpen={isSideMenuOpen}
@@ -1175,6 +1186,11 @@ export const DashboardScreen: React.FC = () => {
         message={toast.message}
         type={toast.type}
         onClose={closeToast}
+      />
+
+      <ProfileSidebar 
+        isOpen={showProfileSidebar}
+        onClose={() => setShowProfileSidebar(false)}
       />
     </Container>
   );

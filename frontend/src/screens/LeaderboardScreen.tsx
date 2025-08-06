@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 
 // Styled Components
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F5DC;
+  background-color: #F9F3E3;
 `;
 
 const Header = styled.div`
@@ -380,7 +380,7 @@ export const LeaderboardScreen: React.FC = () => {
       
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F5DC',
+        background: '#F5F3EF',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -518,7 +518,25 @@ export const LeaderboardScreen: React.FC = () => {
         </MotivationalSection>
       </Content>
       
-      <BottomNav activeTab="home" />
+      <MainNav 
+        activeTab="home"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
     </Container>
   );
 };

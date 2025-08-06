@@ -11,9 +11,9 @@ const meta: Meta<typeof MainNav> = {
   argTypes: {
     activeTab: {
       control: 'radio',
-      options: ['Home', 'BerseConnect', 'BerseMatch', 'Profile'],
+      options: ['home', 'connect', 'match', 'forum'],
     },
-    onTabClick: { action: 'onTabClick' },
+    onTabPress: { action: 'onTabPress' },
   },
   decorators: [
     (Story) => (
@@ -33,24 +33,28 @@ type Story = StoryObj<typeof meta>;
 
 export const HomeActive: Story = {
   args: {
-    activeTab: 'Home',
+    activeTab: 'home',
+    onTabPress: (tab) => console.log('Tab pressed:', tab),
   },
 };
 
-export const BerseConnectActive: Story = {
+export const ConnectActive: Story = {
   args: {
-    activeTab: 'BerseConnect',
+    activeTab: 'connect',
+    onTabPress: (tab) => console.log('Tab pressed:', tab),
   },
 };
 
-export const BerseMatchActive: Story = {
+export const MatchActive: Story = {
   args: {
-    activeTab: 'BerseMatch',
+    activeTab: 'match',
+    onTabPress: (tab) => console.log('Tab pressed:', tab),
   },
 };
 
-export const ProfileActive: Story = {
+export const ForumActive: Story = {
   args: {
-    activeTab: 'Profile',
+    activeTab: 'forum',
+    onTabPress: (tab) => console.log('Tab pressed:', tab),
   },
 };

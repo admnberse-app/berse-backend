@@ -23,12 +23,12 @@ export const SocialEventsScreen: React.FC = () => {
           <PartnershipInfo>Connect with like-minded people in your area</PartnershipInfo>
         </ComingSoon>
       </Content>
-      <MainNav activeTab="social-events" onTabPress={(tab) => {
+      <MainNav activeTab="home" onTabPress={(tab) => {
         switch (tab) {
           case 'home': navigate('/dashboard'); break;
           case 'connect': navigate('/connect'); break;
           case 'match': navigate('/match'); break;
-          case 'profile': navigate('/profile'); break;
+          case 'forum': navigate('/forum'); break;
         }
       }} />
     </Container>
@@ -39,7 +39,7 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
@@ -89,7 +89,7 @@ const Content = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 20px 20px 100px 20px;
 `;
 
 const ComingSoon = styled.div`

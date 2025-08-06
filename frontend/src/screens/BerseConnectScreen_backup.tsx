@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { BottomNav } from '../components/BottomNav';
+import { MainNav } from '../components/MainNav';
 import { useAuth } from '../contexts/AuthContext';
 import { EventRegistrationModal } from '../components/EventRegistrationModal';
 import { SportsEventBookingModal } from '../components/SportsEventBookingModal';
@@ -13,14 +13,14 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F9F3E3;
   max-width: 393px;
   margin: 0 auto;
 `;
 
 const Header = styled.div`
   padding: 16px 20px;
-  background-color: ${({ theme }) => theme.colors.background.default};
+  background-color: #F5F3EF;
 `;
 
 const HeaderTop = styled.div`
@@ -2000,7 +2000,25 @@ export const BerseConnectScreen: React.FC = () => {
         </ModalContent>
       </ConfirmationModal>
 
-      <BottomNav activeTab="connect" />
+      <MainNav 
+        activeTab="connect"
+        onTabPress={(tab) => {
+          switch (tab) {
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'forum':
+              navigate('/forum');
+              break;
+          }
+        }}
+      />
 
       {/* Sports Event Registration Modal */}
       <EventRegistrationModal
