@@ -57,8 +57,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           userData = mockAuthService.getCurrentUser(); // This one is sync
         }
         
+        // If no user found, create a default demo user for the app to function
+        if (!userData) {
+          const defaultUser = {
+            id: 'demo-user',
+            email: 'sasa@example.com',
+            fullName: 'Sasa',
+            firstName: 'Sasa',
+            lastName: '',
+            phone: '+60123456789',
+            bio: 'Welcome to BerseMuka!',
+            profession: 'Explorer',
+            age: 25,
+            location: 'Kuala Lumpur, Malaysia',
+            interests: ['Community', 'Events', 'Coffee'],
+            points: 245,
+            isVerified: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          userData = defaultUser;
+          console.log('No user session found, using demo user');
+        }
+        
         if (userData) {
-          console.log('Found existing user session:', userData);
+          console.log('Setting user:', userData);
           setUser(userData);
         }
       } catch (error) {
