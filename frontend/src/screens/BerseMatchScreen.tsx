@@ -1,3666 +1,1368 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { MainNav } from '../components/MainNav';
-import { ProfileSidebar } from '../components/ProfileSidebar';
-import { useAuth } from '../contexts/AuthContext';
-import { useMessaging } from '../contexts/MessagingContext';
-import { userProfiles, getRandomProfiles, UserProfile } from '../data/profiles';
-import { CountryFilterModal, CityFilterModal } from '../components/FilterModals';
+import { MainNav } from '../components/MainNav/index';
 
-// Types - Using shared UserProfile from profiles.ts
-
-// Enhanced Search Types
-interface SearchCategory {
-  id: 'all' | 'interests' | 'communities' | 'companies' | 'skills' | 'personality';
+// Interface for profile data
+interface ProfileCardData {
+  id: number;
   name: string;
-  icon: string;
+  location: string;
+  origin?: string;
+  match: number;
+  tags: string[];
+  languages?: string[];
+  mutuals?: string[];
+  bio: string;
+  offers?: string[];
+  price?: string;
+  amenities?: string[];
+  reviews?: number;
+  rating?: number;
+  company?: string;
+  expertise?: string[];
+  education?: string;
+  looking?: string[];
+  servicesOffered: {
+    localGuide: boolean;
+    homestay: boolean;
+    marketplace: boolean;
+    openToConnect: boolean;
+  };
 }
 
-interface InterestOption {
-  id: string;
-  name: string;
-  category: string;
-  popularity: number;
-}
-
-interface CommunityOption {
-  id: string;
-  name: string;
-  type: 'educational' | 'professional' | 'regional' | 'alumni';
-  verified: boolean;
-  memberCount: number;
-  description: string;
-}
-
-interface CompanyOption {
-  id: string;
-  name: string;
-  type: 'government' | 'university' | 'corporation' | 'ngo' | 'foundation';
-  verified: boolean;
-  description: string;
-}
-
-interface SkillOption {
-  id: string;
-  name: string;
-  category: string;
-}
-
-interface PersonalityOption {
-  id: string;
-  name: string;
-  type: string;
-  temperament: 'NT' | 'NF' | 'SJ' | 'SP';
-  variants: string[];
-}
-
-interface UserLevel {
-  level: number;
-  name: string;
-  color: string;
-  minPoints: number;
-}
-
-interface VerificationItem {
-  id: string;
-  type: 'community' | 'identity' | 'professional' | 'educational';
-  verifiedBy: string;
-  verificationDate: string;
-  isActive: boolean;
-}
-
-interface AchievementBadge {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  description: string;
-}
-
-// Enhanced User Profile with new fields
-interface EnhancedUserProfile extends UserProfile {
-  communities?: string[];
-  companies?: string[];
-  skills?: string[];
-  verifiedBy?: string[];
-  institutionalBacking?: string[];
-  personalityType?: string;
-  userLevel?: number;
-  verifications?: VerificationItem[];
-  achievements?: string[];
-}
-
-// Enhanced Search Data
-const searchCategories: SearchCategory[] = [
-  { id: 'all', name: 'All', icon: '🔍' },
-  { id: 'interests', name: 'Interests', icon: '🎯' },
-  { id: 'communities', name: 'Communities', icon: '🏛️' },
-  { id: 'companies', name: 'Companies', icon: '🏢' },
-  { id: 'skills', name: 'Skills', icon: '⚡' },
-  { id: 'personality', name: 'Personality', icon: '💭' }
-];
-
-const interestOptions: InterestOption[] = [
-  { id: 'philosophy', name: 'Philosophy', category: 'academic', popularity: 85 },
-  { id: 'finance', name: 'Finance', category: 'professional', popularity: 92 },
-  { id: 'investment', name: 'Investment', category: 'professional', popularity: 88 },
-  { id: 'history', name: 'History', category: 'academic', popularity: 76 },
-  { id: 'photography', name: 'Photography', category: 'creative', popularity: 94 },
-  { id: 'coffee', name: 'Coffee', category: 'lifestyle', popularity: 89 },
-  { id: 'travel', name: 'Travel', category: 'lifestyle', popularity: 96 },
-  { id: 'technology', name: 'Technology', category: 'professional', popularity: 91 },
-  { id: 'art', name: 'Art', category: 'creative', popularity: 83 },
-  { id: 'music', name: 'Music', category: 'creative', popularity: 87 },
-  { id: 'sports', name: 'Sports', category: 'lifestyle', popularity: 84 },
-  { id: 'business', name: 'Business', category: 'professional', popularity: 90 },
-  { id: 'education', name: 'Education', category: 'academic', popularity: 82 },
-  { id: 'health', name: 'Health', category: 'lifestyle', popularity: 86 },
-  { id: 'cooking', name: 'Cooking', category: 'lifestyle', popularity: 81 },
-  { id: 'reading', name: 'Reading', category: 'academic', popularity: 78 },
-  { id: 'gaming', name: 'Gaming', category: 'entertainment', popularity: 79 },
-  { id: 'fitness', name: 'Fitness', category: 'lifestyle', popularity: 85 }
-];
-
-const communityOptions: CommunityOption[] = [
-  { 
-    id: 'ahl-umran', 
-    name: 'Ahl \'Umran Network', 
-    type: 'professional', 
-    verified: true, 
-    memberCount: 2500, 
-    description: 'Professional network for Islamic civilization development' 
-  },
-  { 
-    id: 'mara-germany', 
-    name: 'MARA Germany', 
-    type: 'educational', 
-    verified: true, 
-    memberCount: 1200, 
-    description: 'Malaysian students in Germany supported by MARA' 
-  },
-  { 
-    id: 'masat-turkey', 
-    name: 'MASAT Turkey', 
-    type: 'educational', 
-    verified: true, 
-    memberCount: 800, 
-    description: 'Malaysian Students Association in Turkey' 
-  },
-  { 
-    id: 'msa-global', 
-    name: 'Malaysian Students Association', 
-    type: 'alumni', 
-    verified: true, 
-    memberCount: 5000, 
-    description: 'Global network of Malaysian students' 
-  },
-  { 
-    id: 'nama-foundation', 
-    name: 'NAMA Foundation Network', 
-    type: 'foundation', 
-    verified: true, 
-    memberCount: 3500, 
-    description: 'Building communities and fostering leadership' 
-  },
-  { 
-    id: 'ptptn-alumni', 
-    name: 'PTPTN Alumni', 
-    type: 'alumni', 
-    verified: true, 
-    memberCount: 15000, 
-    description: 'PTPTN scholarship recipients network' 
-  }
-];
-
-const companyOptions: CompanyOption[] = [
-  { 
-    id: 'nama-foundation', 
-    name: 'NAMA Foundation', 
-    type: 'foundation', 
-    verified: true, 
-    description: 'Leadership development and community building' 
-  },
-  { 
-    id: 'ptptn', 
-    name: 'PTPTN', 
-    type: 'government', 
-    verified: true, 
-    description: 'National Higher Education Fund Corporation' 
-  },
-  { 
-    id: 'mara', 
-    name: 'MARA', 
-    type: 'government', 
-    verified: true, 
-    description: 'Majlis Amanah Rakyat - Rural development agency' 
-  },
-  { 
-    id: 'jpa', 
-    name: 'JPA', 
-    type: 'government', 
-    verified: true, 
-    description: 'Public Service Department of Malaysia' 
-  },
-  { 
-    id: 'um', 
-    name: 'University of Malaya', 
-    type: 'university', 
-    verified: true, 
-    description: 'Premier university in Malaysia' 
-  },
-  { 
-    id: 'ukm', 
-    name: 'Universiti Kebangsaan Malaysia', 
-    type: 'university', 
-    verified: true, 
-    description: 'National University of Malaysia' 
-  },
-  { 
-    id: 'maybank', 
-    name: 'Maybank', 
-    type: 'corporation', 
-    verified: true, 
-    description: 'Leading financial services group in Southeast Asia' 
-  }
-];
-
-const skillOptions: SkillOption[] = [
-  { id: 'tutoring', name: 'Tutoring', category: 'education' },
-  { id: 'mentoring', name: 'Mentoring', category: 'professional' },
-  { id: 'consulting', name: 'Consulting', category: 'professional' },
-  { id: 'design', name: 'Design', category: 'creative' },
-  { id: 'programming', name: 'Programming', category: 'technical' },
-  { id: 'translation', name: 'Translation', category: 'language' },
-  { id: 'writing', name: 'Writing', category: 'creative' },
-  { id: 'research', name: 'Research', category: 'academic' },
-  { id: 'analysis', name: 'Analysis', category: 'professional' },
-  { id: 'project-management', name: 'Project Management', category: 'professional' }
-];
-
-// MBTI Personality Types with variants
-const personalityOptions: PersonalityOption[] = [
-  // Analysts (NT)
-  { id: 'intj', name: 'INTJ', type: 'Architect', temperament: 'NT', variants: ['INTJ-A', 'INTJ-T'] },
-  { id: 'intp', name: 'INTP', type: 'Thinker', temperament: 'NT', variants: ['INTP-A', 'INTP-T'] },
-  { id: 'entj', name: 'ENTJ', type: 'Commander', temperament: 'NT', variants: ['ENTJ-A', 'ENTJ-T'] },
-  { id: 'entp', name: 'ENTP', type: 'Debater', temperament: 'NT', variants: ['ENTP-A', 'ENTP-T'] },
-  
-  // Diplomats (NF)
-  { id: 'infj', name: 'INFJ', type: 'Advocate', temperament: 'NF', variants: ['INFJ-A', 'INFJ-T'] },
-  { id: 'infp', name: 'INFP', type: 'Mediator', temperament: 'NF', variants: ['INFP-A', 'INFP-T'] },
-  { id: 'enfj', name: 'ENFJ', type: 'Protagonist', temperament: 'NF', variants: ['ENFJ-A', 'ENFJ-T'] },
-  { id: 'enfp', name: 'ENFP', type: 'Campaigner', temperament: 'NF', variants: ['ENFP-A', 'ENFP-T'] },
-  
-  // Sentinels (SJ)
-  { id: 'istj', name: 'ISTJ', type: 'Logistician', temperament: 'SJ', variants: ['ISTJ-A', 'ISTJ-T'] },
-  { id: 'isfj', name: 'ISFJ', type: 'Protector', temperament: 'SJ', variants: ['ISFJ-A', 'ISFJ-T'] },
-  { id: 'estj', name: 'ESTJ', type: 'Executive', temperament: 'SJ', variants: ['ESTJ-A', 'ESTJ-T'] },
-  { id: 'esfj', name: 'ESFJ', type: 'Consul', temperament: 'SJ', variants: ['ESFJ-A', 'ESFJ-T'] },
-  
-  // Explorers (SP)
-  { id: 'istp', name: 'ISTP', type: 'Virtuoso', temperament: 'SP', variants: ['ISTP-A', 'ISTP-T'] },
-  { id: 'isfp', name: 'ISFP', type: 'Adventurer', temperament: 'SP', variants: ['ISFP-A', 'ISFP-T'] },
-  { id: 'estp', name: 'ESTP', type: 'Entrepreneur', temperament: 'SP', variants: ['ESTP-A', 'ESTP-T'] },
-  { id: 'esfp', name: 'ESFP', type: 'Entertainer', temperament: 'SP', variants: ['ESFP-A', 'ESFP-T'] }
-];
-
-// User Level System
-const userLevels: UserLevel[] = [
-  { level: 1, name: 'Newcomer', color: '#8B4513', minPoints: 0 },
-  { level: 2, name: 'Member', color: '#8B4513', minPoints: 50 },
-  { level: 3, name: 'Active', color: '#8B4513', minPoints: 150 },
-  { level: 4, name: 'Contributor', color: '#CD7F32', minPoints: 300 },
-  { level: 5, name: 'Supporter', color: '#CD7F32', minPoints: 500 },
-  { level: 6, name: 'Advocate', color: '#C0C0C0', minPoints: 800 },
-  { level: 7, name: 'Champion', color: '#C0C0C0', minPoints: 1200 },
-  { level: 8, name: 'Leader', color: '#FFD700', minPoints: 1800 },
-  { level: 9, name: 'Elite', color: '#FFD700', minPoints: 2500 },
-  { level: 10, name: 'Legend', color: '#E5E4E2', minPoints: 3500 }
-];
-
-// Achievement Badges
-const achievementBadges: AchievementBadge[] = [
-  { id: 'community-builder', name: 'Community Builder', icon: '🏆', color: '#FFD700', description: 'Built strong community connections' },
-  { id: 'trusted-member', name: 'Trusted Member', icon: '⭐', color: '#007BFF', description: 'Highly rated by community' },
-  { id: 'verified-expert', name: 'Verified Expert', icon: '👑', color: '#6F42C1', description: 'Professionally verified expertise' },
-  { id: 'helpful-mentor', name: 'Helpful Mentor', icon: '🎯', color: '#28A745', description: 'Actively helps community members' },
-  { id: 'active-participant', name: 'Active Participant', icon: '🔥', color: '#FD7E14', description: 'Regularly participates in events' },
-  { id: 'social-connector', name: 'Social Connector', icon: '🤝', color: '#20C997', description: 'Connects people effectively' }
-];
-
-// Styled Components
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: #F9F3E3;
-  max-width: 393px;
-  margin: 0 auto;
 `;
 
+// Header Styles
 const Header = styled.div`
-  padding: 16px 20px;
-  background-color: #F5F3EF;
+  background: white;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
 const HeaderTop = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-`;
-
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const Avatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #2D5F4F;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 14px;
-`;
-
-const HeaderText = styled.div`
-  h3 {
-    margin: 0;
-    font-size: 12px;
-    color: #666;
-    font-weight: normal;
-  }
-  h2 {
-    margin: 0;
-    font-size: 18px;
-    color: #2D5F4F;
-    font-weight: bold;
-  }
-`;
-
-const NotificationBell = styled.div`
-  position: relative;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  
-  &::before {
-    content: '🔔';
-    font-size: 20px;
-  }
-  
-  &::after {
-    content: '3';
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 16px;
-    height: 16px;
-    background-color: #ff4444;
-    color: white;
-    border-radius: 50%;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-`;
-
-// Filter components from BerseConnect
-const FilterSection = styled.div`
-  padding: 8px 20px;
-  background-color: transparent;
-  margin-bottom: 2px;
-`;
-
-const FilterDropdowns = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: center;
-`;
-
-const FilterDropdown = styled.button<{ $isActive?: boolean; $disabled?: boolean }>`
-  flex: 1;
-  padding: 8px 14px;
-  border: 1px solid ${({ $isActive, $disabled }) => $disabled ? '#E5E5E5' : ($isActive ? '#2D5F4F' : '#ddd')};
-  border-radius: 8px;
-  background: white;
-  color: ${({ $isActive, $disabled }) => $disabled ? '#999' : ($isActive ? '#2D5F4F' : '#333')};
-  font-size: 12px;
-  font-weight: ${({ $isActive }) => $isActive ? '600' : '500'};
-  cursor: ${({ $disabled }) => $disabled ? 'not-allowed' : 'pointer'};
-  display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all 0.2s ease;
-  opacity: ${({ $disabled }) => $disabled ? 0.6 : 1};
-  height: 40px;
-  min-height: 40px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  &:hover {
-    border-color: ${({ $disabled }) => $disabled ? '#E5E5E5' : '#2D5F4F'};
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-  }
-  
-  &::after {
-    content: '▼';
-    font-size: 8px;
-    margin-left: 6px;
-    color: ${({ $isActive, $disabled }) => $disabled ? '#999' : ($isActive ? '#2D5F4F' : '#666')};
-  }
-`;
-
-const SearchFilterButton = styled.button<{ $isActive?: boolean }>`
-  width: 40px;
-  height: 40px;
-  border: 1px solid ${({ $isActive }) => $isActive ? '#2D5F4F' : '#ddd'};
-  border-radius: 8px;
-  background: white;
-  color: ${({ $isActive }) => $isActive ? '#2D5F4F' : '#666'};
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  &:hover {
-    border-color: #2D5F4F;
-    color: #2D5F4F;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-  }
-`;
-
-const ActiveFiltersBar = styled.div`
-  padding: 8px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  font-size: 12px;
-  color: #666;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 20px;
-  margin-bottom: 16px;
-  
-  @media (max-width: 480px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-`;
-
-const FilterContent = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-const ClearFiltersButton = styled.button`
-  background: transparent;
-  color: #666;
-  font-size: 12px;
-  padding: 4px 8px;
-  border: 1px solid #DDD;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    background: #E0E0E0;
-    color: #333;
-  }
-  
-  @media (max-width: 480px) {
-    align-self: flex-end;
-    margin-top: 4px;
-  }
-`;
-
-const FilterBadge = styled.span`
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-`;
-
-const Content = styled.div`
-  flex: 1;
-  padding: 0 20px 100px 20px; /* Added extra space for floating nav */
-  overflow-y: auto;
-`;
-
-// Updated Filter Grid Layout - 4 on top, 2+1 on bottom (Compact)
-const FilterContainer = styled.div`
-  padding: 12px 16px 16px 16px;
-  margin-bottom: 8px;
-`;
-
-const TopFilterRow = styled.div`
-  display: flex;
-  justify-content: space-evenly;
-  gap: 12px;
-  margin-bottom: 18px;
-  align-items: center;
-`;
-
-const BottomFilterRow = styled.div`
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  max-width: 180px;
-  margin: 0 auto;
-  gap: 16px;
-`;
-
-const FilterButton = styled.button<{ $isActive: boolean; $color?: string }>`
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: ${({ $color, $isActive }) => 
-    $isActive 
-      ? `linear-gradient(135deg, ${$color || '#2D5F4F'}, ${$color || '#2D5F4F'}dd)` 
-      : `linear-gradient(135deg, ${$color || '#2D5F4F'}22, ${$color || '#2D5F4F'}44)`
-  };
-  border: 2px solid ${({ $color, $isActive }) => $isActive ? $color || '#2D5F4F' : `${$color || '#2D5F4F'}55`};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  flex-shrink: 0;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const FilterIcon = styled.div<{ $isActive: boolean }>`
-  font-size: 20px;
-  color: ${({ $isActive }) => $isActive ? '#FFFFFF' : '#666666'};
-  z-index: 1;
-`;
-
-const FilterLabel = styled.span<{ $isActive: boolean }>`
-  position: absolute;
-  bottom: -16px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
-  font-weight: 500;
-  color: #666666;
-  text-align: center;
-  white-space: nowrap;
-  pointer-events: none;
-  max-width: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-// Badge for integration partners
-const IntegrationBadge = styled.div`
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #FFFFFF;
-  color: #333;
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: 7px;
-  font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  min-width: 20px;
-  text-align: center;
-  z-index: 2;
-`;
-
-// AI Match Button Styles
-const AIMatchButton = styled.button`
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #FF4444;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
-  position: relative;
-  
-  &:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(255, 68, 68, 0.4);
-  }
-  
-  &:active {
-    transform: scale(0.95);
-  }
-  
-  &::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 2px solid #FF4444;
-    animation: pulse 2s infinite;
-  }
-  
-  @keyframes pulse {
-    0% {
-      transform: scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1.2);
-      opacity: 0.5;
-    }
-    100% {
-      transform: scale(1.3);
-      opacity: 0;
-    }
-  }
-`;
-
-const AIIcon = styled.span`
-  color: white;
-  font-size: 20px;
-  font-weight: bold;
-  z-index: 1;
-`;
-
-// AI Matching Modal
-const AIModal = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-`;
-
-const AIModalContent = styled.div`
-  background: white;
-  border-radius: 20px;
-  padding: 24px;
-  max-width: 340px;
-  width: 100%;
-  text-align: center;
-`;
-
-const AIModalIcon = styled.div`
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-  font-size: 28px;
-`;
-
-const AIModalTitle = styled.h3`
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  margin: 0 0 8px 0;
-`;
-
-const AIModalDesc = styled.p`
-  font-size: 14px;
-  color: #666;
-  line-height: 1.5;
-  margin: 0 0 20px 0;
-`;
-
-const AIModalButtons = styled.div`
-  display: flex;
-  gap: 12px;
-`;
-
-const AIModalButton = styled.button<{ $primary?: boolean }>`
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  ${({ $primary }) => $primary ? `
-    background: #2D5F4F;
-    color: white;
-    border: none;
-    
-    &:hover {
-      background: #1F4A3A;
-    }
-  ` : `
-    background: white;
-    color: #666;
-    border: 1px solid #E0E0E0;
-    
-    &:hover {
-      background: #F5F5F5;
-    }
-  `}
-`;
-
-// Service Category Buttons (with optimized spacing)
-const ServiceButtonsContainer = styled.div`
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px 8px;
-  margin: 0 auto 12px auto;
-  padding: 0 20px;
-  justify-items: center;
-  align-items: center;
-  width: 100%;
-  max-width: 500px;
-  
-  /* Responsive design */
-  @media (max-width: 480px) {
-    grid-template-columns: repeat(3, 1fr);
-    max-width: 300px;
-  }
-  
-  @media (max-width: 360px) {
-    grid-template-columns: repeat(2, 1fr);
-    max-width: 200px;
-  }
-`;
-
-const ServiceButtonCard = styled.div<{ $isSelected?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 8px 4px;
-  border-radius: 12px;
-  width: 100%;
-  min-height: 80px;
-  
-  &:hover {
-    background-color: rgba(45, 95, 79, 0.05);
-    transform: translateY(-1px);
-  }
-  
-  ${({ $isSelected }) => $isSelected && `
-    background-color: rgba(45, 95, 79, 0.1);
-    transform: translateY(-1px);
-  `}
-`;
-
-const ServiceButtonIcon = styled.div<{ $color: string; $isSelected?: boolean }>`
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: ${({ $color, $isSelected }) => 
-    $isSelected 
-      ? `linear-gradient(135deg, ${$color}, ${$color}dd)` 
-      : `linear-gradient(135deg, ${$color}22, ${$color}11)`
-  };
-  border: 2px solid ${({ $color, $isSelected }) => $isSelected ? $color : `${$color}33`};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-`;
-
-const ServiceButtonLabel = styled.span<{ $isSelected?: boolean }>`
-  font-size: 11px;
-  color: ${({ $isSelected }) => $isSelected ? '#2D5F4F' : '#666'};
-  font-weight: ${({ $isSelected }) => $isSelected ? '600' : '500'};
-  text-align: center;
-  line-height: 1.2;
-  max-width: 70px;
-  overflow-wrap: break-word;
-`;
-
-
-
-
-// Search Modal Components
-const SearchModal = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-`;
-
-const SearchModalContent = styled.div`
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 400px;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: relative;
-`;
-
-const SearchModalHeader = styled.div`
-  padding: 20px 20px 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-`;
-
-const SearchModalTitle = styled.h3`
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #2D5F4F;
-`;
-
-const SearchModalCloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #f0f0f0;
-    color: #333;
-  }
-`;
-
-const SearchModalBody = styled.div`
-  padding: 0 20px 20px 20px;
-`;
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #E5E5E5;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease;
-  margin-bottom: 16px;
-  box-sizing: border-box;
-  
-  &:focus {
-    border-color: #2D5F4F;
-  }
-  
-  &::placeholder {
-    color: #999;
-  }
-`;
-
-const SearchSuggestions = styled.div`
-  margin-bottom: 20px;
-`;
-
-const SearchSuggestionsTitle = styled.h4`
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-`;
-
-const SearchSuggestionItem = styled.button`
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 20px;
-  padding: 6px 12px;
-  margin: 4px 8px 4px 0;
-  font-size: 12px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #E8F4F0;
-    border-color: #2D5F4F;
-    color: #2D5F4F;
-  }
-`;
-
-const SearchResults = styled.div`
-  margin-bottom: 20px;
-  max-height: 300px;
-  overflow-y: auto;
-`;
-
-const SearchResultItem = styled.div`
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background-color: #f8f9fa;
-  }
-  
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const SearchResultTitle = styled.div`
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-`;
-
-const SearchResultMeta = styled.div`
-  font-size: 12px;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const SearchModalActions = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-`;
-
-const SearchModalButton = styled.button<{ $variant?: 'primary' | 'secondary'; $disabled?: boolean }>`
-  flex: 1;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: ${({ $disabled }) => $disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s ease;
-  opacity: ${({ $disabled }) => $disabled ? 0.5 : 1};
-  
-  ${({ $variant = 'secondary', $disabled }) => 
-    $variant === 'primary' 
-      ? `
-        background: #2D5F4F;
-        color: white;
-        border: 1px solid #2D5F4F;
-        
-        &:hover {
-          background: ${$disabled ? '#2D5F4F' : '#1F4A3A'};
-        }
-      `
-      : `
-        background: white;
-        color: #666;
-        border: 1px solid #E5E5E5;
-        
-        &:hover {
-          background: ${$disabled ? 'white' : '#f5f5f5'};
-          border-color: ${$disabled ? '#E5E5E5' : '#d0d0d0'};
-        }
-      `
-  }
-`;
-
-const NoSearchResults = styled.div`
-  text-align: center;
-  padding: 20px;
-  color: #666;
-  font-size: 14px;
-`;
-
-// Enhanced Search Modal Components
-const EnhancedSearchModal = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-`;
-
-const EnhancedSearchContent = styled.div`
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 400px;
-  max-height: 85vh;
-  overflow-y: auto;
-  position: relative;
-`;
-
-const EnhancedSearchHeader = styled.div`
-  padding: 20px 20px 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-`;
-
-const EnhancedSearchTitle = styled.h3`
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #2D5F4F;
-`;
-
-const EnhancedSearchCloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #f0f0f0;
-    color: #333;
-  }
-`;
-
-const EnhancedSearchBody = styled.div`
-  padding: 0 20px 20px 20px;
-`;
-
-const MainSearchInput = styled.input`
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #E5E5E5;
-  border-radius: 12px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease;
-  margin-bottom: 16px;
-  box-sizing: border-box;
-  
-  &:focus {
-    border-color: #2D5F4F;
-  }
-  
-  &::placeholder {
-    color: #999;
-  }
-`;
-
-const CategoryTabs = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-`;
-
-const CategoryTab = styled.button<{ $isActive: boolean }>`
-  padding: 8px 16px;
-  border: 1px solid ${({ $isActive }) => $isActive ? '#2D5F4F' : '#E5E5E5'};
-  border-radius: 20px;
-  background: ${({ $isActive }) => $isActive ? '#2D5F4F' : 'white'};
-  color: ${({ $isActive }) => $isActive ? 'white' : '#666'};
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  
-  &:hover {
-    border-color: #2D5F4F;
-    background: ${({ $isActive }) => $isActive ? '#1F4A3A' : '#f8f9fa'};
-  }
-`;
-
-const FilterChips = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-  min-height: 20px;
-`;
-
-const FilterChip = styled.div`
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #bbdefb;
-  }
-`;
-
-const ChipRemove = styled.span`
-  font-size: 14px;
-  font-weight: bold;
-  color: #1976d2;
-  cursor: pointer;
-  
-  &:hover {
-    color: #0d47a1;
-  }
-`;
-
-const QuickSuggestions = styled.div`
-  margin-bottom: 16px;
-`;
-
-const SuggestionsTitle = styled.h4`
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-`;
-
-const SuggestionGrid = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-`;
-
-const SuggestionChip = styled.button`
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 16px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #e9ecef;
-    border-color: #2D5F4F;
-    color: #2D5F4F;
-  }
-`;
-
-const AutocompleteDropdown = styled.div`
-  background: white;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 1001;
-  max-height: 200px;
-  overflow-y: auto;
-`;
-
-const AutocompleteItem = styled.div`
-  padding: 12px 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background: #f8f9fa;
-  }
-  
-  &:not(:last-child) {
-    border-bottom: 1px solid #f0f0f0;
-  }
-`;
-
-const ItemIcon = styled.span`
-  font-size: 14px;
-`;
-
-const ItemDetails = styled.div`
-  flex: 1;
-`;
-
-const ItemName = styled.div`
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-`;
-
-const ItemMeta = styled.div`
-  font-size: 12px;
-  color: #666;
-`;
-
-const ResultsCount = styled.div`
-  font-size: 12px;
-  color: #666;
   margin-bottom: 12px;
-  text-align: center;
-`;
-
-const EnhancedSearchActions = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-`;
-
-const SearchActionButton = styled.button<{ $variant?: 'primary' | 'secondary'; $disabled?: boolean }>`
-  flex: 1;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: ${({ $disabled }) => $disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s ease;
-  opacity: ${({ $disabled }) => $disabled ? 0.5 : 1};
-  
-  ${({ $variant = 'secondary', $disabled }) => 
-    $variant === 'primary' 
-      ? `
-        background: #2D5F4F;
-        color: white;
-        border: 1px solid #2D5F4F;
-        
-        &:hover {
-          background: ${$disabled ? '#2D5F4F' : '#1F4A3A'};
-        }
-      `
-      : `
-        background: white;
-        color: #666;
-        border: 1px solid #E5E5E5;
-        
-        &:hover {
-          background: ${$disabled ? 'white' : '#f5f5f5'};
-          border-color: ${$disabled ? '#E5E5E5' : '#d0d0d0'};
-        }
-      `
-  }
-`;
-
-// Enhanced Profile Card Components with Compact Proportional Design
-const CleanUserCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f0f0;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    transform: translateY(-1px);
-  }
-`;
-
-const CleanUserCardHeader = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
-  position: relative;
-`;
-
-const CleanUserAvatar = styled.div`
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 20px;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 3px solid white;
-  flex-shrink: 0;
-`;
-
-const CleanCardUserInfo = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-`;
-
-// Service Badge Styling
-const ServiceBadge = styled.div<{ $service: string }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  background: ${({ $service }) => 
-    $service === 'localGuide' ? '#E8F5FF' :
-    $service === 'homestay' ? '#FFF0F5' :
-    $service === 'marketplace' ? '#FFF3E0' :
-    $service === 'openToConnect' ? '#E8F4E8' :
-    $service === 'bersebuddy' ? '#F3E5F5' :
-    $service === 'bersementor' ? '#FFEBEE' :
-    '#F5F5F5'
-  };
-  color: ${({ $service }) => 
-    $service === 'localGuide' ? '#0066CC' :
-    $service === 'homestay' ? '#C2185B' :
-    $service === 'marketplace' ? '#FF9800' :
-    $service === 'openToConnect' ? '#2D5F4F' :
-    $service === 'bersebuddy' ? '#9C27B0' :
-    $service === 'bersementor' ? '#D32F2F' :
-    '#666'
-  };
-`;
-
-const ServiceIcon = styled.span<{ $service: string }>`
-  font-size: 12px;
-`;
-
-const UserHeaderDiv = styled.div`
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-`;
-
-const UserNameSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-`;
-
-const TopRightInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  position: absolute;
-  right: 0;
-  top: 0;
-`;
-
-const CleanUserName = styled.h3`
-  margin: 0;
-  font-size: 17px;
-  font-weight: bold;
-  color: #333;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-`;
-
-const CleanUserMeta = styled.p`
-  margin: 0;
-  font-size: 13px;
-  color: #666;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-`;
-
-const CompactRating = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 14px;
-  color: #FFD700;
-  font-weight: 500;
-`;
-
-const CompactLevelBadge = styled.div<{ $color: string }>`
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: ${({ $color }) => $color};
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-`;
-
-const CompactPersonalityBadge = styled.div<{ $temperament: 'NT' | 'NF' | 'SJ' | 'SP' }>`
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 500;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  
-  ${({ $temperament }) => {
-    switch ($temperament) {
-      case 'NT':
-        return `background: #E3F2FD; color: #1976D2;`;
-      case 'NF':
-        return `background: #F3E5F5; color: #7B1FA2;`;
-      case 'SJ':
-        return `background: #E8F5E8; color: #388E3C;`;
-      case 'SP':
-        return `background: #FFF3E0; color: #F57C00;`;
-      default:
-        return `background: #F5F5F5; color: #666;`;
-    }
-  }}
-`;
-
-const CleanInterestsContainer = styled.div`
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  margin: 8px 0;
-  overflow-x: auto;
-  
-  &::-webkit-scrollbar {
-    display: none;
-  }
-`;
-
-const CleanInterestTag = styled.span<{ $clickable?: boolean }>`
-  background: #E3F2FD;
-  color: #1976D2;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 500;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
-  transition: all 0.2s ease;
-  border: 1px solid #BBDEFB;
-  white-space: nowrap;
-  flex-shrink: 0;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  
-  ${({ $clickable }) => $clickable && `
-    &:hover {
-      background: #BBDEFB;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(25, 118, 210, 0.2);
-    }
-  `}
-`;
-
-const CleanShortBio = styled.p`
-  margin: 8px 0;
-  font-size: 13px;
-  color: #444;
-  line-height: 1.4;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-`;
-
-const CommunityAffiliationsSection = styled.div`
-  margin: 8px 0 8px 0;
-`;
-
-const CommunityAffiliations = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 6px;
-`;
-
-const CommunityAffiliation = styled.div<{ $type: 'educational' | 'professional' | 'foundation' | 'alumni' }>`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 500;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  
-  ${({ $type }) => {
-    switch ($type) {
-      case 'educational':
-        return `background: #E3F2FD; color: #1976D2; border: 1px solid #BBDEFB;`;
-      case 'professional':
-        return `background: #E8F5E8; color: #388E3C; border: 1px solid #C8E6C9;`;
-      case 'foundation':
-        return `background: #F3E5F5; color: #7B1FA2; border: 1px solid #E1BEE7;`;
-      case 'alumni':
-        return `background: #FFF3E0; color: #F57C00; border: 1px solid #FFCC02;`;
-      default:
-        return `background: #F5F5F5; color: #666; border: 1px solid #E0E0E0;`;
-    }
-  }}
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const CommunityVerificationTick = styled.span`
-  margin-left: 2px;
-  color: #28A745;
-  font-size: 10px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-`;
-
-
-const DualButtonContainer = styled.div`
-  display: flex;
-  gap: 6px;
-  margin: 8px 0;
-`;
-
-const CleanTrustChain = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  background: #FAFAFA;
-  border: 1px solid #F0F0F0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-  color: #666;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  flex: 1;
-  
-  &:hover {
-    background: #F5F5F5;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const LocationLogbookButton = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  background: #E3F2FD;
-  border: 1px solid #BBDEFB;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-  color: #1976D2;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  flex: 1;
-  
-  &:hover {
-    background: #BBDEFB;
-    box-shadow: 0 2px 4px rgba(25, 118, 210, 0.2);
-  }
-`;
-
-// Location Logbook Modal Components
-const LocationModalContent = styled.div`
-  transition: all 0.3s ease;
-`;
-
-const FriendsGridContainer = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-`;
-
-const MiniFriendCard = styled.div`
-  background: white;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
-  padding: 12px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  
-  &:hover {
-    border-color: #2D5F4F;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-  }
-`;
-
-const MiniFriendHeader = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 8px;
-`;
-
-const MiniFriendAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 14px;
-  flex-shrink: 0;
-`;
-
-const MiniFriendInfo = styled.div`
-  flex: 1;
-`;
-
-const MiniFriendName = styled.h4`
-  margin: 0 0 2px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-`;
-
-const MiniFriendProfession = styled.p`
-  margin: 0 0 4px 0;
-  font-size: 12px;
-  color: #666;
-`;
-
-const MiniFriendConnection = styled.p`
-  margin: 0;
-  font-size: 11px;
-  color: #999;
-  font-style: italic;
-`;
-
-const MiniFriendActions = styled.div`
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-`;
-
-const MiniFriendButton = styled.button<{ $variant: 'primary' | 'secondary' }>`
-  flex: 1;
-  padding: 6px 12px;
-  border: 1px solid ${({ $variant }) => $variant === 'primary' ? '#2D5F4F' : '#E5E5E5'};
-  background: ${({ $variant }) => $variant === 'primary' ? '#2D5F4F' : 'white'};
-  color: ${({ $variant }) => $variant === 'primary' ? 'white' : '#666'};
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: ${({ $variant }) => $variant === 'primary' ? '#1F4A3A' : '#F5F5F5'};
-  }
 `;
 
 const BackButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  color: #2D5F4F;
+`;
+
+const HeaderTitle = styled.div`
+  flex: 1;
+  text-align: center;
+`;
+
+const Title = styled.h2`
+  margin: 0;
+  font-size: 18px;
+  color: #2D5F4F;
+  font-weight: 600;
+`;
+
+const Subtitle = styled.p`
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #666;
+`;
+
+const NotificationButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  position: relative;
+`;
+
+const NotificationBadge = styled.span`
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #FF4444;
+  color: white;
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  font-weight: 600;
+`;
+
+// Connection Mode Selector
+const ConnectionModeCard = styled.div`
+  background: linear-gradient(135deg, #2D5F4F, #4A8B7C);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 0 16px 12px 16px;
+  color: white;
+`;
+
+const ModeTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  background: #F5F5F5;
-  border: 1px solid #E5E5E5;
-  border-radius: 6px;
-  color: #666;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: 16px;
-  
-  &:hover {
-    background: #E5E5E5;
-  }
 `;
 
-// Messaging Modal Components
-const MessagingModalOverlay = styled.div<{ isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: ${({ isOpen }) => isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 2500;
-  padding: 20px;
-`;
-
-const MessagingModalContent = styled.div`
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 400px;
-  max-height: 80vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-`;
-
-const MessagingModalHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
-  padding: 20px;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const MessagingModalTitle = styled.h3`
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-`;
-
-const MessagingModalCloseButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease;
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-`;
-
-const ProfileContextBar = styled.div`
-  padding: 12px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  font-size: 12px;
-  color: #666;
-`;
-
-const ProfileContextTitle = styled.div`
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-`;
-
-const MessagingBody = styled.div`
-  flex: 1;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  max-height: 400px;
-`;
-
-const UserInfoSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 12px;
-  margin-bottom: 16px;
-`;
-
-const UserAvatarLarge = styled.div`
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
-`;
-
-const UserInfoDetails = styled.div`
-  flex: 1;
-`;
-
-const UserNameLarge = styled.div`
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-`;
-
-const UserMetaLarge = styled.div`
-  font-size: 12px;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  
-  &::before {
-    content: '✓';
-    color: #4CAF50;
-    font-size: 10px;
-  }
-`;
-
-const QuickActions = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-`;
-
-const QuickActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  flex: 1;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  ${({ $variant = 'secondary' }) => 
-    $variant === 'primary' 
-      ? `
-        background: #2D5F4F;
-        color: white;
-        border: 1px solid #2D5F4F;
-        
-        &:hover {
-          background: #1F4A3A;
-        }
-      `
-      : `
-        background: white;
-        color: #666;
-        border: 1px solid #E5E5E5;
-        
-        &:hover {
-          background: #f5f5f5;
-          border-color: #d0d0d0;
-        }
-      `
-  }
-`;
-
-const MessageTemplates = styled.div`
-  margin-bottom: 16px;
-`;
-
-const TemplatesTitle = styled.h4`
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-`;
-
-const TemplateButton = styled.button`
-  background: #e8f4f0;
-  color: #2D5F4F;
-  border: 1px solid #2D5F4F22;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
-  margin: 4px 8px 4px 0;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #d4f4e9;
-    border-color: #2D5F4F44;
-  }
-`;
-
-const MessageInput = styled.textarea`
-  width: 100%;
-  min-height: 80px;
-  padding: 12px;
-  border: 2px solid #e5e5e5;
-  border-radius: 8px;
-  font-size: 14px;
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.2s ease;
-  margin-bottom: 16px;
-  box-sizing: border-box;
-  
-  &:focus {
-    border-color: #2D5F4F;
-  }
-  
-  &::placeholder {
-    color: #999;
-  }
-`;
-
-const SendMessageButton = styled.button<{ $disabled?: boolean }>`
-  background: ${({ $disabled }) => $disabled ? '#cccccc' : '#2D5F4F'};
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: ${({ $disabled }) => $disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: ${({ $disabled }) => $disabled ? '#cccccc' : '#1F4A3A'};
-  }
-`;
-
-const ProfileActionButtons = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-`;
-
-const SendMessageActionButton = styled.button`
-  flex: 1;
-  padding: 10px 16px;
-  border: 1px solid #2D5F4F;
-  background: #2D5F4F;
-  color: white;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  
-  &:hover {
-    background: #1F4A3A;
-    border-color: #1F4A3A;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(45, 95, 79, 0.3);
-  }
-`;
-
-const ViewProfileActionButton = styled.button`
-  flex: 1;
-  padding: 10px 16px;
-  border: 1px solid #E5E5E5;
-  background: white;
-  color: #666;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  
-  &:hover {
-    background: #f5f5f5;
-    border-color: #d0d0d0;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const TrustIcon = styled.span`
-  color: #4A9B8E;
-  font-size: 12px;
-`;
-
-const TrustText = styled.span`
+const ModeDescription = styled.div`
   font-size: 11px;
-  color: #666;
+  opacity: 0.9;
+  margin-bottom: 12px;
+  line-height: 1.4;
+`;
+
+const ModeSelector = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ModeButton = styled.button<{ $active?: boolean }>`
+  flex: 1;
+  padding: 8px;
+  background: ${props => props.$active ? 'white' : 'rgba(255, 255, 255, 0.2)'};
+  color: ${props => props.$active ? '#2D5F4F' : 'white'};
+  border: 1px solid ${props => props.$active ? 'white' : 'rgba(255, 255, 255, 0.3)'};
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.$active ? 'white' : 'rgba(255, 255, 255, 0.3)'};
+  }
+`;
+
+// Tab Navigation
+const TabContainer = styled.div`
+  display: flex;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 16px;
+`;
+
+const Tab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 14px 8px;
+  background: transparent;
+  color: ${props => props.$active ? '#2D5F4F' : '#999'};
+  border: none;
+  border-bottom: ${props => props.$active ? '3px solid #2D5F4F' : '3px solid transparent'};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  &:hover {
+    color: #2D5F4F;
+  }
+`;
+
+const TabLabel = styled.div`
+  font-size: 13px;
+`;
+
+const TabSublabel = styled.div`
+  font-size: 10px;
+  opacity: 0.8;
   font-weight: 400;
 `;
 
-const TrustArrow = styled.span`
-  font-size: 10px;
-  color: #999;
-  margin-left: auto;
+// Content Area
+const Content = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 100px;
 `;
 
-const CleanServicesSection = styled.div`
-  margin: 8px 0;
+// Daily Quest Card
+const QuestCard = styled.div`
+  background: linear-gradient(135deg, #FFE0B2, #FFCC80);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px;
+  border: 1px solid #FFB74D;
 `;
 
-const ServicesLabel = styled.div`
-  font-size: 9px;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-  margin-bottom: 6px;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-`;
-
-const CleanServicesRow = styled.div`
+const QuestTitle = styled.h3`
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #E65100;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
 `;
 
-const CleanServiceTag = styled.div<{ $borderColor: string }>`
-  background: white;
-  border-left: 3px solid ${({ $borderColor }) => $borderColor};
-  padding: 3px 6px;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-  font-size: 9px;
-  font-weight: 500;
-  color: #333;
-  white-space: nowrap;
-  border-top: 1px solid #F0F0F0;
-  border-right: 1px solid #F0F0F0;
-  border-bottom: 1px solid #F0F0F0;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
+const QuestDescription = styled.p`
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #795548;
 `;
 
-const CleanActionButton = styled.button`
+const QuestReward = styled.div`
+  font-size: 12px;
+  color: #BF360C;
+  font-weight: 600;
+  margin-bottom: 8px;
+`;
+
+const QuestTimer = styled.div`
+  font-size: 11px;
+  color: #795548;
+  margin-bottom: 12px;
+`;
+
+const QuestButton = styled.button`
   width: 100%;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  background: #28A745;
+  background: #FF6F00;
   color: white;
-  font-size: 14px;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: "-apple-system", "BlinkMacSystemFont", "Segoe UI", Roboto, sans-serif;
-  margin-top: 12px;
-  
+
   &:hover {
-    background: #218838;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    background: #E65100;
   }
 `;
 
-// Community Badges and Affiliations for Profile Cards (keeping for compatibility)
-const CommunityBadges = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0;
+// Filter Card
+const FilterCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 16px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
-const CommunityBadge = styled.div<{ $type: 'educational' | 'professional' | 'regional' | 'alumni' | 'foundation' }>`
+const FilterTitle = styled.h4`
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const FilterSection = styled.div`
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const FilterLabel = styled.div`
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+`;
+
+const FilterOptions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const FilterDropdown = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #333;
+  background: white;
+  cursor: pointer;
+  flex: 1;
+  min-width: 120px;
+
+  &:focus {
+    outline: none;
+    border-color: #2D5F4F;
+  }
+`;
+
+// Connection Card
+const ConnectionCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+`;
+
+const MatchBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+`;
+
+const ConnectionHeader = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+`;
+
+const Avatar = styled.div`
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+`;
+
+const ConnectionInfo = styled.div`
+  flex: 1;
+`;
+
+const ConnectionName = styled.h4`
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+`;
+
+const ConnectionLocation = styled.div`
+  font-size: 12px;
+  color: #666;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+`;
+
+const ConnectionTags = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+`;
+
+const Tag = styled.span`
+  background: #E3F2FD;
+  color: #1976D2;
+  padding: 4px 8px;
   border-radius: 12px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
+`;
+
+const ConnectionBio = styled.p`
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  margin: 12px 0;
+  font-style: italic;
+`;
+
+const MutualSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid #f0f0f0;
+`;
+
+const ConnectionActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+const ActionButton = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  padding: 10px;
+  background: ${props => props.$primary ? '#2D5F4F' : 'white'};
+  color: ${props => props.$primary ? 'white' : '#2D5F4F'};
+  border: ${props => props.$primary ? 'none' : '1px solid #2D5F4F'};
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  
-  ${({ $type }) => {
-    switch ($type) {
-      case 'educational':
-        return `
-          background: #e3f2fd;
-          color: #1976d2;
-          border: 1px solid #bbdefb;
-        `;
-      case 'professional':
-        return `
-          background: #e8f5e8;
-          color: #388e3c;
-          border: 1px solid #c8e6c9;
-        `;
-      case 'foundation':
-        return `
-          background: #f3e5f5;
-          color: #7b1fa2;
-          border: 1px solid #e1bee7;
-        `;
-      default:
-        return `
-          background: #f5f5f5;
-          color: #666;
-          border: 1px solid #e0e0e0;
-        `;
-    }
-  }}
-  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: ${props => props.$primary ? '#1E4039' : '#F5F5F5'};
   }
 `;
 
-const BadgeIcon = styled.span`
-  font-size: 8px;
+// Matchmaker Components
+const MatchmakerCard = styled.div`
+  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 16px;
+  text-align: center;
 `;
 
-const ProfessionalAffiliation = styled.div`
+const MatchmakerTitle = styled.h3`
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  color: #1565C0;
+`;
+
+const MatchmakerLevel = styled.div`
+  font-size: 12px;
+  color: #0D47A1;
+  margin-bottom: 16px;
+`;
+
+const MatchPair = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin: 20px 0;
+`;
+
+const MatchProfile = styled.div`
+  text-align: center;
+`;
+
+const MatchAvatar = styled.div`
+  width: 80px;
+  height: 80px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+`;
+
+const MatchName = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const MatchRelation = styled.div`
+  font-size: 11px;
+  color: #666;
+`;
+
+const MatchIcon = styled.div`
+  font-size: 24px;
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+`;
+
+const MatchReasons = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 16px 0;
+  text-align: left;
+`;
+
+const MatchReason = styled.div`
+  font-size: 13px;
+  color: #666;
+  margin: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const MatchActions = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const MatchButton = styled.button<{ $type?: 'skip' | 'match' }>`
+  flex: 1;
+  padding: 12px;
+  background: ${props => props.$type === 'match' ? '#4CAF50' : '#757575'};
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const ManualIntroButton = styled.button`
+  width: 100%;
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+
+  &:hover {
+    background: #1976D2;
+  }
+`;
+
+// Stats Card
+const StatsCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 16px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+`;
+
+const StatsTitle = styled.h4`
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+`;
+
+const StatItem = styled.div`
+  text-align: center;
+  padding: 8px;
+  background: #F5F5F5;
+  border-radius: 8px;
+`;
+
+const StatValue = styled.div`
+  font-size: 20px;
+  font-weight: 700;
+  color: #2D5F4F;
+`;
+
+const StatLabel = styled.div`
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+`;
+
+const LeaderboardPosition = styled.div`
+  background: linear-gradient(135deg, #FFD700, #FFA000);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+`;
+
+// Bingo Card
+const BingoCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 16px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+`;
+
+const BingoTitle = styled.h4`
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const BingoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+`;
+
+const BingoCell = styled.div<{ $completed?: boolean; $free?: boolean }>`
+  aspect-ratio: 1;
+  background: ${props => 
+    props.$free ? '#FFD700' : 
+    props.$completed ? '#4CAF50' : 
+    '#F5F5F5'
+  };
+  color: ${props => props.$completed || props.$free ? 'white' : '#666'};
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   font-size: 10px;
+  padding: 4px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const BingoIcon = styled.div`
+  font-size: 16px;
+  margin-bottom: 2px;
+`;
+
+const BingoStatus = styled.div`
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+`;
+
+// Homestay Components
+const HomestaySection = styled.div`
+  margin: 0 16px 16px 16px;
+`;
+
+const HomestayTitle = styled.h3`
+  font-size: 14px;
+  color: #333;
+  margin: 0 0 12px 0;
+  font-weight: 600;
+`;
+
+const HomestayCard = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+`;
+
+const HomestayHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 8px;
+`;
+
+const HomestayName = styled.h4`
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+`;
+
+const HomestayPrice = styled.div`
+  font-size: 16px;
+  font-weight: 700;
+  color: #2D5F4F;
+`;
+
+const HomestayInfo = styled.div`
+  font-size: 12px;
   color: #666;
   margin: 4px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 `;
 
-const AffiliationItem = styled.span`
-  display: flex;
-  align-items: center;
-  gap: 3px;
-`;
-
-const VerificationIndicator = styled.div`
+const HomestayRating = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
-  color: #2D5F4F;
-  font-weight: 500;
-  margin-top: 4px;
+  font-size: 12px;
+  color: #FFA000;
+  margin: 8px 0;
 `;
 
-const SearchContainer = styled.div`
-  margin-bottom: 20px;
-`;
-
-const SearchBar = styled.div`
-  display: flex;
-  align-items: center;
-  background: white;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-`;
-
-
-const FilterRow = styled.div`
-  display: flex;
-  gap: 12px;
-`;
-
-
-// Filter Modal Styles
-const FilterModalOverlay = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: 20px;
-`;
-
-const FilterModal = styled.div`
-  background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 350px;
-  max-height: 80vh;
-  overflow-y: auto;
-`;
-
-const FilterModalHeader = styled.div`
-  padding: 20px;
-  border-bottom: 1px solid #F0F0F0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const FilterModalTitle = styled.h3`
-  margin: 0;
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-`;
-
-const FilterCloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 20px;
+const HomestayQuote = styled.div`
+  font-size: 12px;
   color: #666;
-  cursor: pointer;
-  
-  &:hover {
-    color: #333;
-  }
+  font-style: italic;
+  margin: 8px 0;
 `;
 
-const CheckboxGrid = styled.div`
-  padding: 20px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-`;
-
-const CheckboxItem = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: #f5f5f5;
-  }
-`;
-
-const Checkbox = styled.input`
-  width: 16px;
-  height: 16px;
-`;
-
-const FilterActions = styled.div`
-  padding: 20px;
-  border-top: 1px solid #F0F0F0;
-  display: flex;
-  gap: 12px;
-`;
-
-const FilterActionButton = styled.button`
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-`;
-
-const ApplyButton = styled(FilterActionButton)`
+const HomestayButton = styled.button`
+  width: 100%;
   background: #2D5F4F;
   color: white;
-  
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+
   &:hover {
-    background: #1F4A3A;
+    background: #1E4039;
   }
 `;
 
-const ClearButton = styled(FilterActionButton)`
-  background: #f5f5f5;
-  color: #666;
-  
-  &:hover {
-    background: #e5e5e5;
-  }
-`;
-
-const UserCard = styled.div`
+// Network Components
+const NetworkCard = styled.div`
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 16px;
-  margin-bottom: 16px;
+  margin: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
-const UserCardHeader = styled.div`
-  display: flex;
-  gap: 16px;
-  margin-bottom: 8px;
-`;
-
-const UserAvatar = styled.div`
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 18px;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-`;
-
-const VerifiedBadge = styled.div`
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 20px;
-  height: 20px;
-  background: #4CAF50;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-  border: 2px solid white;
-  
-  &::after {
-    content: '✓';
-  }
-`;
-
-const CardUserInfo = styled.div`
-  flex: 1;
-`;
-
-const UserHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 4px;
-`;
-
-const UserName = styled.h3`
-  margin: 0;
+const NetworkTitle = styled.h3`
+  margin: 0 0 16px 0;
   font-size: 16px;
-  font-weight: bold;
   color: #333;
-`;
-
-const Rating = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  color: #666;
-`;
-
-const StarIcon = styled.span`
-  color: #FFD700;
-`;
-
-const UserMeta = styled.p`
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #666;
-`;
-
-// New: Interests Tags Section
-const InterestsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
   gap: 6px;
-  margin: 8px 0;
 `;
 
-const InterestTag = styled.span`
-  background: #F5F5F5;
-  padding: 4px 8px;
+const NetworkVisualization = styled.div`
+  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
   border-radius: 12px;
-  font-size: 11px;
+  padding: 20px;
+  text-align: center;
+  min-height: 200px;
+  position: relative;
+  margin-bottom: 16px;
+`;
+
+const NetworkDescription = styled.div`
+  font-size: 12px;
   color: #666;
-  font-weight: 500;
-`;
-
-// New: Short Bio Section
-const ShortBio = styled.p`
-  margin: 8px 0;
-  font-size: 13px;
-  color: #333;
   line-height: 1.4;
-  max-width: 100%;
-  overflow-wrap: break-word;
+  margin-bottom: 16px;
+  text-align: left;
 `;
 
-// Elegant Bottom Section Design
-const ElegantBottomSection = styled.div`
-  background: #FCFCFC;
-  padding: 12px;
+const NetworkFeature = styled.div`
+  background: #F5F5F5;
   border-radius: 8px;
-  border: 1px solid #F0F0F0;
+  padding: 12px;
   margin-bottom: 12px;
 `;
 
-// Services Section
-const ServicesSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-
-const ElegantServiceTag = styled.div<{ borderColor: string }>`
-  background: white;
-  border-left: 4px solid ${({ borderColor }) => borderColor};
-  padding: 6px 10px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  font-size: 11px;
-  font-weight: 500;
+const NetworkFeatureTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
   color: #333;
-  white-space: nowrap;
-  border-top: 1px solid #F0F0F0;
-  border-right: 1px solid #F0F0F0;
-  border-bottom: 1px solid #F0F0F0;
+  margin-bottom: 6px;
 `;
 
+const NetworkFeatureDesc = styled.div`
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+`;
 
-// Elegant Trust Chain Indicator
-const ElegantTrustChain = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #FAFAFA;
-  border: 1px solid #E8E8E8;
+const NetworkButton = styled.button`
+  width: 100%;
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px;
   border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: 8px;
-  
+  margin-top: 8px;
+
   &:hover {
-    background: #F5F5F5;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: #1976D2;
   }
 `;
 
-const MutualFriend = styled.div`
+// Cluster Components
+const ClusterCard = styled.div`
+  background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 16px 16px;
+`;
+
+const ClusterTitle = styled.h4`
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #2E7D32;
   display: flex;
   align-items: center;
+  gap: 6px;
+`;
+
+const ClusterName = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: #1B5E20;
+  margin-bottom: 8px;
+`;
+
+const ClusterMembers = styled.div`
+  font-size: 12px;
+  color: #388E3C;
+  margin-bottom: 8px;
+`;
+
+const ClusterTraits = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+`;
+
+const ClusterTrait = styled.span`
+  background: white;
+  color: #2E7D32;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+`;
+
+const ClusterActions = styled.div`
+  display: flex;
   gap: 8px;
+`;
+
+const ClusterButton = styled.button`
+  flex: 1;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #388E3C;
+  }
+`;
+
+// Chain Components
+const ChainCard = styled.div`
+  background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 16px 16px;
+`;
+
+const ChainTitle = styled.h4`
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #E65100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ChainPath = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
+const ChainNode = styled.div<{ $clickable?: boolean }>`
+  font-size: 12px;
+  color: ${props => props.$clickable ? '#2196F3' : '#666'};
+  font-weight: 500;
+  cursor: ${props => props.$clickable ? 'pointer' : 'default'};
+  text-decoration: ${props => props.$clickable ? 'underline' : 'none'};
+
+  &:hover {
+    color: ${props => props.$clickable ? '#1976D2' : '#666'};
+  }
+`;
+
+const ChainArrow = styled.span`
+  color: #FF6F00;
+`;
+
+const ChainList = styled.div`
+  margin-top: 12px;
+`;
+
+const ChainItem = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ChainTarget = styled.div`
+  font-size: 13px;
+  color: #333;
+  font-weight: 600;
+`;
+
+const ChainSteps = styled.div`
   font-size: 12px;
   color: #666;
 `;
 
-const FriendAvatar = styled.div`
-  width: 24px;
-  height: 24px;
-  background: #2D5F4F;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+const ChainExploreButton = styled.button`
+  background: #FF6F00;
   color: white;
-  font-size: 10px;
-  font-weight: bold;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-`;
-
-const ActionButton = styled.button`
-  width: 100%;
-  padding: 12px;
   border: none;
-  border-radius: 8px;
-  background-color: #2D5F4F;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  
+
   &:hover {
-    background-color: #1F4A3A;
+    background: #E65100;
   }
 `;
 
-// Modal Styles
-const DetailedProfileModal = styled.div<{ show: boolean }>`
+// Quick Actions
+const QuickActionsCard = styled.div`
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px 16px;
+`;
+
+const QuickActionButton = styled.button`
+  flex: 1;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #F5F5F5;
+    transform: translateY(-2px);
+  }
+`;
+
+const QuickActionIcon = styled.div`
+  font-size: 20px;
+`;
+
+const QuickActionLabel = styled.span`
+  font-size: 10px;
+  color: #666;
+`;
+
+// Modal Components
+const Modal = styled.div<{ $show: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: ${({ show }) => show ? 'flex' : 'none'};
+  background: rgba(0, 0, 0, 0.8);
+  display: ${props => props.$show ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
 `;
 
-const DetailedProfileContent = styled.div`
+const ModalContent = styled.div`
   background: white;
   border-radius: 16px;
+  padding: 20px;
+  max-width: 500px;
   width: 100%;
-  max-width: 400px;
   max-height: 80vh;
   overflow-y: auto;
-  position: relative;
-  
-  /* Smooth scrolling */
-  scroll-behavior: smooth;
-  
-  /* Hide scrollbar but keep functionality */
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
 `;
 
-const DetailedProfileHeader = styled.div`
-  padding: 24px;
-  border-bottom: 1px solid #F0F0F0;
-  position: relative;
+const ModalTitle = styled.h3`
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #333;
 `;
 
-const CloseButton = styled.button`
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #666;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  &:hover {
-    color: #333;
-  }
-`;
-
-const DetailedUserInfo = styled.div`
-  text-align: center;
+const ModalSection = styled.div`
   margin-bottom: 16px;
 `;
 
-const DetailedUserAvatar = styled.div`
-  width: 80px;
-  height: 80px;
+const ModalLabel = styled.label`
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+`;
+
+const ModalInput = styled.input`
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #2D5F4F;
+  }
+`;
+
+const PeopleList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+`;
+
+const PersonChip = styled.div`
+  background: #E3F2FD;
+  color: #1976D2;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const RemoveButton = styled.button`
+  background: none;
+  border: none;
+  color: #F44336;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+`;
+
+const ModalTextarea = styled.textarea`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #2D5F4F;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+`;
+
+const ModalButton = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  padding: 10px;
+  background: ${props => props.$primary ? '#2D5F4F' : '#F5F5F5'};
+  color: ${props => props.$primary ? 'white' : '#666'};
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+// Network Web Modal
+const NetworkWebModal = styled(Modal)``;
+
+const NetworkWebContent = styled(ModalContent)`
+  max-width: 800px;
+`;
+
+const NetworkWebCanvas = styled.div`
+  background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+  border-radius: 12px;
+  padding: 40px;
+  min-height: 400px;
+  position: relative;
+  margin-bottom: 20px;
+`;
+
+const NetworkWebNode = styled.div<{ $x: number; $y: number; $main?: boolean }>`
+  position: absolute;
+  width: ${props => props.$main ? '60px' : '50px'};
+  height: ${props => props.$main ? '60px' : '50px'};
+  background: ${props => props.$main ? '#2D5F4F' : '#64B5F6'};
+  color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 24px;
-  margin: 0 auto 12px;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-`;
-
-const DetailedUserName = styled.h2`
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  font-weight: bold;
-  color: #333;
-`;
-
-const DetailedUserMeta = styled.div`
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 4px;
-`;
-
-const LifeSeason = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #2D5F4F;
-  font-style: italic;
-  margin-bottom: 12px;
-`;
-
-const DetailedUserBio = styled.p`
-  font-size: 14px;
-  color: #333;
-  line-height: 1.5;
-  text-align: left;
-  margin-bottom: 12px;
-`;
-
-const CommunityMessage = styled.div`
-  background: rgba(45, 95, 79, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-`;
-
-const CommunityText = styled.p`
-  margin: 0;
-  font-size: 13px;
-  color: #2D5F4F;
-  font-style: italic;
-  text-align: center;
-`;
-
-// Social Media Section (Subtle & Clean)
-const SocialSection = styled.div`
-  margin: 16px 0;
-  padding: 0 4px;
-`;
-
-const SocialGrid = styled.div`
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-`;
-
-const SocialChip = styled.a`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #f8f9fa;
-  border-radius: 20px;
-  text-decoration: none;
-  font-size: 12px;
-  color: #666;
-  border: 1px solid #e9ecef;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #e9ecef;
-    transform: translateY(-1px);
-  }
-`;
-
-// Category-Based Offerings Section
-const OfferingsSection = styled.div`
-  margin: 16px 0;
-`;
-
-const OfferingsTitle = styled.h4`
-  font-size: 14px;
-  color: #495057;
-  margin: 0 0 12px 0;
-  text-align: center;
-  font-weight: 500;
-`;
-
-const OfferingsGrid = styled.div`
-  display: grid;
-  gap: 10px;
-`;
-
-const OfferingCard = styled.div<{ $category: string }>`
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 12px;
-  border-left: 4px solid ${({ $category }) => getCategoryColor($category)};
-  position: relative;
-`;
-
-const OfferingHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-`;
-
-const CategoryTag = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #495057;
-`;
-
-const OfferingPrice = styled.span`
-  font-size: 12px;
+  font-size: ${props => props.$main ? '14px' : '11px'};
   font-weight: 600;
-  color: #007bff;
-`;
-
-const OfferingTitle = styled.h5`
-  font-size: 13px;
-  font-weight: 600;
-  color: #212529;
-  margin: 0 0 4px 0;
-`;
-
-const OfferingDesc = styled.p`
-  font-size: 11px;
-  color: #6c757d;
-  margin: 0 0 8px 0;
-  line-height: 1.3;
-`;
-
-const BookButton = styled.button`
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 16px;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: 500;
+  left: ${props => props.$x}%;
+  top: ${props => props.$y}%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  transition: all 0.2s ease;
-  
+  z-index: 2;
+
   &:hover {
-    background: #0056b3;
-    transform: translateY(-1px);
+    transform: translate(-50%, -50%) scale(1.1);
   }
 `;
 
-const MainOfferingsSection = styled.div`
-  padding: 24px;
+const NetworkWebLine = styled.svg`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 `;
-
-const MainOfferingsTitle = styled.h3`
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-`;
-
-const OfferingCategory = styled.span`
-  font-size: 12px;
-  color: #2D5F4F;
-  background: rgba(45, 95, 79, 0.1);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-`;
-
-const OfferingDescription = styled.p`
-  margin: 0 0 16px 0;
-  font-size: 14px;
-  color: #666;
-  line-height: 1.4;
-`;
-
-const OfferingActions = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const ChatButton = styled.button`
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #2D5F4F;
-  border-radius: 8px;
-  background: white;
-  color: #2D5F4F;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  
-  &:hover {
-    background: #2D5F4F;
-    color: white;
-  }
-`;
-
-
-
-// Filter buttons configuration with navigation and filtering support
-const filterButtons = [
-  { 
-    id: 'local-guides', 
-    label: 'Local Guides', 
-    icon: '🗺️',
-    filterKey: 'localGuide', // matches user.servicesOffered.localGuide
-    color: '#1976D2'
-  },
-  { 
-    id: 'homestay', 
-    label: 'Homestay', 
-    icon: '🏠',
-    filterKey: 'homestay', // matches user.servicesOffered.homestay
-    color: '#D32F2F'
-  },
-  { 
-    id: 'marketplace', 
-    label: 'Marketplace', 
-    icon: '🛍️',
-    filterKey: 'marketplace', // matches user.servicesOffered.marketplace
-    color: '#F57C00'
-  },
-  { 
-    id: 'open-to-connect', 
-    label: 'Open to Connect', 
-    icon: '🤝',
-    filterKey: 'openToConnect', // matches user.servicesOffered.openToConnect
-    color: '#388E3C'
-  },
-  { 
-    id: 'bersebuddy', 
-    label: 'BerseBuddy', 
-    icon: '👥',
-    screen: '/bersebuddy', // navigates to BerseBuddyScreen
-    color: '#7B1FA2'
-  },
-  { 
-    id: 'bersementor', 
-    label: 'BerseMentor', 
-    icon: '👨‍🏫',
-    screen: '/bersementor', // navigates to BerseMentorScreen
-    color: '#2E7D32'
-  }
-];
-
-// Legacy support - keep topServiceButtons for existing code compatibility
-const topServiceButtons = filterButtons;
-
-
-// Category Color Function
-const getCategoryColor = (category: string) => {
-  const colors = {
-    'local-guides': '#28a745',
-    'homestay': '#ffc107', 
-    'freelance': '#007bff',
-    'marketplace': '#dc3545',
-    'open-to-connect': '#6f42c1'
-  };
-  return colors[category] || '#6c757d';
-};
 
 export const BerseMatchScreen: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [showDetailedProfile, setShowDetailedProfile] = useState(false);
-  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showTrustFeedback, setShowTrustFeedback] = useState(false);
-  const [selectedTrustUser, setSelectedTrustUser] = useState<UserProfile | null>(null);
-  const [showLocationLogbook, setShowLocationLogbook] = useState(false);
-  const [selectedLocationUser, setSelectedLocationUser] = useState<UserProfile | null>(null);
-  const [showLocationFriends, setShowLocationFriends] = useState(false);
-  const [selectedLocationCity, setSelectedLocationCity] = useState<string>('');
-  const [locationFriends, setLocationFriends] = useState<UserProfile[]>([]);
-  const { user } = useAuth();
-  const { openMessagingModal, notificationBadge } = useMessaging();
+  const [activeTab, setActiveTab] = useState<'discover' | 'matchmaker' | 'myweb'>('discover');
+  const [connectionMode, setConnectionMode] = useState<'guides' | 'homesurf' | 'mentor' | 'buddy'>('guides');
+  const [showManualIntro, setShowManualIntro] = useState(false);
+  const [showSquadBuilder, setShowSquadBuilder] = useState(false);
+  const [showNetworkWeb, setShowNetworkWeb] = useState(false);
+  const [showCreateCluster, setShowCreateCluster] = useState(false);
+  const [showBingoInput, setShowBingoInput] = useState(false);
+  const [selectedBingoIndex, setSelectedBingoIndex] = useState<number | null>(null);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   
-  // New filter states from BerseConnect
-  const [selectedCountry, setSelectedCountry] = useState<string>('Malaysia');
-  const [selectedCities, setSelectedCities] = useState<string[]>(['All Cities']);
+  // State for user data and filtering
+  const [users, setUsers] = useState<ProfileCardData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeServiceFilter, setActiveServiceFilter] = useState<string | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showInterestModal, setShowInterestModal] = useState(false);
   
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [selectedTopServiceCategory, setSelectedTopServiceCategory] = useState<string>('');
-  const [countryModalOpen, setCountryModalOpen] = useState(false);
-  const [cityModalOpen, setCityModalOpen] = useState(false);
-  const [interestsModalOpen, setInterestsModalOpen] = useState(false);
-  const [activeSearchTerm, setActiveSearchTerm] = useState('');
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [showAIModal, setShowAIModal] = useState(false);
-
-  // Enhanced Search State
-  const [enhancedSearchOpen, setEnhancedSearchOpen] = useState(false);
-  const [mainSearchQuery, setMainSearchQuery] = useState('');
-  const [activeSearchCategory, setActiveSearchCategory] = useState<'all' | 'interests' | 'communities' | 'companies' | 'skills' | 'personality'>('all');
-  const [selectedSearchInterests, setSelectedSearchInterests] = useState<string[]>([]);
-  const [selectedSearchCommunities, setSelectedSearchCommunities] = useState<string[]>([]);
-  const [selectedSearchCompanies, setSelectedSearchCompanies] = useState<string[]>([]);
-  const [selectedSearchSkills, setSelectedSearchSkills] = useState<string[]>([]);
-  const [selectedSearchPersonalities, setSelectedSearchPersonalities] = useState<string[]>([]);
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [autocompleteResults, setAutocompleteResults] = useState<any[]>([]);
-  const [enhancedSearchResults, setEnhancedSearchResults] = useState<UserProfile[]>([]);
-
-  // Check if we're coming from forum with a selected profile
-  const forumSelectedProfile = location.state?.selectedProfile as UserProfile;
+  // State for manual introductions
+  const [introductionPeople, setIntroductionPeople] = useState<string[]>([]);
+  const [newPersonName, setNewPersonName] = useState('');
   
-  // Filter handlers from BerseConnect
-  const handleCountryFilter = (country: string) => {
-    setSelectedCountry(country);
-    if (country !== 'All Countries') {
-      setSelectedCities(['All Cities']); // Reset cities when country changes
-    }
-  };
-
-  const handleCityFilter = (cities: string[]) => {
-    setSelectedCities(cities);
-  };
-
-  const handleInterestsFilter = (interests: string[]) => {
-    setSelectedInterests(interests);
-  };
+  // State for squad builder
+  const [squadMembers, setSquadMembers] = useState<string[]>([]);
+  const [squadName, setSquadName] = useState('');
+  const [squadActivity, setSquadActivity] = useState('');
   
-  const handleInterestToggle = (interestId: string) => {
-    setSelectedInterests(prev => {
-      if (prev.includes(interestId)) {
-        return prev.filter(id => id !== interestId);
-      } else {
-        return [...prev, interestId];
-      }
-    });
+  // State for cluster creation
+  const [clusterMembers, setClusterMembers] = useState<string[]>([]);
+  const [clusterName, setClusterName] = useState('');
+  
+  // State for bingo
+  const [bingoItems, setBingoItems] = useState([
+    { text: 'Coder', completed: true, icon: '💻', person: 'Ahmad' },
+    { text: 'Vegan', completed: false, icon: '🥗', person: '' },
+    { text: 'Parent', completed: true, icon: '👨‍👩‍👧', person: 'Fatima' },
+    { text: 'Artist', completed: false, icon: '🎨', person: '' },
+    { text: 'Expat', completed: true, icon: '✈️', person: 'John' },
+    { text: 'Night Owl', completed: true, icon: '🦉', person: 'Sarah' },
+    { text: 'Gym Rat', completed: true, icon: '💪', person: 'Khalid' },
+    { text: 'FREE', completed: false, icon: '🌟', free: true, person: '' },
+    { text: 'Foodie', completed: false, icon: '🍔', person: '' },
+    { text: 'NAMA', completed: true, icon: '🕌', person: 'Omar' },
+    { text: 'Biker', completed: false, icon: '🚴', person: '' },
+    { text: 'Gamer', completed: true, icon: '🎮', person: 'Ali' },
+    { text: '3+ Lang', completed: false, icon: '🗣️', person: '' },
+    { text: 'Volunteer', completed: true, icon: '🤝', person: 'Amina' },
+    { text: 'Founder', completed: false, icon: '🚀', person: '' },
+    { text: 'Coffee', completed: true, icon: '☕', person: 'Lisa' },
+    { text: 'Runner', completed: false, icon: '🏃', person: '' },
+    { text: 'Cook', completed: true, icon: '👨‍🍳', person: 'Hassan' },
+    { text: 'Traveler', completed: true, icon: '🌍', person: 'Maya' },
+    { text: 'Investor', completed: false, icon: '📈', person: '' },
+    { text: 'Teacher', completed: false, icon: '👨‍🏫', person: '' },
+    { text: 'Designer', completed: true, icon: '🎨', person: 'Zara' },
+    { text: 'Writer', completed: false, icon: '✍️', person: '' },
+    { text: 'Musician', completed: false, icon: '🎵', person: '' },
+    { text: 'Pet Owner', completed: true, icon: '🐕', person: 'Emma' }
+  ]);
+
+  // Helper functions
+  const getFilterButtonText = (type: 'location' | 'interest') => {
+    if (type === 'location') return '📍 Location Filter';
+    if (type === 'interest') return '💎 Interest Filter';
+    return 'Filter';
   };
 
-  const handleClearInterests = () => {
-    setSelectedInterests([]);
+  // Mode descriptions
+  const modeDescriptions = {
+    guides: "Find locals and friends who can show you around cities, cultures, and communities",
+    homesurf: "Connect with people offering affordable rooms and homestays for students and travelers",
+    mentor: "Find industry professionals for career guidance and skill development",
+    buddy: "International students connecting with local students for support"
   };
 
-  const handleApplyInterests = () => {
-    setInterestsModalOpen(false);
-  };
-
-  // Search handlers
-  const handleSearchInputChange = (value: string) => {
-    setSearchQuery(value);
-    
-    if (value.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    // Real-time search through users
-    const filtered = users.filter(user => {
-      const searchTerm = value.toLowerCase();
-      return (
-        user.fullName.toLowerCase().includes(searchTerm) ||
-        user.bio.toLowerCase().includes(searchTerm) ||
-        user.profession.toLowerCase().includes(searchTerm) ||
-        user.interests.some(interest => interest.toLowerCase().includes(searchTerm))
-      );
-    });
-    
-    setSearchResults(filtered);
-  };
-
-  const handleSearchSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    handleSearchInputChange(suggestion);
-  };
-
-  const handleApplySearch = () => {
-    setActiveSearchTerm(searchQuery);
-    setSearchModalOpen(false);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setActiveSearchTerm('');
-    setSearchModalOpen(false);
-  };
-
-  const handleSearchResultClick = (user: UserProfile) => {
-    setSearchModalOpen(false);
-    setSelectedUser(user);
-    setShowDetailedProfile(true);
-  };
-
-  const handleCloseSearchModal = () => {
-    setSearchModalOpen(false);
-    setSearchQuery('');
-    setSearchResults([]);
-  };
-
-  // Enhanced Search Handlers
-  const handleOpenEnhancedSearch = () => {
-    setEnhancedSearchOpen(true);
-    setSearchModalOpen(false); // Close old modal if open
-  };
-
-  const handleCloseEnhancedSearch = () => {
-    setEnhancedSearchOpen(false);
-    setMainSearchQuery('');
-    setAutocompleteResults([]);
-    setShowAutocomplete(false);
-  };
-
-  const handleMainSearchInputChange = (value: string) => {
-    setMainSearchQuery(value);
-    
-    if (value.trim().length < 2) {
-      setAutocompleteResults([]);
-      setShowAutocomplete(false);
-      return;
-    }
-
-    // Generate autocomplete results based on active category
-    let results: any[] = [];
-    const searchTerm = value.toLowerCase();
-
-    switch (activeSearchCategory) {
-      case 'interests':
-        results = interestOptions
-          .filter(option => option.name.toLowerCase().includes(searchTerm))
-          .slice(0, 5)
-          .map(option => ({ ...option, type: 'interest' }));
-        break;
-      case 'communities':
-        results = communityOptions
-          .filter(option => option.name.toLowerCase().includes(searchTerm))
-          .slice(0, 5)
-          .map(option => ({ ...option, type: 'community' }));
-        break;
-      case 'companies':
-        results = companyOptions
-          .filter(option => option.name.toLowerCase().includes(searchTerm))
-          .slice(0, 5)
-          .map(option => ({ ...option, type: 'company' }));
-        break;
-      case 'skills':
-        results = skillOptions
-          .filter(option => option.name.toLowerCase().includes(searchTerm))
-          .slice(0, 5)
-          .map(option => ({ ...option, type: 'skill' }));
-        break;
-      case 'personality':
-        results = personalityOptions
-          .filter(option => 
-            option.name.toLowerCase().includes(searchTerm) ||
-            option.type.toLowerCase().includes(searchTerm) ||
-            option.variants.some(variant => variant.toLowerCase().includes(searchTerm))
-          )
-          .slice(0, 5)
-          .map(option => ({ ...option, type: 'personality' }));
-        break;
-      default: // 'all'
-        const allResults = [
-          ...interestOptions.filter(o => o.name.toLowerCase().includes(searchTerm)).slice(0, 1).map(o => ({ ...o, type: 'interest' })),
-          ...communityOptions.filter(o => o.name.toLowerCase().includes(searchTerm)).slice(0, 1).map(o => ({ ...o, type: 'community' })),
-          ...companyOptions.filter(o => o.name.toLowerCase().includes(searchTerm)).slice(0, 1).map(o => ({ ...o, type: 'company' })),
-          ...skillOptions.filter(o => o.name.toLowerCase().includes(searchTerm)).slice(0, 1).map(o => ({ ...o, type: 'skill' })),
-          ...personalityOptions.filter(o => 
-            o.name.toLowerCase().includes(searchTerm) || 
-            o.type.toLowerCase().includes(searchTerm) ||
-            o.variants.some(variant => variant.toLowerCase().includes(searchTerm))
-          ).slice(0, 1).map(o => ({ ...o, type: 'personality' }))
-        ];
-        results = allResults.slice(0, 5);
-        break;
-    }
-
-    setAutocompleteResults(results);
-    setShowAutocomplete(results.length > 0);
-  };
-
-  const handleCategoryTabClick = (categoryId: typeof activeSearchCategory) => {
-    setActiveSearchCategory(categoryId);
-    setMainSearchQuery('');
-    setAutocompleteResults([]);
-    setShowAutocomplete(false);
-  };
-
-  const handleAutocompleteSelect = (item: any) => {
-    switch (item.type) {
-      case 'interest':
-        if (!selectedSearchInterests.includes(item.id)) {
-          setSelectedSearchInterests(prev => [...prev, item.id]);
-        }
-        break;
-      case 'community':
-        if (!selectedSearchCommunities.includes(item.id)) {
-          setSelectedSearchCommunities(prev => [...prev, item.id]);
-        }
-        break;
-      case 'company':
-        if (!selectedSearchCompanies.includes(item.id)) {
-          setSelectedSearchCompanies(prev => [...prev, item.id]);
-        }
-        break;
-      case 'skill':
-        if (!selectedSearchSkills.includes(item.id)) {
-          setSelectedSearchSkills(prev => [...prev, item.id]);
-        }
-        break;
-      case 'personality':
-        if (!selectedSearchPersonalities.includes(item.id)) {
-          setSelectedSearchPersonalities(prev => [...prev, item.id]);
-        }
-        break;
-    }
-    setMainSearchQuery('');
-    setAutocompleteResults([]);
-    setShowAutocomplete(false);
-  };
-
-  const removeSearchFilter = (type: string, id: string) => {
-    switch (type) {
-      case 'interest':
-        setSelectedSearchInterests(prev => prev.filter(item => item !== id));
-        break;
-      case 'community':
-        setSelectedSearchCommunities(prev => prev.filter(item => item !== id));
-        break;
-      case 'company':
-        setSelectedSearchCompanies(prev => prev.filter(item => item !== id));
-        break;
-      case 'skill':
-        setSelectedSearchSkills(prev => prev.filter(item => item !== id));
-        break;
-      case 'personality':
-        setSelectedSearchPersonalities(prev => prev.filter(item => item !== id));
-        break;
-    }
-  };
-
-  const handleApplyEnhancedSearch = () => {
-    // Perform enhanced search with all selected filters
-    performEnhancedSearch();
-    setEnhancedSearchOpen(false);
-  };
-
-  const handleClearEnhancedSearch = () => {
-    setMainSearchQuery('');
-    setSelectedSearchInterests([]);
-    setSelectedSearchCommunities([]);
-    setSelectedSearchCompanies([]);
-    setSelectedSearchSkills([]);
-    setSelectedSearchPersonalities([]);
-    setAutocompleteResults([]);
-    setShowAutocomplete(false);
-    setEnhancedSearchResults([]);
-  };
-
-  const performEnhancedSearch = () => {
-    // Filter users based on enhanced search criteria
-    let filtered = users;
-
-    // Filter by interests
-    if (selectedSearchInterests.length > 0) {
-      filtered = filtered.filter(user => 
-        selectedSearchInterests.some(interest => 
-          user.interests.some(userInterest => 
-            userInterest.toLowerCase().includes(interest.toLowerCase()) ||
-            interest.toLowerCase().includes(userInterest.toLowerCase())
-          )
-        )
-      );
-    }
-
-    // Filter by main search query (name, bio, profession)
-    if (mainSearchQuery.trim()) {
-      const searchTerm = mainSearchQuery.toLowerCase();
-      filtered = filtered.filter(user =>
-        user.fullName.toLowerCase().includes(searchTerm) ||
-        user.bio.toLowerCase().includes(searchTerm) ||
-        user.profession.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    setEnhancedSearchResults(filtered);
-    setActiveSearchTerm(mainSearchQuery || `${selectedSearchInterests.length + selectedSearchCommunities.length + selectedSearchCompanies.length + selectedSearchSkills.length + selectedSearchPersonalities.length} filters`);
-  };
-
-  // Quick search suggestions
-  const getQuickSuggestions = () => {
-    switch (activeSearchCategory) {
-      case 'interests':
-        return interestOptions.filter(o => o.popularity > 85).slice(0, 6);
-      case 'communities':
-        return communityOptions.filter(o => o.verified).slice(0, 4);
-      case 'companies':
-        return companyOptions.filter(o => o.verified).slice(0, 4);
-      case 'skills':
-        return skillOptions.slice(0, 6);
-      case 'personality':
-        return personalityOptions.slice(0, 8);
-      default:
-        return [
-          { id: 'photography', name: 'Photography enthusiasts', type: 'suggestion' },
-          { id: 'nama-network', name: 'NAMA Foundation network', type: 'suggestion' },
-          { id: 'finance-pros', name: 'Finance professionals', type: 'suggestion' },
-          { id: 'turkish-students', name: 'Malaysian students in Turkey', type: 'suggestion' }
-        ];
-    }
-  };
-
-  // Helper functions for enhanced profile features
-  const getUserLevel = (user: UserProfile): UserLevel => {
-    const userPoints = user.points || 0;
-    return userLevels.reverse().find(level => userPoints >= level.minPoints) || userLevels[0];
-  };
-
-  const getUserPersonalityType = (user: UserProfile): string | null => {
-    // Mock personality assignment based on user characteristics
-    const personalityTypes = ['INFP-T', 'ENFJ-A', 'INTJ-T', 'ESFP-A', 'ISTJ-T', 'ENTP-A'];
-    const userSpecificType = personalityTypes[parseInt(user.id) % personalityTypes.length];
-    return userSpecificType;
-  };
-
-  const getPersonalityTemperament = (personalityType: string): 'NT' | 'NF' | 'SJ' | 'SP' => {
-    const mbtiCode = personalityType.substring(0, 4);
-    if (['INTJ', 'INTP', 'ENTJ', 'ENTP'].includes(mbtiCode)) return 'NT';
-    if (['INFJ', 'INFP', 'ENFJ', 'ENFP'].includes(mbtiCode)) return 'NF';
-    if (['ISTJ', 'ISFJ', 'ESTJ', 'ESFJ'].includes(mbtiCode)) return 'SJ';
-    return 'SP';
-  };
-
-  const getUserAchievements = (user: UserProfile): AchievementBadge[] => {
-    // Mock achievement assignment based on user profile
-    const achievements = [];
-    if (user.isVerified) achievements.push(achievementBadges.find(b => b.id === 'verified-expert')!);
-    if (user.level >= 5) achievements.push(achievementBadges.find(b => b.id === 'community-builder')!);
-    if ((user.level * 1.2 + 3.5) >= 6.0) achievements.push(achievementBadges.find(b => b.id === 'trusted-member')!);
-    return achievements.slice(0, 3); // Max 3 badges
-  };
-
-  const getUserUniversalVerifications = (user: UserProfile): VerificationItem[] => {
-    // Mock universal verification system
-    const verifications: VerificationItem[] = [];
-    
-    if (user.profession.includes('Architect') || user.profession.includes('Engineer')) {
-      verifications.push({
-        id: 'nama-foundation',
-        type: 'community',
-        verifiedBy: 'NAMA Foundation',
-        verificationDate: '2024-01-15',
-        isActive: true
-      });
-    }
-    
-    if (user.age >= 22 && user.age <= 28) {
-      verifications.push({
-        id: 'masat-turkey',
-        type: 'community',
-        verifiedBy: 'MASAT Turkey',
-        verificationDate: '2024-02-20',
-        isActive: true
-      });
-    }
-    
-    if (user.isVerified) {
-      verifications.push({
-        id: 'university-verification',
-        type: 'educational',
-        verifiedBy: 'University of Malaya',
-        verificationDate: '2023-09-10',
-        isActive: true
-      });
-    }
-    
-    // Add some variety based on profession
-    if (user.profession.includes('Doctor') || user.profession.includes('Medical')) {
-      verifications.push({
-        id: 'medical-council',
-        type: 'professional',
-        verifiedBy: 'Malaysian Medical Council',
-        verificationDate: '2023-11-05',
-        isActive: true
-      });
-    }
-    
-    return verifications.slice(0, 4); // Max 4 verifications for clean display
-  };
-
-  const getEnhancedCommunityAffiliations = (user: UserProfile): Array<{id: string, name: string, type: 'educational' | 'professional' | 'foundation' | 'alumni', icon: string}> => {
-    const affiliations = [];
-    
-    if (user.profession.includes('Architect') || user.profession.includes('Engineer')) {
-      affiliations.push({ id: 'nama', name: 'NAMA Foundation', type: 'foundation' as const, icon: '🏛️' });
-    }
-    
-    if (user.age >= 22 && user.age <= 28) {
-      affiliations.push({ id: 'masat', name: 'MASAT Turkey', type: 'educational' as const, icon: '🎓' });
-    }
-    
-    if (user.profession.includes('Business') || user.profession.includes('Consultant')) {
-      affiliations.push({ id: 'ptptn', name: 'PTPTN Alumni', type: 'alumni' as const, icon: '🎓' });
-    }
-    
-    return affiliations.slice(0, 3); // Max 3 affiliations
-  };
-
-  // Enhanced profile card helpers
-  const getUserCommunities = (user: UserProfile): { id: string; name: string; type: 'educational' | 'professional' | 'foundation' }[] => {
-    // Mock community data based on user profile
-    const communities = [];
-    if (user.profession.includes('Architect') || user.profession.includes('Engineer')) {
-      communities.push({ id: 'professional', name: 'NAMA Foundation', type: 'foundation' });
-    }
-    if (user.age >= 22 && user.age <= 28) {
-      communities.push({ id: 'education', name: 'MASAT Turkey', type: 'educational' });
-    }
-    return communities.slice(0, 2); // Max 2 badges
-  };
-
-  const getUserProfessionalAffiliations = (user: UserProfile): string[] => {
-    // Mock professional affiliations
-    const affiliations = [];
-    if (user.profession.includes('Consultant') || user.profession.includes('Engineer')) {
-      affiliations.push('📍 NAMA Foundation');
-    }
-    if (user.age >= 22 && user.age <= 28) {
-      affiliations.push('🎓 MASAT Turkey');
-    }
-    return affiliations.slice(0, 2); // Max 2 affiliations
-  };
-
-  const getUserVerificationStatus = (user: UserProfile): string | null => {
-    if (user.isVerified) {
-      return 'Verified by NAMA Foundation';
-    }
-    return null;
-  };
-
-  const getCommunityVerificationStatus = (user: UserProfile, communityId: string): boolean => {
-    // Check if this community has verified this user
-    if (communityId === 'nama-foundation' && (user.profession.includes('Architect') || user.profession.includes('Engineer'))) {
-      return true;
-    }
-    if (communityId === 'masat-turkey' && user.age >= 22 && user.age <= 28) {
-      return true;
-    }
-    if (communityId === 'university-of-malaya' && user.isVerified) {
-      return true;
-    }
-    if (communityId === 'medical-council' && (user.profession.includes('Doctor') || user.profession.includes('Medical'))) {
-      return true;
-    }
-    return false;
-  };
-
-  // Location logbook helper functions
-  const getUserTravelHistory = (user: UserProfile) => {
-    const travelHistories = {
-      // Users from Malaysia traveling abroad
-      '1': [ // Amina Hadzic
-        { country: '🇹🇷 Turkey', city: 'Istanbul', duration: 'Mar 2023 - Jun 2023 (3 months)', friends: 3 },
-        { country: '🇩🇪 Germany', city: 'Berlin', duration: 'Aug 2022 - Dec 2022 (4 months)', friends: 7 },
-        { country: '🇮🇩 Indonesia', city: 'Jakarta', duration: 'Jan 2022 - Feb 2022 (1 month)', friends: 2 }
-      ],
-      '2': [ // Hafiz Rahman  
-        { country: '🇹🇷 Turkey', city: 'Istanbul', duration: 'Sep 2023 - Present (5 months)', friends: 4 },
-        { country: '🇸🇬 Singapore', city: 'Singapore', duration: 'Jul 2022 - Aug 2022 (2 months)', friends: 5 },
-        { country: '🇹🇭 Thailand', city: 'Bangkok', duration: 'Dec 2021 - Jan 2022 (1 month)', friends: 3 }
-      ],
-      '13': [ // Omar Hassan
-        { country: '🇸🇦 Saudi Arabia', city: 'Mecca', duration: 'Nov 2023 - Dec 2023 (1 month)', friends: 8 },
-        { country: '🇪🇬 Egypt', city: 'Cairo', duration: 'Jun 2023 - Aug 2023 (2 months)', friends: 6 },
-        { country: '🇮🇩 Indonesia', city: 'Jakarta', duration: 'Mar 2022 - Apr 2022 (1 month)', friends: 4 }
-      ],
-      '18': [ // Chen Wei Ming
-        { country: '🇹🇭 Thailand', city: 'Bangkok', duration: 'Oct 2023 - Nov 2023 (1 month)', friends: 5 },
-        { country: '🇸🇬 Singapore', city: 'Singapore', duration: 'Jul 2023 - Sep 2023 (2 months)', friends: 12 },
-        { country: '🇭🇰 Hong Kong', city: 'Hong Kong', duration: 'Jan 2023 - Feb 2023 (1 month)', friends: 8 }
-      ]
-    };
-    
-    return travelHistories[user.id] || [
-      { country: '🇸🇬 Singapore', city: 'Singapore', duration: 'Jul 2023 - Aug 2023 (1 month)', friends: 3 },
-      { country: '🇹🇭 Thailand', city: 'Bangkok', duration: 'Dec 2022 - Jan 2023 (1 month)', friends: 2 }
-    ];
-  };
-
-  const getUserResidenceInfo = (user: UserProfile) => {
-    const residenceData = {
-      '1': { originalCountry: '🇧🇦 Bosnia', since: '2019' }, // Amina from Bosnia
-      '2': { originalCountry: '🇮🇩 Indonesia', since: '2021' }, // Hafiz from Indonesia  
-      '3': { originalCountry: '🇲🇦 Morocco', since: '2015' }, // Marwan from Morocco
-      '4': { originalCountry: '🇲🇾 Malaysia', since: '2020' }, // Ali from Malaysia to Yemen
-      '13': { originalCountry: '🇲🇾 Malaysia', since: 'Born here' }, // Omar Malaysian
-      '18': { originalCountry: '🇨🇳 China', since: '2018' }, // Chen from China
-    };
-    
-    return residenceData[user.id] || { originalCountry: '🇲🇾 Malaysia', since: 'Born here' };
-  };
-
-  const getTravelFriends = (user: UserProfile, city: string): UserProfile[] => {
-    // Map cities to actual BerseMatch profiles with connection context
-    const friendsData = {
-      'Istanbul': [
-        { ...userProfiles.find(p => p.id === '13')!, connection: 'Met through MASAT Turkey community' }, // Omar Hassan - Cultural Heritage Guide
-        { ...userProfiles.find(p => p.id === '14')!, connection: 'Adventure travel companion' }, // Sara Wong - Adventure Guide  
-        { ...userProfiles.find(p => p.id === '21')!, connection: 'Tech meetup connection' }  // Daniel Lee - Developer
-      ],
-      'Berlin': [
-        { ...userProfiles.find(p => p.id === '18')!, connection: 'Business networking event' }, // Chen Wei Ming - Homestay Specialist
-        { ...userProfiles.find(p => p.id === '23')!, connection: 'Professional consulting network' }, // Marcus Tan - Business Consultant
-        { ...userProfiles.find(p => p.id === '25')!, connection: 'Tech support community' }, // Hafiz Rahman - IT Support
-        { ...userProfiles.find(p => p.id === '28')!, connection: 'Fitness community center' }, // Lily Chan - Personal Trainer
-        { ...userProfiles.find(p => p.id === '30')!, connection: 'Marketing professionals meetup' }, // Michelle Goh - Networker
-        { ...userProfiles.find(p => p.id === '31')!, connection: 'Entrepreneurship workshop' }, // Zain Abdullah - Community Builder
-        { ...userProfiles.find(p => p.id === '32')!, connection: 'Environmental advocacy group' }  // Jenny Lim - Social Impact
-      ],
-      'Jakarta': [
-        { ...userProfiles.find(p => p.id === '17')!, connection: 'Cultural homestay experience' }, // Fatimah Ibrahim - Homestay Host
-        { ...userProfiles.find(p => p.id === '22')!, connection: 'Creative arts workshop' }  // Nurul Aisyah - Designer
-      ],
-      'Singapore': [
-        { ...userProfiles.find(p => p.id === '18')!, connection: 'Business traveler community' }, // Chen Wei Ming (also travels to Singapore)
-        { ...userProfiles.find(p => p.id === '21')!, connection: 'Developer community' }, // Daniel Lee
-        { ...userProfiles.find(p => p.id === '30')!, connection: 'Professional networking' }  // Michelle Goh
-      ],
-      'Bangkok': [
-        { ...userProfiles.find(p => p.id === '14')!, connection: 'Adventure travel group' }, // Sara Wong
-        { ...userProfiles.find(p => p.id === '29')!, connection: 'Student cultural exchange' }  // Arif Hakim
-      ],
-      'Mecca': [
-        { ...userProfiles.find(p => p.id === '2')!, connection: 'Hajj pilgrimage group' }, // Hafiz Rahman (original)
-        { ...userProfiles.find(p => p.id === '31')!, connection: 'Islamic community network' }  // Zain Abdullah
-      ],
-      'Cairo': [
-        { ...userProfiles.find(p => p.id === '7')!, connection: 'Medical studies program' }, // Fatima Al-Zahra (original)
-        { ...userProfiles.find(p => p.id === '29')!, connection: 'International relations studies' }  // Arif Hakim
-      ]
-    };
-    
-    const cityFriends = friendsData[city] || [
-      { ...userProfiles.find(p => p.id === '29')!, connection: 'Cultural exchange program' }, // Arif Hakim - default
-      { ...userProfiles.find(p => p.id === '32')!, connection: 'Travel companion' }  // Jenny Lim - default
-    ];
-    
-    return cityFriends.filter(friend => friend && friend.id !== user.id); // Remove self and null entries
-  };
-
-  // Helper functions for generating community messages and managing state
-
-  const getCommunityMessage = (user: UserProfile) => {
-    const messages = [
-      "Happy to help fellow community members! 🤝",
-      "Let's connect and explore together! 🌟", 
-      "Supporting our BerseMuka family always! ❤️",
-      "Building connections, one friendship at a time! 👥",
-      "Here to help neighbors in our community! 🏘️"
-    ];
-    return messages[parseInt(user.id) % messages.length];
-  };
-
-  // Get user interests (top 4)
-  const getUserInterests = (user: UserProfile) => {
-    const allInterests = user.interests || [];
-    const additionalInterests = [
-      'Architecture', 'Photography', 'Travel', 'Coffee', 'Design', 'Art', 
-      'Technology', 'Music', 'Reading', 'Cooking', 'Fitness', 'Languages'
-    ];
-    const userSpecificInterests = [
-      ...allInterests.slice(0, 2),
-      ...additionalInterests.slice(parseInt(user.id) % 3, parseInt(user.id) % 3 + 2)
-    ];
-    return userSpecificInterests.slice(0, 4);
-  };
-
-  // Get short bio (max 50 words)
-  const getShortBio = (user: UserProfile) => {
-    const bios = [
-      "Architect and photographer exploring traditions worldwide. Love discovering hidden gems and meeting people over coffee.",
-      "Passionate about connecting communities through shared experiences. Always ready to help fellow travelers and locals alike.",
-      "Creative professional specializing in design and storytelling. Enjoys cultural exchanges and building meaningful friendships.",
-      "Tech enthusiast with a love for art and culture. Happy to share local insights and learn from others.",
-      "Lifelong learner passionate about languages and travel. Believes in the power of community and authentic connections."
-    ];
-    return bios[parseInt(user.id) % bios.length];
-  };
-
-  // Get user social media links (for Match screen profile popup)
-  const getUserSocialLinks = (user: UserProfile) => {
-    const socialOptions = [
-      { platform: 'Instagram', icon: '📸', url: 'https://instagram.com/', handle: '@' + user.firstName.toLowerCase() + '_arch' },
-      { platform: 'LinkedIn', icon: '💼', url: 'https://linkedin.com/in/', handle: user.firstName.toLowerCase() + '-' + user.lastName?.toLowerCase() },
-      { platform: 'Portfolio', icon: '🌐', url: 'https://', handle: user.firstName.toLowerCase() + '.com' },
-      { platform: 'Email', icon: '✉️', url: 'mailto:', handle: 'Contact' }
-    ];
-    
-    // Return 2-4 social links per user based on their profile
-    const userSeed = parseInt(user.id) || 1;
-    const numLinks = 2 + (userSeed % 3); // 2-4 links
-    return socialOptions.slice(0, numLinks);
-  };
-
-  // Get user offerings (based on actual services offered)
-  const getUserOfferings = (user: UserProfile) => {
-    if (!user.servicesOffered) return [];
-    
-    const serviceTemplates = {
-      localGuide: [
+  // Filter connections based on mode
+  const getFilteredConnections = () => {
+    const allConnections = {
+      guides: [
         {
-          category: 'local-guides',
-          icon: '🗺️',
-          categoryName: 'Local Guides',
-          title: 'City Walking Tours',
-          description: `Expert guided tours around ${user.location} with local insights and hidden gems`,
-          price: 'RM 80/person',
-          duration: '3 hours',
-          available: true
+          id: 1,
+          name: 'Sarah Lim',
+          location: 'KLCC, Kuala Lumpur',
+          match: 92,
+          tags: ['Local Friend', 'City Guide', 'Coffee Expert'],
+          mutuals: ['Ahmad', 'Fatima'],
+          bio: 'Know all the best cafes and hidden gems in KL! Happy to show you around',
+          offers: ['Weekend city tours', 'Best food spots', 'Local hangouts']
         },
         {
-          category: 'local-guides',
-          icon: '🗺️',
-          categoryName: 'Local Guides', 
-          title: 'Cultural Heritage Experience',
-          description: `Authentic cultural tours showcasing ${user.location}'s rich history and traditions`,
-          price: 'RM 120/day',
-          duration: '6-8 hours',
-          available: true
+          id: 2,
+          name: 'Ahmad Rahman',
+          location: 'Berlin, Germany',
+          origin: 'KL, Malaysia',
+          match: 95,
+          tags: ['Local Guide', 'Free Tours'],
+          languages: ['EN', 'DE', 'MS'],
+          mutuals: ['Sarah', 'Amir', 'Zara'],
+          bio: 'Helping Malaysians navigate life in Germany since 2019',
+          offers: ['City tours (Free)', 'Uni applications help', 'Halal food spots map']
         }
       ],
-      homestay: [
+      homesurf: [
         {
-          category: 'homestay',
-          icon: '🏠',
-          categoryName: 'Homestay',
-          title: 'Comfortable Home Stay',
-          description: `Welcoming accommodation in ${user.location} with authentic local experience`,
-          price: 'RM 180/night',
-          duration: 'Per night',
-          available: true
+          id: 3,
+          name: "Fatima's Family",
+          location: 'Bangsar, KL',
+          match: 98,
+          tags: ['Homestay', 'Student-Friendly', 'Halal'],
+          price: 'RM 80/night',
+          amenities: ['Halal kitchen', 'WiFi', 'Laundry', 'Family meals'],
+          bio: 'Cozy family home perfect for students. We treat you like family!',
+          reviews: 12,
+          rating: 5
         },
         {
-          category: 'homestay',
-          icon: '🏠',
-          categoryName: 'Homestay',
-          title: 'Family Homestay Experience',
-          description: 'Comfortable room with home-cooked meals and cultural immersion',
-          price: 'RM 220/night (meals included)',
-          duration: 'Per night',
-          available: true
+          id: 4,
+          name: 'Jason Tan',
+          location: 'Subang Jaya',
+          match: 85,
+          tags: ['Room Rental', 'Near University'],
+          price: 'RM 50/night',
+          amenities: ['Private room', 'Shared kitchen', 'Near LRT'],
+          bio: 'Spare room available for students. 5 mins to Sunway University',
+          reviews: 8,
+          rating: 4.5
         }
       ],
-      marketplace: [
+      mentor: [
         {
-          category: 'marketplace',
-          icon: '🛍️',
-          categoryName: 'Marketplace',
-          title: `${user.profession} Services`,
-          description: `Professional ${user.profession.toLowerCase()} consultation and services`,
-          price: 'RM 150/hour',
-          duration: 'Flexible',
-          available: true
-        },
-        {
-          category: 'marketplace',
-          icon: '🛍️',
-          categoryName: 'Marketplace',
-          title: 'Freelance Projects',
-          description: 'Custom projects and professional services in my area of expertise',
-          price: 'From RM 200',
-          duration: 'Project-based',
-          available: true
+          id: 5,
+          name: 'Dr. Farah Ibrahim',
+          location: 'Singapore',
+          match: 88,
+          tags: ['Tech Mentor', 'AI Expert'],
+          company: 'Google Singapore',
+          mutuals: ['Khalid', 'Omar'],
+          bio: 'Mentoring aspiring tech professionals in SEA',
+          expertise: ['Machine Learning', 'Career Growth', 'Tech Interviews']
         }
       ],
-      openToConnect: [
+      buddy: [
         {
-          category: 'open-to-connect',
-          icon: '🤝',
-          categoryName: 'Open to Connect',
-          title: 'Coffee Chat & Networking',
-          description: 'Casual conversation over coffee to share experiences and make connections',
-          price: 'Free',
-          duration: '1-2 hours',
-          available: true
-        },
-        {
-          category: 'open-to-connect',
-          icon: '🤝',
-          categoryName: 'Open to Connect',
-          title: 'Language Exchange',
-          description: `Practice languages and learn about ${user.location} culture together`,
-          price: 'Free',
-          duration: '1 hour',
-          available: true
-        }
-      ],
-      bersebuddy: [
-        {
-          category: 'bersebuddy',
-          icon: '👥',
-          categoryName: 'BerseBuddy',
-          title: 'Social Companion',
-          description: 'Friendly companion for exploring the city, attending events, or just hanging out',
-          price: 'RM 50/day',
-          duration: 'Flexible',
-          available: true
-        },
-        {
-          category: 'bersebuddy',
-          icon: '👥',
-          categoryName: 'BerseBuddy',
-          title: 'Activity Partner',
-          description: 'Join me for hobbies, sports, or social activities around the city',
-          price: 'RM 30/activity',
-          duration: '2-4 hours',
-          available: true
-        }
-      ],
-      bersementor: [
-        {
-          category: 'bersementor',
-          icon: '👨‍🏫',
-          categoryName: 'BerseMentor',
-          title: `${user.profession} Mentoring`,
-          description: `Professional mentorship and career guidance in ${user.profession.toLowerCase()}`,
-          price: 'RM 200/session',
-          duration: '1 hour',
-          available: true
-        },
-        {
-          category: 'bersementor',
-          icon: '👨‍🏫',
-          categoryName: 'BerseMentor',
-          title: 'Career Development Coaching',
-          description: 'Personalized career advice and skill development guidance',
-          price: 'RM 250/session',
-          duration: '1.5 hours',
-          available: true
+          id: 6,
+          name: 'Kim Ji-won',
+          location: 'UM Campus',
+          origin: 'Seoul, Korea',
+          match: 90,
+          tags: ['Study Buddy', 'EMGS Support'],
+          education: 'Computer Science Year 2',
+          mutuals: ['Lisa', 'Ahmed'],
+          bio: 'Exchange student helping other internationals settle in',
+          looking: ['Study groups', 'Campus tours', 'Food adventures']
         }
       ]
     };
 
-    // Generate offerings based on actual services offered
-    const userOfferings = [];
-    
-    if (user.servicesOffered.localGuide) {
-      userOfferings.push(...serviceTemplates.localGuide);
-    }
-    if (user.servicesOffered.homestay) {
-      userOfferings.push(...serviceTemplates.homestay);
-    }
-    if (user.servicesOffered.marketplace) {
-      userOfferings.push(...serviceTemplates.marketplace);
-    }
-    if (user.servicesOffered.openToConnect) {
-      userOfferings.push(...serviceTemplates.openToConnect);
-    }
-    if (user.servicesOffered.bersebuddy) {
-      userOfferings.push(...serviceTemplates.bersebuddy);
-    }
-    if (user.servicesOffered.bersementor) {
-      userOfferings.push(...serviceTemplates.bersementor);
-    }
-
-    // Return all offerings for services they actually offer
-    return userOfferings;
+    return allConnections[connectionMode] || [];
   };
 
-
-  // Load users data
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      // Use the shared profiles data, exclude current user
-      const profileUsers = userProfiles.filter(profile => profile.id !== (user?.id || '1'));
-      setUsers(profileUsers);
+      // Mock users with proper servicesOffered for testing
+      const mockUsers: ProfileCardData[] = [
+        {
+          id: 1,
+          name: 'Sarah Lim',
+          location: 'KLCC, Kuala Lumpur',
+          match: 92,
+          tags: ['Local Friend', 'City Guide', 'Coffee Expert'],
+          mutuals: ['Ahmad', 'Fatima'],
+          bio: 'Know all the best cafes and hidden gems in KL! Happy to show you around',
+          offers: ['Weekend city tours', 'Best food spots', 'Local hangouts'],
+          servicesOffered: {
+            localGuide: true,
+            homestay: false,
+            marketplace: false,
+            openToConnect: true
+          }
+        }
+      ];
+      setUsers(mockUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
@@ -3668,1264 +1370,726 @@ export const BerseMatchScreen: React.FC = () => {
     }
   };
 
+  // Friendship matches data
+  const friendshipMatches = [
+    {
+      person1: { name: 'Ahmad', emoji: '👨‍💼', relation: 'Your gym buddy' },
+      person2: { name: 'Khalid', emoji: '👨‍🎓', relation: 'Your colleague' },
+      reasons: [
+        '🏸 Both play badminton weekly',
+        '☕ Coffee enthusiasts who work remotely',
+        '📍 Live in the same neighborhood',
+        '🎯 Both looking for workout partners',
+        '📚 Share interest in tech podcasts'
+      ]
+    },
+    {
+      person1: { name: 'Sarah', emoji: '👩‍💻', relation: 'Your sister' },
+      person2: { name: 'Fatima', emoji: '👩‍🎨', relation: 'Your classmate' },
+      reasons: [
+        '🎨 Both into digital art',
+        '🌱 Vegetarian foodies',
+        '🏃‍♀️ Morning runners',
+        '📷 Photography hobbyists',
+        '🎭 Theatre enthusiasts'
+      ]
+    },
+    {
+      person1: { name: 'Omar', emoji: '👨‍🔬', relation: 'Lab partner' },
+      person2: { name: 'Lisa', emoji: '👩‍⚕️', relation: 'Neighbor' },
+      reasons: [
+        '🔬 Both in medical field',
+        '📚 Love reading sci-fi',
+        '🎮 Board game enthusiasts',
+        '🍳 Weekend cooking experiments',
+        '🏊 Swimming at same pool'
+      ]
+    }
+  ];
+
+  // Connection chains data
+  const connectionChains = [
+    { target: 'Tech CEO', path: ['You', 'Ahmad', 'Dr. Wan', 'CEO'], steps: 3 },
+    { target: 'Minister', path: ['You', 'Uncle Rahman', 'Minister'], steps: 2 },
+    { target: 'Hollywood Actor', path: ['You', 'Sarah', 'Film Director', 'Actor'], steps: 3 },
+    { target: 'Nobel Laureate', path: ['You', 'Professor', 'Researcher', 'Laureate'], steps: 3 }
+  ];
+
   useEffect(() => {
     loadUsers();
-    
-    // If coming from forum with a selected profile, show it immediately
-    if (forumSelectedProfile) {
-      setSelectedUser(forumSelectedProfile);
-      setShowDetailedProfile(true);
-    }
-  }, [forumSelectedProfile]);
+  }, []);
 
-
-  // Trust chain feedback
-  const handleTrustChainClick = (user: UserProfile) => {
-    setSelectedTrustUser(user);
-    setShowTrustFeedback(true);
+  // Handler functions
+  const handleSkipMatch = () => {
+    setCurrentMatchIndex((prev) => (prev + 1) % friendshipMatches.length);
   };
 
-  const handleCloseTrustFeedback = () => {
-    setShowTrustFeedback(false);
-    setSelectedTrustUser(null);
-  };
-
-  // Location logbook
-  const handleLocationLogbookClick = (user: UserProfile) => {
-    setSelectedLocationUser(user);
-    setShowLocationLogbook(true);
-    setShowLocationFriends(false);
-  };
-
-  const handleCloseLocationLogbook = () => {
-    setShowLocationLogbook(false);
-    setSelectedLocationUser(null);
-    setShowLocationFriends(false);
-    setLocationFriends([]);
-    setSelectedLocationCity('');
-  };
-
-  const handleShowLocationFriends = (user: UserProfile, city: string) => {
-    const friends = getTravelFriends(user, city);
-    setLocationFriends(friends);
-    setSelectedLocationCity(city);
-    setShowLocationFriends(true);
-  };
-
-  // Messaging handlers
-  const handleSendMessageClick = (user: UserProfile) => {
-    // Use unified messaging system
-    openMessagingModal(
-      user.id,
-      user.fullName,
-      {
-        type: 'profile',
-        data: {
-          userId: user.id,
-          userFullName: user.fullName,
-          userProfession: user.profession,
-          userLocation: user.location
-        }
-      }
-    );
-  };
-
-  // Booking functionality
-  const handleBooking = (user: UserProfile, offering: any) => {
-    const bookingMessage = `Hi ${user.firstName}! I'm interested in booking your "${offering.title}" for ${offering.price}. Could we discuss the details?`;
-    
-    // Use unified messaging system for booking
-    openMessagingModal(
-      user.id,
-      user.fullName,
-      {
-        type: 'service_booking',
-        data: {
-          userId: user.id,
-          userFullName: user.fullName,
-          service: offering.title,
-          price: offering.price,
-          category: offering.category,
-          context: 'service_booking',
-          prefilledMessage: bookingMessage
-        }
-      }
-    );
-
-    // Award points for service booking
-    const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
-    const newPoints = currentPoints + 5;
-    localStorage.setItem('user_points', newPoints.toString());
-    
-    console.log(`🛍️ Booking ${offering.title} with ${user.fullName}! +5 BerseMuka Points`);
-  };
-
-
-  const handleBackToLogbook = () => {
-    setShowLocationFriends(false);
-    setLocationFriends([]);
-    setSelectedLocationCity('');
-  };
-
-  // Enhanced filter handler with navigation and filtering support
-  const handleFilterClick = (filter: any) => {
-    // If filter has a screen property, navigate to that screen
-    if (filter.screen) {
-      navigate(filter.screen);
-      return;
-    }
-    
-    // Otherwise apply the filter
-    const isSelecting = selectedTopServiceCategory !== filter.id;
-    setSelectedTopServiceCategory(isSelecting ? filter.id : '');
-    
-    if (isSelecting) {
-      // Award points for exploring services
-      const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
-      const newPoints = currentPoints + 1;
-      localStorage.setItem('user_points', newPoints.toString());
-      
-      // Provide subtle feedback
-      console.log(`✨ Exploring ${filter.label} services! +1 BerseMuka Point`);
+  const handleAddPersonToIntro = () => {
+    if (newPersonName.trim() && introductionPeople.length < 4) {
+      setIntroductionPeople([...introductionPeople, newPersonName.trim()]);
+      setNewPersonName('');
     }
   };
 
-  // Legacy support - keep the old function name for existing code
-  const handleTopServiceCategoryClick = handleFilterClick;
-
-  // AI Matching handler
-  const handleAIMatch = () => {
-    setShowAIModal(false);
-    // Navigate to AI matching screen or show AI matching results
-    navigate('/ai-match', { 
-      state: { 
-        matchType: 'similarity',
-        matchCount: 3 
-      }
-    });
+  const handleRemovePersonFromIntro = (index: number) => {
+    setIntroductionPeople(introductionPeople.filter((_, i) => i !== index));
   };
 
-  // Get all services offered by user
-  const getAllUserServices = (servicesOffered?: any) => {
-    if (!servicesOffered) return [];
-    
-    const services = [];
-    
-    if (servicesOffered.localGuide) services.push({ key: 'localGuide', label: 'Local Guide', icon: '🗺️' });
-    if (servicesOffered.homestay) services.push({ key: 'homestay', label: 'Homestay', icon: '🏠' });
-    if (servicesOffered.marketplace) services.push({ key: 'marketplace', label: 'Marketplace', icon: '🛍️' });
-    if (servicesOffered.openToConnect) services.push({ key: 'openToConnect', label: 'Open to Connect', icon: '🤝' });
-    if (servicesOffered.bersebuddy) services.push({ key: 'bersebuddy', label: 'BerseBuddy', icon: '👥' });
-    if (servicesOffered.bersementor) services.push({ key: 'bersementor', label: 'BerseMentor', icon: '👨‍🏫' });
-    
-    return services;
+  const handleSendIntroduction = () => {
+    if (introductionPeople.length >= 2) {
+      alert(`Introduction sent to ${introductionPeople.join(', ')}! You earned ${introductionPeople.length * 25} points!`);
+      setIntroductionPeople([]);
+      setShowManualIntro(false);
+    }
   };
 
-  // Clear all filters function
-  const clearAllFilters = () => {
-    // Reset all filter states to default
-    setSelectedCountry('Malaysia');
-    setSelectedCities(['All Cities']);
-    setSelectedInterests([]);
-    setSelectedTopServiceCategory('');
-    setActiveSearchTerm('');
-    setSearchQuery('');
-    
-    // Close any open modals
-    setCountryModalOpen(false);
-    setCityModalOpen(false);
-    setInterestsModalOpen(false);
-    setSearchModalOpen(false);
-    
-    // Award points for filter management
-    const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
-    const newPoints = currentPoints + 1;
-    localStorage.setItem('user_points', newPoints.toString());
-    
-    console.log('🔄 All filters cleared! +1 BerseMuka Point');
+  const handleAddToSquad = () => {
+    if (newPersonName.trim() && squadMembers.length < 8) {
+      setSquadMembers([...squadMembers, newPersonName.trim()]);
+      setNewPersonName('');
+    }
   };
 
-  // Filter users based on search and filters (including service categories)
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.profession.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.interests.some(interest => interest.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    // Additional filters from BerseConnect
-    const matchesCountry = selectedCountry === 'All Countries' || selectedCountry === 'Malaysia';
-    const matchesCities = selectedCities.includes('All Cities') || selectedCities.length === 0;
-    const matchesInterests = selectedInterests.length === 0 || selectedInterests.some(interest => 
-      user.profession.toLowerCase().includes(interest.toLowerCase()) ||
-      user.interests.some(userInterest => userInterest.toLowerCase().includes(interest.toLowerCase()))
-    );
-    
-    // Service category filter - check servicesOffered property
-    const matchesServiceCategory = selectedTopServiceCategory === '' || (() => {
-      if (!user.servicesOffered) return false;
-      
-      const filter = filterButtons.find(btn => btn.id === selectedTopServiceCategory);
-      if (!filter || !filter.filterKey) return true;
-      
-      // Check if user offers this service
-      return user.servicesOffered[filter.filterKey as keyof typeof user.servicesOffered] === true;
-    })();
-    
-    return matchesSearch && matchesCountry && matchesCities && matchesInterests && matchesServiceCategory;
-  });
-
-  // Event handlers
-  const handleSeeProfile = (user: UserProfile) => {
-    setSelectedUser(user);
-    setShowDetailedProfile(true);
+  const handleCreateSquad = () => {
+    if (squadMembers.length >= 2 && squadName && squadActivity) {
+      alert(`Squad "${squadName}" created with ${squadMembers.length} members for ${squadActivity}! Earned 150 points!`);
+      setSquadMembers([]);
+      setSquadName('');
+      setSquadActivity('');
+      setShowSquadBuilder(false);
+    }
   };
 
-  const handleCloseProfile = () => {
-    setShowDetailedProfile(false);
-    setSelectedUser(null);
+  const handleAddToCluster = () => {
+    if (newPersonName.trim()) {
+      setClusterMembers([...clusterMembers, newPersonName.trim()]);
+      setNewPersonName('');
+    }
   };
 
-  const handleChatUser = (user: UserProfile, offering?: any) => {
-    // Award points for community engagement
-    const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
-    const newPoints = currentPoints + 3;
-    localStorage.setItem('user_points', newPoints.toString());
-    
-    alert(`✨ Message sent to ${user.fullName}! 💬
-
-🎉 You earned 3 BerseMuka Points for building community connections!
-💰 Your total: ${newPoints} points
-
-They'll receive your friendly message and can respond to start building a beautiful community connection, inshaAllah! 🤝`);
-    
-    setShowDetailedProfile(false);
+  const handleCreateCluster = () => {
+    if (clusterMembers.length >= 3 && clusterName) {
+      alert(`Cluster "${clusterName}" created with ${clusterMembers.length} members! Earned 300 points!`);
+      setClusterMembers([]);
+      setClusterName('');
+      setShowCreateCluster(false);
+    }
   };
 
-  const handleBookService = (user: UserProfile, offering: any) => {
-    // Award points for service booking
-    const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
-    const newPoints = currentPoints + 5;
-    localStorage.setItem('user_points', newPoints.toString());
-    
-    alert(`🤝 Booking request sent to ${user.fullName}!
+  const handleBingoClick = (index: number) => {
+    if (!bingoItems[index].completed && !bingoItems[index].free) {
+      setSelectedBingoIndex(index);
+      setShowBingoInput(true);
+    } else if (bingoItems[index].completed) {
+      alert(`This square was completed by connecting with ${bingoItems[index].person}`);
+    }
+  };
 
-Service: ${offering.title}
-${offering.price ? `Price: ${offering.price}` : ''}
-
-🎉 You earned 5 BerseMuka Points for connecting with community services!
-💰 Your total: ${newPoints} points
-
-They'll receive your booking request and can coordinate the details with you directly. Building our community together! 🌟`);
-    
-    setShowDetailedProfile(false);
+  const handleBingoComplete = (personName: string) => {
+    if (selectedBingoIndex !== null && personName.trim()) {
+      const newBingoItems = [...bingoItems];
+      newBingoItems[selectedBingoIndex] = {
+        ...newBingoItems[selectedBingoIndex],
+        completed: true,
+        person: personName.trim()
+      };
+      setBingoItems(newBingoItems);
+      alert(`Connected with ${personName} who is a ${bingoItems[selectedBingoIndex].text}! Square completed!`);
+      setShowBingoInput(false);
+      setSelectedBingoIndex(null);
+    }
   };
 
   return (
     <Container>
       <StatusBar />
-      {/* Standardized Header */}
-      <div style={{
-        background: '#F5F3EF',
-        width: '100%',
-        padding: '12px 16px',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              borderRadius: '12px',
-              padding: '4px 8px 4px 4px',
-              position: 'relative'
-            }}
-            onClick={() => {
-              console.log('Profile icon clicked - opening sidebar');
-              setShowProfileSidebar(true);
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(74, 103, 65, 0.1)';
-              e.currentTarget.style.transform = 'translateX(2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.transform = 'translateX(0)';
-            }}
-          >
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              background: '#4A6741',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : 'ZM'}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ fontSize: '12px', color: '#999999', fontWeight: 'normal' }}>Connect With Your Community</div>
-              <div style={{ fontSize: '18px', color: '#333333', fontWeight: '600' }}>BerseMatch</div>
-            </div>
-          </div>
-          <div style={{
-            background: '#FF6B6B',
-            color: 'white',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>{notificationBadge.total}</div>
-        </div>
-      </div>
       
-      {/* Filter Section */}
-      <FilterSection>
-        <FilterDropdowns>
-          <FilterDropdown 
-            type="button" 
-            $isActive={!selectedCities.includes('All Cities')}
-            onClick={() => setCityModalOpen(true)}
-          >
-            {selectedCities.includes('All Cities') 
-              ? 'All Cities' 
-              : selectedCities.length === 1 
-                ? selectedCities[0]
-                : `${selectedCities.length} cities`
-            }
-          </FilterDropdown>
-          <FilterDropdown 
-            type="button" 
-            $isActive={selectedCountry !== 'Malaysia'}
-            onClick={() => setCountryModalOpen(true)}
-          >
-            {selectedCountry}
-          </FilterDropdown>
-          <FilterDropdown 
-            type="button" 
-            $isActive={selectedInterests.length > 0}
-            onClick={() => setInterestsModalOpen(true)}
-          >
-            {selectedInterests.length === 0 
-              ? 'Interests' 
-              : selectedInterests.length === 1 
-                ? selectedInterests[0]
-                : `${selectedInterests.length} interests`
-            }
-          </FilterDropdown>
-          <SearchFilterButton 
-            type="button"
-            $isActive={!!activeSearchTerm}
-            onClick={handleOpenEnhancedSearch}
-            title={activeSearchTerm ? `Searching: ${activeSearchTerm}` : 'Search people, interests, communities...'}
-          >
-            🔍
-          </SearchFilterButton>
-        </FilterDropdowns>
-      </FilterSection>
+      <Header>
+        <HeaderTop>
+          <BackButton onClick={() => navigate('/dashboard')}>←</BackButton>
+          <HeaderTitle>
+            <Title>BerseMatch</Title>
+            <Subtitle>Connect • Discover • Network</Subtitle>
+          </HeaderTitle>
+          <NotificationButton>
+            🔔
+            <NotificationBadge>3</NotificationBadge>
+          </NotificationButton>
+        </HeaderTop>
+      </Header>
 
-      {/* Enhanced Filter Layout - 4 on top, 2+1 on bottom */}
-      <FilterContainer>
-        {/* Top Row - 4 Filter Buttons */}
-        <TopFilterRow>
-          {filterButtons.slice(0, 4).map((filter) => (
-            <FilterButton
-              key={filter.id}
-              $isActive={selectedTopServiceCategory === filter.id}
-              $color={filter.color}
-              onClick={() => handleFilterClick(filter)}
-            >
-              <FilterIcon $isActive={selectedTopServiceCategory === filter.id}>
-                {filter.icon}
-              </FilterIcon>
-              <FilterLabel $isActive={selectedTopServiceCategory === filter.id}>
-                {filter.label}
-              </FilterLabel>
-            </FilterButton>
-          ))}
-        </TopFilterRow>
-
-        {/* Bottom Row - BerseBuddy + AI Button + BerseMentor */}
-        <BottomFilterRow>
-          <FilterButton
-            onClick={() => navigate('/bersebuddy')}
-            style={{ position: 'relative' }}
-            $isActive={false}
-            $color="#7B1FA2"
+      <ConnectionModeCard>
+        <ModeTitle>🌍 CONNECTION MODE</ModeTitle>
+        <ModeDescription>{modeDescriptions[connectionMode]}</ModeDescription>
+        <ModeSelector>
+          <ModeButton 
+            $active={connectionMode === 'guides'}
+            onClick={() => setConnectionMode('guides')}
           >
-            <IntegrationBadge>EMGS</IntegrationBadge>
-            <FilterIcon $isActive={false}>👥</FilterIcon>
-            <FilterLabel $isActive={false}>BerseBuddy</FilterLabel>
-          </FilterButton>
-
-          {/* AI Matching Button in the middle */}
-          <AIMatchButton onClick={() => setShowAIModal(true)}>
-            <AIIcon>?</AIIcon>
-          </AIMatchButton>
-
-          <FilterButton
-            onClick={() => navigate('/bersementor')}
-            style={{ position: 'relative' }}
-            $isActive={false}
-            $color="#2E7D32"
+            Guides
+          </ModeButton>
+          <ModeButton 
+            $active={connectionMode === 'homesurf'}
+            onClick={() => setConnectionMode('homesurf')}
           >
-            <IntegrationBadge>TalentCorp</IntegrationBadge>
-            <FilterIcon $isActive={false}>👨‍🏫</FilterIcon>
-            <FilterLabel $isActive={false}>BerseMentor</FilterLabel>
-          </FilterButton>
-        </BottomFilterRow>
-      </FilterContainer>
-      
-      {/* Active Filters Bar */}
-      {(selectedCountry !== 'Malaysia' || !selectedCities.includes('All Cities') || selectedInterests.length > 0 || activeSearchTerm || selectedTopServiceCategory) && (
-        <ActiveFiltersBar>
-          <FilterContent>
-            <span>Active filters:</span>
-            {activeSearchTerm && (
-              <FilterBadge style={{ background: '#E8F4F0', color: '#2D5F4F' }}>
-                Search: "{activeSearchTerm}"
-              </FilterBadge>
-            )}
-            {selectedCountry !== 'Malaysia' && (
-              <FilterBadge>{selectedCountry}</FilterBadge>
-            )}
-            {!selectedCities.includes('All Cities') && selectedCities.length > 0 && (
-              <FilterBadge>
-                {selectedCities.length === 1 ? selectedCities[0] : `${selectedCities.length} cities`}
-              </FilterBadge>
-            )}
-            {selectedInterests.length > 0 && (
-              <FilterBadge>
-                {selectedInterests.length === 1 ? selectedInterests[0] : `${selectedInterests.length} interests`}
-              </FilterBadge>
-            )}
-            {selectedTopServiceCategory && (
-              <FilterBadge style={{ background: '#E8F5E8', color: '#388E3C' }}>
-                Service: {topServiceButtons.find(s => s.id === selectedTopServiceCategory)?.name}
-              </FilterBadge>
-            )}
-          </FilterContent>
-          <ClearFiltersButton onClick={clearAllFilters}>
-            Clear Filters
-          </ClearFiltersButton>
-        </ActiveFiltersBar>
-      )}
-      
+            HomeSurf
+          </ModeButton>
+          <ModeButton 
+            $active={connectionMode === 'mentor'}
+            onClick={() => setConnectionMode('mentor')}
+          >
+            Mentor
+          </ModeButton>
+          <ModeButton 
+            $active={connectionMode === 'buddy'}
+            onClick={() => setConnectionMode('buddy')}
+          >
+            Buddy
+          </ModeButton>
+        </ModeSelector>
+      </ConnectionModeCard>
+
+      <TabContainer>
+        <Tab $active={activeTab === 'discover'} onClick={() => setActiveTab('discover')}>
+          <TabLabel>DISCOVER</TabLabel>
+          <TabSublabel>Find</TabSublabel>
+        </Tab>
+        <Tab $active={activeTab === 'matchmaker'} onClick={() => setActiveTab('matchmaker')}>
+          <TabLabel>CONNECTOR</TabLabel>
+          <TabSublabel>Introduce</TabSublabel>
+        </Tab>
+        <Tab $active={activeTab === 'myweb'} onClick={() => setActiveTab('myweb')}>
+          <TabLabel>MY WEB</TabLabel>
+          <TabSublabel>Network</TabSublabel>
+        </Tab>
+      </TabContainer>
+
       <Content>
+        {activeTab === 'discover' && (
+          <>
+            <QuestCard>
+              <QuestTitle>🎯 TODAY'S CONNECTION QUEST</QuestTitle>
+              <QuestDescription>Find: Malaysian in Germany</QuestDescription>
+              <QuestReward>Reward: 200 pts + Badge</QuestReward>
+              <QuestTimer>Time left: 3h 45m</QuestTimer>
+              <QuestButton>Start Hunt →</QuestButton>
+            </QuestCard>
 
-        {isLoading ? (
-          <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
-            Loading community members...
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
-            No community members found matching your criteria.
-          </div>
-        ) : (
-          filteredUsers.map((user) => {
-            const userInterests = getUserInterests(user);
-            const shortBio = getShortBio(user);
-            const userLevel = getUserLevel(user);
-            const personalityType = getUserPersonalityType(user);
-            const achievements = getUserAchievements(user);
-            const verifications = getUserUniversalVerifications(user);
-            const communityAffiliations = getEnhancedCommunityAffiliations(user);
-            
-            return (
-              <CleanUserCard key={user.id}>
-                {/* CLEAN HEADER: Avatar + Name & Level + Achievements + Rating */}
-                <CleanUserCardHeader>
-                  <CleanUserAvatar style={{ background: user.avatarColor }}>
-                    {user.initials}
-                    {user.isVerified && <VerifiedBadge />}
-                  </CleanUserAvatar>
-                  <CleanCardUserInfo>
-                    <UserHeaderDiv>
-                      <UserNameSection>
-                        <CleanUserName>{user.fullName}</CleanUserName>
-                        <CleanUserMeta>{user.age} • {user.profession}</CleanUserMeta>
-                      </UserNameSection>
-                      <TopRightInfo>
-                        <CompactRating>
-                          <span>⭐</span>
-                          {(user.level * 1.2 + 3.5).toFixed(1)}
-                        </CompactRating>
-                        <CompactLevelBadge $color={userLevel.color}>
-                          Lv.{userLevel.level}
-                        </CompactLevelBadge>
-                        {personalityType && (
-                          <CompactPersonalityBadge $temperament={getPersonalityTemperament(personalityType)}>
-                            {personalityType}
-                          </CompactPersonalityBadge>
-                        )}
-                      </TopRightInfo>
-                    </UserHeaderDiv>
-                  </CleanCardUserInfo>
-                </CleanUserCardHeader>
+            <FilterCard>
+              <FilterTitle>🔍 SMART FILTERS</FilterTitle>
+              <FilterSection>
+                <FilterLabel>📍 Location:</FilterLabel>
+                <FilterOptions>
+                  <FilterDropdown>
+                    <option>My City</option>
+                    <option>Any City</option>
+                  </FilterDropdown>
+                  <FilterDropdown>
+                    <option>Any Country</option>
+                    <option>Malaysia</option>
+                    <option>Germany</option>
+                  </FilterDropdown>
+                </FilterOptions>
+              </FilterSection>
+            </FilterCard>
 
-
-                {/* CLEAN INTERESTS SECTION */}
-                <CleanInterestsContainer>
-                  {userInterests.map((interest, index) => (
-                    <CleanInterestTag 
-                      key={index}
-                      $clickable={true}
-                      onClick={() => {
-                        setActiveSearchCategory('interests');
-                        setSelectedSearchInterests([interest.toLowerCase()]);
-                        setEnhancedSearchOpen(true);
-                      }}
-                      title={`Find others interested in ${interest}`}
-                    >
-                      {interest}
-                    </CleanInterestTag>
+            {getFilteredConnections().map((connection: any) => (
+              <ConnectionCard key={connection.id}>
+                <MatchBadge>🌟 {connection.match}% MATCH</MatchBadge>
+                <ConnectionHeader>
+                  <Avatar>👤</Avatar>
+                  <ConnectionInfo>
+                    <ConnectionName>{connection.name}</ConnectionName>
+                    <ConnectionLocation>
+                      📍 {connection.location}
+                      {connection.origin && ` • From: ${connection.origin}`}
+                    </ConnectionLocation>
+                    {connection.price && (
+                      <HomestayPrice>{connection.price}</HomestayPrice>
+                    )}
+                  </ConnectionInfo>
+                </ConnectionHeader>
+                <ConnectionTags>
+                  {connection.tags.map(tag => (
+                    <Tag key={tag}>{tag}</Tag>
                   ))}
-                </CleanInterestsContainer>
-
-                {/* CLEAN SHORT BIO */}
-                <CleanShortBio>{shortBio}</CleanShortBio>
-
-                {/* COMMUNITY AFFILIATIONS SECTION */}
-                {communityAffiliations.length > 0 && (
-                  <CommunityAffiliationsSection>
-                    <CommunityAffiliations>
-                      {communityAffiliations.map((affiliation, index) => {
-                        const isVerified = getCommunityVerificationStatus(user, affiliation.id);
-                        return (
-                          <CommunityAffiliation 
-                            key={index}
-                            $type={affiliation.type}
-                            onClick={() => {
-                              setActiveSearchCategory('communities');
-                              setSelectedSearchCommunities([affiliation.id]);
-                              setEnhancedSearchOpen(true);
-                            }}
-                          >
-                            <span>{affiliation.icon}</span>
-                            {affiliation.name}
-                            {isVerified && (
-                              <CommunityVerificationTick>✓</CommunityVerificationTick>
-                            )}
-                          </CommunityAffiliation>
-                        );
-                      })}
-                    </CommunityAffiliations>
-                  </CommunityAffiliationsSection>
-                )}
-
-                {/* DUAL BUTTON SECTION */}
-                <DualButtonContainer>
-                  <CleanTrustChain onClick={() => handleTrustChainClick(user)}>
-                    <TrustIcon>🔗</TrustIcon>
-                    <TrustText>Trust Chain</TrustText>
-                    <TrustArrow>→</TrustArrow>
-                  </CleanTrustChain>
-                  
-                  <LocationLogbookButton onClick={() => handleLocationLogbookClick(user)}>
-                    <span>📍</span>
-                    <span>{user.location}</span>
-                  </LocationLogbookButton>
-                </DualButtonContainer>
+                </ConnectionTags>
+                <ConnectionBio>"{connection.bio}"</ConnectionBio>
                 
-                {/* SERVICE BADGES SECTION */}
-                <CleanServicesSection>
-                  <ServicesLabel>Services Offered:</ServicesLabel>
-                  <CleanServicesRow>
-                    {getAllUserServices(user.servicesOffered).map((service, index) => (
-                      <ServiceBadge key={index} $service={service.key}>
-                        <ServiceIcon $service={service.key}>{service.icon}</ServiceIcon>
-                        {service.label}
-                      </ServiceBadge>
-                    ))}
-                  </CleanServicesRow>
-                </CleanServicesSection>
+                {connection.amenities && (
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                      Amenities: {connection.amenities.join(' • ')}
+                    </div>
+                  </div>
+                )}
+                
+                {connection.rating && (
+                  <HomestayRating>
+                    {'⭐'.repeat(Math.floor(connection.rating))} ({connection.reviews} reviews)
+                  </HomestayRating>
+                )}
+                
+                {connection.mutuals && (
+                  <MutualSection>
+                    <span style={{ fontSize: '12px', color: '#666' }}>
+                      👥 {connection.mutuals.length} mutual friends
+                    </span>
+                  </MutualSection>
+                )}
+                
+                <ConnectionActions>
+                  <ActionButton>💬 Message</ActionButton>
+                  <ActionButton $primary>
+                    {connectionMode === 'homesurf' ? '🏠 Book Stay' : '🤝 Connect'}
+                  </ActionButton>
+                </ConnectionActions>
+              </ConnectionCard>
+            ))}
+          </>
+        )}
 
-                {/* PROFILE ACTION BUTTONS */}
-                <ProfileActionButtons>
-                  <SendMessageActionButton onClick={() => handleSendMessageClick(user)}>
-                    💬 Send Message
-                  </SendMessageActionButton>
-                  <ViewProfileActionButton onClick={() => handleSeeProfile(user)}>
-                    👤 View Profile
-                  </ViewProfileActionButton>
-                </ProfileActionButtons>
-              </CleanUserCard>
-            );
-          })
+        {activeTab === 'matchmaker' && (
+          <>
+            <MatchmakerCard>
+              <MatchmakerTitle>🤝 FRIEND CONNECTOR</MatchmakerTitle>
+              <MatchmakerLevel>Level 3 Connector • 450 pts to Level 4</MatchmakerLevel>
+              
+              <MatchPair>
+                <MatchProfile>
+                  <MatchAvatar>{friendshipMatches[currentMatchIndex].person1.emoji}</MatchAvatar>
+                  <MatchName>{friendshipMatches[currentMatchIndex].person1.name}</MatchName>
+                  <MatchRelation>{friendshipMatches[currentMatchIndex].person1.relation}</MatchRelation>
+                </MatchProfile>
+                
+                <MatchIcon>🤝</MatchIcon>
+                
+                <MatchProfile>
+                  <MatchAvatar>{friendshipMatches[currentMatchIndex].person2.emoji}</MatchAvatar>
+                  <MatchName>{friendshipMatches[currentMatchIndex].person2.name}</MatchName>
+                  <MatchRelation>{friendshipMatches[currentMatchIndex].person2.relation}</MatchRelation>
+                </MatchProfile>
+              </MatchPair>
+              
+              <MatchReasons>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>
+                  Why they'd be great friends:
+                </div>
+                {friendshipMatches[currentMatchIndex].reasons.map(reason => (
+                  <MatchReason key={reason}>{reason}</MatchReason>
+                ))}
+              </MatchReasons>
+              
+              <MatchActions>
+                <MatchButton $type="skip" onClick={handleSkipMatch}>
+                  ⏭️ Skip
+                </MatchButton>
+                <MatchButton $type="match">
+                  🤝 Introduce Them!
+                </MatchButton>
+              </MatchActions>
+              
+              <ManualIntroButton onClick={() => setShowManualIntro(true)}>
+                ✏️ Manually Introduce Friends (2-4 people)
+              </ManualIntroButton>
+            </MatchmakerCard>
+
+            <StatsCard>
+              <StatsTitle>📊 YOUR MATCHMAKER STATS</StatsTitle>
+              <StatsGrid>
+                <StatItem>
+                  <StatValue>12</StatValue>
+                  <StatLabel>Introductions</StatLabel>
+                </StatItem>
+                <StatItem>
+                  <StatValue>8</StatValue>
+                  <StatLabel>Successful</StatLabel>
+                </StatItem>
+                <StatItem>
+                  <StatValue>3</StatValue>
+                  <StatLabel>Close Friends</StatLabel>
+                </StatItem>
+                <StatItem>
+                  <StatValue>850</StatValue>
+                  <StatLabel>Points Earned</StatLabel>
+                </StatItem>
+              </StatsGrid>
+              <LeaderboardPosition>
+                🏆 #2 on Weekly Leaderboard
+              </LeaderboardPosition>
+            </StatsCard>
+
+            <BingoCard>
+              <BingoTitle>🎯 FRIEND BINGO - WEEK 12</BingoTitle>
+              <BingoGrid>
+                {bingoItems.map((item, idx) => (
+                  <BingoCell 
+                    key={idx} 
+                    $completed={item.completed}
+                    $free={item.free}
+                    onClick={() => handleBingoClick(idx)}
+                  >
+                    <BingoIcon>{item.completed ? '✅' : item.free ? '🌟' : item.icon}</BingoIcon>
+                    <div style={{ fontSize: '8px' }}>{item.text}</div>
+                  </BingoCell>
+                ))}
+              </BingoGrid>
+              <BingoStatus>
+                2 away from BINGO! • Prize: 500pts
+              </BingoStatus>
+            </BingoCard>
+          </>
+        )}
+
+        {activeTab === 'myweb' && (
+          <>
+            <NetworkCard>
+              <NetworkTitle>🕸️ YOUR CONNECTION UNIVERSE</NetworkTitle>
+              <NetworkDescription>
+                Your network visualization shows how all your connections relate to each other.
+              </NetworkDescription>
+              <NetworkVisualization>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🕸️</div>
+                <div style={{ fontSize: '14px', color: '#1565C0' }}>
+                  47 connections across 12 countries
+                </div>
+              </NetworkVisualization>
+              <NetworkFeature>
+                <NetworkFeatureTitle>🔍 Hidden Connections</NetworkFeatureTitle>
+                <NetworkFeatureDesc>
+                  Discover that Ahmad knows Sarah through their gym!
+                </NetworkFeatureDesc>
+                <NetworkButton onClick={() => setShowNetworkWeb(true)}>
+                  Explore Connections
+                </NetworkButton>
+              </NetworkFeature>
+            </NetworkCard>
+
+            <ClusterCard>
+              <ClusterTitle>💫 DISCOVERED CLUSTERS</ClusterTitle>
+              <ClusterName>"The Berlin Malaysians"</ClusterName>
+              <ClusterMembers>5 people who should connect</ClusterMembers>
+              <ClusterTraits>
+                <ClusterTrait>All from Malaysia</ClusterTrait>
+                <ClusterTrait>Living in Berlin</ClusterTrait>
+              </ClusterTraits>
+              <ClusterActions>
+                <ClusterButton>Auto-Create Group</ClusterButton>
+                <ClusterButton onClick={() => setShowCreateCluster(true)}>
+                  Manual Create
+                </ClusterButton>
+              </ClusterActions>
+            </ClusterCard>
+
+            <ChainCard>
+              <ChainTitle>⛓️ CONNECTION CHAINS</ChainTitle>
+              <ChainList>
+                {connectionChains.map((chain, idx) => (
+                  <ChainItem key={idx}>
+                    <div>
+                      <ChainTarget>{chain.target}</ChainTarget>
+                      <ChainSteps>{chain.steps} steps away</ChainSteps>
+                    </div>
+                    <ChainExploreButton>
+                      View Path →
+                    </ChainExploreButton>
+                  </ChainItem>
+                ))}
+              </ChainList>
+            </ChainCard>
+
+            <QuickActionsCard>
+              <QuickActionButton onClick={() => setShowSquadBuilder(true)}>
+                <QuickActionIcon>👥</QuickActionIcon>
+                <QuickActionLabel>Squad</QuickActionLabel>
+              </QuickActionButton>
+              <QuickActionButton onClick={() => setActiveTab('matchmaker')}>
+                <QuickActionIcon>🎲</QuickActionIcon>
+                <QuickActionLabel>Bingo</QuickActionLabel>
+              </QuickActionButton>
+              <QuickActionButton>
+                <QuickActionIcon>🏆</QuickActionIcon>
+                <QuickActionLabel>Leaders</QuickActionLabel>
+              </QuickActionButton>
+              <QuickActionButton onClick={() => setShowCreateCluster(true)}>
+                <QuickActionIcon>💫</QuickActionIcon>
+                <QuickActionLabel>Clusters</QuickActionLabel>
+              </QuickActionButton>
+            </QuickActionsCard>
+          </>
         )}
       </Content>
-      
 
-      {/* Detailed Profile Modal */}
-      <DetailedProfileModal show={showDetailedProfile} onClick={handleCloseProfile}>
-        <DetailedProfileContent onClick={(e) => e.stopPropagation()}>
-          {selectedUser && (
-            <>
-              <DetailedProfileHeader>
-                <CloseButton onClick={handleCloseProfile}>×</CloseButton>
-                <DetailedUserInfo>
-                  <DetailedUserAvatar style={{ background: selectedUser.avatarColor }}>
-                    {selectedUser.initials}
-                    {selectedUser.isVerified && <VerifiedBadge />}
-                  </DetailedUserAvatar>
-                  <DetailedUserName>{selectedUser.fullName}</DetailedUserName>
-                  <DetailedUserMeta>
-                    {selectedUser.age} • {selectedUser.profession}
-                  </DetailedUserMeta>
-                  <DetailedUserMeta>
-                    <StarIcon>★</StarIcon> {(selectedUser.level * 1.2 + 3.5).toFixed(1)} {selectedUser.isVerified && '• ✓ Verified'}
-                  </DetailedUserMeta>
-                  <LifeSeason>
-                    <span>🌱</span>
-                    Level {selectedUser.level} • {selectedUser.points} points
-                  </LifeSeason>
-                </DetailedUserInfo>
-                <DetailedUserBio>{selectedUser.bio}</DetailedUserBio>
-                
-                <CommunityMessage>
-                  <CommunityText>{getCommunityMessage(selectedUser)}</CommunityText>
-                </CommunityMessage>
-
-                {/* Social Media - Compact Row */}
-                <SocialSection>
-                  <SocialGrid>
-                    {getUserSocialLinks(selectedUser).map((social, index) => (
-                      <SocialChip 
-                        key={index}
-                        href={social.url + (social.platform === 'Email' ? selectedUser.firstName.toLowerCase() + '@example.com' : social.handle)}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
-                        {social.icon} {social.platform}
-                      </SocialChip>
-                    ))}
-                  </SocialGrid>
-                </SocialSection>
-
-                {/* Category-Based Offerings */}
-                <OfferingsSection>
-                  <OfferingsTitle>🌟 What I Offer</OfferingsTitle>
-                  <OfferingsGrid>
-                    {getUserOfferings(selectedUser).map((offering, index) => (
-                      <OfferingCard key={index} $category={offering.category}>
-                        <OfferingHeader>
-                          <CategoryTag>
-                            {offering.icon} {offering.categoryName}
-                          </CategoryTag>
-                          <OfferingPrice>{offering.price}</OfferingPrice>
-                        </OfferingHeader>
-                        
-                        <OfferingTitle>{offering.title}</OfferingTitle>
-                        <OfferingDesc>{offering.description}</OfferingDesc>
-                        
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '10px', color: '#6c757d' }}>
-                            ⏱️ {offering.duration}
-                          </span>
-                          <BookButton onClick={() => handleBooking(selectedUser, offering)}>
-                            💬 Book Now
-                          </BookButton>
-                        </div>
-                      </OfferingCard>
-                    ))}
-                  </OfferingsGrid>
-                </OfferingsSection>
-              </DetailedProfileHeader>
-
-              <MainOfferingsSection>
-                <MainOfferingsTitle>🤝 Connect With {selectedUser.firstName}</MainOfferingsTitle>
-                <OfferingCard>
-                  <OfferingHeader>
-                    <OfferingCategory>Community Connection</OfferingCategory>
-                  </OfferingHeader>
-                  <OfferingTitle>Get to know {selectedUser.firstName}</OfferingTitle>
-                  <OfferingDescription>
-                    Connect with {selectedUser.firstName} to learn more about their {selectedUser.profession} background 
-                    and explore {selectedUser.interests.slice(0, 3).join(', ')} together in the community.
-                  </OfferingDescription>
-                  <OfferingActions>
-                    <ChatButton onClick={() => handleChatUser(selectedUser)}>
-                      💬 Send Message
-                    </ChatButton>
-                    <BookButton onClick={() => handleChatUser(selectedUser)}>
-                      🤝 Connect
-                    </BookButton>
-                  </OfferingActions>
-                </OfferingCard>
-              </MainOfferingsSection>
-            </>
-          )}
-        </DetailedProfileContent>
-      </DetailedProfileModal>
-
-
-      {/* Trust Chain Feedback Modal */}
-      <FilterModalOverlay $isOpen={showTrustFeedback} onClick={handleCloseTrustFeedback}>
-        <FilterModal onClick={(e) => e.stopPropagation()}>
-          <FilterModalHeader>
-            <FilterModalTitle>Trust Chain Reviews</FilterModalTitle>
-            <FilterCloseButton onClick={handleCloseTrustFeedback}>×</FilterCloseButton>
-          </FilterModalHeader>
+      {/* Manual Introduction Modal */}
+      <Modal $show={showManualIntro}>
+        <ModalContent>
+          <ModalTitle>🤝 Manually Introduce Friends</ModalTitle>
           
-          {selectedTrustUser && (
-            <div style={{ padding: '20px' }}>
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <DetailedUserAvatar style={{ background: selectedTrustUser.avatarColor, width: '60px', height: '60px', fontSize: '18px', margin: '0 auto 8px' }}>
-                  {selectedTrustUser.initials}
-                </DetailedUserAvatar>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '16px' }}>{selectedTrustUser.fullName}</h3>
-                <div style={{ color: '#666', fontSize: '12px' }}>Trust Chain Reviews & Feedback</div>
-              </div>
-
-              {/* Trust Network Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#2D5F4F' }}>
-                  🔗 Trusted By Community Leaders
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', backgroundColor: '#F0F8F5', borderRadius: '8px' }}>
-                    <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #0891B2, #06B6D4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: 'bold' }}>AH</div>
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: '600' }}>Ahmed Hassan</div>
-                      <div style={{ fontSize: '11px', color: '#666' }}>Most Trusted Friend • Dubai Fintech Expert</div>
-                    </div>
-                    <div style={{ marginLeft: 'auto', color: '#2D5F4F', fontSize: '12px', fontWeight: '600' }}>✓ Verified</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', backgroundColor: '#F8F9FA', borderRadius: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #2D5F4F, #4A90A4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 'bold' }}>AH</div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>Amina Hadzic</div>
-                      <div style={{ fontSize: '10px', color: '#666' }}>Trust Network • Architecture Expert</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', backgroundColor: '#F8F9FA', borderRadius: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #10B981, #34D399)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 'bold' }}>AS</div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>Ali Seggaf</div>
-                      <div style={{ fontSize: '10px', color: '#666' }}>Trust Network • Islamic Studies Scholar</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', backgroundColor: '#F8F9FA', borderRadius: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 'bold' }}>ZM</div>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: '600' }}>Zara Malik</div>
-                      <div style={{ fontSize: '10px', color: '#666' }}>Trust Network • Fashion Entrepreneur</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Community Reviews */}
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#2D5F4F' }}>
-                  💬 Community Reviews (Admin Verified)
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ border: '1px solid #E5E5E5', borderRadius: '8px', padding: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '24px', height: '24px', background: 'linear-gradient(135deg, #0891B2, #06B6D4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px', fontWeight: 'bold' }}>AH</div>
-                        <span style={{ fontSize: '14px', fontWeight: '600' }}>Ahmed Hassan</span>
-                        <span style={{ fontSize: '10px', color: '#2D5F4F', backgroundColor: '#F0F8F5', padding: '2px 6px', borderRadius: '4px' }}>TRUSTED</span>
-                      </div>
-                      <div style={{ color: '#FFD700', fontSize: '12px' }}>★★★★★</div>
-                    </div>
-                    <p style={{ margin: '0', fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
-                      "MashaAllah, {selectedTrustUser.firstName} is an excellent community member. Very reliable and knowledgeable about {selectedTrustUser.profession.toLowerCase()}. I personally vouch for their trustworthiness. Barakallahu feek!"
-                    </p>
-                    <div style={{ fontSize: '11px', color: '#999', marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>2 weeks ago</span>
-                      <span style={{ color: '#2D5F4F' }}>✓ Admin Verified</span>
-                    </div>
-                  </div>
-
-                  <div style={{ border: '1px solid #E5E5E5', borderRadius: '8px', padding: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '24px', height: '24px', background: 'linear-gradient(135deg, #EC4899, #F472B6)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px', fontWeight: 'bold' }}>FZ</div>
-                        <span style={{ fontSize: '14px', fontWeight: '600' }}>Fatima Al-Zahra</span>
-                      </div>
-                      <div style={{ color: '#FFD700', fontSize: '12px' }}>★★★★★</div>
-                    </div>
-                    <p style={{ margin: '0', fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
-                      "Alhamdulillah, {selectedTrustUser.firstName} has been very helpful to our community. Their expertise in {selectedTrustUser.interests[0]} is valuable. JazakAllahu khair for all your contributions!"
-                    </p>
-                    <div style={{ fontSize: '11px', color: '#999', marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>1 month ago</span>
-                      <span style={{ color: '#2D5F4F' }}>✓ Admin Verified</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#F8F9FA', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#2D5F4F', marginBottom: '4px' }}>
-                  Overall Rating: ⭐ {(selectedTrustUser.level * 1.2 + 3.5).toFixed(1)}/5.0
-                </div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
-                  Based on {selectedTrustUser.forumReplies + selectedTrustUser.forumLikes + 8} community reviews
-                </div>
-                <button style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#2D5F4F',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }} onClick={() => {
-                  alert('📝 Review submitted for admin approval!\n\nYour feedback will be reviewed by our community moderators before being published to maintain trust and authenticity. JazakAllahu khair for contributing to our community trust network! 🤝');
-                  handleCloseTrustFeedback();
-                }}>
-                  📝 Submit Review (Admin Approval Required)
-                </button>
-              </div>
-            </div>
-          )}
-        </FilterModal>
-      </FilterModalOverlay>
-
-      {/* Location Logbook Modal */}
-      <FilterModalOverlay $isOpen={showLocationLogbook} onClick={handleCloseLocationLogbook}>
-        <FilterModal onClick={(e) => e.stopPropagation()}>
-          <FilterModalHeader>
-            <FilterModalTitle>📍 Location Logbook - {selectedLocationUser?.fullName}</FilterModalTitle>
-            <FilterCloseButton onClick={handleCloseLocationLogbook}>×</FilterCloseButton>
-          </FilterModalHeader>
-          
-          {selectedLocationUser && (
-            <LocationModalContent style={{ padding: '20px' }}>
-              {!showLocationFriends ? (
-                // Main Location Logbook View
-                (() => {
-                  const residenceInfo = getUserResidenceInfo(selectedLocationUser);
-                  const travelHistory = getUserTravelHistory(selectedLocationUser);
-                  
-                  return (
-                    <>
-                      {/* Residence Info Section */}
-                      <div style={{ marginBottom: '24px' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                          <DetailedUserAvatar style={{ background: selectedLocationUser.avatarColor, width: '60px', height: '60px', fontSize: '18px', margin: '0 auto 8px' }}>
-                            {selectedLocationUser.initials}
-                          </DetailedUserAvatar>
-                          <h3 style={{ margin: '0 0 4px 0', fontSize: '16px' }}>{selectedLocationUser.fullName}</h3>
-                        </div>
-
-                        <div style={{ background: '#F8F9FA', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#2D5F4F', marginBottom: '8px' }}>Residence Information</div>
-                          <div style={{ fontSize: '13px', color: '#333', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: '500' }}>Original Country:</span> {residenceInfo.originalCountry}
-                          </div>
-                          <div style={{ fontSize: '13px', color: '#333', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: '500' }}>Current Residence:</span> 📍 {selectedLocationUser.location}, {selectedLocationUser.country}
-                          </div>
-                          <div style={{ fontSize: '13px', color: '#333' }}>
-                            <span style={{ fontWeight: '500' }}>Since:</span> Living here since {residenceInfo.since}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Travel History Section */}
-                      <div>
-                        <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: '#2D5F4F' }}>Travel History</h4>
-                        
-                        {travelHistory.map((travel, index) => (
-                          <div key={index} style={{ 
-                            border: '1px solid #E5E5E5', 
-                            borderRadius: '8px', 
-                            padding: '12px', 
-                            marginBottom: '12px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#F8F9FA';
-                            e.currentTarget.style.borderColor = '#2D5F4F';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'white';
-                            e.currentTarget.style.borderColor = '#E5E5E5';
-                          }}
-                          onClick={() => handleShowLocationFriends(selectedLocationUser, travel.city)}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
-                                {travel.country} - {travel.city}
-                              </div>
-                              <div style={{ fontSize: '12px', color: '#666' }}>
-                                👥 {travel.friends} friends
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#666' }}>
-                              📅 {travel.duration}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>
-                              Click to see friends in this location
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Action Button */}
-                      <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#F8F9FA', borderRadius: '8px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
-                          Connect with {selectedLocationUser.firstName} to share travel experiences and get local insights!
-                        </div>
-                        <button style={{
-                          width: '100%',
-                          padding: '10px',
-                          backgroundColor: '#2D5F4F',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }} onClick={() => {
-                          alert(`🌍 Travel connection request sent to ${selectedLocationUser.fullName}!\n\nThey'll be notified that you're interested in connecting to share travel experiences and get local insights. Safe travels! ✈️`);
-                          handleCloseLocationLogbook();
-                        }}>
-                          🌍 Connect for Travel Insights
-                        </button>
-                      </div>
-                    </>
-                  );
-                })()
-              ) : (
-                // Friends in Location View
-                <>
-                  <BackButton onClick={handleBackToLogbook}>
-                    ← Back to Travel History
-                  </BackButton>
-                  
-                  <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#2D5F4F' }}>
-                      Friends in {selectedLocationCity}
-                    </h3>
-                    <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>
-                      Connect with people {selectedLocationUser?.firstName} knows in this location
-                    </p>
-                  </div>
-
-                  <FriendsGridContainer>
-                    {locationFriends.map((friend) => (
-                      <MiniFriendCard key={friend.id}>
-                        <MiniFriendHeader>
-                          <MiniFriendAvatar style={{ background: friend.avatarColor }}>
-                            {friend.initials}
-                          </MiniFriendAvatar>
-                          <MiniFriendInfo>
-                            <MiniFriendName>{friend.fullName}</MiniFriendName>
-                            <MiniFriendProfession>{friend.profession}</MiniFriendProfession>
-                            <MiniFriendConnection>
-                              Connection: {(friend as any).connection}
-                            </MiniFriendConnection>
-                          </MiniFriendInfo>
-                        </MiniFriendHeader>
-                        
-                        <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
-                          Services: {friend.lookingFor?.slice(0, 2).join(', ') || 'Open to Connect'}
-                        </div>
-                        
-                        <MiniFriendActions>
-                          <MiniFriendButton 
-                            $variant="secondary"
-                            onClick={() => {
-                              setSelectedUser(friend);
-                              setShowDetailedProfile(true);
-                              setShowLocationLogbook(false);
-                            }}
-                          >
-                            View Profile
-                          </MiniFriendButton>
-                          <MiniFriendButton 
-                            $variant="primary"
-                            onClick={() => {
-                              alert(`🤝 Connection request sent to ${friend.fullName}!\n\nThey'll be notified that you'd like to connect through your mutual friend ${selectedLocationUser?.firstName} in ${selectedLocationCity}.`);
-                            }}
-                          >
-                            Connect
-                          </MiniFriendButton>
-                        </MiniFriendActions>
-                      </MiniFriendCard>
-                    ))}
-                  </FriendsGridContainer>
-
-                  {locationFriends.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#666' }}>
-                      <p>No friends found in this location yet.</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </LocationModalContent>
-          )}
-        </FilterModal>
-      </FilterModalOverlay>
-      
-      {/* Filter Modals from BerseConnect */}
-      <CountryFilterModal
-        isOpen={countryModalOpen}
-        onClose={() => setCountryModalOpen(false)}
-        selectedCountry={selectedCountry}
-        onApply={handleCountryFilter}
-      />
-
-      <CityFilterModal
-        isOpen={cityModalOpen}
-        onClose={() => setCityModalOpen(false)}
-        selectedCountry={selectedCountry}
-        selectedCities={selectedCities}
-        onApply={handleCityFilter}
-      />
-      
-      {/* Interests Filter Modal */}
-      <FilterModalOverlay $isOpen={interestsModalOpen} onClick={() => setInterestsModalOpen(false)}>
-        <FilterModal onClick={(e) => e.stopPropagation()}>
-          <FilterModalHeader>
-            <FilterModalTitle>Select Your Interests</FilterModalTitle>
-            <FilterCloseButton onClick={() => setInterestsModalOpen(false)}>
-              ×
-            </FilterCloseButton>
-          </FilterModalHeader>
-          
-          <CheckboxGrid>
-            {interestOptions.map((interest) => (
-              <CheckboxItem
-                key={interest.id}
-              >
-                <Checkbox
-                  type="checkbox"
-                  checked={selectedInterests.includes(interest.id)}
-                  onChange={() => handleInterestToggle(interest.id)}
-                />
-                <div>
-                  <div style={{ fontWeight: '600', marginBottom: '2px' }}>{interest.label}</div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
-                    {interest.description}
-                  </div>
-                </div>
-              </CheckboxItem>
-            ))}
-          </CheckboxGrid>
-          
-          <FilterActions>
-            <ClearButton onClick={handleClearInterests}>
-              Clear All
-            </ClearButton>
-            <ApplyButton onClick={handleApplyInterests}>
-              Apply ({selectedInterests.length})
-            </ApplyButton>
-          </FilterActions>
-        </FilterModal>
-      </FilterModalOverlay>
-
-      {/* Enhanced Search Modal */}
-      <EnhancedSearchModal $isOpen={enhancedSearchOpen} onClick={handleCloseEnhancedSearch}>
-        <EnhancedSearchContent onClick={(e) => e.stopPropagation()}>
-          <EnhancedSearchHeader>
-            <EnhancedSearchTitle>Advanced Search</EnhancedSearchTitle>
-            <EnhancedSearchCloseButton onClick={handleCloseEnhancedSearch}>
-              ×
-            </EnhancedSearchCloseButton>
-          </EnhancedSearchHeader>
-          
-          <EnhancedSearchBody>
-            {/* Main Search Input */}
-            <div style={{ position: 'relative' }}>
-              <MainSearchInput
-                type="text"
-                placeholder="Search people, interests, communities..."
-                value={mainSearchQuery}
-                onChange={(e) => handleMainSearchInputChange(e.target.value)}
-                autoFocus
+          <ModalSection>
+            <ModalLabel>Add friends to introduce (2-4 people):</ModalLabel>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <ModalInput
+                placeholder="Enter friend's name"
+                value={newPersonName}
+                onChange={(e) => setNewPersonName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddPersonToIntro()}
               />
-              {showAutocomplete && autocompleteResults.length > 0 && (
-                <AutocompleteDropdown>
-                  {autocompleteResults.map((item, index) => (
-                    <AutocompleteItem key={index} onClick={() => handleAutocompleteSelect(item)}>
-                      <ItemIcon>
-                        {item.type === 'interest' ? '🎯' : 
-                         item.type === 'community' ? '🏛️' : 
-                         item.type === 'company' ? '🏢' : 
-                         item.type === 'skill' ? '⚡' : '💭'}
-                      </ItemIcon>
-                      <ItemDetails>
-                        <ItemName>{item.name}</ItemName>
-                        <ItemMeta>
-                          {item.type === 'community' && `${item.memberCount} members • ${item.type}`}
-                          {item.type === 'interest' && `${item.category} • ${item.popularity}% popularity`}
-                          {item.type === 'company' && item.description}
-                          {item.type === 'skill' && item.category}
-                          {item.type === 'personality' && `${item.type} • ${item.temperament} temperament`}
-                        </ItemMeta>
-                      </ItemDetails>
-                    </AutocompleteItem>
-                  ))}
-                </AutocompleteDropdown>
-              )}
-            </div>
-
-            {/* Category Tabs */}
-            <CategoryTabs>
-              {searchCategories.map((category) => (
-                <CategoryTab
-                  key={category.id}
-                  $isActive={activeSearchCategory === category.id}
-                  onClick={() => handleCategoryTabClick(category.id)}
-                >
-                  <span>{category.icon}</span>
-                  {category.name}
-                </CategoryTab>
-              ))}
-            </CategoryTabs>
-
-            {/* Active Filter Chips */}
-            <FilterChips>
-              {selectedSearchInterests.map((interest) => (
-                <FilterChip key={`interest-${interest}`}>
-                  🎯 {interestOptions.find(o => o.id === interest)?.name || interest}
-                  <ChipRemove onClick={() => removeSearchFilter('interest', interest)}>×</ChipRemove>
-                </FilterChip>
-              ))}
-              {selectedSearchCommunities.map((community) => (
-                <FilterChip key={`community-${community}`}>
-                  🏛️ {communityOptions.find(o => o.id === community)?.name || community}
-                  <ChipRemove onClick={() => removeSearchFilter('community', community)}>×</ChipRemove>
-                </FilterChip>
-              ))}
-              {selectedSearchCompanies.map((company) => (
-                <FilterChip key={`company-${company}`}>
-                  🏢 {companyOptions.find(o => o.id === company)?.name || company}
-                  <ChipRemove onClick={() => removeSearchFilter('company', company)}>×</ChipRemove>
-                </FilterChip>
-              ))}
-              {selectedSearchSkills.map((skill) => (
-                <FilterChip key={`skill-${skill}`}>
-                  ⚡ {skillOptions.find(o => o.id === skill)?.name || skill}
-                  <ChipRemove onClick={() => removeSearchFilter('skill', skill)}>×</ChipRemove>
-                </FilterChip>
-              ))}
-              {selectedSearchPersonalities.map((personality) => (
-                <FilterChip key={`personality-${personality}`}>
-                  💭 {personalityOptions.find(o => o.id === personality)?.name || personality}
-                  <ChipRemove onClick={() => removeSearchFilter('personality', personality)}>×</ChipRemove>
-                </FilterChip>
-              ))}
-            </FilterChips>
-
-            {/* Quick Suggestions */}
-            {!mainSearchQuery && (
-              <QuickSuggestions>
-                <SuggestionsTitle>
-                  {activeSearchCategory === 'all' ? 'Popular Searches' : 
-                   activeSearchCategory === 'interests' ? 'Popular Interests' :
-                   activeSearchCategory === 'communities' ? 'Verified Communities' :
-                   activeSearchCategory === 'companies' ? 'Organizations' : 
-                   activeSearchCategory === 'skills' ? 'Common Skills' : 'Personality Types'}
-                </SuggestionsTitle>
-                <SuggestionGrid>
-                  {getQuickSuggestions().map((suggestion, index) => (
-                    <SuggestionChip 
-                      key={index}
-                      onClick={() => {
-                        if (suggestion.type === 'suggestion') {
-                          setMainSearchQuery(suggestion.name);
-                          handleMainSearchInputChange(suggestion.name);
-                        } else {
-                          handleAutocompleteSelect({ ...suggestion, type: activeSearchCategory === 'all' ? 'interest' : activeSearchCategory });
-                        }
-                      }}
-                    >
-                      {suggestion.name}
-                    </SuggestionChip>
-                  ))}
-                </SuggestionGrid>
-              </QuickSuggestions>
-            )}
-
-            {/* Results Count */}
-            {(selectedSearchInterests.length > 0 || selectedSearchCommunities.length > 0 || 
-              selectedSearchCompanies.length > 0 || selectedSearchSkills.length > 0 || 
-              selectedSearchPersonalities.length > 0 || mainSearchQuery.trim()) && (
-              <ResultsCount>
-                Will search {users.length} community members
-              </ResultsCount>
-            )}
-
-            {/* Actions */}
-            <EnhancedSearchActions>
-              <SearchActionButton onClick={handleClearEnhancedSearch}>
-                Clear All
-              </SearchActionButton>
-              <SearchActionButton 
-                $variant="primary" 
-                onClick={handleApplyEnhancedSearch}
-                $disabled={!mainSearchQuery.trim() && selectedSearchInterests.length === 0 && 
-                          selectedSearchCommunities.length === 0 && selectedSearchCompanies.length === 0 && 
-                          selectedSearchSkills.length === 0 && selectedSearchPersonalities.length === 0}
+              <ModalButton 
+                $primary 
+                onClick={handleAddPersonToIntro}
+                style={{ flex: 'none', width: 'auto' }}
               >
-                Search ({selectedSearchInterests.length + selectedSearchCommunities.length + 
-                        selectedSearchCompanies.length + selectedSearchSkills.length + 
-                        selectedSearchPersonalities.length + (mainSearchQuery.trim() ? 1 : 0)} filters)
-              </SearchActionButton>
-            </EnhancedSearchActions>
-          </EnhancedSearchBody>
-        </EnhancedSearchContent>
-      </EnhancedSearchModal>
+                Add
+              </ModalButton>
+            </div>
+          </ModalSection>
 
+          <PeopleList>
+            {introductionPeople.map((person, idx) => (
+              <PersonChip key={idx}>
+                {person}
+                <RemoveButton onClick={() => handleRemovePersonFromIntro(idx)}>×</RemoveButton>
+              </PersonChip>
+            ))}
+          </PeopleList>
+
+          {introductionPeople.length >= 2 && (
+            <ModalSection>
+              <ModalLabel>Introduction message:</ModalLabel>
+              <ModalTextarea
+                placeholder={`Hey ${introductionPeople.join(', ')}! I think you all would really get along...`}
+              />
+            </ModalSection>
+          )}
+
+          <ModalActions>
+            <ModalButton onClick={() => {
+              setShowManualIntro(false);
+              setIntroductionPeople([]);
+            }}>
+              Cancel
+            </ModalButton>
+            <ModalButton 
+              $primary 
+              onClick={handleSendIntroduction}
+              disabled={introductionPeople.length < 2}
+            >
+              Send Introduction
+            </ModalButton>
+          </ModalActions>
+        </ModalContent>
+      </Modal>
+
+      {/* Squad Builder Modal */}
+      <Modal $show={showSquadBuilder}>
+        <ModalContent>
+          <ModalTitle>👥 Squad Builder</ModalTitle>
+          
+          <ModalSection>
+            <ModalLabel>Squad Name:</ModalLabel>
+            <ModalInput
+              placeholder="e.g. Weekend Hikers"
+              value={squadName}
+              onChange={(e) => setSquadName(e.target.value)}
+            />
+          </ModalSection>
+
+          <ModalSection>
+            <ModalLabel>Activity/Purpose:</ModalLabel>
+            <ModalInput
+              placeholder="e.g. Weekend hiking, Study group, etc."
+              value={squadActivity}
+              onChange={(e) => setSquadActivity(e.target.value)}
+            />
+          </ModalSection>
+
+          <ModalSection>
+            <ModalLabel>Add squad members:</ModalLabel>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <ModalInput
+                placeholder="Enter member name"
+                value={newPersonName}
+                onChange={(e) => setNewPersonName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddToSquad()}
+              />
+              <ModalButton 
+                $primary 
+                onClick={handleAddToSquad}
+                style={{ flex: 'none', width: 'auto' }}
+              >
+                Add
+              </ModalButton>
+            </div>
+          </ModalSection>
+
+          <PeopleList>
+            {squadMembers.map((member, idx) => (
+              <PersonChip key={idx}>
+                {member}
+                <RemoveButton onClick={() => setSquadMembers(squadMembers.filter((_, i) => i !== idx))}>×</RemoveButton>
+              </PersonChip>
+            ))}
+          </PeopleList>
+
+          <ModalActions>
+            <ModalButton onClick={() => {
+              setShowSquadBuilder(false);
+              setSquadMembers([]);
+              setSquadName('');
+              setSquadActivity('');
+            }}>
+              Cancel
+            </ModalButton>
+            <ModalButton 
+              $primary 
+              onClick={handleCreateSquad}
+              disabled={squadMembers.length < 2 || !squadName || !squadActivity}
+            >
+              Create Squad
+            </ModalButton>
+          </ModalActions>
+        </ModalContent>
+      </Modal>
+
+      {/* Create Cluster Modal */}
+      <Modal $show={showCreateCluster}>
+        <ModalContent>
+          <ModalTitle>💫 Create Custom Cluster</ModalTitle>
+          
+          <ModalSection>
+            <ModalLabel>Cluster Name:</ModalLabel>
+            <ModalInput
+              placeholder="e.g. Tech Entrepreneurs in KL"
+              value={clusterName}
+              onChange={(e) => setClusterName(e.target.value)}
+            />
+          </ModalSection>
+
+          <ModalSection>
+            <ModalLabel>Add cluster members:</ModalLabel>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <ModalInput
+                placeholder="Enter member name"
+                value={newPersonName}
+                onChange={(e) => setNewPersonName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddToCluster()}
+              />
+              <ModalButton 
+                $primary 
+                onClick={handleAddToCluster}
+                style={{ flex: 'none', width: 'auto' }}
+              >
+                Add
+              </ModalButton>
+            </div>
+          </ModalSection>
+
+          <PeopleList>
+            {clusterMembers.map((member, idx) => (
+              <PersonChip key={idx}>
+                {member}
+                <RemoveButton onClick={() => setClusterMembers(clusterMembers.filter((_, i) => i !== idx))}>×</RemoveButton>
+              </PersonChip>
+            ))}
+          </PeopleList>
+
+          <ModalActions>
+            <ModalButton onClick={() => {
+              setShowCreateCluster(false);
+              setClusterMembers([]);
+              setClusterName('');
+            }}>
+              Cancel
+            </ModalButton>
+            <ModalButton 
+              $primary 
+              onClick={handleCreateCluster}
+              disabled={clusterMembers.length < 3 || !clusterName}
+            >
+              Create Cluster
+            </ModalButton>
+          </ModalActions>
+        </ModalContent>
+      </Modal>
+
+      {/* Bingo Input Modal */}
+      <Modal $show={showBingoInput}>
+        <ModalContent>
+          <ModalTitle>🎯 Complete Bingo Square</ModalTitle>
+          
+          <ModalSection>
+            <ModalLabel>
+              Who did you meet that is a {selectedBingoIndex !== null ? bingoItems[selectedBingoIndex]?.text : ''}?
+            </ModalLabel>
+            <ModalInput
+              placeholder="Enter their name"
+              value={newPersonName}
+              onChange={(e) => setNewPersonName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleBingoComplete(newPersonName)}
+            />
+          </ModalSection>
+
+          <ModalActions>
+            <ModalButton onClick={() => {
+              setShowBingoInput(false);
+              setSelectedBingoIndex(null);
+              setNewPersonName('');
+            }}>
+              Cancel
+            </ModalButton>
+            <ModalButton 
+              $primary 
+              onClick={() => handleBingoComplete(newPersonName)}
+              disabled={!newPersonName.trim()}
+            >
+              Complete Square
+            </ModalButton>
+          </ModalActions>
+        </ModalContent>
+      </Modal>
+
+      {/* Network Web Modal */}
+      <NetworkWebModal $show={showNetworkWeb}>
+        <NetworkWebContent>
+          <ModalTitle>🕸️ Your Connection Web</ModalTitle>
+          
+          <NetworkWebCanvas>
+            <NetworkWebNode $x={50} $y={30} $main>You</NetworkWebNode>
+            <NetworkWebNode $x={25} $y={60}>Ahmad</NetworkWebNode>
+            <NetworkWebNode $x={75} $y={60}>Sarah</NetworkWebNode>
+            <NetworkWebNode $x={50} $y={80}>Gym</NetworkWebNode>
+            <NetworkWebNode $x={20} $y={20}>Tech</NetworkWebNode>
+            <NetworkWebNode $x={80} $y={20}>Art</NetworkWebNode>
+            
+            <NetworkWebLine>
+              <line x1="50%" y1="30%" x2="25%" y2="60%" stroke="#64B5F6" strokeWidth="2"/>
+              <line x1="50%" y1="30%" x2="75%" y2="60%" stroke="#64B5F6" strokeWidth="2"/>
+              <line x1="25%" y1="60%" x2="50%" y2="80%" stroke="#FFA726" strokeWidth="2"/>
+              <line x1="75%" y1="60%" x2="50%" y2="80%" stroke="#FFA726" strokeWidth="2"/>
+              <line x1="25%" y1="60%" x2="20%" y2="20%" stroke="#66BB6A" strokeWidth="2"/>
+              <line x1="75%" y1="60%" x2="80%" y2="20%" stroke="#66BB6A" strokeWidth="2"/>
+            </NetworkWebLine>
+          </NetworkWebCanvas>
+
+          <div style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>
+            Click on any node to explore deeper connections and mutual interests.
+          </div>
+
+          <ModalActions>
+            <ModalButton $primary onClick={() => setShowNetworkWeb(false)}>
+              Close
+            </ModalButton>
+          </ModalActions>
+        </NetworkWebContent>
+      </NetworkWebModal>
 
       <MainNav 
         activeTab="match"
         onTabPress={(tab) => {
-          switch (tab) {
-            case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/connect'); break;
-            case 'match': navigate('/match'); break;
-            case 'forum': navigate('/forum'); break;
+          if (tab !== 'match') {
+            navigate(`/${tab === 'home' ? 'dashboard' : tab}`);
           }
         }}
-      />
-      
-      {/* AI Matching Modal */}
-      <AIModal $isOpen={showAIModal}>
-        <AIModalContent>
-          <AIModalIcon>🤖</AIModalIcon>
-          <AIModalTitle>AI-Powered Matching</AIModalTitle>
-          <AIModalDesc>
-            Would you like our AI to match you with 3 profiles that are similar to yours? 
-            We'll analyze your interests, skills, and preferences to find the best connections for you.
-          </AIModalDesc>
-          <AIModalButtons>
-            <AIModalButton onClick={() => setShowAIModal(false)}>
-              No, thanks
-            </AIModalButton>
-            <AIModalButton $primary onClick={handleAIMatch}>
-              Yes, match me!
-            </AIModalButton>
-          </AIModalButtons>
-        </AIModalContent>
-      </AIModal>
-
-      <ProfileSidebar 
-        isOpen={showProfileSidebar}
-        onClose={() => setShowProfileSidebar(false)}
       />
     </Container>
   );

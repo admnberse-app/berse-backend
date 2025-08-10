@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Routes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .route-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .route-card {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .route-card:hover {
+            transform: scale(1.05);
+        }
+        .route-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .route-path {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 BerseMuka App Routes</h1>
+        <div class="status">
+            ✅ All screens are accessible and running on <strong>http://localhost:5173</strong>
+        </div>
+        
+        <div class="route-list">
+            <a href="http://localhost:5173/dashboard" target="_blank" class="route-card">
+                <div class="route-title">📊 Dashboard</div>
+                <div class="route-path">/dashboard</div>
+            </a>
+            
+            <a href="http://localhost:5173/connect" target="_blank" class="route-card">
+                <div class="route-title">🤝 Connect</div>
+                <div class="route-path">/connect</div>
+            </a>
+            
+            <a href="http://localhost:5173/forum" target="_blank" class="route-card">
+                <div class="route-title">💬 Forum</div>
+                <div class="route-path">/forum</div>
+            </a>
+            
+            <a href="http://localhost:5173/match" target="_blank" class="route-card">
+                <div class="route-title">💕 Match</div>
+                <div class="route-path">/match</div>
+            </a>
+            
+            <a href="http://localhost:5173/messages" target="_blank" class="route-card">
+                <div class="route-title">✉️ Messages</div>
+                <div class="route-path">/messages</div>
+            </a>
+            
+            <a href="http://localhost:5173/points" target="_blank" class="route-card">
+                <div class="route-title">💎 Points</div>
+                <div class="route-path">/points</div>
+            </a>
+            
+            <a href="http://localhost:5173/settings" target="_blank" class="route-card">
+                <div class="route-title">⚙️ Settings</div>
+                <div class="route-path">/settings</div>
+            </a>
+            
+            <a href="http://localhost:5173/leaderboard" target="_blank" class="route-card">
+                <div class="route-title">🏆 Leaderboard</div>
+                <div class="route-path">/leaderboard</div>
+            </a>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: #fff3e0; border-radius: 8px;">
+            <h3>📝 Notes:</h3>
+            <ul>
+                <li><strong>Match Screen:</strong> Now shows search/filter interface with user grid</li>
+                <li><strong>Authentication:</strong> Login with any email/password to access protected routes</li>
+                <li><strong>Navigation:</strong> Use the bottom navigation bar to switch between screens</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

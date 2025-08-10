@@ -145,6 +145,15 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
       }
     },
     {
+      id: 'forum',
+      label: 'Forum',
+      icon: '💬',
+      action: () => {
+        navigate('/forum');
+        onClose();
+      }
+    },
+    {
       id: 'events',
       label: 'Events',
       icon: '📅',
@@ -174,7 +183,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
     {
       id: 'messages',
       label: 'Messages',
-      icon: '💬',
+      icon: '✉️',
       action: () => {
         navigate('/messages');
         onClose();

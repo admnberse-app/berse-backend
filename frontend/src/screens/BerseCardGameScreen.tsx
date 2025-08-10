@@ -19,7 +19,7 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-  background: #F5F3EF;
+  background: #F9F3E3;
   width: 100%;
   padding: 12px 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

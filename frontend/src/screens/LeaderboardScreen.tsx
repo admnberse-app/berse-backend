@@ -380,7 +380,7 @@ export const LeaderboardScreen: React.FC = () => {
       
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F3EF',
+        background: '#F9F3E3',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'

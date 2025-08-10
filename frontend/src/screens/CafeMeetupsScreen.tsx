@@ -46,7 +46,7 @@ const Container = styled.div`
 
 const Header = styled.div`
   padding: 16px 20px;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
   position: relative;
 `;
 

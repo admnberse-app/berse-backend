@@ -1,489 +1,484 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import styled from 'styled-components';
+import React, { useState, useEffect } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { MainNav } from '../components/MainNav';
-import { ProfileSidebar } from '../components/ProfileSidebar';
-import { useAuth } from '../contexts/AuthContext';
-import { EventRegistrationModal } from '../components/EventRegistrationModal';
-import { SportsEventBookingModal } from '../components/SportsEventBookingModal';
-
-// ================================
-// STYLED COMPONENTS
-// ================================
+import { MainNav } from '../components/MainNav/index';
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: #F9F3E3;
-  max-width: 393px;
-  margin: 0 auto;
-  position: relative; /* Add this for proper z-index stacking */
 `;
 
-const AvatarImage = styled.img`
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
+// Animations
+const pulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 `;
 
-const Content = styled.div`
-  flex: 1;
-  padding: 0 20px 100px 20px; /* Added extra space for floating nav */
-  overflow-y: auto;
-  margin-top: -2px;
+const slideIn = keyframes`
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 `;
 
-const FilterSection = styled.div`
-  padding: 8px 20px;
-  background-color: transparent;
-  margin-bottom: 8px;
+const slideUp = keyframes`
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 `;
 
-const FilterDropdowns = styled.div`
-  display: flex;
-  gap: 6px;
-  align-items: center;
-`;
-
-const FilterDropdown = styled.button<{ $isActive?: boolean }>`
-  flex: 1;
-  padding: 8px 14px;
-  border: 1px solid ${({ $isActive }) => $isActive ? '#2D5F4F' : '#ddd'};
-  border-radius: 8px;
+// Header Styles
+const Header = styled.div`
   background: white;
-  color: ${({ $isActive }) => $isActive ? '#2D5F4F' : '#333'};
-  font-size: 12px;
-  font-weight: ${({ $isActive }) => $isActive ? '600' : '500'};
-  cursor: pointer;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+`;
+
+const HeaderTop = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all 0.2s ease;
-  height: 40px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  &:hover {
-    border-color: #2D5F4F;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-  }
-  
-  &::after {
-    content: '▼';
-    font-size: 8px;
-    margin-left: 6px;
-    color: ${({ $isActive }) => $isActive ? '#2D5F4F' : '#666'};
-  }
 `;
 
-const SearchFilterButton = styled.button<{ $isActive?: boolean }>`
-  width: 40px;
-  height: 40px;
-  border: 1px solid ${({ $isActive }) => $isActive ? '#2D5F4F' : '#ddd'};
-  border-radius: 8px;
-  background: white;
-  color: ${({ $isActive }) => $isActive ? '#2D5F4F' : '#666'};
-  font-size: 16px;
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 20px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  &:hover {
-    border-color: #2D5F4F;
-    color: #2D5F4F;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-  }
+  padding: 4px;
+  color: #2D5F4F;
 `;
 
-const CategoryGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 8px 6px;
-  margin-bottom: 12px;
-  padding: 0 4px;
-  justify-items: center;
-  align-items: center;
-  
-  /* Ensure equal distribution in 4x2 grid */
-  width: 100%;
-  max-width: 340px;
-  margin: 0 auto 12px auto;
+const HeaderTitle = styled.div`
+  flex: 1;
+  text-align: center;
 `;
 
-const CategoryCard = styled.div<{ $isSelected?: boolean }>`
-  display: flex;
-  flex-direction: column;
+const LocationTag = styled.div`
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 4px;
+  background: #E8F5E9;
+  color: #2D5F4F;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  padding: 6px 3px;
-  border-radius: 12px;
-  width: 100%;
-  min-height: 68px;
-  
+
   &:hover {
-    background-color: rgba(45, 95, 79, 0.05);
-    transform: translateY(-1px);
+    background: #C8E6C9;
   }
+`;
+
+const Title = styled.h2`
+  margin: 0;
+  font-size: 18px;
+  color: #2D5F4F;
+  font-weight: 600;
+`;
+
+const CreateButton = styled.button`
+  background: #2D5F4F;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: #1E4039;
+  }
+`;
+
+// Search Bar
+const SearchContainer = styled.div`
+  padding: 0 16px;
+  margin-bottom: 12px;
+`;
+
+const SearchBar = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const SearchIcon = styled.span`
+  font-size: 16px;
+  color: #666;
+`;
+
+const FilterButton = styled.button`
+  background: #E8F5E9;
+  color: #2D5F4F;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: #C8E6C9;
+  }
+`;
+
+// Category Tabs
+const CategoryTabs = styled.div`
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  background: white;
+  padding-top: 12px;
+  padding-bottom: 12px;
   
-  ${({ $isSelected }) => $isSelected && `
-    background-color: rgba(45, 95, 79, 0.1);
-    transform: translateY(-1px);
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const CategoryTab = styled.button<{ $active?: boolean }>`
+  background: ${props => props.$active ? '#2D5F4F' : 'white'};
+  color: ${props => props.$active ? 'white' : '#666'};
+  border: 1px solid ${props => props.$active ? '#2D5F4F' : '#e0e0e0'};
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    background: ${props => props.$active ? '#1E4039' : '#f5f5f5'};
+    border-color: #2D5F4F;
+  }
+`;
+
+const CategoryIcon = styled.span`
+  font-size: 14px;
+`;
+
+// Smart Tabs
+const SmartTabs = styled.div`
+  display: flex;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0;
+`;
+
+const SmartTab = styled.button<{ $active?: boolean }>`
+  flex: 1;
+  padding: 12px;
+  background: ${props => props.$active ? '#2D5F4F' : 'white'};
+  color: ${props => props.$active ? 'white' : '#666'};
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.$active ? '#1E4039' : '#f5f5f5'};
+  }
+
+  ${props => props.$active && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #4CAF50;
+    }
   `}
 `;
 
-const CategoryIcon = styled.div<{ $color: string; $isSelected?: boolean }>`
-  width: 48px;
-  height: 48px;
+const TabBadge = styled.span`
+  background: #FF4444;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  margin-left: 4px;
+`;
+
+// Quick Filters
+const QuickFilters = styled.div`
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const QuickFilter = styled.button<{ $active?: boolean }>`
+  background: ${props => props.$active ? 'rgba(45, 95, 79, 0.1)' : 'white'};
+  color: ${props => props.$active ? '#2D5F4F' : '#666'};
+  border: 1px solid ${props => props.$active ? '#2D5F4F' : '#e0e0e0'};
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    border-color: #2D5F4F;
+    background: rgba(45, 95, 79, 0.05);
+  }
+`;
+
+// Content Area
+const Content = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 100px;
+  background: #F9F3E3;
+`;
+
+// Section Header
+const SectionHeader = styled.div`
+  padding: 16px 16px 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const SectionTitle = styled.h3`
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+// Event Card with Share
+const EventCard = styled.div<{ $trending?: boolean; $category?: string }>`
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  ${props => props.$trending && `border: 2px solid #FF6B6B;`}
+  ${props => props.$category === 'volunteer' && `
+    background: linear-gradient(to right, white 98%, #4CAF50 2%);
+  `}
+  ${props => props.$category === 'donation' && `
+    background: linear-gradient(to right, white 98%, #9C27B0 2%);
+  `}
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+`;
+
+const ShareButton = styled.button`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e0e0e0;
   border-radius: 50%;
-  background: ${({ $color, $isSelected }) => 
-    $isSelected 
-      ? `linear-gradient(135deg, ${$color}, ${$color}dd)` 
-      : `linear-gradient(135deg, ${$color}22, ${$color}44)`
-  };
-  border: 2px solid ${({ $color, $isSelected }) => $isSelected ? $color : `${$color}55`};
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1;
+
+  &:hover {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const TrendingBadge = styled.div`
+  background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: ${pulse} 2s infinite;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+`;
+
+const EventHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+`;
+
+const EventInfo = styled.div`
+  flex: 1;
+  padding-right: 40px;
+`;
+
+const EventIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  margin-right: 12px;
 `;
 
-const CategoryLabel = styled.span<{ $isSelected?: boolean }>`
-  font-size: 11px;
-  color: ${({ $isSelected }) => $isSelected ? '#2D5F4F' : '#666'};
-  font-weight: ${({ $isSelected }) => $isSelected ? '600' : '500'};
-  text-align: center;
-  line-height: 1.2;
-  max-width: 70px;
-  overflow-wrap: break-word;
-`;
-
-const ActiveFiltersBar = styled.div`
-  padding: 6px 20px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  font-size: 12px;
-  color: #666;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 18px;
-  margin-bottom: 10px;
-`;
-
-const FilterContent = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-`;
-
-const FilterBadge = styled.span`
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-`;
-
-const ClearFiltersButton = styled.button`
-  background: transparent;
-  color: #666;
-  font-size: 12px;
-  padding: 4px 8px;
-  border: 1px solid #DDD;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    background: #E0E0E0;
-    color: #333;
-  }
-`;
-
-const SuggestedEventsSection = styled.div`
-  margin-top: 6px;
-`;
-
-
-const CompactEventCard = styled.div`
-  background: #FFFFFF;
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
-  width: 100%;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  &:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
-    transform: translateY(-1px);
-  }
-`;
-
-const CompactEventHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-`;
-
-const HighlightBanner = styled.div`
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  background: linear-gradient(90deg, #FF6B6B, #FF8E8E, #FFB347);
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 10px 10px 0 0;
-  text-align: center;
-  animation: bannerShimmer 2s ease-in-out infinite;
-  
-  @keyframes bannerShimmer {
-    0%, 100% { background: linear-gradient(90deg, #FF6B6B, #FF8E8E, #FFB347); }
-    50% { background: linear-gradient(90deg, #FFB347, #FF6B6B, #FF8E8E); }
-  }
-`;
-
-const CategoryBadge = styled.div<{ color: string }>`
-  background: ${({ color }) => color};
-  color: white;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
-const PriceDisplay = styled.div<{ color: string }>`
-  background: ${({ color }) => color};
-  color: white;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-`;
-
-const EventTitleRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-`;
-
-const CompactEventTitle = styled.h4`
-  margin: 0;
+const EventTitle = styled.h4`
+  margin: 0 0 4px 0;
   font-size: 16px;
-  font-weight: bold;
   color: #333;
-  line-height: 1.2;
-  flex: 1;
-`;
-
-const TitlePoints = styled.span`
-  font-size: 12px;
-  color: #999;
-  font-weight: 500;
-`;
-
-const EventBio = styled.div`
-  font-size: 12px;
-  color: #999;
-  line-height: 1.3;
-  margin-bottom: 6px;
-`;
-
-const EventDetailsRow = styled.div`
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #666;
-  flex-wrap: wrap;
-`;
-
-const EventDetailItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #666;
-`;
-
-const CompactEventActions = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-`;
-
-const ParticipantsInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #999;
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
   gap: 8px;
 `;
 
-const PayButton = styled.button<{ bgColor?: string }>`
-  background: ${({ bgColor }) => bgColor || '#FF6B6B'};
+const EventDateTime = styled.div`
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+`;
+
+const EventLocation = styled.div`
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const EventStats = styled.div`
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+`;
+
+const EventStat = styled.div`
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const EventFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+`;
+
+const EventPrice = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const Price = styled.div`
+  font-size: 16px;
+  font-weight: 700;
+  color: #2D5F4F;
+`;
+
+const EventAction = styled.button`
+  background: #2D5F4F;
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const MoreButton = styled.button`
-  background: white;
-  color: #2D5F4F;
-  border: 1px solid #2D5F4F;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #2D5F4F;
-    color: white;
-  }
-`;
-
-const ConfirmationModal = styled.div<{ show: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: ${({ show }) => show ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  margin: 20px;
-  max-width: 320px;
-  width: 100%;
-`;
-
-const ModalTitle = styled.h3`
-  margin: 0 0 12px 0;
-  font-size: 18px;
-  font-weight: bold;
-  color: #2D5F4F;
-  text-align: center;
-`;
-
-const ModalText = styled.p`
-  margin: 0 0 20px 0;
-  font-size: 14px;
-  color: #666;
-  text-align: center;
-  line-height: 1.4;
-`;
-
-const ModalButtons = styled.div`
-  display: flex;
-  gap: 12px;
-`;
-
-const ModalButton = styled.button<{ primary?: boolean }>`
-  flex: 1;
-  padding: 12px;
-  border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  
-  ${({ primary }) => primary ? `
-    background-color: #2D5F4F;
-    color: white;
-    
-    &:hover {
-      background-color: #1F4A3A;
-    }
-  ` : `
-    background-color: #F8F9FA;
-    color: #666;
-    
-    &:hover {
-      background-color: #E9ECEF;
-    }
-  `}
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #1E4039;
+  }
 `;
 
-// Filter Modal Styles
-const FilterModal = styled.div<{ show: boolean }>`
+// Filter Modal
+const FilterModal = styled.div<{ $show: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: ${({ show }) => show ? 'flex' : 'none'};
+  background: rgba(0, 0, 0, 0.6);
+  display: ${props => props.$show ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
-  z-index: 1001;
+  z-index: 2000;
+  padding: 20px;
 `;
 
 const FilterModalContent = styled.div`
   background: white;
   border-radius: 16px;
   padding: 24px;
-  margin: 20px;
-  max-width: 340px;
   width: 100%;
+  max-width: 400px;
   max-height: 70vh;
   overflow-y: auto;
 `;
@@ -498,8 +493,7 @@ const FilterModalHeader = styled.div`
 const FilterModalTitle = styled.h3`
   margin: 0;
   font-size: 18px;
-  font-weight: bold;
-  color: #2D5F4F;
+  color: #333;
 `;
 
 const CloseButton = styled.button`
@@ -508,1808 +502,1509 @@ const CloseButton = styled.button`
   font-size: 24px;
   color: #666;
   cursor: pointer;
-  padding: 0;
-  
-  &:hover {
-    color: #333;
-  }
 `;
 
-const FilterList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+const FilterSection = styled.div`
+  margin-bottom: 20px;
 `;
 
-const FilterItem = styled.div<{ $isSelected?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid ${({ $isSelected }) => $isSelected ? '#2D5F4F' : '#e9ecef'};
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: ${({ $isSelected }) => $isSelected ? '#f8f9fa' : 'white'};
-  
-  &:hover {
-    border-color: #2D5F4F;
-    background: #f8f9fa;
-  }
-`;
-
-const CheckBox = styled.div<{ $isChecked?: boolean }>`
-  width: 20px;
-  height: 20px;
-  border: 2px solid ${({ $isChecked }) => $isChecked ? '#2D5F4F' : '#ccc'};
-  border-radius: 4px;
-  background: ${({ $isChecked }) => $isChecked ? '#2D5F4F' : 'white'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-  transition: all 0.2s ease;
-`;
-
-const FilterItemText = styled.span`
-  flex: 1;
+const FilterLabel = styled.label`
+  display: block;
   font-size: 14px;
+  font-weight: 600;
   color: #333;
+  margin-bottom: 10px;
 `;
 
-const FilterItemCount = styled.span`
-  font-size: 12px;
-  color: #666;
-  background: #f8f9fa;
-  padding: 2px 6px;
-  border-radius: 12px;
+const FilterOptions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 `;
 
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
-  
-  &:focus {
-    outline: none;
+const FilterOption = styled.button<{ $selected?: boolean }>`
+  background: ${props => props.$selected ? '#2D5F4F' : 'white'};
+  color: ${props => props.$selected ? 'white' : '#666'};
+  border: 1px solid ${props => props.$selected ? '#2D5F4F' : '#e0e0e0'};
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
     border-color: #2D5F4F;
   }
 `;
 
-// ================================
-// PAYMENT & CANCELLATION STYLED COMPONENTS
-// ================================
-
-const PaymentButton = styled.button`
-  background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: linear-gradient(135deg, #FF5252, #FF7979);
-    transform: translateY(-1px);
-  }
-`;
-
-const JoinButton = styled.button`
-  background-color: #2D5F4F;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #1F4A3A;
-  }
-`;
-
-const CancelButton = styled.button<{ $refundPercentage?: number }>`
-  background: ${({ $refundPercentage }) => 
-    $refundPercentage === 100 ? 'linear-gradient(135deg, #FF9800, #FFB74D)' :
-    $refundPercentage === 50 ? 'linear-gradient(135deg, #FF5722, #FF7043)' :
-    'linear-gradient(135deg, #757575, #9E9E9E)'
-  };
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-`;
-
-
-const CancelModal = styled.div`
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  margin: 0 auto;
-  max-width: 320px;
+const PriceSlider = styled.input`
   width: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  margin: 12px 0;
 `;
 
-const CancelModalContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const RefundInfo = styled.div<{ $percentage: number }>`
-  background: ${({ $percentage }) => 
-    $percentage === 100 ? '#E8F5E8' :
-    $percentage === 50 ? '#FFF3E0' :
-    '#FAFAFA'
-  };
-  border-radius: 8px;
+const ApplyButton = styled.button`
+  width: 100%;
+  background: #2D5F4F;
+  color: white;
+  border: none;
   padding: 12px;
-  margin: 16px 0;
-  border-left: 4px solid ${({ $percentage }) => 
-    $percentage === 100 ? '#4CAF50' :
-    $percentage === 50 ? '#FF9800' :
-    '#9E9E9E'
-  };
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1E4039;
+  }
 `;
 
-const FilterModalOverlay = styled.div<{ isOpen: boolean }>`
+// Share Modal Components
+const ShareModal = styled.div<{ $show: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: ${({ isOpen }) => isOpen ? 'flex' : 'none'};
-  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  display: ${props => props.$show ? 'flex' : 'none'};
+  align-items: flex-end;
   justify-content: center;
   z-index: 2000;
-  padding: 20px;
 `;
 
-const FilterActions = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
+const ShareModalContent = styled.div`
+  background: white;
+  border-radius: 20px 20px 0 0;
+  padding: 8px 0 20px 0;
+  width: 100%;
+  max-height: 70vh;
+  animation: ${slideUp} 0.3s ease;
 `;
 
-const FilterButton = styled.button`
-  flex: 1;
+const ShareModalHeader = styled.div`
+  text-align: center;
   padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+`;
+
+const ShareModalDragHandle = styled.div`
+  width: 40px;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 0 auto 8px auto;
+`;
+
+const ShareModalTitle = styled.h3`
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+`;
+
+const ShareSearchBar = styled.div`
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+`;
+
+const ShareSearchInput = styled.input`
+  width: 100%;
+  padding: 8px 12px;
+  background: #f5f5f5;
   border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const ShareContactsGrid = styled.div`
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-height: 250px;
+  overflow-y: auto;
+`;
+
+const ShareContact = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  position: relative;
+`;
+
+const ContactAvatar = styled.div<{ $selected?: boolean }>`
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  position: relative;
+  border: 2px solid ${props => props.$selected ? '#2196F3' : 'transparent'};
+  transition: all 0.2s ease;
+`;
+
+const ContactName = styled.span`
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const ExternalShareOptions = styled.div`
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-around;
+`;
+
+const ExternalShareButton = styled.button`
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+`;
+
+const ExternalShareIcon = styled.div<{ $bgColor?: string }>`
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: ${props => props.$bgColor || '#e0e0e0'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+`;
+
+const ExternalShareLabel = styled.span`
+  font-size: 11px;
+  color: #666;
+`;
+
+// Cafe Scanner Card
+const CafeScannerCard = styled.div`
+  background: linear-gradient(135deg, #6F4E37, #8B5A3C);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 16px 16px 16px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+`;
+
+const LiveIndicator = styled.div`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #4CAF50;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: ${pulse} 2s infinite;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    animation: ${pulse} 1s infinite;
+  }
+`;
+
+const CafeScannerTitle = styled.h3`
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+`;
+
+const CafeScannerDesc = styled.p`
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  opacity: 0.9;
+`;
+
+const ScanButton = styled.button`
+  background: white;
+  color: #6F4E37;
+  border: none;
+  padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  background-color: #2D5F4F;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+`;
+
+// Join Event Modal Styles
+const JoinModal = styled.div<{ $show: boolean }>`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  padding: 24px;
+  z-index: 1000;
+  transform: translateY(${props => props.$show ? '0' : '100%'});
+  transition: transform 0.3s ease;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+`;
+
+const JoinModalHeader = styled.div`
+  text-align: center;
+  margin-bottom: 24px;
+`;
+
+const JoinModalTitle = styled.h3`
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #2D5F4F;
+`;
+
+const JoinModalSubtitle = styled.p`
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+`;
+
+const EventDetailsCard = styled.div`
+  background: #F5F8F5;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+`;
+
+const EventDetailRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const EventDetailIcon = styled.span`
+  font-size: 20px;
+`;
+
+const EventDetailText = styled.div`
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+`;
+
+const PointsEarned = styled.div`
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 600;
+`;
+
+const JoinButton = styled.button`
+  background: #2D5F4F;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 12px;
+  
+  &:hover {
+    background: #1E4039;
+  }
+`;
+
+const CancelButton = styled.button`
+  background: #f5f5f5;
+  color: #666;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  
+  &:hover {
+    background: #e8e8e8;
+  }
+`;
+
+// Payment Modal Styles
+const PaymentModal = styled(JoinModal)``;
+
+const PaymentMethod = styled.div`
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  &:hover {
+    border-color: #2D5F4F;
+    background: #F5F8F5;
+  }
+`;
+
+const PaymentIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+`;
+
+const PaymentLabel = styled.div`
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const TotalAmount = styled.div`
+  background: #F5F8F5;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const TotalLabel = styled.span`
+  font-size: 14px;
+  color: #666;
+`;
+
+const TotalPrice = styled.span`
+  font-size: 20px;
+  font-weight: 700;
+  color: #2D5F4F;
+`;
+
+// Refund Modal Styles
+const RefundModal = styled(JoinModal)``;
+
+const RefundOptions = styled.div`
+  margin-bottom: 20px;
+`;
+
+const RefundOption = styled.div`
+  background: #FFF3E0;
+  border: 2px solid #FFE0B2;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+`;
+
+const RefundTitle = styled.h4`
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #FF6B35;
+`;
+
+const RefundDescription = styled.p`
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+`;
+
+const RefundButton = styled.button`
+  background: #FF6B35;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 12px;
+  
+  &:hover {
+    background: #E55A2B;
+  }
+`;
+
+const KeepButton = styled(CancelButton)`
+  background: #2D5F4F;
   color: white;
   
   &:hover {
-    background-color: #1F4A3A;
+    background: #1E4039;
   }
 `;
-
-const ClearButton = styled.button`
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  background-color: #F8F9FA;
-  color: #666;
-  
-  &:hover {
-    background-color: #E9ECEF;
-  }
-`;
-
-// ================================
-// INTERFACES AND TYPES
-// ================================
-
-interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-}
-
-interface EventData {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  category: string;
-  hostName: string;
-  participantCount: number;
-  maxParticipants: number;
-  pointsReward: number;
-  price?: number;
-  variant: 'free' | 'paid' | 'cafe' | 'volunteer';
-  // Enhanced payment fields
-  requiresPayment?: boolean;
-  paymentAmount?: number;
-  type?: 'SOCIAL' | 'SPORTS' | 'TRIP' | 'ILM' | 'CAFE_MEETUP' | 'VOLUNTEER' | 'MONTHLY_EVENT' | 'LOCAL_TRIP';
-}
-
-interface UserEventParticipation {
-  eventId: string;
-  userId: string;
-  joinedAt: Date;
-  paymentAmount: number;
-  paymentId: string;
-  status: 'joined' | 'cancelled';
-  canCancel: boolean;
-  refundPercentage: number;
-}
-
-// ================================
-// CONSTANTS
-// ================================
-
-const categories: Category[] = [
-  { id: 'social', name: 'Social Events', icon: '🤝', color: '#87CEEB' },
-  { id: 'cafe', name: 'Cafe Meetups', icon: '☕', color: '#D2B48C' },
-  { id: 'ilm', name: 'Ilm Initiative', icon: '📚', color: '#DDA0DD' },
-  { id: 'donate', name: 'Donate', icon: '🤲', color: '#F0E68C' },
-  { id: 'trips', name: 'Trips', icon: '✈️', color: '#90EE90' },
-  { id: 'communities', name: 'Communities', icon: '🏘️', color: '#DDA0DD' },
-  { id: 'sukan', name: 'Sukan Squad', icon: '🏸', color: '#F08080' },
-  { id: 'volunteer', name: 'Volunteer', icon: '🌱', color: '#98FB98' },
-];
-
-const mockEvents: EventData[] = [
-  {
-    id: '1',
-    title: 'BerseMinton',
-    description: 'Professional badminton coaching with equipment provided',
-    date: 'May 18',
-    time: '8:00 AM',
-    location: 'Shah Alam Sports Complex',
-    category: 'sukan',
-    hostName: 'Sukan Squad',
-    participantCount: 8,
-    maxParticipants: 20,
-    pointsReward: 4,
-    price: 12,
-    variant: 'paid'
-  },
-  {
-    id: '2',
-    title: 'Coffee & Cultural Exchange',
-    description: 'Meet diverse Muslims and share cultural experiences',
-    date: 'May 20',
-    time: '7:00 PM',
-    location: 'KLCC Mesra Cafe',
-    category: 'social',
-    hostName: 'Ahmad Rahman',
-    participantCount: 15,
-    maxParticipants: 25,
-    pointsReward: 3,
-    variant: 'free'
-  },
-  {
-    id: '3',
-    title: 'Monday Morning Coffee',
-    description: 'Casual meetup for working professionals',
-    date: 'May 22',
-    time: '8:30 AM',
-    location: 'Damansara Heights',
-    category: 'cafe',
-    hostName: 'Sarah Khalil',
-    participantCount: 6,
-    maxParticipants: 12,
-    pointsReward: 2,
-    variant: 'cafe'
-  },
-  {
-    id: '4',
-    title: 'Islamic Finance Workshop',
-    description: 'Learn Sharia-compliant investment strategies',
-    date: 'May 25',
-    time: '2:00 PM',
-    location: 'IIUM Gombak',
-    category: 'ilm',
-    hostName: 'Dr. Abdullah',
-    participantCount: 12,
-    maxParticipants: 30,
-    pointsReward: 5,
-    price: 25,
-    variant: 'paid'
-  },
-  {
-    id: '5',
-    title: 'Charity Fun Run',
-    description: 'Support orphanages while staying fit',
-    date: 'May 28',
-    time: '6:00 AM',
-    location: 'Titiwangsa Park',
-    category: 'donate',
-    hostName: 'Muslim Runners',
-    participantCount: 25,
-    maxParticipants: 100,
-    pointsReward: 4,
-    price: 35,
-    variant: 'paid'
-  },
-  {
-    id: '6',
-    title: 'Cameron Highlands Trek',
-    description: 'Mountain hiking with halal food stops',
-    date: 'Jun 2',
-    time: '5:00 AM',
-    location: 'Cameron Highlands',
-    category: 'trips',
-    hostName: 'Adventure Seekers',
-    participantCount: 8,
-    maxParticipants: 15,
-    pointsReward: 6,
-    price: 85,
-    variant: 'paid'
-  },
-  {
-    id: '7',
-    title: 'Weekend Flea Market',
-    description: 'Community marketplace for local businesses',
-    date: 'May 26',
-    time: '10:00 AM',
-    location: 'Shah Alam Mall',
-    category: 'communities',
-    hostName: 'Local Vendors',
-    participantCount: 40,
-    maxParticipants: 100,
-    pointsReward: 2,
-    variant: 'free'
-  },
-  {
-    id: '8',
-    title: 'Teaching English',
-    description: 'Help refugee children with English lessons',
-    date: 'May 24',
-    time: '3:00 PM',
-    location: 'Ampang Community Center',
-    category: 'volunteer',
-    hostName: 'Volunteer Network',
-    participantCount: 5,
-    maxParticipants: 10,
-    pointsReward: 4,
-    variant: 'volunteer'
-  },
-  // CAFE MEETUP EVENTS (3)
-  {
-    id: '9',
-    title: 'Wednesday Coffee Talks at Suria KLCC',
-    description: 'Midweek coffee discussions and networking',
-    date: 'May 8',
-    time: '10:00 AM',
-    location: 'Suria KLCC',
-    category: 'cafe',
-    hostName: 'Nora Fatimah',
-    participantCount: 6,
-    maxParticipants: 15,
-    pointsReward: 3,
-    variant: 'cafe'
-  },
-  {
-    id: '10',
-    title: 'Friday Morning Brew at The Grind Damansara',
-    description: 'Start your Friday with great coffee and conversation',
-    date: 'May 10',
-    time: '8:30 AM',
-    location: 'The Grind Damansara',
-    category: 'cafe',
-    hostName: 'Rahman Hafiz',
-    participantCount: 14,
-    maxParticipants: 20,
-    pointsReward: 4,
-    variant: 'cafe'
-  },
-  {
-    id: '11',
-    title: 'Sunday Chill at Common Man Coffee Roasters',
-    description: 'Relaxed Sunday afternoon coffee meetup',
-    date: 'May 12',
-    time: '3:00 PM',
-    location: 'Petaling Jaya',
-    category: 'cafe',
-    hostName: 'Laila Maisarah',
-    participantCount: 8,
-    maxParticipants: 12,
-    pointsReward: 3,
-    variant: 'cafe'
-  },
-  // SOCIAL EVENTS (4)
-  {
-    id: '12',
-    title: 'BerseMuka Cultural Night',
-    description: 'Celebrate diverse Malaysian Muslim cultures',
-    date: 'May 14',
-    time: '7:00 PM',
-    location: 'Dewan Komuniti Shah Alam',
-    category: 'social',
-    hostName: 'Zara Aminah',
-    participantCount: 20,
-    maxParticipants: 50,
-    pointsReward: 5,
-    variant: 'free'
-  },
-  {
-    id: '13',
-    title: 'Board Games & Chill Evening',
-    description: 'Fun board games night with fellow Muslims',
-    date: 'May 16',
-    time: '6:00 PM',
-    location: 'Mid Valley Megamall',
-    category: 'social',
-    hostName: 'Farid Ikmal',
-    participantCount: 12,
-    maxParticipants: 16,
-    pointsReward: 4,
-    variant: 'free'
-  },
-  {
-    id: '14',
-    title: 'BerseMakan Food Adventure Bukit Bintang',
-    description: 'Explore halal food gems in Bukit Bintang',
-    date: 'May 19',
-    time: '1:00 PM',
-    location: 'Bukit Bintang KL',
-    category: 'social',
-    hostName: 'Halim Syafiq',
-    participantCount: 18,
-    maxParticipants: 25,
-    pointsReward: 6,
-    variant: 'free'
-  },
-  {
-    id: '15',
-    title: 'Art Jamming Session at Publika',
-    description: 'Creative art session for Muslim artists',
-    date: 'May 21',
-    time: '2:30 PM',
-    location: 'Publika Mont Kiara',
-    category: 'social',
-    hostName: 'Aina Sofia',
-    participantCount: 11,
-    maxParticipants: 15,
-    pointsReward: 5,
-    variant: 'free'
-  },
-  // TRIP EVENTS (3)
-  {
-    id: '16',
-    title: 'Highland Adventure to Cameron Highlands',
-    description: '3-day mountain adventure with halal accommodations',
-    date: 'May 24-26',
-    time: '3 Days',
-    location: 'Cameron Highlands Pahang',
-    category: 'trips',
-    hostName: 'Azlan Ibrahim',
-    participantCount: 8,
-    maxParticipants: 12,
-    pointsReward: 10,
-    price: 150,
-    variant: 'paid'
-  },
-  {
-    id: '17',
-    title: 'Beach Getaway to Langkawi Island',
-    description: '3-day tropical island retreat',
-    date: 'Jun 1-3',
-    time: '3 Days',
-    location: 'Langkawi Kedah',
-    category: 'trips',
-    hostName: 'Mira Rania',
-    participantCount: 15,
-    maxParticipants: 20,
-    pointsReward: 12,
-    price: 280,
-    variant: 'paid'
-  },
-  {
-    id: '18',
-    title: 'Cultural Heritage Trip to Terengganu',
-    description: '2-day Islamic heritage and culture exploration',
-    date: 'Jun 8-9',
-    time: '2 Days',
-    location: 'Kuala Terengganu',
-    category: 'trips',
-    hostName: 'Hasan Nabil',
-    participantCount: 10,
-    maxParticipants: 15,
-    pointsReward: 7,
-    price: 120,
-    variant: 'paid'
-  },
-  // LOCAL GUIDE EVENTS (3)
-  {
-    id: '19',
-    title: 'Historical Walk in Georgetown Penang',
-    description: 'Guided tour of Islamic heritage sites',
-    date: 'May 25',
-    time: '9:00 AM',
-    location: 'Georgetown Penang',
-    category: 'communities',
-    hostName: 'Khairul Anuar',
-    participantCount: 7,
-    maxParticipants: 12,
-    pointsReward: 4,
-    variant: 'free'
-  },
-  {
-    id: '20',
-    title: 'Rice Field Tour in Sekinchan',
-    description: 'Early morning rice field exploration',
-    date: 'May 28',
-    time: '7:00 AM',
-    location: 'Sekinchan Selangor',
-    category: 'communities',
-    hostName: 'Salmah Fadzil',
-    participantCount: 12,
-    maxParticipants: 18,
-    pointsReward: 6,
-    variant: 'free'
-  },
-  {
-    id: '21',
-    title: 'Mangrove & Eagle Watching in Kuala Selangor',
-    description: 'Nature tour with wildlife observation',
-    date: 'May 30',
-    time: '4:00 PM',
-    location: 'Kuala Selangor Nature Park',
-    category: 'communities',
-    hostName: 'Rafiq Zainal',
-    participantCount: 5,
-    maxParticipants: 10,
-    pointsReward: 5,
-    variant: 'free'
-  },
-  // SPORTS EVENTS (3)
-  {
-    id: '22',
-    title: 'BerseBola Sunday Football League',
-    description: 'Weekly football matches for Muslim players',
-    date: 'May 26',
-    time: '6:00 PM',
-    location: 'Padang Astaka Shah Alam',
-    category: 'sukan',
-    hostName: 'Danial Hakim',
-    participantCount: 16,
-    maxParticipants: 22,
-    pointsReward: 5,
-    variant: 'free'
-  },
-  {
-    id: '23',
-    title: 'Morning Jog at KLCC Park',
-    description: 'Healthy morning jog with the community',
-    date: 'May 27',
-    time: '6:30 AM',
-    location: 'KLCC Park Kuala Lumpur',
-    category: 'sukan',
-    hostName: 'Lina Azira',
-    participantCount: 9,
-    maxParticipants: 15,
-    pointsReward: 4,
-    variant: 'free'
-  },
-  {
-    id: '24',
-    title: 'Swimming Session at National Aquatic Centre',
-    description: 'Professional swimming training session',
-    date: 'May 29',
-    time: '7:00 PM',
-    location: 'Bukit Jalil National Stadium',
-    category: 'sukan',
-    hostName: 'Irfan Musa',
-    participantCount: 11,
-    maxParticipants: 16,
-    pointsReward: 6,
-    price: 15,
-    variant: 'paid'
-  },
-  // VOLUNTEER EVENTS (3)
-  {
-    id: '25',
-    title: 'Volunteer at Rumah Kasih Orphanage',
-    description: 'Help and spend time with orphaned children',
-    date: 'May 31',
-    time: '9:00 AM',
-    location: 'Ampang Selangor',
-    category: 'volunteer',
-    hostName: 'Rumah Kasih',
-    participantCount: 13,
-    maxParticipants: 20,
-    pointsReward: 8,
-    variant: 'volunteer'
-  },
-  {
-    id: '26',
-    title: 'Elderly Care Visit Program',
-    description: 'Visit and care for elderly residents',
-    date: 'Jun 2',
-    time: '10:00 AM',
-    location: 'Cheras Old Folks Home',
-    category: 'volunteer',
-    hostName: 'Nurul Hidayah',
-    participantCount: 8,
-    maxParticipants: 12,
-    pointsReward: 7,
-    variant: 'volunteer'
-  },
-  {
-    id: '27',
-    title: 'Food Distribution Drive for Asnaf',
-    description: 'Distribute meals to those in need',
-    date: 'Jun 5',
-    time: '8:00 AM',
-    location: 'Masjid Jamek KL',
-    category: 'volunteer',
-    hostName: 'Zakat Melaka',
-    participantCount: 15,
-    maxParticipants: 25,
-    pointsReward: 6,
-    variant: 'volunteer'
-  },
-  // ILM INITIATIVE EVENTS (4)
-  {
-    id: '28',
-    title: 'Ramadan Preparation Workshop',
-    description: 'Prepare spiritually and practically for Ramadan',
-    date: 'Jun 7',
-    time: '8:00 PM',
-    location: 'Masjid Wilayah KL',
-    category: 'ilm',
-    hostName: 'Ustaz Ahmad',
-    participantCount: 25,
-    maxParticipants: 40,
-    pointsReward: 6,
-    variant: 'free'
-  },
-  {
-    id: '29',
-    title: 'Islamic Finance & Business Ethics',
-    description: 'Learn halal business practices and finance',
-    date: 'Jun 9',
-    time: '2:00 PM',
-    location: 'IIUM Gombak',
-    category: 'ilm',
-    hostName: 'Faizal Husni',
-    participantCount: 18,
-    maxParticipants: 30,
-    pointsReward: 5,
-    variant: 'free'
-  },
-  {
-    id: '30',
-    title: 'Family Life in Islam Workshop',
-    description: 'Building strong Muslim families',
-    date: 'Jun 12',
-    time: '10:00 AM',
-    location: 'Masjid Negara KL',
-    category: 'ilm',
-    hostName: 'Khadijah Sarah',
-    participantCount: 22,
-    maxParticipants: 35,
-    pointsReward: 7,
-    variant: 'free'
-  },
-  {
-    id: '31',
-    title: 'Quran Recitation & Tajweed Class',
-    description: 'Improve your Quran recitation skills',
-    date: 'Jun 14',
-    time: '8:30 PM',
-    location: 'Masjid Al-Hidayah Shah Alam',
-    category: 'ilm',
-    hostName: 'Mohd Hafiz',
-    participantCount: 14,
-    maxParticipants: 20,
-    pointsReward: 4,
-    variant: 'free'
-  }
-];
-
-// ================================
-// MAIN COMPONENT
-// ================================
 
 export const BerseConnectScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  // ================================
-  // STATE MANAGEMENT
-  // ================================
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [activeTab, setActiveTab] = useState('For You');
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [currentLocation, setCurrentLocation] = useState({ city: 'Kuala Lumpur', country: 'Malaysia' });
+  const [searchQuery, setSearchQuery] = useState('');
   
-  // Refs
-  const eventRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  
-  const [events] = useState<EventData[]>(mockEvents);
-  const [filteredEvents, setFilteredEvents] = useState<EventData[]>(mockEvents);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  // Event registration modal states
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [joinedEvents, setJoinedEvents] = useState<string[]>([]);
 
-  // Filter state
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>('Malaysia');
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  
-  // Modal state
-  const [showSportsModal, setShowSportsModal] = useState(false);
-  const [showRegularModal, setShowRegularModal] = useState(false);
-  const [showProfileSidebar, setShowProfileSidebar] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
-  const [showJoinConfirmation, setShowJoinConfirmation] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [showCountryModal, setShowCountryModal] = useState(false);
-  const [showInterestsModal, setShowInterestsModal] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
+  // Categories with icons
+  const categories = [
+    { id: 'All', name: 'All', icon: '🎯' },
+    { id: 'Sports', name: 'Sports', icon: '⚽' },
+    { id: 'Social', name: 'Social', icon: '☕' },
+    { id: 'Trips', name: 'Trips', icon: '✈️' },
+    { id: 'Study', name: 'Study', icon: '📚' },
+    { id: 'Donation', name: 'Donation', icon: '💝' },
+    { id: 'Volunteer', name: 'Volunteer', icon: '🤲' },
+    { id: 'Cafe', name: 'Cafe', icon: '☕' },
+  ];
 
-  // Payment & Cancellation state
-  const [userEvents, setUserEvents] = useState<UserEventParticipation[]>([]);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedEventForCancel, setSelectedEventForCancel] = useState<string | null>(null);
-  const [showSportsPaymentModal, setShowSportsPaymentModal] = useState(false);
-  const [selectedSportsEvent, setSelectedSportsEvent] = useState<string | null>(null);
-  
-  // Highlighted event from URL parameters (for deep links)
-  const location = useLocation();
-  const [highlightedEvent, setHighlightedEvent] = useState<string | null>(null);
-
-
-  // ================================
-  // FILTER LOGIC
-  // ================================
-
-  // Get unique locations from all events
-  const allLocations = Array.from(new Set(events.map(event => event.location))).sort();
-  
-  // Available countries
-  const allCountries = ['Malaysia', 'Singapore', 'Indonesia', 'Thailand', 'Philippines', 'Brunei', 'Vietnam'];
-  
-  // Get unique interests (mapped to categories)
-  const allInterests = categories.map(cat => ({ id: cat.id, name: cat.name }));
-
-  // Apply filters whenever filter state changes
-  useEffect(() => {
-    applyFilters();
-  }, [selectedCategory, selectedLocations, selectedCountry, selectedInterests, searchQuery, events]);
-
-  // Initialize some sample user events for testing
-  useEffect(() => {
-    if (user && userEvents.length === 0) {
-      const sampleUserEvents: UserEventParticipation[] = [
-        {
-          eventId: '1', // BerseMinton (paid sports event)
-          userId: user.id || 'current-user-id',
-          joinedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-          paymentAmount: 12,
-          paymentId: 'payment_123',
-          status: 'joined',
-          canCancel: true,
-          refundPercentage: 100
-        },
-        {
-          eventId: '2', // Coffee & Cultural Exchange (free event)
-          userId: user.id || 'current-user-id',
-          joinedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-          paymentAmount: 0,
-          paymentId: '',
-          status: 'joined',
-          canCancel: true,
-          refundPercentage: 0
-        }
-      ];
-      setUserEvents(sampleUserEvents);
+  // All events including from both sources
+  const allEvents = [
+    // New BerseMukha Special Event
+    {
+      id: 'bersemukha-july',
+      category: 'Social',
+      icon: '🎭',
+      title: 'BerseMukha July: Slow Down, You\'re Doing Fine',
+      dateTime: 'July 28 · 2:30-5:30 PM',
+      location: 'Mukha Ba TTDI',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'BerseMukha',
+      hostType: 'organization',
+      attendees: 45,
+      maxAttendees: 120,
+      price: 0,
+      description: 'Monthly gathering for mindfulness and community connection',
+      trending: true,
+      compatibility: 95,
+      points: 10
+    },
+    // New Sports Events
+    {
+      id: 'berseminton-monday',
+      category: 'Sports',
+      icon: '🏸',
+      title: 'BerseMinton Monday League',
+      dateTime: 'Every Monday · 8:00 PM',
+      location: 'Yosin Badminton Centre, Damansara',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Sukan Squad',
+      attendees: 12,
+      maxAttendees: 20,
+      price: 15,
+      description: 'Weekly badminton sessions for all levels',
+      points: 5,
+      recurring: true
+    },
+    {
+      id: 'sirah-squad',
+      category: 'Study',
+      icon: '📖',
+      title: 'Sirah Squad Online Session',
+      dateTime: 'Every Sunday · 9:00 PM',
+      location: 'Online - Discord',
+      city: 'Online',
+      country: 'Malaysia',
+      host: 'Sirah Squad',
+      attendees: 35,
+      maxAttendees: 100,
+      price: 0,
+      description: 'Weekly Sirah study and discussion group',
+      points: 6,
+      recurring: true
+    },
+    // Events from original source
+    {
+      id: '1',
+      category: 'Sports',
+      icon: '🏸',
+      title: 'Badminton @ KLCC',
+      dateTime: 'Tonight · 8pm',
+      location: 'KLCC Sports Complex',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      distance: '2.5km',
+      host: 'Ahmad',
+      hostRating: 4.9,
+      attendees: 12,
+      maxAttendees: 16,
+      friendsGoing: ['Sarah', 'Khalid', 'Fatima'],
+      price: 75,
+      description: 'Friendly badminton session for all levels.',
+      points: 50,
+      compatibility: 85
+    },
+    {
+      id: '2',
+      category: 'Social',
+      icon: '☕',
+      title: 'Coffee & Code Meetup',
+      dateTime: 'Tomorrow · 10am',
+      location: 'Brew & Bean, Bangsar',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Tech KL',
+      hostType: 'organization',
+      attendees: 23,
+      maxAttendees: 30,
+      price: 0,
+      description: 'Weekly meetup for developers.',
+      points: 30
+    },
+    // Events from BerseConnect screen
+    {
+      id: '3',
+      category: 'Social',
+      icon: '☕',
+      title: 'Coffee & Cultural Exchange',
+      dateTime: 'May 20 · 7:00 PM',
+      location: 'KLCC Mesra Cafe',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Ahmad Rahman',
+      attendees: 15,
+      maxAttendees: 25,
+      price: 0,
+      description: 'Meet diverse Muslims and share cultural experiences',
+      points: 3
+    },
+    {
+      id: '4',
+      category: 'Cafe',
+      icon: '☕',
+      title: 'Monday Morning Coffee',
+      dateTime: 'May 22 · 8:30 AM',
+      location: 'Damansara Heights',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Sarah Khalil',
+      attendees: 6,
+      maxAttendees: 12,
+      price: 0,
+      description: 'Casual meetup for working professionals',
+      points: 2
+    },
+    {
+      id: '5',
+      category: 'Study',
+      icon: '📚',
+      title: 'Islamic Finance Workshop',
+      dateTime: 'May 25 · 2:00 PM',
+      location: 'IIUM Gombak',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Dr. Abdullah',
+      attendees: 12,
+      maxAttendees: 30,
+      price: 25,
+      description: 'Learn Sharia-compliant investment strategies',
+      points: 5
+    },
+    {
+      id: '6',
+      category: 'Donation',
+      icon: '🏃',
+      title: 'Charity Fun Run',
+      dateTime: 'May 28 · 6:00 AM',
+      location: 'Titiwangsa Park',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Muslim Runners',
+      attendees: 25,
+      maxAttendees: 100,
+      price: 35,
+      description: 'Support orphanages while staying fit',
+      points: 4
+    },
+    {
+      id: '7',
+      category: 'Trips',
+      icon: '🏔️',
+      title: 'Cameron Highlands Trek',
+      dateTime: 'Jun 2 · 5:00 AM',
+      location: 'Cameron Highlands',
+      city: 'Pahang',
+      country: 'Malaysia',
+      host: 'Adventure Seekers',
+      attendees: 8,
+      maxAttendees: 15,
+      price: 85,
+      description: 'Mountain hiking with halal food stops',
+      points: 6
+    },
+    {
+      id: '8',
+      category: 'Volunteer',
+      icon: '📚',
+      title: 'Teaching English',
+      dateTime: 'May 24 · 3:00 PM',
+      location: 'Ampang Community Center',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Volunteer Network',
+      attendees: 5,
+      maxAttendees: 10,
+      price: 0,
+      description: 'Help refugee children with English lessons',
+      points: 4
+    },
+    {
+      id: '9',
+      category: 'Cafe',
+      icon: '☕',
+      title: 'Wednesday Coffee Talks at Suria KLCC',
+      dateTime: 'May 8 · 10:00 AM',
+      location: 'Suria KLCC',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Nora Fatimah',
+      attendees: 6,
+      maxAttendees: 15,
+      price: 0,
+      description: 'Midweek coffee discussions and networking',
+      points: 3
+    },
+    {
+      id: '10',
+      category: 'Cafe',
+      icon: '☕',
+      title: 'Friday Morning Brew at The Grind Damansara',
+      dateTime: 'May 10 · 8:30 AM',
+      location: 'The Grind Damansara',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Rahman Hafiz',
+      attendees: 14,
+      maxAttendees: 20,
+      price: 0,
+      description: 'Start your Friday with great coffee and conversation',
+      points: 4
+    },
+    {
+      id: '11',
+      category: 'Cafe',
+      icon: '☕',
+      title: 'Sunday Chill at Common Man Coffee Roasters',
+      dateTime: 'May 12 · 3:00 PM',
+      location: 'Petaling Jaya',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Laila Maisarah',
+      attendees: 8,
+      maxAttendees: 12,
+      price: 0,
+      description: 'Relaxed Sunday afternoon coffee meetup',
+      points: 3
+    },
+    {
+      id: '12',
+      category: 'Social',
+      icon: '🎭',
+      title: 'BerseMuka Cultural Night',
+      dateTime: 'May 14 · 7:00 PM',
+      location: 'Dewan Komuniti Shah Alam',
+      city: 'Shah Alam',
+      country: 'Malaysia',
+      host: 'Zara Aminah',
+      attendees: 20,
+      maxAttendees: 50,
+      price: 0,
+      description: 'Celebrate diverse Malaysian Muslim cultures',
+      points: 5
+    },
+    {
+      id: '13',
+      category: 'Social',
+      icon: '🎲',
+      title: 'Board Games & Chill Evening',
+      dateTime: 'May 16 · 6:00 PM',
+      location: 'Mid Valley Megamall',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Farid Ikmal',
+      attendees: 12,
+      maxAttendees: 16,
+      price: 0,
+      description: 'Fun board games night with fellow Muslims',
+      points: 4
+    },
+    {
+      id: '14',
+      category: 'Social',
+      icon: '🍜',
+      title: 'BerseMakan Food Adventure Bukit Bintang',
+      dateTime: 'May 19 · 1:00 PM',
+      location: 'Bukit Bintang KL',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Halim Syafiq',
+      attendees: 18,
+      maxAttendees: 25,
+      price: 0,
+      description: 'Explore halal food gems in Bukit Bintang',
+      points: 6
+    },
+    {
+      id: '15',
+      category: 'Social',
+      icon: '🎨',
+      title: 'Art Jamming Session at Publika',
+      dateTime: 'May 21 · 2:30 PM',
+      location: 'Publika Mont Kiara',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Aina Sofia',
+      attendees: 11,
+      maxAttendees: 15,
+      price: 0,
+      description: 'Creative art session for Muslim artists',
+      points: 5
+    },
+    {
+      id: '16',
+      category: 'Trips',
+      icon: '🏔️',
+      title: 'Highland Adventure to Cameron Highlands',
+      dateTime: 'May 24-26 · 3 Days',
+      location: 'Cameron Highlands Pahang',
+      city: 'Pahang',
+      country: 'Malaysia',
+      host: 'Azlan Ibrahim',
+      attendees: 8,
+      maxAttendees: 12,
+      price: 150,
+      description: '3-day mountain adventure with halal accommodations',
+      points: 10
+    },
+    {
+      id: '17',
+      category: 'Trips',
+      icon: '🏝️',
+      title: 'Beach Getaway to Langkawi Island',
+      dateTime: 'Jun 1-3 · 3 Days',
+      location: 'Langkawi Kedah',
+      city: 'Langkawi',
+      country: 'Malaysia',
+      host: 'Mira Rania',
+      attendees: 15,
+      maxAttendees: 20,
+      price: 280,
+      description: '3-day tropical island retreat',
+      points: 12
+    },
+    {
+      id: '22',
+      category: 'Sports',
+      icon: '⚽',
+      title: 'BerseBola Sunday Football League',
+      dateTime: 'May 26 · 6:00 PM',
+      location: 'Padang Astaka Shah Alam',
+      city: 'Shah Alam',
+      country: 'Malaysia',
+      host: 'Danial Hakim',
+      attendees: 16,
+      maxAttendees: 22,
+      price: 0,
+      description: 'Weekly football matches for Muslim players',
+      points: 5
+    },
+    {
+      id: '23',
+      category: 'Sports',
+      icon: '🏃',
+      title: 'Morning Jog at KLCC Park',
+      dateTime: 'May 27 · 6:30 AM',
+      location: 'KLCC Park Kuala Lumpur',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Lina Azira',
+      attendees: 9,
+      maxAttendees: 15,
+      price: 0,
+      description: 'Healthy morning jog with the community',
+      points: 4
+    },
+    {
+      id: '25',
+      category: 'Volunteer',
+      icon: '🏠',
+      title: 'Volunteer at Rumah Kasih Orphanage',
+      dateTime: 'May 31 · 9:00 AM',
+      location: 'Ampang Selangor',
+      city: 'Ampang',
+      country: 'Malaysia',
+      host: 'Rumah Kasih',
+      attendees: 13,
+      maxAttendees: 20,
+      price: 0,
+      description: 'Help and spend time with orphaned children',
+      points: 8
+    },
+    {
+      id: '28',
+      category: 'Study',
+      icon: '🕌',
+      title: 'Ramadan Preparation Workshop',
+      dateTime: 'Jun 7 · 8:00 PM',
+      location: 'Masjid Wilayah KL',
+      city: 'Kuala Lumpur',
+      country: 'Malaysia',
+      host: 'Ustaz Ahmad',
+      attendees: 25,
+      maxAttendees: 40,
+      price: 0,
+      description: 'Prepare spiritually and practically for Ramadan',
+      points: 6
+    },
+    {
+      id: '31',
+      category: 'Study',
+      icon: '📖',
+      title: 'Quran Recitation & Tajweed Class',
+      dateTime: 'Jun 14 · 8:30 PM',
+      location: 'Masjid Al-Hidayah Shah Alam',
+      city: 'Shah Alam',
+      country: 'Malaysia',
+      host: 'Mohd Hafiz',
+      attendees: 14,
+      maxAttendees: 20,
+      price: 0,
+      description: 'Improve your Quran recitation skills',
+      points: 4
     }
-  }, [user, userEvents.length]);
+  ];
 
-  const applyFilters = () => {
-    let filtered = [...events];
+  // Filter events based on category and tab
+  const getFilteredEvents = () => {
+    let events = [...allEvents];
 
-    // Category filter
-    if (selectedCategory) {
-      filtered = filtered.filter(event => event.category === selectedCategory);
-    }
-
-    // Location filter
-    if (selectedLocations.length > 0) {
-      filtered = filtered.filter(event => 
-        selectedLocations.some(location => 
-          event.location.toLowerCase().includes(location.toLowerCase())
-        )
-      );
-    }
-
-    // Country filter (most events are Malaysia-based)
-    if (selectedCountry !== 'Malaysia') {
-      // For demo purposes, filter out events that don't match selected country
-      // In a real app, events would have country properties
-      filtered = filtered.filter(event => {
-        // Simple country matching based on location
-        const location = event.location.toLowerCase();
-        if (selectedCountry === 'Singapore') {
-          return location.includes('singapore') || location.includes('sg');
-        }
-        // For other countries, show no events (since all events are Malaysia-based)
-        return false;
-      });
-    }
-
-    // Interest filter (maps to categories)
-    if (selectedInterests.length > 0) {
-      filtered = filtered.filter(event => 
-        selectedInterests.includes(event.category)
-      );
-    }
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(event => 
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      events = events.filter(event =>
         event.title.toLowerCase().includes(query) ||
         event.description.toLowerCase().includes(query) ||
-        event.hostName.toLowerCase().includes(query) ||
-        event.location.toLowerCase().includes(query)
+        event.location.toLowerCase().includes(query) ||
+        event.host.toLowerCase().includes(query)
       );
     }
 
-    setFilteredEvents(filtered);
+    // Filter by category
+    if (activeCategory !== 'All') {
+      events = events.filter(event => event.category === activeCategory);
+    }
+
+    // Apply quick filters
+    if (activeFilters.includes('Friends Going')) {
+      events = events.filter(e => e.friendsGoing && e.friendsGoing.length > 0);
+    }
+    if (activeFilters.includes('Free')) {
+      events = events.filter(e => e.price === 0);
+    }
+    if (activeFilters.includes('Trending')) {
+      events = events.filter(e => e.trending);
+    }
+
+    // Filter by tab
+    if (activeTab === 'Today') {
+      events = events.filter(e => 
+        e.dateTime?.includes('Tonight') || 
+        e.dateTime?.includes('Today')
+      );
+    } else if (activeTab === 'This Week') {
+      events = events.filter(e => 
+        !e.dateTime?.includes('Jun') && 
+        !e.dateTime?.includes('July')
+      );
+    } else if (activeTab === 'Free') {
+      events = events.filter(e => e.price === 0);
+    }
+
+    return events;
   };
 
-  // Handle URL parameters for event highlighting (deep links)
-  useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const highlightParam = urlParams.get('highlight');
-    if (highlightParam) {
-      setHighlightedEvent(highlightParam);
-      console.log(`✨ Highlighting event from URL: ${highlightParam}`);
-      
-      // Clear the URL parameter after a delay to avoid persistent highlighting
-      setTimeout(() => {
-        setHighlightedEvent(null);
-      }, 5000);
-    }
-  }, [location.search]);
-
-  // ================================
-  // EVENT HANDLERS
-  // ================================
-
-  const handleCategorySelect = (categoryId: string) => {
-    if (selectedCategory === categoryId) {
-      setSelectedCategory('');
-    } else {
-      setSelectedCategory(categoryId);
-    }
+  const toggleFilter = (filter: string) => {
+    setActiveFilters(prev =>
+      prev.includes(filter)
+        ? prev.filter(f => f !== filter)
+        : [...prev, filter]
+    );
   };
 
-  const handlePayButtonClick = (event: EventData, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const handleShare = (event: any) => {
     setSelectedEvent(event);
-
-    if (event.variant === 'paid' && event.category === 'sukan') {
-      setShowSportsModal(true);
-    } else if (event.variant === 'cafe') {
-      navigate('/book-meetup');
-    } else if (event.variant === 'paid') {
-      setShowRegularModal(true);
+    setShowShareModal(true);
+  };
+  
+  const handleEventClick = (event: any) => {
+    setSelectedEvent(event);
+    
+    // Check if already joined for refund/cancel option
+    if (joinedEvents.includes(event.id)) {
+      setShowRefundModal(true);
+    } else if (event.price > 0) {
+      setShowPaymentModal(true);
     } else {
-      setShowJoinConfirmation(true);
+      setShowJoinModal(true);
     }
   };
-
-  const handleMoreButtonClick = (event: EventData, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    navigate(`/event/${event.id}`);
-  };
-
-  const handleCloseSportsModal = () => {
-    setShowSportsModal(false);
-    setSelectedEvent(null);
-  };
-
-  const handleSportsPaymentSuccess = (eventId: string, paymentAmount: number, paymentId: string) => {
-    // Add user to event after successful payment
-    const newParticipation: UserEventParticipation = {
-      eventId,
-      userId: user?.id || 'current-user-id',
-      joinedAt: new Date(),
-      paymentAmount,
-      paymentId,
-      status: 'joined',
-      canCancel: true,
-      refundPercentage: 100 // Initially 100% since just joined
-    };
-    setUserEvents(prev => [...prev, newParticipation]);
-    
-    // Close the modal
-    setShowSportsModal(false);
-    setSelectedEvent(null);
-  };
-
-  const handleCloseRegularModal = () => {
-    setShowRegularModal(false);
-    setSelectedEvent(null);
-  };
-
-  const handleRegularPaymentSuccess = (eventId: string, paymentAmount: number, paymentId: string) => {
-    // Add user to event after successful payment
-    const newParticipation: UserEventParticipation = {
-      eventId,
-      userId: user?.id || 'current-user-id',
-      joinedAt: new Date(),
-      paymentAmount,
-      paymentId,
-      status: 'joined',
-      canCancel: true,
-      refundPercentage: 100 // Initially 100% since just joined
-    };
-    setUserEvents(prev => [...prev, newParticipation]);
-    
-    // Close the modal
-    setShowRegularModal(false);
-    setSelectedEvent(null);
-  };
-
-  const confirmJoinEvent = () => {
+  
+  const handleJoinEvent = () => {
     if (selectedEvent) {
-      // Add user to event
-      const newParticipation: UserEventParticipation = {
-        eventId: selectedEvent.id,
-        userId: user?.id || 'current-user-id',
-        joinedAt: new Date(),
-        paymentAmount: 0,
-        paymentId: '',
-        status: 'joined',
-        canCancel: true,
-        refundPercentage: 0
-      };
-      setUserEvents(prev => [...prev, newParticipation]);
+      setJoinedEvents([...joinedEvents, selectedEvent.id]);
+      setShowJoinModal(false);
+      setSelectedEvent(null);
+      // Show success notification
+      alert(`Successfully joined ${selectedEvent.title}!`);
     }
+  };
+  
+  const handlePayment = () => {
+    if (selectedEvent) {
+      setJoinedEvents([...joinedEvents, selectedEvent.id]);
+      setShowPaymentModal(false);
+      setSelectedEvent(null);
+      // Show success notification
+      alert(`Payment successful! You've joined ${selectedEvent.title}!`);
+    }
+  };
+  
+  const handleRefund = () => {
+    if (selectedEvent) {
+      setJoinedEvents(joinedEvents.filter(id => id !== selectedEvent.id));
+      setShowRefundModal(false);
+      setSelectedEvent(null);
+      // Show success notification
+      alert(`Refund processed. You've been removed from ${selectedEvent.title}.`);
+    }
+  };
+
+  const handleExternalShare = (platform: string) => {
+    const eventUrl = `https://berseapp.com/event/${selectedEvent?.id}`;
+    const shareText = `Check out this event: ${selectedEvent?.title} at ${selectedEvent?.location}`;
     
-    setShowJoinConfirmation(false);
-    setSelectedEvent(null);
-    alert('Successfully joined the event!');
-  };
-
-  const cancelJoinEvent = () => {
-    setShowJoinConfirmation(false);
-    setSelectedEvent(null);
-  };
-
-  // Filter handlers
-  const handleLocationFilter = () => {
-    setShowLocationModal(true);
-  };
-
-  const handleCountryFilter = () => {
-    setShowCountryModal(true);
-  };
-
-  const handleInterestsFilter = () => {
-    setShowInterestsModal(true);
-  };
-
-  const handleSearchFilter = () => {
-    setShowSearchModal(true);
-  };
-
-  const toggleLocation = (location: string) => {
-    setSelectedLocations(prev => 
-      prev.includes(location) 
-        ? prev.filter(l => l !== location)
-        : [...prev, location]
-    );
-  };
-
-  const toggleInterest = (interest: string) => {
-    setSelectedInterests(prev => 
-      prev.includes(interest) 
-        ? prev.filter(i => i !== interest)
-        : [...prev, interest]
-    );
-  };
-
-  const selectCountry = (country: string) => {
-    setSelectedCountry(country);
-    setShowCountryModal(false);
-  };
-
-  const clearAllFilters = () => {
-    setSelectedCategory('');
-    setSelectedLocations([]);
-    setSelectedCountry('Malaysia');
-    setSelectedInterests([]);
-    setSearchQuery('');
-  };
-
-  // ================================
-  // PAYMENT & CANCELLATION EVENT HANDLERS
-  // ================================
-
-  const handleSportsPayment = (eventId: string) => {
-    console.log('Opening payment modal for event:', eventId);
-    const event = events.find(e => e.id === eventId);
-    setSelectedEvent(event || null);
-    
-    // Check if it's a sports event
-    if (event && (event.category === 'sukan' || isSportsEvent(event.type || event.category, event.title))) {
-      setShowSportsModal(true);
-    } else {
-      // Regular paid event
-      setShowRegularModal(true);
+    switch(platform) {
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + eventUrl)}`);
+        break;
+      case 'instagram':
+        alert('Opening Instagram...');
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(eventUrl);
+        alert('Link copied to clipboard!');
+        break;
     }
   };
 
-  const handleRegularJoin = (eventId: string) => {
-    console.log('Opening join confirmation for free event:', eventId);
-    const event = events.find(e => e.id === eventId);
-    setSelectedEvent(event || null);
-    setShowJoinConfirmation(true);
-  };
-
-  const handleCancelClick = (eventId: string) => {
-    setSelectedEventForCancel(eventId);
-    setShowCancelModal(true);
-  };
-
-  const handleConfirmCancel = async (eventId: string) => {
-    const event = events.find(e => e.id === eventId);
-    const userEventData = getUserEventData(eventId);
-    const refundPercentage = calculateRefundPercentage(event?.date || '');
-    const refundAmount = getRefundAmount(userEventData?.paymentAmount || event?.price || 0, refundPercentage);
-    
-    try {
-      // Process refund API call here
-      // await eventService.cancelEvent(eventId, { refundAmount, refundPercentage });
-      
-      // Update local state
-      setUserEvents(prev => 
-        prev.map(ue => 
-          ue.eventId === eventId 
-            ? { ...ue, status: 'cancelled' as const }
-            : ue
-        )
-      );
-      
-      setShowCancelModal(false);
-      setSelectedEventForCancel(null);
-      
-      // Show success message
-      if (refundAmount > 0) {
-        alert(`Event cancelled. Refund of RM ${refundAmount.toFixed(2)} will be processed within 3-5 business days.`);
-      } else {
-        alert('Event cancelled successfully.');
-      }
-      
-    } catch (error) {
-      console.error('Cancellation failed:', error);
-      alert('Failed to cancel event. Please try again.');
-    }
-  };
-
-  const handleCancelFreeEvent = (eventId: string) => {
-    // Direct cancellation for free events
-    setUserEvents(prev => 
-      prev.map(ue => 
-        ue.eventId === eventId 
-          ? { ...ue, status: 'cancelled' as const }
-          : ue
-      )
-    );
-    alert('Successfully left the event.');
-  };
-
-  // ================================
-  // UTILITY FUNCTIONS
-  // ================================
-
-  const getCategoryInfo = (categoryId: string): Category => {
-    return categories.find(c => c.id === categoryId) || categories[0];
-  };
-
-  const formatPrice = (event: EventData): string => {
-    if (event.price && event.price > 0) {
-      return `RM ${event.price}`;
-    }
-    if (event.variant === 'cafe') {
-      return 'Own drinks';
-    }
-    return 'FREE';
-  };
-
-  const getButtonText = (event: EventData): string => {
-    if (event.variant === 'paid') return 'Pay';
-    if (event.variant === 'cafe') return 'Book';
-    if (event.variant === 'volunteer') return 'Help';
-    return 'Join';
-  };
-
-  // ================================
-  // PAYMENT & CANCELLATION HELPER FUNCTIONS
-  // ================================
-
-  const isSportsEvent = (eventType: string, eventTitle: string): boolean => {
-    return eventType === 'SPORTS' || 
-           eventTitle.toLowerCase().includes('sukan') || 
-           eventTitle.toLowerCase().includes('sport') ||
-           eventTitle.toLowerCase().includes('badminton') ||
-           eventTitle.toLowerCase().includes('football') ||
-           eventTitle.toLowerCase().includes('berseminton');
-  };
-
-  const calculateRefundPercentage = (eventDate: string): number => {
-    const eventDateTime = new Date(eventDate);
-    const now = new Date();
-    const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    if (hoursUntilEvent > 24) {
-      return 100; // Full refund
-    } else if (hoursUntilEvent > 0) {
-      return 50; // 50% refund (same day or <24 hours)
-    } else {
-      return 0; // Event already started/passed
-    }
-  };
-
-  const getRefundAmount = (originalAmount: number, refundPercentage: number): number => {
-    return (originalAmount * refundPercentage) / 100;
-  };
-
-  const isUserJoined = (eventId: string): boolean => {
-    return userEvents.some(ue => ue.eventId === eventId && ue.status === 'joined');
-  };
-
-  const getUserEventData = (eventId: string): UserEventParticipation | null => {
-    return userEvents.find(ue => ue.eventId === eventId && ue.status === 'joined') || null;
-  };
-
-  // ================================
-  // COMBINED BUTTON LOGIC
-  // ================================
-
-  const getEventActionButton = (event: EventData) => {
-    const userEventData = getUserEventData(event.id);
-    const isJoined = isUserJoined(event.id);
-    
-    // If user already joined
-    if (isJoined) {
-      if (event.requiresPayment || (event.price && event.price > 0)) {
-        const refundPercentage = calculateRefundPercentage(event.date);
-        const refundAmount = getRefundAmount(userEventData?.paymentAmount || event.price || 0, refundPercentage);
-        
-        return (
-          <CancelButton 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleCancelClick(event.id);
-            }}
-            $refundPercentage={refundPercentage}
-          >
-            {refundPercentage > 0 ? (
-              <>❌ Cancel (RM {refundAmount.toFixed(0)} refund)</>
-            ) : (
-              <>❌ Cancel (No refund)</>
-            )}
-          </CancelButton>
-        );
-      } else {
-        return (
-          <CancelButton 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleCancelFreeEvent(event.id);
-            }}
-          >
-            ❌ Leave
-          </CancelButton>
-        );
-      }
-    }
-    
-    // If user hasn't joined yet
-    if (event.variant === 'paid' || (event.price && event.price > 0) || event.requiresPayment) {
-      return (
-        <PaymentButton 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleSportsPayment(event.id);
-          }}
-        >
-          💳 Pay & Join
-        </PaymentButton>
-      );
-    } else {
-      return (
-        <JoinButton 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleRegularJoin(event.id);
-          }}
-        >
-          Join
-        </JoinButton>
-      );
-    }
-  };
-
-
-  // ================================
-  // RENDER
-  // ================================
+  const filteredEvents = getFilteredEvents();
 
   return (
     <Container>
       <StatusBar />
       
-      {/* Standardized Header */}
-      <div style={{
-        background: '#F5F3EF',
-        width: '100%',
-        padding: '12px 16px',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              borderRadius: '12px',
-              padding: '4px 8px 4px 4px',
-              position: 'relative'
-            }}
-            onClick={() => {
-              console.log('Profile icon clicked - opening sidebar');
-              setShowProfileSidebar(true);
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(74, 103, 65, 0.1)';
-              e.currentTarget.style.transform = 'translateX(2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.transform = 'translateX(0)';
-            }}
-          >
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              background: '#4A6741',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <AvatarImage 
-                src="https://images.unsplash.com/photo-1494790108755-2616b612b619?w=40&h=40&fit=crop&crop=face&auto=format" 
-                alt="Profile" 
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : 'ZA';
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ fontSize: '12px', color: '#999999', fontWeight: 'normal' }}>Build Communities & Friendship</div>
-              <div style={{ fontSize: '18px', color: '#333333', fontWeight: '600' }}>BerseConnect</div>
-            </div>
-          </div>
-          <div style={{
-            background: '#FF6B6B',
-            color: 'white',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>3</div>
-        </div>
-      </div>
+      <Header>
+        <HeaderTop>
+          <BackButton onClick={() => navigate('/dashboard')}>←</BackButton>
+          <HeaderTitle>
+            <LocationTag>📍 {currentLocation.city}</LocationTag>
+            <Title>BerseConnect</Title>
+          </HeaderTitle>
+          <CreateButton>+ Create</CreateButton>
+        </HeaderTop>
+      </Header>
 
-      <FilterSection>
-        <FilterDropdowns>
-          <FilterDropdown 
-            type="button"
-            $isActive={selectedLocations.length > 0}
-            onClick={handleLocationFilter}
-          >
-            {selectedLocations.length > 0 ? `Cities (${selectedLocations.length})` : 'All Cities'}
-          </FilterDropdown>
-          <FilterDropdown 
-            type="button"
-            $isActive={selectedCountry !== 'Malaysia'}
-            onClick={handleCountryFilter}
-          >
-            {selectedCountry}
-          </FilterDropdown>
-          <FilterDropdown 
-            type="button"
-            $isActive={selectedInterests.length > 0}
-            onClick={handleInterestsFilter}
-          >
-            {selectedInterests.length > 0 ? `Interests (${selectedInterests.length})` : 'Interests'}
-          </FilterDropdown>
-          <SearchFilterButton 
-            type="button"
-            $isActive={searchQuery.length > 0}
-            onClick={handleSearchFilter}
-            title={searchQuery ? `Searching: ${searchQuery}` : 'Search events, hosts, locations...'}
-          >
-            🔍
-          </SearchFilterButton>
-        </FilterDropdowns>
-      </FilterSection>
+      <SearchContainer>
+        <SearchBar>
+          <SearchIcon>🔍</SearchIcon>
+          <SearchInput 
+            placeholder="Search events, communities, activities..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <FilterButton onClick={() => setShowFilterModal(true)}>
+            ⚙️ Filters
+          </FilterButton>
+        </SearchBar>
+      </SearchContainer>
 
+      <CategoryTabs>
+        {categories.map(cat => (
+          <CategoryTab
+            key={cat.id}
+            $active={activeCategory === cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+          >
+            <CategoryIcon>{cat.icon}</CategoryIcon>
+            {cat.name}
+          </CategoryTab>
+        ))}
+      </CategoryTabs>
 
+      <SmartTabs>
+        {['For You', 'Today', 'This Week', 'Free'].map(tab => (
+          <SmartTab
+            key={tab}
+            $active={activeTab === tab}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+            {tab === 'Today' && <TabBadge>3</TabBadge>}
+          </SmartTab>
+        ))}
+      </SmartTabs>
+
+      <QuickFilters>
+        <QuickFilter
+          $active={activeFilters.includes('Friends Going')}
+          onClick={() => toggleFilter('Friends Going')}
+        >
+          👥 Friends Going
+        </QuickFilter>
+        <QuickFilter
+          $active={activeFilters.includes('Trending')}
+          onClick={() => toggleFilter('Trending')}
+        >
+          🔥 Trending
+        </QuickFilter>
+        <QuickFilter
+          $active={activeFilters.includes('Free')}
+          onClick={() => toggleFilter('Free')}
+        >
+          🎁 Free
+        </QuickFilter>
+      </QuickFilters>
 
       <Content>
-        {/* Category Grid */}
-        <CategoryGrid>
-          {categories.map((category) => (
-            <CategoryCard 
-              key={category.id} 
-              $isSelected={selectedCategory === category.id}
-              onClick={() => handleCategorySelect(category.id)}
-            >
-              <CategoryIcon 
-                $color={category.color} 
-                $isSelected={selectedCategory === category.id}
-              >
-                {category.icon}
-              </CategoryIcon>
-              <CategoryLabel $isSelected={selectedCategory === category.id}>
-                {category.name}
-              </CategoryLabel>
-            </CategoryCard>
-          ))}
-        </CategoryGrid>
-
-        {/* Active Filters Bar */}
-        {(selectedCategory || selectedLocations.length > 0 || selectedCountry !== 'Malaysia' || selectedInterests.length > 0 || searchQuery) && (
-          <ActiveFiltersBar>
-            <FilterContent>
-              <span>Active filters:</span>
-              {selectedCategory && (
-                <FilterBadge>
-                  {categories.find(c => c.id === selectedCategory)?.name}
-                </FilterBadge>
-              )}
-              {selectedLocations.map(location => (
-                <FilterBadge key={location}>
-                  📍 {location}
-                </FilterBadge>
-              ))}
-              {selectedCountry !== 'Malaysia' && (
-                <FilterBadge>
-                  🌍 {selectedCountry}
-                </FilterBadge>
-              )}
-              {selectedInterests.map(interest => {
-                const category = categories.find(c => c.id === interest);
-                return (
-                  <FilterBadge key={interest}>
-                    {category?.icon} {category?.name}
-                  </FilterBadge>
-                );
-              })}
-              {searchQuery && (
-                <FilterBadge>
-                  🔍 "{searchQuery}"
-                </FilterBadge>
-              )}
-            </FilterContent>
-            <ClearFiltersButton onClick={clearAllFilters}>
-              Clear Filters
-            </ClearFiltersButton>
-          </ActiveFiltersBar>
+        {/* Cafe Scanner - Show only in Cafe or All */}
+        {(activeCategory === 'All' || activeCategory === 'Cafe') && (
+          <CafeScannerCard>
+            <LiveIndicator>3 Live Now</LiveIndicator>
+            <CafeScannerTitle>☕ Instant Cafe Meetups</CafeScannerTitle>
+            <CafeScannerDesc>
+              Scan QR at any cafe to join spontaneous meetups happening right now!
+            </CafeScannerDesc>
+            <ScanButton>📷 Scan Cafe QR Code</ScanButton>
+          </CafeScannerCard>
         )}
 
         {/* Events Section */}
-        <SuggestedEventsSection>
-          {filteredEvents.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '40px 20px', 
-              color: '#666',
-              background: '#f8f9fa',
-              borderRadius: '12px',
-              margin: '20px 0'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-              <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>No events found</h3>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                Try adjusting your filters or search terms
-              </p>
-            </div>
-          ) : (
-            filteredEvents.map((event) => {
-            const categoryInfo = getCategoryInfo(event.category);
-            const isHighlighted = highlightedEvent === event.id;
-            
-            return (
-              <CompactEventCard 
-                key={event.id}
-                $highlighted={isHighlighted}
-                ref={(el) => eventRefs.current[event.id] = el}
-              >
-                {isHighlighted && (
-                  <HighlightBanner>
-                    ✨ Featured Event - Register Now!
-                  </HighlightBanner>
+        <SectionHeader>
+          <SectionTitle>
+            {activeTab === 'For You' && '🎯 Recommended For You'}
+            {activeTab === 'Today' && `📅 Today's Events`}
+            {activeTab === 'This Week' && '📆 This Week'}
+            {activeTab === 'Free' && '🎁 Free Events'}
+          </SectionTitle>
+        </SectionHeader>
+
+        {filteredEvents.length > 0 ? (
+          filteredEvents.map(event => (
+            <EventCard 
+              key={event.id} 
+              $trending={event.trending}
+              $category={event.category?.toLowerCase()}
+            >
+              <ShareButton onClick={(e) => {
+                e.stopPropagation();
+                handleShare(event);
+              }}>
+                ↗️
+              </ShareButton>
+
+              {event.trending && (
+                <TrendingBadge>🔥 Trending</TrendingBadge>
+              )}
+              
+              <EventHeader>
+                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <EventIcon>{event.icon}</EventIcon>
+                  <EventInfo>
+                    <EventTitle>{event.title}</EventTitle>
+                    <EventDateTime>{event.dateTime}</EventDateTime>
+                    <EventLocation>📍 {event.location}</EventLocation>
+                  </EventInfo>
+                </div>
+              </EventHeader>
+
+              <EventStats>
+                <EventStat>Host: {event.host}</EventStat>
+                <EventStat>{event.attendees}/{event.maxAttendees} going</EventStat>
+                {event.compatibility && (
+                  <EventStat style={{ color: '#4CAF50' }}>
+                    {event.compatibility}% match
+                  </EventStat>
                 )}
-                {/* Header Section */}
-                <CompactEventHeader>
-                  <CategoryBadge color={categoryInfo.color}>
-                    {categoryInfo.icon} {categoryInfo.name} • {event.pointsReward} pts
-                  </CategoryBadge>
-                  
-                  <PriceDisplay color={categoryInfo.color}>
-                    {formatPrice(event)}
-                  </PriceDisplay>
-                </CompactEventHeader>
+              </EventStats>
 
-                {/* Title Section */}
-                <EventTitleRow>
-                  <CompactEventTitle style={{ 
-                    color: isHighlighted ? '#2D5F4F' : undefined,
-                    fontWeight: isHighlighted ? '700' : undefined
-                  }}>
-                    {event.title}
-                    {isHighlighted && ' 🎯'}
-                  </CompactEventTitle>
-                  <TitlePoints>{event.pointsReward} pts</TitlePoints>
-                </EventTitleRow>
-
-                {/* Bio/Description Section */}
-                <EventBio>
-                  {event.description}
-                </EventBio>
-                
-                {/* Event Details Row */}
-                <EventDetailsRow>
-                  <EventDetailItem>
-                    <span>📅</span>
-                    <span>{event.date} • {event.time}</span>
-                  </EventDetailItem>
-                  <EventDetailItem>
-                    <span>📍</span>
-                    <span>{event.location}</span>
-                  </EventDetailItem>
-                  {/* Show status if joined */}
-                  {isUserJoined(event.id) && (
-                    <EventDetailItem>
-                      <span>✅</span>
-                      <span>Joined</span>
-                    </EventDetailItem>
+              <EventFooter>
+                <EventPrice>
+                  <Price>{event.price === 0 ? 'FREE' : `RM ${event.price}`}</Price>
+                  {event.points && (
+                    <span style={{ fontSize: '12px', color: '#666' }}>
+                      +{event.points} pts
+                    </span>
                   )}
-                </EventDetailsRow>
-
-                {/* Bottom Row */}
-                <CompactEventActions>
-                  <ParticipantsInfo>
-                    <span>👥</span>
-                    <span>{event.participantCount}/{event.maxParticipants} joined</span>
-                  </ParticipantsInfo>
-                  
-                  <ActionButtons>
-                    {React.cloneElement(getEventActionButton(event), {
-                      style: {
-                        ...(getEventActionButton(event).props.style || {}),
-                        background: isHighlighted && !isUserJoined(event.id) 
-                          ? 'linear-gradient(135deg, #FF6B6B, #FF8E8E)' 
-                          : undefined,
-                        fontWeight: isHighlighted ? '600' : undefined,
-                        transform: isHighlighted ? 'scale(1.02)' : undefined
-                      },
-                      children: isHighlighted && !isUserJoined(event.id) 
-                        ? '🎯 Register Now' 
-                        : getEventActionButton(event).props.children
-                    })}
-                    
-                    <MoreButton
-                      type="button"
-                      onClick={(e) => handleMoreButtonClick(event, e)}
-                    >
-                      More
-                    </MoreButton>
-                  </ActionButtons>
-                </CompactEventActions>
-              </CompactEventCard>
-            );
-          }))}
-        </SuggestedEventsSection>
+                </EventPrice>
+                <EventAction onClick={(e) => {
+                  e.stopPropagation();
+                  handleEventClick(event);
+                }}>
+                  {joinedEvents.includes(event.id) ? 'Manage' : event.price > 0 ? 'Pay & Join' : 'Join'}
+                </EventAction>
+              </EventFooter>
+            </EventCard>
+          ))
+        ) : (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '40px', 
+            color: '#999' 
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+            <div>No events found</div>
+            <div style={{ fontSize: '14px', marginTop: '8px' }}>
+              Try adjusting your filters
+            </div>
+          </div>
+        )}
       </Content>
+
+      {/* Filter Modal */}
+      <FilterModal $show={showFilterModal}>
+        <FilterModalContent>
+          <FilterModalHeader>
+            <FilterModalTitle>Filters</FilterModalTitle>
+            <CloseButton onClick={() => setShowFilterModal(false)}>×</CloseButton>
+          </FilterModalHeader>
+
+          <FilterSection>
+            <FilterLabel>Event Type</FilterLabel>
+            <FilterOptions>
+              {['Sports', 'Social', 'Study', 'Volunteer', 'Travel', 'Workshop'].map(type => (
+                <FilterOption key={type} $selected={activeFilters.includes(type)}>
+                  {type}
+                </FilterOption>
+              ))}
+            </FilterOptions>
+          </FilterSection>
+
+          <FilterSection>
+            <FilterLabel>Price Range (RM)</FilterLabel>
+            <PriceSlider type="range" min="0" max="500" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666' }}>
+              <span>Free</span>
+              <span>RM 500</span>
+            </div>
+          </FilterSection>
+
+          <FilterSection>
+            <FilterLabel>Distance</FilterLabel>
+            <FilterOptions>
+              {['< 5km', '< 10km', '< 25km', 'Any'].map(distance => (
+                <FilterOption key={distance} $selected={activeFilters.includes(distance)}>
+                  {distance}
+                </FilterOption>
+              ))}
+            </FilterOptions>
+          </FilterSection>
+
+          <ApplyButton onClick={() => setShowFilterModal(false)}>
+            Apply Filters
+          </ApplyButton>
+        </FilterModalContent>
+      </FilterModal>
+
+      {/* Share Modal */}
+      <ShareModal $show={showShareModal}>
+        <ShareModalContent>
+          <ShareModalHeader>
+            <ShareModalDragHandle />
+            <ShareModalTitle>Share Event</ShareModalTitle>
+          </ShareModalHeader>
+
+          <ShareSearchBar>
+            <ShareSearchInput placeholder="Search contacts..." />
+          </ShareSearchBar>
+
+          <ShareContactsGrid>
+            {['Ahmad', 'Sarah', 'Fatima', 'Khalid', 'Lisa', 'Omar'].map(name => (
+              <ShareContact key={name}>
+                <ContactAvatar>👤</ContactAvatar>
+                <ContactName>{name}</ContactName>
+              </ShareContact>
+            ))}
+          </ShareContactsGrid>
+
+          <ExternalShareOptions>
+            <ExternalShareButton onClick={() => handleExternalShare('whatsapp')}>
+              <ExternalShareIcon $bgColor="#25D366">📱</ExternalShareIcon>
+              <ExternalShareLabel>WhatsApp</ExternalShareLabel>
+            </ExternalShareButton>
+            
+            <ExternalShareButton onClick={() => handleExternalShare('instagram')}>
+              <ExternalShareIcon $bgColor="linear-gradient(135deg, #F58529, #DD2A7B)">
+                📷
+              </ExternalShareIcon>
+              <ExternalShareLabel>Instagram</ExternalShareLabel>
+            </ExternalShareButton>
+            
+            <ExternalShareButton onClick={() => handleExternalShare('copy')}>
+              <ExternalShareIcon $bgColor="#666">🔗</ExternalShareIcon>
+              <ExternalShareLabel>Copy Link</ExternalShareLabel>
+            </ExternalShareButton>
+          </ExternalShareOptions>
+
+          <button
+            onClick={() => setShowShareModal(false)}
+            style={{
+              width: 'calc(100% - 32px)',
+              margin: '0 16px',
+              padding: '12px',
+              background: '#f5f5f5',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Cancel
+          </button>
+        </ShareModalContent>
+      </ShareModal>
+
+      {/* Join Event Modal */}
+      <JoinModal $show={showJoinModal}>
+        <JoinModalHeader>
+          <JoinModalTitle>Join Event</JoinModalTitle>
+          <JoinModalSubtitle>You're about to join this event</JoinModalSubtitle>
+        </JoinModalHeader>
+
+        {selectedEvent && (
+          <>
+            <EventDetailsCard>
+              <EventDetailRow>
+                <EventDetailIcon>{selectedEvent.icon}</EventDetailIcon>
+                <EventDetailText>
+                  <strong>{selectedEvent.title}</strong>
+                </EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>📅</EventDetailIcon>
+                <EventDetailText>{selectedEvent.dateTime}</EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>📍</EventDetailIcon>
+                <EventDetailText>{selectedEvent.location}</EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>👥</EventDetailIcon>
+                <EventDetailText>
+                  {selectedEvent.attendees}/{selectedEvent.maxAttendees} attendees
+                </EventDetailText>
+              </EventDetailRow>
+            </EventDetailsCard>
+
+            {selectedEvent.points > 0 && (
+              <PointsEarned>
+                🎉 Earn {selectedEvent.points} points for joining!
+              </PointsEarned>
+            )}
+
+            <JoinButton onClick={handleJoinEvent}>
+              Confirm Join
+            </JoinButton>
+            <CancelButton onClick={() => setShowJoinModal(false)}>
+              Cancel
+            </CancelButton>
+          </>
+        )}
+      </JoinModal>
+
+      {/* Payment Modal */}
+      <PaymentModal $show={showPaymentModal}>
+        <JoinModalHeader>
+          <JoinModalTitle>Complete Payment</JoinModalTitle>
+          <JoinModalSubtitle>Choose your payment method</JoinModalSubtitle>
+        </JoinModalHeader>
+
+        {selectedEvent && (
+          <>
+            <EventDetailsCard>
+              <EventDetailRow>
+                <EventDetailIcon>{selectedEvent.icon}</EventDetailIcon>
+                <EventDetailText>
+                  <strong>{selectedEvent.title}</strong>
+                </EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>📅</EventDetailIcon>
+                <EventDetailText>{selectedEvent.dateTime}</EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>📍</EventDetailIcon>
+                <EventDetailText>{selectedEvent.location}</EventDetailText>
+              </EventDetailRow>
+            </EventDetailsCard>
+
+            <TotalAmount>
+              <TotalLabel>Total Amount</TotalLabel>
+              <TotalPrice>RM {selectedEvent.price}</TotalPrice>
+            </TotalAmount>
+
+            <PaymentMethod onClick={handlePayment}>
+              <PaymentIcon>💳</PaymentIcon>
+              <PaymentLabel>Credit/Debit Card</PaymentLabel>
+            </PaymentMethod>
+
+            <PaymentMethod onClick={handlePayment}>
+              <PaymentIcon>🏦</PaymentIcon>
+              <PaymentLabel>Online Banking</PaymentLabel>
+            </PaymentMethod>
+
+            <PaymentMethod onClick={handlePayment}>
+              <PaymentIcon>📱</PaymentIcon>
+              <PaymentLabel>Touch 'n Go eWallet</PaymentLabel>
+            </PaymentMethod>
+
+            {selectedEvent.points > 0 && (
+              <PointsEarned>
+                🎉 Earn {selectedEvent.points} points after payment!
+              </PointsEarned>
+            )}
+
+            <CancelButton onClick={() => setShowPaymentModal(false)}>
+              Cancel
+            </CancelButton>
+          </>
+        )}
+      </PaymentModal>
+
+      {/* Refund/Cancel Modal */}
+      <RefundModal $show={showRefundModal}>
+        <JoinModalHeader>
+          <JoinModalTitle>Manage Registration</JoinModalTitle>
+          <JoinModalSubtitle>You're registered for this event</JoinModalSubtitle>
+        </JoinModalHeader>
+
+        {selectedEvent && (
+          <>
+            <EventDetailsCard>
+              <EventDetailRow>
+                <EventDetailIcon>{selectedEvent.icon}</EventDetailIcon>
+                <EventDetailText>
+                  <strong>{selectedEvent.title}</strong>
+                </EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>📅</EventDetailIcon>
+                <EventDetailText>{selectedEvent.dateTime}</EventDetailText>
+              </EventDetailRow>
+              <EventDetailRow>
+                <EventDetailIcon>📍</EventDetailIcon>
+                <EventDetailText>{selectedEvent.location}</EventDetailText>
+              </EventDetailRow>
+            </EventDetailsCard>
+
+            <RefundOptions>
+              <RefundOption>
+                <RefundTitle>Cancel Registration</RefundTitle>
+                <RefundDescription>
+                  {selectedEvent.price > 0 
+                    ? `Get a full refund of RM ${selectedEvent.price} if cancelled 24 hours before the event`
+                    : 'Free up your spot for other attendees'}
+                </RefundDescription>
+              </RefundOption>
+            </RefundOptions>
+
+            <RefundButton onClick={handleRefund}>
+              {selectedEvent.price > 0 ? 'Cancel & Request Refund' : 'Cancel Registration'}
+            </RefundButton>
+            <KeepButton onClick={() => setShowRefundModal(false)}>
+              Keep Registration
+            </KeepButton>
+          </>
+        )}
+      </RefundModal>
 
       <MainNav 
         activeTab="connect"
         onTabPress={(tab) => {
           switch (tab) {
-            case 'home': navigate('/dashboard'); break;
-            case 'connect': navigate('/connect'); break;
-            case 'match': navigate('/match'); break;
-            case 'forum': navigate('/forum'); break;
+            case 'home':
+              navigate('/dashboard');
+              break;
+            case 'connect':
+              navigate('/connect');
+              break;
+            case 'match':
+              navigate('/match');
+              break;
+            case 'market':
+              navigate('/market');
+              break;
           }
         }}
-      />
-
-      {/* Sports Event Booking Modal */}
-      <SportsEventBookingModal
-        isOpen={showSportsModal}
-        onClose={handleCloseSportsModal}
-        event={selectedEvent}
-      />
-
-      {/* Regular Event Registration Modal */}
-      <EventRegistrationModal
-        isOpen={showRegularModal}
-        onClose={handleCloseRegularModal}
-        event={selectedEvent ? {
-          id: selectedEvent.id,
-          title: selectedEvent.title,
-          date: selectedEvent.date,
-          time: selectedEvent.time,
-          location: selectedEvent.location,
-          included: ['Registration confirmation', 'Event materials', 'Networking opportunities'],
-          spotsLeft: selectedEvent.maxParticipants - selectedEvent.participantCount,
-          totalSpots: selectedEvent.maxParticipants,
-          price: selectedEvent.price || 0,
-          image: '/api/placeholder/400/200'
-        } : null}
-      />
-
-      {/* Join Event Confirmation Modal */}
-      <ConfirmationModal show={showJoinConfirmation}>
-        <ModalContent>
-          <ModalTitle>Join Event</ModalTitle>
-          <ModalText>
-            Are you sure you want to join <strong>"{selectedEvent?.title}"</strong>?
-            <br /><br />
-            📅 {selectedEvent?.date}<br />
-            📍 {selectedEvent?.location}<br />
-            👥 Hosted by {selectedEvent?.hostName}
-          </ModalText>
-          <ModalButtons>
-            <ModalButton onClick={cancelJoinEvent}>Cancel</ModalButton>
-            <ModalButton primary onClick={confirmJoinEvent}>Join Event</ModalButton>
-          </ModalButtons>
-        </ModalContent>
-      </ConfirmationModal>
-
-      {/* Location Filter Modal */}
-      <FilterModal show={showLocationModal}>
-        <FilterModalContent>
-          <FilterModalHeader>
-            <FilterModalTitle>Filter by Location</FilterModalTitle>
-            <CloseButton onClick={() => setShowLocationModal(false)}>×</CloseButton>
-          </FilterModalHeader>
-          <FilterList>
-            {allLocations.map(location => {
-              const eventCount = events.filter(event => 
-                event.location.toLowerCase().includes(location.toLowerCase())
-              ).length;
-              const isSelected = selectedLocations.includes(location);
-              
-              return (
-                <FilterItem 
-                  key={location}
-                  $isSelected={isSelected}
-                  onClick={() => toggleLocation(location)}
-                >
-                  <CheckBox $isChecked={isSelected}>
-                    {isSelected && '✓'}
-                  </CheckBox>
-                  <FilterItemText>{location}</FilterItemText>
-                  <FilterItemCount>{eventCount}</FilterItemCount>
-                </FilterItem>
-              );
-            })}
-          </FilterList>
-        </FilterModalContent>
-      </FilterModal>
-
-      {/* Country Filter Modal */}
-      <FilterModal show={showCountryModal}>
-        <FilterModalContent>
-          <FilterModalHeader>
-            <FilterModalTitle>Select Country</FilterModalTitle>
-            <CloseButton onClick={() => setShowCountryModal(false)}>×</CloseButton>
-          </FilterModalHeader>
-          <FilterList>
-            {allCountries.map(country => {
-              const eventCount = country === 'Malaysia' ? events.length : 0;
-              const isSelected = selectedCountry === country;
-              
-              return (
-                <FilterItem 
-                  key={country}
-                  $isSelected={isSelected}
-                  onClick={() => selectCountry(country)}
-                >
-                  <CheckBox $isChecked={isSelected}>
-                    {isSelected && '✓'}
-                  </CheckBox>
-                  <FilterItemText>
-                    🌍 {country}
-                  </FilterItemText>
-                  <FilterItemCount>{eventCount}</FilterItemCount>
-                </FilterItem>
-              );
-            })}
-          </FilterList>
-        </FilterModalContent>
-      </FilterModal>
-
-      {/* Interests Filter Modal */}
-      <FilterModal show={showInterestsModal}>
-        <FilterModalContent>
-          <FilterModalHeader>
-            <FilterModalTitle>Filter by Interests</FilterModalTitle>
-            <CloseButton onClick={() => setShowInterestsModal(false)}>×</CloseButton>
-          </FilterModalHeader>
-          <FilterList>
-            {allInterests.map(interest => {
-              const eventCount = events.filter(event => event.category === interest.id).length;
-              const isSelected = selectedInterests.includes(interest.id);
-              const category = categories.find(c => c.id === interest.id);
-              
-              return (
-                <FilterItem 
-                  key={interest.id}
-                  $isSelected={isSelected}
-                  onClick={() => toggleInterest(interest.id)}
-                >
-                  <CheckBox $isChecked={isSelected}>
-                    {isSelected && '✓'}
-                  </CheckBox>
-                  <FilterItemText>
-                    {category?.icon} {interest.name}
-                  </FilterItemText>
-                  <FilterItemCount>{eventCount}</FilterItemCount>
-                </FilterItem>
-              );
-            })}
-          </FilterList>
-        </FilterModalContent>
-      </FilterModal>
-
-      {/* Search Modal */}
-      <FilterModal show={showSearchModal}>
-        <FilterModalContent>
-          <FilterModalHeader>
-            <FilterModalTitle>Search Events</FilterModalTitle>
-            <CloseButton onClick={() => setShowSearchModal(false)}>×</CloseButton>
-          </FilterModalHeader>
-          <SearchInput
-            type="text"
-            placeholder="Search events, hosts, locations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-          <ModalButtons>
-            <ModalButton onClick={() => setShowSearchModal(false)}>
-              Done
-            </ModalButton>
-          </ModalButtons>
-        </FilterModalContent>
-      </FilterModal>
-
-      {/* Cancellation Modal */}
-      <FilterModalOverlay isOpen={showCancelModal} onClick={() => setShowCancelModal(false)}>
-        <CancelModal onClick={(e) => e.stopPropagation()}>
-          <FilterModalHeader>
-            <FilterModalTitle>Cancel Event</FilterModalTitle>
-            <CloseButton onClick={() => setShowCancelModal(false)}>×</CloseButton>
-          </FilterModalHeader>
-          
-          <CancelModalContent>
-            {selectedEventForCancel && (() => {
-              const event = events.find(e => e.id === selectedEventForCancel);
-              const refundPercentage = calculateRefundPercentage(event?.date || '');
-              const userEventData = getUserEventData(selectedEventForCancel);
-              const refundAmount = getRefundAmount(userEventData?.paymentAmount || event?.price || 0, refundPercentage);
-              
-              return (
-                <>
-                  <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>{event?.title}</h3>
-                  <RefundInfo $percentage={refundPercentage}>
-                    <strong>Refund Policy:</strong><br/>
-                    {refundPercentage === 100 && "✅ Full refund (>24 hours before event)"}
-                    {refundPercentage === 50 && "⚠️ 50% refund (≤24 hours before event)"}
-                    {refundPercentage === 0 && "❌ No refund (event already started)"}
-                    <br/>
-                    <strong>Refund Amount: RM {refundAmount.toFixed(2)}</strong>
-                  </RefundInfo>
-                  
-                  <div style={{ 
-                    fontSize: '14px', 
-                    color: '#666', 
-                    marginBottom: '16px',
-                    lineHeight: '1.4'
-                  }}>
-                    📅 {event?.date}<br/>
-                    📍 {event?.location}<br/>
-                    👥 Hosted by {event?.hostName}
-                  </div>
-                  
-                  <FilterActions>
-                    <FilterButton 
-                      onClick={() => handleConfirmCancel(selectedEventForCancel)}
-                      style={{ 
-                        background: refundPercentage > 0 ? '#FF5722' : '#9E9E9E' 
-                      }}
-                    >
-                      Confirm Cancel
-                    </FilterButton>
-                    <ClearButton onClick={() => setShowCancelModal(false)}>
-                      Keep Joined
-                    </ClearButton>
-                  </FilterActions>
-                </>
-              );
-            })()}
-          </CancelModalContent>
-        </CancelModal>
-      </FilterModalOverlay>
-
-      <ProfileSidebar 
-        isOpen={showProfileSidebar}
-        onClose={() => setShowProfileSidebar(false)}
       />
     </Container>
   );
 };
-
-
-
-

@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar';
-import { Header } from '../components/Header';
+import { CompactHeader } from '../components/CompactHeader';
 import { Card } from '../components/Card';
 import { Points } from '../components/Points';
 import { Button } from '../components/Button';
 import { SideMenu } from '../components/SideMenu';
 import { NotificationPanel } from '../components/NotificationPanel';
-import { MainNav } from '../components/MainNav';
+import { MainNav } from '../components/MainNav/index';
 import { QRCodeGenerator } from '../components/QRCode';
 import { DualQRModal } from '../components/DualQRModal';
 import { ManagePassModal } from '../components/ManagePassModal';
@@ -22,17 +22,30 @@ import { voucherService } from '../services/voucherService';
 import { useUniversalRedemption } from '../hooks/useUniversalRedemption';
 import { Event } from '../types';
 
+// Calendar Event Interface - Updated for compact calendar
+interface CalendarEvent {
+  id: string;
+  date: Date;
+  time: string;
+  title: string;
+  type: 'social' | 'cafe' | 'ilm' | 'donate' | 'trips' | 'sukan' | 'volunteer' | 'ai';
+  icon: string;
+  color: string;
+  status: 'confirmed' | 'pending' | 'suggested';
+  location?: string;
+  attendees?: string[];
+}
+
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: calc(100vh - 2px);
   background-color: #F9F3E3;
 `;
 
 const Content = styled.div`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.md};
-  padding-bottom: 100px; // Space for floating nav
+  padding: 8px 16px 100px 16px; // Match header margins and space for nav
   overflow-y: auto;
   max-width: 393px;
   width: 100%;
@@ -76,6 +89,849 @@ const LoadingMessage = styled.div`
   padding: ${({ theme }) => theme.spacing.xl};
 `;
 
+
+const slideUp = keyframes`
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+`;
+
+// Calendar Container - MyVouchers card style with blue gradient
+const CalendarContainer = styled.div`
+  margin-bottom: 16px;
+`;
+
+const CalendarWidget = styled.div`
+  background: linear-gradient(135deg, #3d4c74, #4a5a85, #566896);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(61, 76, 116, 0.25);
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  color: white;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(61, 76, 116, 0.3);
+  }
+`;
+
+const CalendarContent = styled.div`
+  display: block;
+`;
+
+const CalendarLeft = styled.div`
+  width: 100%;
+`;
+
+const RightActionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 120px;
+`;
+
+const BelowCalendarActions = styled.div`
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+// Separate Quick Actions Section
+const QuickActionsSection = styled.div`
+  margin-bottom: 16px;
+`;
+
+const QuickActionsContainer = styled.div`
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+`;
+
+const QuickActionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 4px;
+`;
+
+const StreakContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const StreakText = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+`;
+
+const QuickActionsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+`;
+
+const QuickActionsTitle = styled.h4`
+  font-size: 11px;
+  font-weight: 600;
+  color: #2D5F4F;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+`;
+
+const FeaturedRewardsTitle = styled.h4`
+  font-size: 11px;
+  font-weight: 600;
+  color: #2D5F4F;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  padding: 0;
+  margin-bottom: 12px;
+`;
+
+const FeaturedRewardsContainer = styled.div`
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 16px;
+`;
+
+const TravelFundButton = styled.button`
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #00BCD4, #0288D1);
+  border: 1px solid #0097A7;
+  border-radius: 6px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 24px;
+  box-shadow: 0 2px 4px rgba(0, 188, 212, 0.2);
+  position: relative;
+  
+  &::after {
+    content: '✈️';
+    position: absolute;
+    right: -8px;
+    top: -8px;
+    font-size: 12px;
+    animation: fly 3s ease-in-out infinite;
+  }
+  
+  @keyframes fly {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(2px, -2px); }
+    50% { transform: translate(-2px, 2px); }
+    75% { transform: translate(1px, -1px); }
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, #0097A7, #00ACC1);
+    transform: scale(1.05);
+    box-shadow: 0 3px 8px rgba(0, 188, 212, 0.4);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const QuickActionsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const QuickActionButton = styled.button<{ $variant?: string }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 4px;
+  background: ${({ $variant }) => 
+    $variant === 'events' ? 'linear-gradient(135deg, #FF6B6B, #FF9A00)' :
+    $variant === 'profiles' ? 'linear-gradient(135deg, #FFC107, #FF9800)' :
+    $variant === 'market' ? 'linear-gradient(135deg, #00BCD4, #009688)' :
+    $variant === 'game' ? 'linear-gradient(135deg, #673AB7, #3F51B5)' :
+    '#666666'
+  };
+  border: 1px solid ${({ $variant }) => 
+    $variant === 'events' ? '#FF5722' :
+    $variant === 'profiles' ? '#F57C00' :
+    $variant === 'market' ? '#0097A7' :
+    $variant === 'game' ? '#512DA8' :
+    '#555555'
+  };
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 42px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.05));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  &:active {
+    transform: translateY(0) scale(1);
+  }
+`;
+
+const ActionLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+`;
+
+const ActionIcon = styled.span`
+  font-size: 18px;
+  margin-bottom: 2px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+`;
+
+const ActionText = styled.span`
+  font-size: 8px;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.1;
+  color: rgba(255, 255, 255, 0.95);
+  font-style: italic;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  
+  strong {
+    font-weight: 700;
+    display: block;
+    font-size: 9px;
+    margin-bottom: 1px;
+    font-style: normal;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+`;
+
+const ActionBadge = styled.div<{ $special?: boolean }>`
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: ${({ $special }) => $special ? 
+    'linear-gradient(135deg, #FFD700, #FFA500)' : 
+    'linear-gradient(135deg, #FF6B6B, #FF4444)'
+  };
+  color: white;
+  padding: 1px 4px;
+  border-radius: 10px;
+  font-size: 7px;
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1.2;
+  min-width: 14px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: ${({ $special }) => $special ? 'pulse 2s infinite' : 'none'};
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+`;
+
+// Calendar Header - Proportional spacing
+const CalendarHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  height: 32px;
+  gap: 12px;
+`;
+
+const MonthNavigation = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const NavButton = styled.button`
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+`;
+
+const MonthTitle = styled.h3`
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const QuickActions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex: 1;
+`;
+
+const CalendarViewSwitcher = styled.div`
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+`;
+
+const ViewSwitchButton = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) => $active ? 'rgba(255, 255, 255, 0.3)' : 'transparent'};
+  border: none;
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 5px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 32px;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  ${({ $active }) => $active && `
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  `}
+`;
+
+const ActionButton = styled.button<{ $isActive?: boolean }>`
+  background: ${props => props.$isActive ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)'};
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: white;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+  }
+`;
+
+// Calendar Grid - Styled with card design
+const CalendarGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 1px;
+  border-radius: 6px;
+  height: 180px;
+  width: 100%;
+`;
+
+const WeekDayHeader = styled.div`
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 2px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+`;
+
+const DayCell = styled.div<{ $isToday?: boolean; $isOtherMonth?: boolean; $hasEvents?: boolean }>`
+  background: ${props => {
+    if (props.$isToday) return 'rgba(255, 255, 255, 0.3)';
+    if (props.$hasEvents) return 'rgba(255, 255, 255, 0.2)';
+    return 'rgba(255, 255, 255, 0.1)';
+  }};
+  padding: 3px 2px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  opacity: ${props => props.$isOtherMonth ? 0.5 : 1};
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  ${props => props.$hasEvents && !props.$isOtherMonth && `
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        repeating-linear-gradient(
+          45deg,
+          transparent 0px,
+          transparent 3px,
+          rgba(255, 255, 255, 0.3) 3px,
+          rgba(255, 255, 255, 0.3) 4px
+        );
+      pointer-events: none;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 3px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+      z-index: 1;
+    }
+  `}
+`;
+
+const DayNumber = styled.div<{ $isToday?: boolean }>`
+  font-size: 11px;
+  font-weight: ${props => props.$isToday ? 'bold' : 'normal'};
+  color: white;
+  text-shadow: ${props => props.$isToday ? '0 1px 2px rgba(0, 0, 0, 0.4)' : '0 1px 2px rgba(0, 0, 0, 0.2)'};
+`;
+
+// Week View Components
+const WeekView = styled.div`
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  height: 180px;
+`;
+
+const WeekHeader = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const WeekDayColumn = styled.div`
+  text-align: center;
+`;
+
+const WeekDayName = styled.div`
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+`;
+
+const WeekDayDate = styled.div<{ $isToday?: boolean }>`
+  font-size: 14px;
+  font-weight: ${props => props.$isToday ? 'bold' : 'normal'};
+  color: white;
+  background: ${props => props.$isToday ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)'};
+  border-radius: 8px;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+`;
+
+const WeekEventsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 100px;
+  overflow-y: auto;
+`;
+
+const WeekEventItem = styled.div<{ $color: string }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 3px solid ${({ $color }) => $color};
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+`;
+
+// Day View Components
+const DayView = styled.div`
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  height: 180px;
+`;
+
+const DayHeader = styled.div`
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const DayTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+`;
+
+const DayEventsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+`;
+
+const DayEventItem = styled.div<{ $color: string }>`
+  display: flex;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 4px solid ${({ $color }) => $color};
+  padding: 12px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+`;
+
+const EventTime = styled.div`
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 50px;
+`;
+
+const EventDetails = styled.div`
+  flex: 1;
+`;
+
+const EventTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2px;
+`;
+
+const EventLocation = styled.div`
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const EmptyDayMessage = styled.div`
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  padding: 20px;
+`;
+
+
+
+// Event Popup Modal - Modern Blue Design
+const EventPopupOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(13, 27, 42, 0.8);
+  backdrop-filter: blur(8px);
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+`;
+
+const EventPopup = styled.div`
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 24px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: ${slideUp} 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 25px 50px -12px rgba(61, 76, 116, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+`;
+
+const PopupHeader = styled.div`
+  background: linear-gradient(135deg, #3d4c74, #4a5a85, #566896);
+  padding: 24px 24px 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  }
+`;
+
+const PopupTitle = styled.h3`
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: -0.5px;
+`;
+
+const PopupCloseButton = styled.button`
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 18px;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  font-weight: 300;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+`;
+
+const PopupViewTabs = styled.div`
+  display: flex;
+  gap: 4px;
+  padding: 16px 24px;
+  background: rgba(61, 76, 116, 0.02);
+`;
+
+const ViewTab = styled.button<{ $active: boolean }>`
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  background: ${({ $active }) => 
+    $active 
+      ? 'linear-gradient(135deg, #4a5a85, #566896)' 
+      : 'transparent'
+  };
+  color: ${({ $active }) => $active ? 'white' : '#64748b'};
+  font-size: 14px;
+  font-weight: ${({ $active }) => $active ? '600' : '500'};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  
+  &:hover {
+    background: ${({ $active }) => 
+      $active 
+        ? 'linear-gradient(135deg, #4a5a85, #566896)' 
+        : 'rgba(74, 90, 133, 0.1)'
+    };
+    transform: translateY(-1px);
+  }
+  
+  ${({ $active }) => $active && `
+    box-shadow: 0 4px 12px rgba(74, 90, 133, 0.3);
+  `}
+`;
+
+const PopupContent = styled.div`
+  padding: 0 24px 24px 24px;
+  background: #ffffff;
+`;
+
+const EventList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const PopupEventCard = styled.div<{ $color: string }>`
+  padding: 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border: 1px solid rgba(74, 90, 133, 0.1);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 12px;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: ${({ $color }) => $color};
+    border-radius: 16px 0 0 16px;
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(74, 90, 133, 0.15);
+    border-color: rgba(74, 90, 133, 0.2);
+  }
+`;
+
+const EventCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+`;
+
+const EventCardTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.3;
+`;
+
+const EventCardBadge = styled.div<{ $color: string }>`
+  background: linear-gradient(135deg, ${({ $color }) => $color}15, ${({ $color }) => $color}10);
+  color: ${({ $color }) => $color};
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid ${({ $color }) => $color}20;
+`;
+
+const EventCardDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const EventDetail = styled.div`
+  font-size: 14px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  
+  span {
+    font-size: 16px;
+  }
+`;
+
 export const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -93,9 +949,279 @@ export const DashboardScreen: React.FC = () => {
   const [currentPoints, setCurrentPoints] = useState(getUserPoints());
   
   // Filter state for bottom panel system
-  const [activeFilter, setActiveFilter] = useState<string | null>('featured-rewards');
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [showBottomPanel, setShowBottomPanel] = useState(false);
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
+  
+  // Calendar state
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showGoogleSync, setShowGoogleSync] = useState(false);
+  const [aiSuggestionsEnabled, setAiSuggestionsEnabled] = useState(true);
+  const [showEventPopup, setShowEventPopup] = useState(false);
+  const [popupView, setPopupView] = useState<'day' | 'week' | 'month'>('day');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('month');
+  
+  // Travel Fund Modal states
+  const [showTravelPlansModal, setShowTravelPlansModal] = useState(false);
+  const [showTravelDetailModal, setShowTravelDetailModal] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState<number | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'funding' | 'timeline'>('overview');
+  
+  // ESC key handler for modals
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowTravelPlansModal(false);
+        setShowTravelDetailModal(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+  
+  // Travel Plans Data
+  const travelPlans = [
+    {
+      id: 1,
+      title: 'Bali Adventure',
+      date: 'Dec 15-22, 2024',
+      emoji: '🏝️',
+      totalBudget: 2000,
+      currentFunding: 950,
+      percentage: 47.5,
+      breakdown: {
+        flight: { budget: 600, funded: 600 },
+        hotel: { budget: 800, funded: 200 },
+        food: { budget: 400, funded: 0 },
+        activities: { budget: 200, funded: 150 }
+      }
+    },
+    {
+      id: 2,
+      title: 'Umrah Journey',
+      date: 'March 2025',
+      emoji: '🕌',
+      totalBudget: 8000,
+      currentFunding: 2000,
+      percentage: 25,
+      breakdown: {
+        flight: { budget: 3000, funded: 1500 },
+        hotel: { budget: 3000, funded: 500 },
+        food: { budget: 1000, funded: 0 },
+        activities: { budget: 1000, funded: 0 }
+      }
+    },
+    {
+      id: 3,
+      title: 'Tokyo Exploration',
+      date: 'June 2025',
+      emoji: '🗼',
+      totalBudget: 5000,
+      currentFunding: 500,
+      percentage: 10,
+      breakdown: {
+        flight: { budget: 2000, funded: 300 },
+        hotel: { budget: 1500, funded: 200 },
+        food: { budget: 1000, funded: 0 },
+        activities: { budget: 500, funded: 0 }
+      }
+    }
+  ];
+  
+  // Mock calendar events for compact calendar - using current date for today's events
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonthIndex = today.getMonth();
+  const currentDay = today.getDate();
+  
+  const [calendarEvents] = useState<CalendarEvent[]>([
+    {
+      id: '1',
+      date: new Date(currentYear, currentMonthIndex, 1),
+      time: '19:00',
+      title: 'New Year Gathering',
+      type: 'social',
+      icon: '🎉',
+      color: '#9C27B0',
+      status: 'confirmed'
+    },
+    {
+      id: '2',
+      date: new Date(currentYear, currentMonthIndex, currentDay), // Today's event
+      time: '09:00',
+      title: 'Cafe Meetup - KLCC',
+      type: 'cafe',
+      icon: '☕',
+      color: '#795548',
+      status: 'confirmed',
+      location: 'Espresso Lab KLCC'
+    },
+    {
+      id: '3',
+      date: new Date(currentYear, currentMonthIndex, currentDay), // Today's event
+      time: '19:00',
+      title: 'AI: Badminton Session',
+      type: 'ai',
+      icon: '🤖',
+      color: '#FF4444',
+      status: 'suggested'
+    },
+    {
+      id: '4',
+      date: new Date(currentYear, currentMonthIndex, 12),
+      time: '10:00',
+      title: 'Ilm Study Circle',
+      type: 'ilm',
+      icon: '📚',
+      color: '#FF9800',
+      status: 'confirmed'
+    },
+    {
+      id: '5',
+      date: new Date(currentYear, currentMonthIndex, 15),
+      time: '07:00',
+      title: 'Beach Cleanup',
+      type: 'volunteer',
+      icon: '🌱',
+      color: '#8BC34A',
+      status: 'confirmed'
+    },
+    {
+      id: '6',
+      date: new Date(currentYear, currentMonthIndex, 20),
+      time: '14:00',
+      title: 'Donation Drive',
+      type: 'donate',
+      icon: '🤲',
+      color: '#4CAF50',
+      status: 'confirmed'
+    },
+    {
+      id: '7',
+      date: new Date(currentYear, currentMonthIndex, 25),
+      time: '06:00',
+      title: 'Cameron Highlands Trip',
+      type: 'trips',
+      icon: '✈️',
+      color: '#00BCD4',
+      status: 'confirmed'
+    },
+    {
+      id: '8',
+      date: new Date(currentYear, currentMonthIndex, 28),
+      time: '16:00',
+      title: 'Sukan Badminton',
+      type: 'sukan',
+      icon: '🏸',
+      color: '#FF5722',
+      status: 'confirmed'
+    }
+  ]);
+
+  // Mock suggested events for days without committed events
+  const [suggestedEvents] = useState<CalendarEvent[]>([
+    {
+      id: 'suggest_1',
+      date: new Date(currentYear, currentMonthIndex, 2),
+      time: '14:00',
+      title: 'Coffee Chat - Pavilion',
+      type: 'cafe',
+      icon: '☕',
+      color: '#795548',
+      status: 'suggested',
+      location: 'Starbucks Pavilion KL'
+    },
+    {
+      id: 'suggest_2',
+      date: new Date(currentYear, currentMonthIndex, 5),
+      time: '19:00',
+      title: 'Evening Prayers & Discussion',
+      type: 'ilm',
+      icon: '🕌',
+      color: '#FF9800',
+      status: 'suggested',
+      location: 'Masjid Jamek'
+    },
+    {
+      id: 'suggest_3',
+      date: new Date(currentYear, currentMonthIndex, 8),
+      time: '10:00',
+      title: 'Weekend Basketball',
+      type: 'sukan',
+      icon: '🏀',
+      color: '#FF5722',
+      status: 'suggested',
+      location: 'Titiwangsa Sports Complex'
+    },
+    {
+      id: 'suggest_4',
+      date: new Date(currentYear, currentMonthIndex, 11),
+      time: '16:00',
+      title: 'Community Garden Volunteering',
+      type: 'volunteer',
+      icon: '🌱',
+      color: '#8BC34A',
+      status: 'suggested',
+      location: 'Taman Tasik Perdana'
+    },
+    {
+      id: 'suggest_5',
+      date: new Date(currentYear, currentMonthIndex, 14),
+      time: '18:30',
+      title: 'Photography Walk - KLCC',
+      type: 'social',
+      icon: '📸',
+      color: '#9C27B0',
+      status: 'suggested',
+      location: 'KLCC Park'
+    },
+    {
+      id: 'suggest_6',
+      date: new Date(currentYear, currentMonthIndex, 18),
+      time: '20:00',
+      title: 'Ramadan Prep Workshop',
+      type: 'ilm',
+      icon: '📚',
+      color: '#FF9800',
+      status: 'suggested',
+      location: 'Islamic Centre KL'
+    },
+    {
+      id: 'suggest_7',
+      date: new Date(currentYear, currentMonthIndex, 22),
+      time: '08:00',
+      title: 'Morning Hike - Bukit Tabur',
+      type: 'trips',
+      icon: '⛰️',
+      color: '#00BCD4',
+      status: 'suggested',
+      location: 'Bukit Tabur West'
+    },
+    {
+      id: 'suggest_8',
+      date: new Date(currentYear, currentMonthIndex, 26),
+      time: '15:00',
+      title: 'Food Bank Donation Drive',
+      type: 'donate',
+      icon: '🤲',
+      color: '#4CAF50',
+      status: 'suggested',
+      location: 'Kechara Food Bank'
+    }
+  ]);
+
+  // Function to get suggested events for a date
+  const getSuggestedEventsForDate = (date: Date | null) => {
+    if (!date) return [];
+    return suggestedEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate.getDate() === date.getDate() &&
+             eventDate.getMonth() === date.getMonth() &&
+             eventDate.getFullYear() === date.getFullYear();
+    });
+  };
 
   // Use universal redemption hook
   const {
@@ -134,6 +1260,306 @@ export const DashboardScreen: React.FC = () => {
       window.removeEventListener('pointsUpdated', handlePointsUpdate as EventListener);
     };
   }, []);
+  
+  // Calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    return days;
+  };
+  
+  const getEventsForDate = (date: Date | null) => {
+    if (!date) return [];
+    return calendarEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate.getDate() === date.getDate() &&
+             eventDate.getMonth() === date.getMonth() &&
+             eventDate.getFullYear() === date.getFullYear();
+    });
+  };
+  
+  const getEventsForWeek = (date: Date) => {
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    
+    return calendarEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate >= startOfWeek && eventDate <= endOfWeek;
+    });
+  };
+  
+  const getEventsForMonth = () => {
+    return calendarEvents.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate.getMonth() === currentMonth.getMonth() &&
+             eventDate.getFullYear() === currentMonth.getFullYear();
+    });
+  };
+  
+  const getTodayEvents = () => {
+    const today = new Date();
+    return getEventsForDate(today);
+  };
+  
+  const isToday = (date: Date | null) => {
+    if (!date) return false;
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+  
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(currentMonth);
+    if (direction === 'prev') {
+      newMonth.setMonth(currentMonth.getMonth() - 1);
+    } else {
+      newMonth.setMonth(currentMonth.getMonth() + 1);
+    }
+    setCurrentMonth(newMonth);
+  };
+  
+  const handleDayClick = (date: Date | null) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setShowEventPopup(true);
+    setPopupView('day');
+  };
+  
+  const getMonthYear = () => {
+    return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // Compact Calendar Component
+  const CalendarComponent: React.FC = () => {
+    // Only render on development port
+    if (window.location.port !== '5173') return null;
+
+    const eventCategories = {
+      social: { icon: '🎉', color: '#9C27B0' },
+      cafe: { icon: '☕', color: '#795548' },
+      ilm: { icon: '📚', color: '#FF9800' },
+      donate: { icon: '🤲', color: '#4CAF50' },
+      trips: { icon: '✈️', color: '#00BCD4' },
+      sukan: { icon: '🏸', color: '#FF5722' },
+      volunteer: { icon: '🌱', color: '#8BC34A' },
+      ai: { icon: '🤖', color: '#FF4444' }
+    };
+
+    // Get calendar days with previous and next month
+    const getDaysInMonthCompact = (date: Date) => {
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startingDayOfWeek = firstDay.getDay();
+      
+      const days = [];
+      
+      // Previous month days
+      const prevMonthLastDay = new Date(year, month, 0).getDate();
+      for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+        days.push({
+          day: prevMonthLastDay - i,
+          isOtherMonth: true,
+          date: new Date(year, month - 1, prevMonthLastDay - i)
+        });
+      }
+      
+      // Current month days
+      for (let i = 1; i <= daysInMonth; i++) {
+        days.push({
+          day: i,
+          isOtherMonth: false,
+          date: new Date(year, month, i)
+        });
+      }
+      
+      // Next month days
+      const remainingDays = 35 - days.length; // 5 weeks * 7 days
+      for (let i = 1; i <= remainingDays; i++) {
+        days.push({
+          day: i,
+          isOtherMonth: true,
+          date: new Date(year, month + 1, i)
+        });
+      }
+      
+      return days;
+    };
+
+    const days = getDaysInMonthCompact(currentMonth);
+    const todayEvents = getTodayEvents();
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return (
+      <CalendarContainer>
+        <CalendarWidget>
+          {/* Compact Header */}
+          <CalendarHeader>
+            <MonthNavigation>
+              <NavButton onClick={() => navigateMonth('prev')}>
+                ◄
+              </NavButton>
+              <MonthTitle>
+                {getMonthYear()}
+              </MonthTitle>
+              <NavButton onClick={() => navigateMonth('next')}>
+                ►
+              </NavButton>
+            </MonthNavigation>
+            
+            <CalendarViewSwitcher>
+              <ViewSwitchButton 
+                $active={calendarView === 'day'} 
+                onClick={() => setCalendarView('day')}
+              >
+                Day
+              </ViewSwitchButton>
+              <ViewSwitchButton 
+                $active={calendarView === 'week'} 
+                onClick={() => setCalendarView('week')}
+              >
+                Week
+              </ViewSwitchButton>
+              <ViewSwitchButton 
+                $active={calendarView === 'month'} 
+                onClick={() => setCalendarView('month')}
+              >
+                Month
+              </ViewSwitchButton>
+            </CalendarViewSwitcher>
+          </CalendarHeader>
+
+          <CalendarContent>
+            <CalendarLeft>
+              {/* Render different calendar views */}
+              {calendarView === 'month' && (
+                <CalendarGrid>
+                  {weekDays.map(day => (
+                    <WeekDayHeader key={day}>{day.charAt(0)}</WeekDayHeader>
+                  ))}
+                  
+                  {days.map((dayInfo, index) => {
+                    const dayEvents = getEventsForDate(dayInfo.date);
+                    return (
+                      <DayCell
+                        key={index}
+                        $isToday={isToday(dayInfo.date)}
+                        $isOtherMonth={dayInfo.isOtherMonth}
+                        $hasEvents={dayEvents.length > 0}
+                        onClick={() => handleDayClick(dayInfo.date)}
+                      >
+                        <DayNumber $isToday={isToday(dayInfo.date)}>
+                          {dayInfo.day}
+                        </DayNumber>
+                      </DayCell>
+                    );
+                  })}
+                </CalendarGrid>
+              )}
+
+              {calendarView === 'week' && (
+                <WeekView>
+                  <WeekHeader>
+                    {Array.from({length: 7}, (_, i) => {
+                      const date = new Date(selectedDate);
+                      date.setDate(selectedDate.getDate() - selectedDate.getDay() + i);
+                      return (
+                        <WeekDayColumn key={i}>
+                          <WeekDayName>{weekDays[i]}</WeekDayName>
+                          <WeekDayDate 
+                            $isToday={isToday(date)}
+                            onClick={() => handleDayClick(date)}
+                          >
+                            {date.getDate()}
+                          </WeekDayDate>
+                        </WeekDayColumn>
+                      );
+                    })}
+                  </WeekHeader>
+                  <WeekEventsContainer>
+                    {getEventsForWeek(selectedDate).map(event => (
+                      <WeekEventItem key={event.id} $color={event.color}>
+                        <span>{event.icon}</span>
+                        <div>
+                          <div style={{fontWeight: '600', fontSize: '12px'}}>{event.title}</div>
+                          <div style={{fontSize: '10px', opacity: 0.8}}>{event.time}</div>
+                        </div>
+                      </WeekEventItem>
+                    ))}
+                  </WeekEventsContainer>
+                </WeekView>
+              )}
+
+              {calendarView === 'day' && (
+                <DayView>
+                  <DayHeader>
+                    <DayTitle>
+                      {selectedDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </DayTitle>
+                  </DayHeader>
+                  <DayEventsContainer>
+                    {getEventsForDate(selectedDate).length > 0 ? (
+                      getEventsForDate(selectedDate).map(event => (
+                        <DayEventItem key={event.id} $color={event.color}>
+                          <EventTime>{event.time}</EventTime>
+                          <EventDetails>
+                            <EventTitle>{event.icon} {event.title}</EventTitle>
+                            <EventLocation>{event.location}</EventLocation>
+                          </EventDetails>
+                        </DayEventItem>
+                      ))
+                    ) : (
+                      <EmptyDayMessage>
+                        <div style={{fontSize: '32px', marginBottom: '8px'}}>📅</div>
+                        <div>No events scheduled for this day</div>
+                      </EmptyDayMessage>
+                    )}
+                  </DayEventsContainer>
+                </DayView>
+              )}
+            </CalendarLeft>
+          </CalendarContent>
+        </CalendarWidget>
+      </CalendarContainer>
+    );
+  };
+
+  // Travel deals data for dashboard
+  const travelDeals = [
+    { title: 'English Course', discount: '20% OFF', points: '💰 50 pts', color: '#70AD47' },
+    { title: 'Mukha Cafe', discount: '20% off', points: '💰 25 pts', color: '#FF6B35' },
+    { title: 'Bali Trip', discount: '20% OFF', points: '500 points', color: '#9B59B6' },
+    { title: 'University Studies', discount: '20% OFF', points: '💰 100 pts', color: '#70AD47' },
+    { title: 'Umrah Package', discount: '25% OFF', points: '600 points', color: '#9B59B6' },
+    { title: 'Dubai Hotel', discount: '30% OFF', points: '400 points', color: '#9B59B6' },
+    { title: 'Flight to Tokyo', discount: '15% OFF', points: '800 points', color: '#4A90E2' },
+  ];
 
   // Generate QR code data for BersePass
   const generateQRData = () => {
@@ -205,16 +1631,22 @@ export const DashboardScreen: React.FC = () => {
   const renderFilterContent = (filter: string | null) => {
     switch (filter) {
       case 'featured-rewards':
+        // Updated design - should show new layout
         return (
           <RewardsContainer>
             <RewardsGrid>
-              <RewardCard $bgColor="#4A90E2">
-                <FilterRewardIcon>📚</FilterRewardIcon>
+              <RewardCard $bgColor="#70AD47">
+                <CategoryLabel>📚 EDUCATION</CategoryLabel>
+                <ClaimedText>60% CLAIMED</ClaimedText>
+                <MiniProgressBar $percentage={60} />
+                
                 <RewardContent>
                   <RewardTitle>BRIGHT English Centre</RewardTitle>
-                  <RewardDiscount>20% off English courses</RewardDiscount>
-                  <FilterRewardPoints>50 pts</FilterRewardPoints>
+                  <DiscountBox>20% OFF</DiscountBox>
+                  <FilterRewardPoints>💰 50 pts</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Limited time</ExpiryInfo>
                 </RewardContent>
+                
                 <FilterRedeemButton 
                   onClick={() => handleRedeemClick({
                     id: 'bright',
@@ -233,13 +1665,18 @@ export const DashboardScreen: React.FC = () => {
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#27AE60">
-                <FilterRewardIcon>🎓</FilterRewardIcon>
+              <RewardCard $bgColor="#70AD47">
+                <CategoryLabel>📚 EDUCATION</CategoryLabel>
+                <ClaimedText>80% CLAIMED</ClaimedText>
+                <MiniProgressBar $percentage={80} />
+                
                 <RewardContent>
                   <RewardTitle>University Studies</RewardTitle>
-                  <RewardDiscount>20% off university fees</RewardDiscount>
-                  <FilterRewardPoints>100 pts</FilterRewardPoints>
+                  <DiscountBox>20% OFF</DiscountBox>
+                  <FilterRewardPoints>💰 100 pts</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Expires in 2 days</ExpiryInfo>
                 </RewardContent>
+                
                 <FilterRedeemButton 
                   onClick={() => handleRedeemClick({
                     id: 'university',
@@ -258,13 +1695,18 @@ export const DashboardScreen: React.FC = () => {
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#E91E63">
-                <FilterRewardIcon>☕</FilterRewardIcon>
+              <RewardCard $bgColor="#FF6B35">
+                <CategoryLabel>🍽️ FOOD & DRINKS</CategoryLabel>
+                <ClaimedText>45% CLAIMED</ClaimedText>
+                <MiniProgressBar $percentage={45} />
+                
                 <RewardContent>
                   <RewardTitle>Mukha Cafe</RewardTitle>
-                  <RewardDiscount>Food & beverage discount</RewardDiscount>
-                  <FilterRewardPoints>25 pts</FilterRewardPoints>
+                  <DiscountBox>Food & Beverage</DiscountBox>
+                  <FilterRewardPoints>💰 25 pts</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Today only</ExpiryInfo>
                 </RewardContent>
+                
                 <FilterRedeemButton 
                   onClick={() => handleRedeemClick({
                     id: 'mukha',
@@ -283,13 +1725,18 @@ export const DashboardScreen: React.FC = () => {
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#FF9800">
-                <FilterRewardIcon>✈️</FilterRewardIcon>
+              <RewardCard $bgColor="#9B59B6">
+                <CategoryLabel>✈️ TRAVEL</CategoryLabel>
+                <ClaimedText>30% CLAIMED</ClaimedText>
+                <MiniProgressBar $percentage={30} />
+                
                 <RewardContent>
                   <RewardTitle>Umrah Travel & Tours</RewardTitle>
-                  <RewardDiscount>10% discount on travel</RewardDiscount>
-                  <FilterRewardPoints>75 pts</FilterRewardPoints>
+                  <DiscountBox>10% OFF</DiscountBox>
+                  <FilterRewardPoints>💰 75 pts</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Limited spots</ExpiryInfo>
                 </RewardContent>
+                
                 <FilterRedeemButton 
                   onClick={() => handleRedeemClick({
                     id: 'umran',
@@ -470,397 +1917,355 @@ export const DashboardScreen: React.FC = () => {
         `}
       </style>
       <StatusBar />
-      {/* Standardized Header */}
-<div style={{
-  background: '#F5F3EF',
-  width: '100%',
-  padding: '12px 16px',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-}}>
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  }}>
-    <div 
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '12px',
-        cursor: 'pointer',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        borderRadius: '12px',
-        padding: '4px 8px 4px 4px',
-        position: 'relative'
-      }}
-      onClick={() => {
-        console.log('Profile icon clicked - opening sidebar');
-        setShowProfileSidebar(true);
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(74, 103, 65, 0.1)';
-        e.currentTarget.style.transform = 'translateX(2px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent';
-        e.currentTarget.style.transform = 'translateX(0)';
-      }}
-    >
-      <div style={{
-        width: '40px',
-        height: '40px',
-        borderRadius: '50%',
-        background: '#4A6741',
-        color: 'white',
-        fontSize: '16px',
-        fontWeight: 'bold',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 2px 8px rgba(74, 103, 65, 0.3)',
-        border: '2px solid white',
-        transition: 'transform 0.3s ease'
-      }}>
-        {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : 'ZM'}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <div style={{ fontSize: '12px', color: '#999999', fontWeight: 'normal' }}>Your Activity Overview</div>
-        <div style={{ fontSize: '18px', color: '#333333', fontWeight: '600' }}>Dashboard</div>
-      </div>
-    </div>
-    <div style={{
-      background: '#FF6B6B',
-      color: 'white',
-      width: '20px',
-      height: '20px',
-      borderRadius: '50%',
-      fontSize: '12px',
-      fontWeight: 'bold',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>3</div>
-  </div>
-</div>
+      <CompactHeader 
+        onMenuClick={() => setShowProfileSidebar(true)}
+      />
       
       <Content>
+        {/* Compact Calendar Widget - Only shows on port 5173 */}
+        <CalendarComponent />
 
-        {/* BersePass Card - Exact Specification */}
-        <div style={{
-          maxWidth: '400px',
-          margin: '0 auto',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          padding: '20px',
-          border: '3px solid #00C851',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          marginBottom: '20px',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        }}>
-          {/* Header Section */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '16px' 
-          }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '600', 
-              color: '#333', 
-              margin: 0 
-            }}>BersePass</h3>
-            <div style={{
-              background: '#00C851',
-              color: 'white',
-              padding: '4px 12px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              <div style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: 'white'
-              }}></div>
-              Active
-            </div>
-          </div>
-          
-          {/* Balance Section */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start', 
-            marginBottom: '20px' 
-          }}>
-            {/* Left Column */}
-            <div>
-              <div style={{ 
-                fontSize: '28px', 
-                fontWeight: 'bold', 
-                color: '#333', 
-                lineHeight: '1' 
-              }}>
-                RM {isLoadingBalance ? '...' : setelBalance.toFixed(2)}
-              </div>
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#666', 
-                marginTop: '4px' 
-              }}>Current Balance</div>
-            </div>
+        {/* Quick Actions Section - Separate from Calendar */}
+        <QuickActionsSection>
+          <QuickActionsContainer>
+            <QuickActionsHeader>
+              <QuickActionsTitle>Quick Actions</QuickActionsTitle>
+              <TravelFundButton onClick={() => setShowTravelPlansModal(true)}>
+                ✈️ My Travel Fund
+              </TravelFundButton>
+            </QuickActionsHeader>
             
-            {/* Right Column */}
-            <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
-              <div style={{ fontSize: '12px', color: '#666' }}>RM 19.99/month</div>
-              <div style={{ fontSize: '12px', color: '#666' }}>Next: Dec 15</div>
-            </div>
-          </div>
-          
-          {/* Buttons Section */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            gap: '8px' 
-          }}>
-            <button style={{
-              background: '#f8f9fa',
-              color: '#333',
-              border: '1px solid #e9ecef',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              textAlign: 'center',
-              flex: '1',
-              textDecoration: 'none',
-              cursor: 'pointer',
-              transition: 'background 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-            onClick={() => {
-              if (isSetelConnected) {
-                alert('Opening Setel app for top-up...');
-              } else {
-                setShowSetelOnboarding(true);
-              }
-            }}>
-              Top-up in Setel
-            </button>
-            
-            <button style={{
-              background: '#f8f9fa',
-              color: '#333',
-              border: '1px solid #e9ecef',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              textAlign: 'center',
-              flex: '1',
-              textDecoration: 'none',
-              cursor: 'pointer',
-              transition: 'background 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-            onClick={() => setIsDualQRModalOpen(true)}>
-              QR Code
-            </button>
-            
-            <button style={{
-              background: '#f8f9fa',
-              color: '#333',
-              border: '1px solid #e9ecef',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              textAlign: 'center',
-              flex: '1',
-              textDecoration: 'none',
-              cursor: 'pointer',
-              transition: 'background 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-            onClick={() => setIsManagePassModalOpen(true)}>
-              Manage Pass
-            </button>
-          </div>
-        </div>
-
-        {/* BersePoints & Rewards Card - Exact Specification */}
-        <div style={{
-          maxWidth: '400px',
-          margin: '0 auto',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          padding: '20px',
-          border: '3px solid #FFA500',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          marginBottom: '16px',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        }}>
-          {/* Header Section */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '20px' 
-          }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '600', 
-              color: '#333', 
-              margin: 0 
-            }}>BersePoints & Rewards</h3>
-            <div style={{
-              background: '#8E44AD',
-              color: 'white',
-              padding: '4px 12px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: '500'
-            }}>
-              Level 3
-            </div>
-          </div>
-          
-          {/* Stats Section */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start', 
-            marginBottom: '16px' 
-          }}>
-            {/* Left Column */}
-            <div style={{ flex: '1' }}>
-              <div style={{ 
-                fontSize: '28px', 
-                fontWeight: 'bold', 
-                color: '#FFA500', 
-                lineHeight: '1' 
-              }}>
-                {currentPoints}
-              </div>
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#666', 
-                marginTop: '2px' 
-              }}>points available</div>
-            </div>
-            
-            {/* Right Section */}
-            <div style={{ 
-              flex: '1', 
-              display: 'flex', 
-              flexDirection: 'row', 
-              gap: '12px', 
-              justifyContent: 'flex-end' 
-            }}>
-              {/* Redeemed Stat */}
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center' 
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  color: '#000', 
-                  fontWeight: '600' 
-                }}>RM 347</div>
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: '#666' 
-                }}>Redeemed</div>
-              </div>
+            <QuickActionsGrid>
+              <QuickActionButton $variant="events" onClick={() => navigate('/connect')}>
+                <ActionBadge>3</ActionBadge>
+                <ActionIcon>🎫</ActionIcon>
+                <ActionText>
+                  <strong>Find Events</strong>
+                  Sports & gatherings
+                </ActionText>
+              </QuickActionButton>
               
-              {/* Weekly Stat */}
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center' 
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  color: '#000', 
-                  fontWeight: '600' 
-                }}>+15</div>
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: '#666' 
-                }}>This week</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Progress Section */}
-          <div>
-            {/* Progress Bar */}
-            <div style={{
-              width: '100%',
-              height: '8px',
-              background: '#E0E0E0',
-              borderRadius: '4px',
-              overflow: 'hidden',
-              marginBottom: '8px'
-            }}>
-              <div style={{
-                width: '82%',
-                height: '100%',
-                background: '#FFA500',
-                borderRadius: '4px'
-              }}></div>
-            </div>
-            
-            {/* Bottom Row */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
-            }}>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666' 
-              }}>
-                {currentPoints}/300 to Level 4
-              </div>
-              <button 
-                onClick={() => navigate('/points')}
-                style={{
-                  background: '#FFA500',
-                  color: 'white',
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#FF8C00'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#FFA500'}
+              <QuickActionButton $variant="profiles" onClick={() => navigate('/match')}>
+                <ActionBadge>5</ActionBadge>
+                <ActionIcon>👥</ActionIcon>
+                <ActionText>
+                  <strong>Explore Profiles</strong>
+                  Connect & network
+                </ActionText>
+              </QuickActionButton>
+              
+              <QuickActionButton $variant="market" onClick={() => navigate('/market')}>
+                <ActionBadge>10</ActionBadge>
+                <ActionIcon>🛍️</ActionIcon>
+                <ActionText>
+                  <strong>BerseMarket</strong>
+                  Buy, sell, trade
+                </ActionText>
+              </QuickActionButton>
+              
+              <QuickActionButton $variant="game" onClick={() => navigate('/bersecardgame')}>
+                <ActionBadge $special>!</ActionBadge>
+                <ActionIcon>🃏</ActionIcon>
+                <ActionText>
+                  <strong>BerseCardGame</strong>
+                  Conversational prompts
+                </ActionText>
+              </QuickActionButton>
+            </QuickActionsGrid>
+          </QuickActionsContainer>
+        </QuickActionsSection>
+
+        {/* Event Popup Modal */}
+        <EventPopupOverlay 
+          $isOpen={showEventPopup} 
+          onClick={() => setShowEventPopup(false)}
+        >
+          <EventPopup onClick={(e) => e.stopPropagation()}>
+            <PopupHeader>
+              <PopupTitle>
+                {popupView === 'day' && selectedDate && 
+                  selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                }
+                {popupView === 'week' && 'This Week'}
+                {popupView === 'month' && getMonthYear()}
+              </PopupTitle>
+              <PopupCloseButton onClick={() => setShowEventPopup(false)}>
+                ×
+              </PopupCloseButton>
+            </PopupHeader>
+
+            <PopupViewTabs>
+              <ViewTab 
+                $active={popupView === 'day'} 
+                onClick={() => setPopupView('day')}
               >
-                See All Rewards
-              </button>
-            </div>
-          </div>
-        </div>
+                Day
+              </ViewTab>
+              <ViewTab 
+                $active={popupView === 'week'} 
+                onClick={() => setPopupView('week')}
+              >
+                Week
+              </ViewTab>
+              <ViewTab 
+                $active={popupView === 'month'} 
+                onClick={() => setPopupView('month')}
+              >
+                Month
+              </ViewTab>
+            </PopupViewTabs>
+
+            <PopupContent>
+              <EventList>
+                {popupView === 'day' && selectedDate && (
+                  (() => {
+                    const committedEvents = getEventsForDate(selectedDate);
+                    const suggestedEvents = getSuggestedEventsForDate(selectedDate);
+                    
+                    if (committedEvents.length > 0) {
+                      // Show committed events
+                      return (
+                        <>
+                          <div style={{ 
+                            marginBottom: '20px', 
+                            padding: '16px 20px', 
+                            background: 'linear-gradient(135deg, rgba(74, 90, 133, 0.05), rgba(86, 104, 150, 0.02))', 
+                            borderRadius: '16px',
+                            border: '1px solid rgba(74, 90, 133, 0.1)',
+                            position: 'relative'
+                          }}>
+                            <div style={{ 
+                              fontSize: '16px', 
+                              fontWeight: '700', 
+                              color: '#1e293b',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              marginBottom: '4px'
+                            }}>
+                              ✅ Your Committed Events
+                            </div>
+                            <div style={{ 
+                              fontSize: '13px', 
+                              color: '#64748b',
+                              fontWeight: '500'
+                            }}>
+                              Events you've joined and confirmed to attend
+                            </div>
+                          </div>
+                          {committedEvents.map(event => (
+                            <PopupEventCard key={event.id} $color={event.color}>
+                              <EventCardHeader>
+                                <EventCardTitle>
+                                  {event.icon} {event.title}
+                                </EventCardTitle>
+                                <EventCardBadge $color={event.color}>
+                                  {event.status}
+                                </EventCardBadge>
+                              </EventCardHeader>
+                              <EventCardDetails>
+                                <EventDetail>
+                                  🕐 {event.time}
+                                </EventDetail>
+                                <EventDetail>
+                                  📍 {event.location}
+                                </EventDetail>
+                                <EventDetail style={{ color: '#4CAF50', fontWeight: '600' }}>
+                                  ✅ You're attending
+                                </EventDetail>
+                              </EventCardDetails>
+                            </PopupEventCard>
+                          ))}
+                        </>
+                      );
+                    } else if (suggestedEvents.length > 0) {
+                      // Show suggested events
+                      return (
+                        <>
+                          <div style={{ 
+                            marginBottom: '20px', 
+                            padding: '16px 20px', 
+                            background: 'linear-gradient(135deg, rgba(100, 116, 139, 0.08), rgba(74, 90, 133, 0.03))', 
+                            borderRadius: '16px',
+                            border: '1px solid rgba(100, 116, 139, 0.15)',
+                            position: 'relative'
+                          }}>
+                            <div style={{ 
+                              fontSize: '16px', 
+                              fontWeight: '700', 
+                              color: '#334155',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              marginBottom: '4px'
+                            }}>
+                              💡 Suggested Events in Your City
+                            </div>
+                            <div style={{ 
+                              fontSize: '13px', 
+                              color: '#64748b',
+                              fontWeight: '500'
+                            }}>
+                              Tap an event to join and meet like-minded people
+                            </div>
+                          </div>
+                          {suggestedEvents.map(event => (
+                            <SuggestedEventCard key={event.id} $color={event.color}>
+                              <EventCardHeader>
+                                <EventCardTitle>
+                                  {event.icon} {event.title}
+                                </EventCardTitle>
+                                <SuggestedBadge>
+                                  Suggested
+                                </SuggestedBadge>
+                              </EventCardHeader>
+                              <EventCardDetails>
+                                <EventDetail>
+                                  🕐 {event.time}
+                                </EventDetail>
+                                <EventDetail>
+                                  📍 {event.location}
+                                </EventDetail>
+                                <EventDetail style={{ color: '#FF9800', fontWeight: '600' }}>
+                                  💎 +5 points for joining
+                                </EventDetail>
+                              </EventCardDetails>
+                              <JoinEventButton>
+                                <span>👋</span> Join Event
+                              </JoinEventButton>
+                            </SuggestedEventCard>
+                          ))}
+                        </>
+                      );
+                    } else {
+                      // No events at all
+                      return (
+                        <div style={{ textAlign: 'center', color: '#666', padding: '40px 20px' }}>
+                          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: '0.5' }}>
+                            📅
+                          </div>
+                          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+                            No events for this day
+                          </div>
+                          <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '20px' }}>
+                            Check back later or explore other dates for upcoming activities in your area
+                          </div>
+                          <div style={{
+                            background: '#2D5F4F',
+                            color: 'white',
+                            padding: '10px 16px',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'inline-block'
+                          }}
+                          onClick={() => navigate('/connect')}
+                          >
+                            🔍 Find Events
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()
+                )}
+
+                {popupView === 'week' && selectedDate && (
+                  getEventsForWeek(selectedDate).length > 0 ? (
+                    getEventsForWeek(selectedDate).map(event => (
+                      <PopupEventCard key={event.id} $color={event.color}>
+                        <EventCardHeader>
+                          <EventCardTitle>
+                            {event.icon} {event.title}
+                          </EventCardTitle>
+                          <EventCardBadge $color={event.color}>
+                            {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </EventCardBadge>
+                        </EventCardHeader>
+                        <EventCardDetails>
+                          <EventDetail>
+                            🕐 {event.time}
+                          </EventDetail>
+                          <EventDetail>
+                            📍 {event.location}
+                          </EventDetail>
+                          {event.points && (
+                            <EventDetail style={{ color: '#4CAF50', fontWeight: '600' }}>
+                              💎 +{event.points} points
+                            </EventDetail>
+                          )}
+                        </EventCardDetails>
+                      </PopupEventCard>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                      No events scheduled for this week
+                    </div>
+                  )
+                )}
+
+                {popupView === 'month' && (
+                  getEventsForMonth().length > 0 ? (
+                    getEventsForMonth().map(event => (
+                      <PopupEventCard key={event.id} $color={event.color}>
+                        <EventCardHeader>
+                          <EventCardTitle>
+                            {event.icon} {event.title}
+                          </EventCardTitle>
+                          <EventCardBadge $color={event.color}>
+                            {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </EventCardBadge>
+                        </EventCardHeader>
+                        <EventCardDetails>
+                          <EventDetail>
+                            🕐 {event.time}
+                          </EventDetail>
+                          <EventDetail>
+                            📍 {event.location}
+                          </EventDetail>
+                          {event.points && (
+                            <EventDetail style={{ color: '#4CAF50', fontWeight: '600' }}>
+                              💎 +{event.points} points
+                            </EventDetail>
+                          )}
+                        </EventCardDetails>
+                      </PopupEventCard>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                      No events scheduled for this month
+                    </div>
+                  )
+                )}
+              </EventList>
+            </PopupContent>
+          </EventPopup>
+        </EventPopupOverlay>
+
+        {/* Featured Rewards */}
+        <FeaturedRewardsContainer>
+          <FeaturedRewardsTitle>
+            Featured Rewards
+          </FeaturedRewardsTitle>
+          <HorizontalScroll>
+            {travelDeals.map((deal, index) => (
+              <DealCard key={index} bgColor={deal.color}>
+                <DealCardTitle color="white">{deal.title}</DealCardTitle>
+                <DealCardDiscount color="white">{deal.discount}</DealCardDiscount>
+                <DealCardPoints color="rgba(255,255,255,0.8)">
+                  {deal.points}
+                </DealCardPoints>
+                <DealCardButton>
+                  Redeem
+                </DealCardButton>
+              </DealCard>
+            ))}
+          </HorizontalScroll>
+        </FeaturedRewardsContainer>
 
         {/* Features Section - Filter Based System */}
         <FeaturesSection>
           <FeaturesGrid>
-            <FeatureButton onClick={() => handleFilterClick('featured-rewards')}>
-              <FeatureIconContainer $bgColor="#FFE8CC" $active={activeFilter === 'featured-rewards'}>
-                <FeatureIcon>🎁</FeatureIcon>
-              </FeatureIconContainer>
-              <FeatureTitle>Featured Rewards</FeatureTitle>
-            </FeatureButton>
-
             <FeatureButton onClick={() => handleFilterClick('points-leaderboard')}>
               <FeatureIconContainer $bgColor="#E8D5E8" $active={activeFilter === 'points-leaderboard'}>
                 <FeatureIcon>🏆</FeatureIcon>
@@ -875,12 +2280,19 @@ export const DashboardScreen: React.FC = () => {
               <FeatureTitle>Recent Activities</FeatureTitle>
             </FeatureButton>
 
-            {/* NEW: BerseCardGame button */}
-            <FeatureButton onClick={() => navigate('/bersecardgame')}>
-              <FeatureIconContainer $bgColor="#FFE8E8" $active={false}>
-                <FeatureIcon>🃏</FeatureIcon>
+            <FeatureButton onClick={() => navigate('/my-vouchers')}>
+              <FeatureIconContainer $bgColor="#E8F0FF" $active={false}>
+                <FeatureIcon>🎫</FeatureIcon>
               </FeatureIconContainer>
-              <FeatureTitle>Card Game</FeatureTitle>
+              <FeatureTitle>My Vouchers</FeatureTitle>
+            </FeatureButton>
+
+            {/* All Rewards button */}
+            <FeatureButton onClick={() => navigate('/points')}>
+              <FeatureIconContainer $bgColor="#FFE8E8" $active={false}>
+                <FeatureIcon>🎁</FeatureIcon>
+              </FeatureIconContainer>
+              <FeatureTitle>All Rewards</FeatureTitle>
             </FeatureButton>
           </FeaturesGrid>
         </FeaturesSection>
@@ -894,20 +2306,22 @@ export const DashboardScreen: React.FC = () => {
       </Content>
 
       <MainNav 
-        activeTab="home"
+        activeTab={activeTab as 'home' | 'connect' | 'match' | 'market'}
         onTabPress={(tab) => {
+          setActiveTab(tab);
           switch (tab) {
-            case 'home':
-              navigate('/dashboard');
-              break;
             case 'connect':
               navigate('/connect');
               break;
             case 'match':
               navigate('/match');
               break;
-            case 'forum':
-              navigate('/forum');
+            case 'market':
+              navigate('/market');
+              break;
+            case 'home':
+            default:
+              // Stay on dashboard
               break;
           }
         }}
@@ -1192,6 +2606,286 @@ export const DashboardScreen: React.FC = () => {
         isOpen={showProfileSidebar}
         onClose={() => setShowProfileSidebar(false)}
       />
+
+      {/* Travel Plans List Modal */}
+      <TravelModalOverlay 
+        $isOpen={showTravelPlansModal}
+        onClick={() => setShowTravelPlansModal(false)}
+      >
+        <TravelModalContainer onClick={(e) => e.stopPropagation()}>
+          <TravelModalHeader>
+            <TravelModalTitle>My Travel Plans 🌍</TravelModalTitle>
+            <TravelModalClose onClick={() => setShowTravelPlansModal(false)}>✕</TravelModalClose>
+          </TravelModalHeader>
+          <TravelModalContent>
+            <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666' }}>
+              Select a trip to view details:
+            </div>
+            
+            {travelPlans.map(trip => (
+              <TripCard key={trip.id}>
+                <TripHeader>
+                  <TripEmoji>{trip.emoji}</TripEmoji>
+                  <TripInfo>
+                    <TripTitle>{trip.title}</TripTitle>
+                    <TripDate>{trip.date}</TripDate>
+                  </TripInfo>
+                </TripHeader>
+                <TripProgress>
+                  <ProgressBar $percentage={trip.percentage} />
+                  <TripFunding>
+                    <span>{trip.percentage}% funded</span>
+                    <span>RM {trip.currentFunding}/{trip.totalBudget}</span>
+                  </TripFunding>
+                </TripProgress>
+                <ViewDetailsButton onClick={() => {
+                  setSelectedTripId(trip.id);
+                  setShowTravelPlansModal(false);
+                  setShowTravelDetailModal(true);
+                  setActiveDetailTab('overview');
+                }}>
+                  View Details →
+                </ViewDetailsButton>
+              </TripCard>
+            ))}
+            
+            <AddTripCard>
+              <TripEmoji>➕</TripEmoji>
+              <TripTitle style={{ marginTop: '8px' }}>Add New Trip Plan</TripTitle>
+              <TripDate>Start planning your next adventure</TripDate>
+              <ViewDetailsButton style={{ background: '#4CAF50' }}>
+                Create New →
+              </ViewDetailsButton>
+            </AddTripCard>
+          </TravelModalContent>
+        </TravelModalContainer>
+      </TravelModalOverlay>
+
+      {/* Travel Plan Detail Modal */}
+      <TravelModalOverlay 
+        $isOpen={showTravelDetailModal}
+        onClick={() => setShowTravelDetailModal(false)}
+      >
+        <TravelModalContainer onClick={(e) => e.stopPropagation()}>
+          {selectedTripId && (() => {
+            const trip = travelPlans.find(t => t.id === selectedTripId);
+            if (!trip) return null;
+            
+            return (
+              <>
+                <TravelModalHeader>
+                  <TravelModalTitle>Travel Fund Planner ✈️</TravelModalTitle>
+                  <TravelModalClose onClick={() => setShowTravelDetailModal(false)}>✕</TravelModalClose>
+                </TravelModalHeader>
+                
+                <TravelModalContent>
+                  <DetailTabs>
+                    <DetailTab 
+                      $active={activeDetailTab === 'overview'}
+                      onClick={() => setActiveDetailTab('overview')}
+                    >
+                      Overview
+                    </DetailTab>
+                    <DetailTab 
+                      $active={activeDetailTab === 'funding'}
+                      onClick={() => setActiveDetailTab('funding')}
+                    >
+                      Funding
+                    </DetailTab>
+                    <DetailTab 
+                      $active={activeDetailTab === 'timeline'}
+                      onClick={() => setActiveDetailTab('timeline')}
+                    >
+                      Timeline
+                    </DetailTab>
+                  </DetailTabs>
+                  
+                  {activeDetailTab === 'overview' && (
+                    <>
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '28px' }}>{trip.emoji}</span>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{trip.title}</h3>
+                            <div style={{ fontSize: '13px', color: '#666' }}>{trip.date}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ background: '#f8f9fa', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Total Progress</div>
+                        <ProgressBar $percentage={trip.percentage} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '13px' }}>
+                          <span>{trip.percentage}% Funded</span>
+                          <span>RM {trip.currentFunding}/{trip.totalBudget}</span>
+                        </div>
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                          45 days remaining
+                        </div>
+                      </div>
+                      
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' }}>Budget Breakdown:</div>
+                        
+                        <BudgetItem>
+                          <BudgetLabel>
+                            <span><BudgetIcon>✈️</BudgetIcon>Flight</span>
+                            <span>RM {trip.breakdown.flight.funded}/{trip.breakdown.flight.budget} ✓</span>
+                          </BudgetLabel>
+                          <ProgressBar $percentage={(trip.breakdown.flight.funded / trip.breakdown.flight.budget) * 100} />
+                        </BudgetItem>
+                        
+                        <BudgetItem>
+                          <BudgetLabel>
+                            <span><BudgetIcon>🏨</BudgetIcon>Hotel</span>
+                            <span>RM {trip.breakdown.hotel.funded}/{trip.breakdown.hotel.budget}</span>
+                          </BudgetLabel>
+                          <ProgressBar $percentage={(trip.breakdown.hotel.funded / trip.breakdown.hotel.budget) * 100} />
+                        </BudgetItem>
+                        
+                        <BudgetItem>
+                          <BudgetLabel>
+                            <span><BudgetIcon>🍽️</BudgetIcon>Food</span>
+                            <span>RM {trip.breakdown.food.funded}/{trip.breakdown.food.budget}</span>
+                          </BudgetLabel>
+                          <ProgressBar $percentage={(trip.breakdown.food.funded / trip.breakdown.food.budget) * 100} />
+                        </BudgetItem>
+                        
+                        <BudgetItem>
+                          <BudgetLabel>
+                            <span><BudgetIcon>🎯</BudgetIcon>Activities</span>
+                            <span>RM {trip.breakdown.activities.funded}/{trip.breakdown.activities.budget}</span>
+                          </BudgetLabel>
+                          <ProgressBar $percentage={(trip.breakdown.activities.funded / trip.breakdown.activities.budget) * 100} />
+                        </BudgetItem>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <BackButton onClick={() => {
+                          setShowTravelDetailModal(false);
+                          setShowTravelPlansModal(true);
+                        }}>
+                          ← Back to Plans
+                        </BackButton>
+                        <TravelActionButton>Edit Trip</TravelActionButton>
+                      </div>
+                    </>
+                  )}
+                  
+                  {activeDetailTab === 'funding' && (
+                    <>
+                      <FundingSection>
+                        <FundingTitle>🛍️ MARKETPLACE OPTIONS</FundingTitle>
+                        <div style={{ fontSize: '13px', marginBottom: '12px' }}>Suggested items to sell:</div>
+                        <CheckboxItem>
+                          <input type="checkbox" />
+                          <span style={{ flex: 1 }}>Textbooks</span>
+                          <span>RM 150</span>
+                        </CheckboxItem>
+                        <CheckboxItem>
+                          <input type="checkbox" />
+                          <span style={{ flex: 1 }}>Electronics</span>
+                          <span>RM 500</span>
+                        </CheckboxItem>
+                        <CheckboxItem>
+                          <input type="checkbox" />
+                          <span style={{ flex: 1 }}>Clothes</span>
+                          <span>RM 100</span>
+                        </CheckboxItem>
+                        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e0e0e0', fontSize: '13px' }}>
+                          <strong>Total value: RM 750</strong>
+                        </div>
+                        <TravelActionButton style={{ width: '100%', marginTop: '12px' }}>
+                          Go to Market →
+                        </TravelActionButton>
+                      </FundingSection>
+                      
+                      <FundingSection>
+                        <FundingTitle>🎁 POINTS REDEMPTION</FundingTitle>
+                        <div style={{ fontSize: '14px', marginBottom: '12px' }}>
+                          Your Points: <strong>800</strong>
+                        </div>
+                        <div style={{ fontSize: '13px', marginBottom: '12px' }}>Available rewards:</div>
+                        <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span>✈️ AirAsia discount -500pts</span>
+                          <span style={{ color: '#4CAF50' }}>Save RM 120</span>
+                        </div>
+                        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span>🏨 Hotel.com -300pts</span>
+                          <span style={{ color: '#4CAF50' }}>Save RM 50</span>
+                        </div>
+                        <TravelActionButton style={{ width: '100%' }}>
+                          View All Rewards →
+                        </TravelActionButton>
+                      </FundingSection>
+                      
+                      <FundingSection>
+                        <FundingTitle>💰 QUICK ACTIONS</FundingTitle>
+                        <div style={{ fontSize: '14px', marginBottom: '12px' }}>
+                          Earn RM {trip.totalBudget - trip.currentFunding} by:
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.6' }}>
+                          <li>Selling 5 items</li>
+                          <li>Tutoring 20 hours</li>
+                          <li>Using points wisely</li>
+                        </ul>
+                        <TravelActionButton style={{ width: '100%', marginTop: '12px' }}>
+                          Start Earning →
+                        </TravelActionButton>
+                      </FundingSection>
+                    </>
+                  )}
+                  
+                  {activeDetailTab === 'timeline' && (
+                    <>
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px' }}>
+                          📅 45 days until trip
+                        </div>
+                      </div>
+                      
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                          Week 1-2: Need RM 300
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.6' }}>
+                          <li>Sell textbooks</li>
+                          <li>Start tutoring ads</li>
+                        </ul>
+                      </div>
+                      
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                          Week 3-4: Need RM 400
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.6' }}>
+                          <li>Redeem flight discount</li>
+                          <li>Sell electronics</li>
+                        </ul>
+                      </div>
+                      
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                          Week 5-6: Need RM 350
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.6' }}>
+                          <li>Final push with services</li>
+                          <li>Use remaining points</li>
+                        </ul>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <TravelActionButton>Set Reminders</TravelActionButton>
+                        <TravelActionButton style={{ background: '#4CAF50' }}>Share Plan</TravelActionButton>
+                      </div>
+                    </>
+                  )}
+                </TravelModalContent>
+              </>
+            );
+          })()}
+        </TravelModalContainer>
+      </TravelModalOverlay>
     </Container>
   );
 };
@@ -1320,8 +3014,10 @@ const FilteredContent = styled.div`
   }
 `;
 
-// Featured Rewards Components
-const RewardsContainer = styled.div``;
+// Featured Rewards Components  
+const RewardsContainer = styled.div`
+  padding: 0;
+`;
 
 const RewardsGrid = styled.div`
   display: grid;
@@ -1334,8 +3030,333 @@ const RewardCard = styled.div<{ $bgColor: string }>`
   border-radius: 16px;
   padding: 16px;
   color: white;
-  text-align: center;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+`;
+
+const ClaimedText = styled.div`
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 0.9;
+  margin-bottom: 4px;
+`;
+
+const MiniProgressBar = styled.div<{ $percentage: number }>`
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    display: block;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    width: ${props => props.$percentage}%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+`;
+
+const DiscountBox = styled.div`
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 12px;
+  display: inline-block;
+`;
+
+const ExpiryInfo = styled.div`
+  font-size: 11px;
+  opacity: 0.9;
+  margin-bottom: 16px;
+`;
+
+const CategoryLabel = styled.div`
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  opacity: 0.9;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+`;
+
+// Travel Fund Modal Styles
+const TravelModalOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  padding: 20px;
+  animation: ${({ $isOpen }) => $isOpen ? 'fadeIn 0.3s ease' : 'none'};
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const TravelModalContainer = styled.div`
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp 0.3s ease;
+  
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+`;
+
+const TravelModalHeader = styled.div`
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const TravelModalTitle = styled.h2`
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+`;
+
+const TravelModalClose = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+`;
+
+const TravelModalContent = styled.div`
+  padding: 20px;
+`;
+
+const TripCard = styled.div`
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const TripHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+`;
+
+const TripEmoji = styled.span`
+  font-size: 28px;
+`;
+
+const TripInfo = styled.div`
+  flex: 1;
+`;
+
+const TripTitle = styled.h3`
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 4px 0;
+`;
+
+const TripDate = styled.div`
+  font-size: 12px;
+  color: #666;
+`;
+
+const TripProgress = styled.div`
+  margin: 12px 0;
+`;
+
+const ProgressBar = styled.div<{ $percentage: number }>`
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  
+  &::after {
+    content: '';
+    display: block;
+    height: 100%;
+    width: ${props => props.$percentage}%;
+    background: ${props => 
+      props.$percentage >= 75 ? '#4CAF50' :
+      props.$percentage >= 50 ? '#FFC107' :
+      '#FF5722'
+    };
+    transition: width 0.5s ease;
+  }
+`;
+
+const TripFunding = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #666;
+`;
+
+const ViewDetailsButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  background: #2D5F4F;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 12px;
+  
+  &:hover {
+    background: #1a4a3a;
+  }
+`;
+
+const AddTripCard = styled(TripCard)`
+  background: linear-gradient(135deg, #e8f4f0 0%, #f0f8f5 100%);
+  border: 2px dashed #2D5F4F;
+  text-align: center;
+  cursor: pointer;
+  
+  &:hover {
+    background: linear-gradient(135deg, #d5e8e0 0%, #e0f0e8 100%);
+  }
+`;
+
+const DetailTabs = styled.div`
+  display: flex;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 20px;
+`;
+
+const DetailTab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 10px;
+  background: ${({ $active }) => $active ? 'white' : 'transparent'};
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: ${({ $active }) => $active ? '600' : '500'};
+  color: ${({ $active }) => $active ? '#2D5F4F' : '#666'};
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    color: #2D5F4F;
+  }
+`;
+
+const BudgetItem = styled.div`
+  margin-bottom: 16px;
+`;
+
+const BudgetLabel = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 14px;
+`;
+
+const BudgetIcon = styled.span`
+  margin-right: 8px;
+`;
+
+const FundingSection = styled.div`
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+`;
+
+const FundingTitle = styled.h4`
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 12px 0;
+`;
+
+const CheckboxItem = styled.label`
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  
+  input {
+    margin-right: 8px;
+  }
+`;
+
+const TravelActionButton = styled.button`
+  background: #2D5F4F;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #1a4a3a;
+  }
+`;
+
+const BackButton = styled.button`
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-right: 8px;
+  
+  &:hover {
+    background: #d0d0d0;
+  }
 `;
 
 const FilterRewardIcon = styled.div`
@@ -1344,13 +3365,19 @@ const FilterRewardIcon = styled.div`
 `;
 
 const RewardContent = styled.div`
-  margin-bottom: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0;
 `;
 
 const RewardTitle = styled.h4`
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
-  margin: 0 0 4px 0;
+  margin: 0 0 12px 0;
+  line-height: 1.2;
 `;
 
 const RewardDiscount = styled.p`
@@ -1360,23 +3387,94 @@ const RewardDiscount = styled.p`
 `;
 
 const FilterRewardPoints = styled.div`
-  font-size: 12px;
+  font-size: 14px;
   font-weight: bold;
+  margin-bottom: 8px;
 `;
 
 const FilterRedeemButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  color: ${props => props.disabled ? '#999' : '#333'};
+  border: none;
   border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  width: 100%;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: white;
+    transform: translateY(-1px);
+  }
+`;
+
+// Travel Deals Components
+const HorizontalScroll = styled.div`
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0;
+  padding-right: 16px;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const DealCard = styled.div<{ bgColor?: string }>`
+  min-width: 160px;
+  background: ${props => props.bgColor || 'white'};
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+`;
+
+const DealCardTitle = styled.h4`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${props => props.color || '#333'};
+  margin-bottom: 8px;
+`;
+
+const DealCardDiscount = styled.div`
+  font-size: 20px;
+  font-weight: bold;
+  color: ${props => props.color || '#333'};
+  margin-bottom: 4px;
+`;
+
+const DealCardPoints = styled.div`
+  font-size: 12px;
+  color: ${props => props.color || '#666'};
+  margin-bottom: 12px;
+`;
+
+const DealCardButton = styled.button`
+  background: white;
+  color: #333;
+  border: none;
   padding: 8px 16px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  width: 100%;
+  transition: all 0.2s;
+  margin-top: auto;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
   }
 `;
 
@@ -1537,6 +3635,88 @@ const ActivityMeta = styled.div`
 const MentorContainer = styled.div``;
 
 const BuddyContainer = styled.div``;
+
+// Suggested Events Components - Modern Blue Design
+const SuggestedEventCard = styled.div<{ $color: string }>`
+  padding: 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 2px dashed rgba(74, 90, 133, 0.3);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 12px;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    background: linear-gradient(135deg, #4a5a85, #566896, #64748b);
+    border-radius: 16px;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(74, 90, 133, 0.15);
+    border-color: rgba(74, 90, 133, 0.4);
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+`;
+
+const SuggestedBadge = styled.div`
+  background: linear-gradient(135deg, rgba(74, 90, 133, 0.1), rgba(86, 104, 150, 0.05));
+  color: #4a5a85;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(74, 90, 133, 0.2);
+`;
+
+const JoinEventButton = styled.button`
+  width: 100%;
+  background: linear-gradient(135deg, #4a5a85, #566896);
+  color: white;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(74, 90, 133, 0.3);
+  
+  &:hover {
+    background: linear-gradient(135deg, #3d4c74, #4a5a85);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 90, 133, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(74, 90, 133, 0.3);
+  }
+  
+  span {
+    font-size: 16px;
+  }
+`;
 
 const IntegrationPrompt = styled.div`
   display: flex;

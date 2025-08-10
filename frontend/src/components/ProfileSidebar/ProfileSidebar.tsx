@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { DualQRModal } from '../DualQRModal';
 
 interface ProfileSidebarProps {
   isOpen: boolean;
@@ -9,6 +10,12 @@ interface ProfileSidebarProps {
 
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const [setelBalance, setSetelBalance] = useState(45.60);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [currentPoints, setCurrentPoints] = useState(245);
+  const [isDualQRModalOpen, setIsDualQRModalOpen] = useState(false);
+  const [isManagePassModalOpen, setIsManagePassModalOpen] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(true); // true = active/paid, false = not subscribed
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -69,6 +76,329 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
             ✏️ Edit Profile
           </EditButton>
         </ProfileCard>
+
+        {/* BersePass Card */}
+        <BersePassCard $isSubscribed={isSubscribed}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '16px' 
+          }}>
+            <h3 style={{ 
+              fontSize: '18px', 
+              fontWeight: '600', 
+              color: '#333', 
+              margin: 0 
+            }}>BersePass</h3>
+            <div style={{
+              background: isSubscribed ? '#00C851' : '#FF4444',
+              color: 'white',
+              padding: '4px 12px',
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <div style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: 'white'
+              }}></div>
+              {isSubscribed ? 'Active' : 'Expired'}
+            </div>
+          </div>
+          
+{isSubscribed ? (
+            <>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-start', 
+                marginBottom: '20px' 
+              }}>
+                <div>
+                  <div style={{ 
+                    fontSize: '28px', 
+                    fontWeight: 'bold', 
+                    color: '#333', 
+                    lineHeight: '1' 
+                  }}>
+                    RM {isLoadingBalance ? '...' : setelBalance.toFixed(2)}
+                  </div>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: '#666', 
+                    marginTop: '4px' 
+                  }}>Current Balance</div>
+                </div>
+                
+                <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
+                  <div style={{ fontSize: '12px', color: '#666' }}>RM 19.99/month</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Next: Dec 15</div>
+                </div>
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                gap: '8px' 
+              }}>
+                <button style={{
+                  background: '#f8f9fa',
+                  color: '#333',
+                  border: '1px solid #e9ecef',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  flex: '1',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease'
+                }}>
+                  Top-up in Setel
+                </button>
+                
+                <button style={{
+                  background: '#f8f9fa',
+                  color: '#333',
+                  border: '1px solid #e9ecef',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  flex: '1',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease'
+                }}>
+                  Manage Pass
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                marginBottom: '20px',
+                padding: '20px 0'
+              }}>
+                <div style={{ 
+                  fontSize: '48px',
+                  marginBottom: '12px'
+                }}>⚠️</div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '600', 
+                  color: '#FF4444', 
+                  marginBottom: '8px'
+                }}>
+                  Subscription Expired
+                </div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#666',
+                  lineHeight: '1.4'
+                }}>
+                  Renew your BersePass to enjoy premium benefits and exclusive features
+                </div>
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                gap: '8px' 
+              }}>
+                <button 
+                  style={{
+                    background: '#FF4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease'
+                  }}
+                  onClick={() => {
+                    // In real app, this would redirect to subscription page
+                    alert('Redirecting to subscription renewal...');
+                  }}
+                >
+                  Renew Subscription
+                </button>
+              </div>
+            </>
+          )}
+        </BersePassCard>
+
+        {/* BersePoints Card */}
+        <BersePointsCard>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginBottom: '20px' 
+          }}>
+            <h3 style={{ 
+              fontSize: '18px', 
+              fontWeight: '600', 
+              color: '#333', 
+              margin: 0 
+            }}>BersePoints & Rewards</h3>
+            <div style={{
+              background: '#8E44AD',
+              color: 'white',
+              padding: '4px 12px',
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: '500'
+            }}>
+              Level 3
+            </div>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'flex-start', 
+            marginBottom: '16px' 
+          }}>
+            <div style={{ flex: '1' }}>
+              <div style={{ 
+                fontSize: '28px', 
+                fontWeight: 'bold', 
+                color: '#FFA500', 
+                lineHeight: '1' 
+              }}>
+                {currentPoints}
+              </div>
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#666', 
+                marginTop: '2px' 
+              }}>points available</div>
+            </div>
+            
+            <div style={{ 
+              flex: '1', 
+              display: 'flex', 
+              flexDirection: 'row', 
+              gap: '12px', 
+              justifyContent: 'flex-end' 
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center' 
+              }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#000', 
+                  fontWeight: '600' 
+                }}>RM 347</div>
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: '#666' 
+                }}>Redeemed</div>
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center' 
+              }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  color: '#000', 
+                  fontWeight: '600' 
+                }}>+15</div>
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: '#666' 
+                }}>This week</div>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div style={{
+              width: '100%',
+              height: '8px',
+              background: '#E0E0E0',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              marginBottom: '8px'
+            }}>
+              <div style={{
+                width: '82%',
+                height: '100%',
+                background: '#FFA500',
+                borderRadius: '4px'
+              }}></div>
+            </div>
+            
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#666',
+              fontStyle: 'italic',
+              marginBottom: '12px'
+            }}>
+              {currentPoints}/300 to Level 4
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <button style={{
+                background: '#FFA500',
+                color: 'white',
+                border: 'none',
+                padding: '10px 12px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 6px rgba(255, 165, 0, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onClick={() => setIsDualQRModalOpen(true)}>
+                <span>📱</span>
+                QR
+              </button>
+              
+              <button 
+                onClick={() => navigate('/points')}
+                style={{
+                  background: '#FFA500',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease'
+                }}
+              >
+                See All Rewards
+              </button>
+            </div>
+          </div>
+        </BersePointsCard>
 
         <MenuSection>
           {/* 1. Private Messages */}
@@ -134,6 +464,12 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
           {/* REMOVED: My Communities */}
         </MenuSection>
       </SidebarContainer>
+      
+      {/* DualQRModal for QR Code functionality */}
+      <DualQRModal 
+        isOpen={isDualQRModalOpen} 
+        onClose={() => setIsDualQRModalOpen(false)} 
+      />
     </>
   );
 };
@@ -419,4 +755,24 @@ const MenuItem = styled.div`
   &:active {
     background-color: #E9ECEF;
   }
+`;
+
+const BersePassCard = styled.div<{ $isSubscribed: boolean }>`
+  background: white;
+  margin: 0 20px 20px 20px;
+  border-radius: 12px;
+  padding: 20px;
+  border: 3px solid ${({ $isSubscribed }) => $isSubscribed ? '#00C851' : '#FF4444'};
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+`;
+
+const BersePointsCard = styled.div`
+  background: white;
+  margin: 0 20px 20px 20px;
+  border-radius: 12px;
+  padding: 20px;
+  border: 3px solid #FFA500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 `;

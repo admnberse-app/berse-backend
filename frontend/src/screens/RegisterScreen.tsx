@@ -18,7 +18,7 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   padding: 16px 20px;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
 `;
 
 const BackButton = styled.button`

@@ -7,14 +7,14 @@ interface ManagePassModalProps {
 }
 
 // Styled Components
-const ModalOverlay = styled.div<{ isOpen: boolean }>`
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.8);
-  display: ${({ isOpen }) => isOpen ? 'flex' : 'none'};
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 2000;
@@ -113,10 +113,10 @@ const StatusValue = styled.div`
   font-weight: 600;
 `;
 
-const Toggle = styled.div<{ active: boolean }>`
+const Toggle = styled.div<{ $active: boolean }>`
   width: 44px;
   height: 24px;
-  background: ${({ active }) => active ? '#4CAF50' : '#ccc'};
+  background: ${({ $active }) => $active ? '#4CAF50' : '#ccc'};
   border-radius: 12px;
   position: relative;
   cursor: pointer;
@@ -130,7 +130,7 @@ const Toggle = styled.div<{ active: boolean }>`
     background: white;
     border-radius: 50%;
     top: 2px;
-    left: ${({ active }) => active ? '22px' : '2px'};
+    left: ${({ $active }) => $active ? '22px' : '2px'};
     transition: left 0.3s ease;
   }
 `;
@@ -322,7 +322,7 @@ export const ManagePassModal: React.FC<ManagePassModalProps> = ({ isOpen, onClos
         <StatusRow>
           <StatusLabel>Auto-renewal</StatusLabel>
           <Toggle 
-            active={autoRenewal} 
+            $active={autoRenewal} 
             onClick={() => setAutoRenewal(!autoRenewal)}
           />
         </StatusRow>
@@ -503,7 +503,7 @@ export const ManagePassModal: React.FC<ManagePassModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+    <ModalOverlay $isOpen={isOpen} onClick={onClose}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>BersePass Management</ModalTitle>

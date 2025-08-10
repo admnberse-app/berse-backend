@@ -19,7 +19,7 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background-color: #F5F3EF;
+  background-color: #F9F3E3;
 `;
 
 const BackButton = styled.button`
@@ -315,7 +315,7 @@ export const SettingsScreen: React.FC = () => {
       
       {/* Standardized Header */}
       <div style={{
-        background: '#F5F3EF',
+        background: '#F9F3E3',
         width: '100%',
         padding: '12px 16px',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'

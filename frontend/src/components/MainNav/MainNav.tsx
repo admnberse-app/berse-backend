@@ -2,8 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 
 interface MainNavProps {
-  activeTab: 'home' | 'connect' | 'match' | 'forum';
-  onTabPress: (tab: 'home' | 'connect' | 'match' | 'forum') => void;
+  activeTab: 'home' | 'connect' | 'match' | 'market';
+  onTabPress: (tab: 'home' | 'connect' | 'match' | 'market') => void;
 }
 
 // Outline Icons as SVG components
@@ -14,23 +14,32 @@ const HomeIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
-const ConnectIcon = ({ active }: { active: boolean }) => (
+const EventsIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
-    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-    <circle cx="9" cy="7" r="4"/>
-    <path d="m22 21-3-3m0 0a5.5 5.5 0 1 1-8-8 5.5 5.5 0 0 1 8 8z"/>
+    <path d="M3 7h14l1 1v8l-1 1H3l-1-1V8l1-1z"/>
+    <path d="M18 7h3v10h-3"/>
+    <path strokeDasharray="2 2" d="M18 8v8"/>
+    <circle cx="8" cy="12" r="1.5"/>
+    <circle cx="13" cy="12" r="1.5"/>
   </svg>
 );
 
-const MatchIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+const ProfilesIcon = ({ active }: { active: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="5" r="2.5"/>
+    <circle cx="6" cy="8" r="2"/>
+    <circle cx="18" cy="8" r="2"/>
+    <path d="M12 8.5c2 0 3.5 1 3.5 2.5v5h-7v-5c0-1.5 1.5-2.5 3.5-2.5z"/>
+    <path d="M6 11c1.5 0 2.5 0.5 2.5 2v5h-5v-5c0-1.5 1-2 2.5-2z"/>
+    <path d="M18 11c-1.5 0-2.5 0.5-2.5 2v5h5v-5c0-1.5-1-2-2.5-2z"/>
   </svg>
 );
 
-const ForumIcon = ({ active }: { active: boolean }) => (
+const MarketIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 0 1-8 0"/>
   </svg>
 );
 
@@ -39,7 +48,10 @@ export const MainNav: React.FC<MainNavProps> = ({ activeTab, onTabPress }) => {
     <Container>
       <NavButton 
         $active={activeTab === 'home'}
-        onClick={() => onTabPress('home')}
+        onClick={() => {
+          console.log('Home button clicked');
+          onTabPress('home');
+        }}
       >
         <IconWrapper>
           <HomeIcon active={activeTab === 'home'} />
@@ -49,32 +61,41 @@ export const MainNav: React.FC<MainNavProps> = ({ activeTab, onTabPress }) => {
 
       <NavButton 
         $active={activeTab === 'connect'}
-        onClick={() => onTabPress('connect')}
+        onClick={() => {
+          console.log('Events button clicked');
+          onTabPress('connect');
+        }}
       >
         <IconWrapper>
-          <ConnectIcon active={activeTab === 'connect'} />
+          <EventsIcon active={activeTab === 'connect'} />
         </IconWrapper>
-        <NavLabel $active={activeTab === 'connect'}>Connect</NavLabel>
+        <NavLabel $active={activeTab === 'connect'}>Events</NavLabel>
       </NavButton>
 
       <NavButton 
         $active={activeTab === 'match'}
-        onClick={() => onTabPress('match')}
+        onClick={() => {
+          console.log('Profiles button clicked');
+          onTabPress('match');
+        }}
       >
         <IconWrapper>
-          <MatchIcon active={activeTab === 'match'} />
+          <ProfilesIcon active={activeTab === 'match'} />
         </IconWrapper>
-        <NavLabel $active={activeTab === 'match'}>Match</NavLabel>
+        <NavLabel $active={activeTab === 'match'}>Profiles</NavLabel>
       </NavButton>
 
       <NavButton 
-        $active={activeTab === 'forum'}
-        onClick={() => onTabPress('forum')}
+        $active={activeTab === 'market'}
+        onClick={() => {
+          console.log('Market button clicked');
+          onTabPress('market');
+        }}
       >
         <IconWrapper>
-          <ForumIcon active={activeTab === 'forum'} />
+          <MarketIcon active={activeTab === 'market'} />
         </IconWrapper>
-        <NavLabel $active={activeTab === 'forum'}>Forum</NavLabel>
+        <NavLabel $active={activeTab === 'market'}>Market</NavLabel>
       </NavButton>
     </Container>
   );
@@ -93,7 +114,7 @@ const Container = styled.div`
   align-items: center;
   justify-content: space-around;
   padding: 0 8px;
-  z-index: 1000;
+  z-index: 9999;
   max-width: 361px; /* 393px - 32px margins */
   margin: 0 auto;
 `;
@@ -110,6 +131,9 @@ const NavButton = styled.button<{ $active: boolean }>`
   cursor: pointer;
   transition: all 0.2s ease;
   border-radius: 12px;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
   
   &:active {
     transform: scale(0.95);

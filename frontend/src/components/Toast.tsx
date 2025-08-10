@@ -31,15 +31,15 @@ const slideOut = keyframes`
   }
 `;
 
-const ToastContainer = styled.div<{ show: boolean; type: 'success' | 'error' | 'info' }>`
+const ToastContainer = styled.div<{ $show: boolean; $type: 'success' | 'error' | 'info' }>`
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
-  background: ${({ type }) => 
-    type === 'success' ? '#10B981' :
-    type === 'error' ? '#EF4444' :
+  background: ${({ $type }) => 
+    $type === 'success' ? '#10B981' :
+    $type === 'error' ? '#EF4444' :
     '#3B82F6'};
   color: white;
   padding: 16px 20px;
@@ -50,7 +50,7 @@ const ToastContainer = styled.div<{ show: boolean; type: 'success' | 'error' | '
   gap: 12px;
   min-width: 300px;
   max-width: 90vw;
-  animation: ${({ show }) => show ? slideIn : slideOut} 0.3s ease-out;
+  animation: ${({ $show }) => $show ? slideIn : slideOut} 0.3s ease-out;
   font-weight: 500;
   font-size: 14px;
 `;
@@ -116,7 +116,7 @@ export const Toast: React.FC<ToastProps> = ({
   if (!show) return null;
 
   return (
-    <ToastContainer show={isVisible} type={type}>
+    <ToastContainer $show={isVisible} $type={type}>
       <ToastIcon>{getIcon()}</ToastIcon>
       <ToastMessage>{message}</ToastMessage>
       <CloseButton onClick={() => {

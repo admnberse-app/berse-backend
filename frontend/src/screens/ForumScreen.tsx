@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { StatusBar } from '../components/StatusBar/StatusBar';
-import { MainNav } from '../components/MainNav';
+import { MainNav } from '../components/MainNav/index';
 
 const Container = styled.div`
   display: flex;
@@ -13,7 +13,7 @@ const Container = styled.div`
 
 // Header with BerseConnectScreen styling
 const Header = styled.div`
-  background: #F5F3EF;
+  background: #F9F3E3;
   padding: 20px 16px 16px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 `;
@@ -1331,7 +1331,7 @@ export const ForumScreen: React.FC = () => {
 
       {/* Bottom Navigation */}
       <MainNav 
-        activeTab="forum"
+        activeTab={'home' as 'home' | 'connect' | 'match' | 'market'}
         onTabPress={(tab) => {
           switch (tab) {
             case 'home':
@@ -1343,8 +1343,8 @@ export const ForumScreen: React.FC = () => {
             case 'match':
               navigate('/match');
               break;
-            case 'forum':
-              navigate('/forum');
+            case 'market':
+              navigate('/market');
               break;
           }
         }}

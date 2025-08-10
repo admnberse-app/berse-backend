@@ -22,7 +22,6 @@ import { RegisterScreen } from './screens/RegisterScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { BerseConnectScreen } from './screens/BerseConnectScreen';
 import { BerseMatchScreen } from './screens/BerseMatchScreen';
-import { BerseMarketScreen } from './screens/BerseMarketScreen';
 import { PointsDetailScreen } from './screens/PointsDetailScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { EventDetailsScreen } from './screens/EventDetailsScreen';
@@ -172,14 +171,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <BerseMatchScreen />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/market"
-                element={
-                  <ProtectedRoute>
-                    <BerseMarketScreen />
                   </ProtectedRoute>
                 }
               />
