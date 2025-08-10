@@ -1351,8 +1351,6 @@ export const DashboardScreen: React.FC = () => {
 
   // Compact Calendar Component
   const CalendarComponent: React.FC = () => {
-    // Only render on development port
-    if (window.location.port !== '5173') return null;
 
     const eventCategories = {
       social: { icon: '🎉', color: '#9C27B0' },
