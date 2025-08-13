@@ -21,6 +21,8 @@ const HeaderContainer = styled.header`
   transition: all 0.3s ease;
   animation: ${float} 3s ease-in-out infinite;
   border: none;
+  max-width: 100%;
+  overflow: hidden;
   
   &:hover {
     transform: translateY(-2px);
@@ -32,9 +34,15 @@ const HeaderContent = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 12px;
   max-width: 100%;
   position: relative;
+  gap: 8px;
+  
+  @media (max-width: 480px) {
+    padding: 8px 10px;
+    gap: 6px;
+  }
   
   &::before {
     content: '';
@@ -48,12 +56,12 @@ const HeaderContent = styled.div`
 `;
 
 const LogoHorizontal = styled.img`
-  height: 42px;
+  height: 36px;
   width: auto;
-  margin-left: 8px;
   cursor: pointer;
   transition: transform 0.2s ease;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+  flex-shrink: 0;
   
   &:hover {
     transform: scale(1.05);
@@ -61,8 +69,7 @@ const LogoHorizontal = styled.img`
   }
   
   @media (max-width: 480px) {
-    height: 36px;
-    margin-left: 6px;
+    height: 32px;
     filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.12));
   }
 `;
@@ -70,33 +77,51 @@ const LogoHorizontal = styled.img`
 const LeftSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  
+  @media (max-width: 480px) {
+    gap: 4px;
+  }
 `;
 
 const UserInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  flex: 1;
   
-  @media (max-width: 480px) {
+  @media (max-width: 380px) {
     display: none;
   }
 `;
 
 const UserName = styled.span`
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #2D5F4F;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  @media (max-width: 480px) {
+    font-size: 12px;
+  }
 `;
 
 const Tagline = styled.span`
-  font-size: 9px;
+  font-size: 10px;
   font-style: italic;
   color: #666;
   opacity: 0.7;
   line-height: 1;
+  
+  @media (max-width: 480px) {
+    font-size: 9px;
+  }
 `;
 
 const LogoButton = styled.button`
@@ -152,13 +177,17 @@ const RightSection = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: 0 0 auto;
+  flex-shrink: 0;
+  
+  @media (max-width: 400px) {
+    gap: 3px;
+  }
 `;
 
 const IconButton = styled.button`
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: #F8F9FA;
   border: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
@@ -168,6 +197,7 @@ const IconButton = styled.button`
   transition: all 0.3s ease;
   position: relative;
   font-size: 14px;
+  flex-shrink: 0;
 
   &:hover {
     background: #2D5F4F;
@@ -197,7 +227,7 @@ const ProfileButton = styled(IconButton)`
   background: linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%);
   border: none;
   color: white;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(45, 95, 79, 0.2);
 
@@ -215,11 +245,17 @@ const BalanceButton = styled.button`
   gap: 1px;
   background: #F8F9FA;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: 8px;
+  padding: 5px 6px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 60px;
+  min-width: 62px;
+  flex-shrink: 0;
+  
+  @media (max-width: 400px) {
+    min-width: 58px;
+    padding: 4px 5px;
+  }
 
   &:hover {
     background: #2D5F4F;
@@ -235,11 +271,15 @@ const BalanceButton = styled.button`
 `;
 
 const BalanceLabel = styled.span`
-  font-size: 8px;
+  font-size: 9px;
   font-style: italic;
   color: #666;
   opacity: 0.7;
   line-height: 1;
+  
+  @media (max-width: 400px) {
+    font-size: 8px;
+  }
   
   ${BalanceButton}:hover & {
     color: white;
@@ -248,10 +288,14 @@ const BalanceLabel = styled.span`
 `;
 
 const BalanceAmount = styled.span`
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: #2D5F4F;
   line-height: 1;
+  
+  @media (max-width: 400px) {
+    font-size: 9px;
+  }
   
   ${BalanceButton}:hover & {
     color: white;

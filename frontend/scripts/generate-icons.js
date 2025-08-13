@@ -1,13 +1,13 @@
 // Icon generation script for BerseMuka PWA
-// Generates all required icon sizes from the Berse App Emblem
+// Generates all required icon sizes from the new PWA Icon
 
 const fs = require('fs');
 const path = require('path');
 
-// Since we don't have sharp installed, we'll copy the existing emblem to multiple locations
+// Since we don't have sharp installed, we'll copy the existing icon to multiple locations
 // with proper naming for PWA requirements
 
-const SOURCE_LOGO = path.join(__dirname, '..', 'public', 'berse-emblem.png');
+const SOURCE_LOGO = path.join(__dirname, '..', 'public', 'pwa-icon-source.png');
 const OUTPUT_DIR = path.join(__dirname, '..', 'public', 'icons');
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 

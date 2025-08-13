@@ -8,14 +8,14 @@ interface MainNavProps {
 
 // Outline Icons as SVG components
 const HomeIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
     <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
     <polyline points="9,22 9,12 15,12 15,22"/>
   </svg>
 );
 
 const EventsIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
     <path d="M3 7h14l1 1v8l-1 1H3l-1-1V8l1-1z"/>
     <path d="M18 7h3v10h-3"/>
     <path strokeDasharray="2 2" d="M18 8v8"/>
@@ -25,7 +25,7 @@ const EventsIcon = ({ active }: { active: boolean }) => (
 );
 
 const ProfilesIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="5" r="2.5"/>
     <circle cx="6" cy="8" r="2"/>
     <circle cx="18" cy="8" r="2"/>
@@ -36,7 +36,7 @@ const ProfilesIcon = ({ active }: { active: boolean }) => (
 );
 
 const MarketIcon = ({ active }: { active: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={active ? '#2D5F4F' : '#B0B0B0'} strokeWidth="2">
     <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
     <line x1="3" y1="6" x2="21" y2="6"/>
     <path d="M16 10a4 4 0 0 1-8 0"/>
@@ -103,19 +103,19 @@ export const MainNav: React.FC<MainNavProps> = ({ activeTab, onTabPress }) => {
 
 const Container = styled.div`
   position: fixed;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
+  bottom: 10px;
+  left: 14px;
+  right: 14px;
   background: #FFFFFF;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  height: 70px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 8px;
+  padding: 0 4px;
   z-index: 9999;
-  max-width: 361px; /* 393px - 32px margins */
+  max-width: 369px; /* 393px - 24px margins */
   margin: 0 auto;
 `;
 
@@ -130,7 +130,7 @@ const NavButton = styled.button<{ $active: boolean }>`
   padding: 8px 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-radius: 12px;
+  border-radius: 8px;
   pointer-events: auto;
   position: relative;
   z-index: 1;
@@ -149,11 +149,18 @@ const IconWrapper = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 `;
 
 const NavLabel = styled.span<{ $active: boolean }>`
   font-size: 11px;
   color: ${({ $active }) => $active ? '#2D5F4F' : '#B0B0B0'};
-  font-weight: ${({ $active }) => $active ? '500' : '400'};
+  font-weight: ${({ $active }) => $active ? '600' : '400'};
   text-align: center;
+  line-height: 1;
+  margin-top: 2px;
 `;
