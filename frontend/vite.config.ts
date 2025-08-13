@@ -7,12 +7,18 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: [
+        'favicon-32x32.png', 
+        'favicon-16x16.png',
+        'apple-touch-icon.png', 
+        'icons/*.png',
+        'safari-pinned-tab.svg'
+      ],
       manifest: {
         name: 'BerseMuka - Malaysian Community App',
         short_name: 'BerseMuka',
         description: 'Connect, meet, and build meaningful relationships in Malaysia',
-        theme_color: '#E74C3C',
+        theme_color: '#2D5F4F',
         background_color: '#F5F3EF',
         display: 'standalone',
         orientation: 'portrait',
@@ -20,23 +26,49 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-64x64.png',
-            sizes: '64x64',
-            type: 'image/png'
+            src: '/icons/icon-72x72.png',
+            sizes: '72x72',
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: 'pwa-192x192.png',
+            src: '/icons/icon-96x96.png',
+            sizes: '96x96',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon-128x128.png',
+            sizes: '128x128',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: 'pwa-512x512.png',
+            src: '/icons/icon-256x256.png',
+            sizes: '256x256',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon-384x384.png',
+            sizes: '384x384',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'maskable-icon-512x512.png',
+            src: '/icons/maskable-icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
@@ -46,7 +78,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackAllowlist: [/^(?!\/(api|src|__.*|.*\.(js|css|png|ico|svg|webmanifest)$)).*/],
+        navigateFallbackAllowlist: [/^\/(?!(api|src|__|.*\.(js|css|png|ico|svg|webmanifest)$)).*/],
         navigateFallbackDenylist: [
           /^\/__.*$/,
           /^\/api\/.*$/,
