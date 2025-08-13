@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { DualQRModal } from '../DualQRModal';
+import { berseHorizontalLogo } from '../../assets/images';
 
 const float = keyframes`
   0%, 100% { transform: translateY(0px); }
@@ -11,12 +12,12 @@ const float = keyframes`
 
 const HeaderContainer = styled.header`
   position: sticky;
-  top: 8px;
+  top: 4px;
   z-index: 1000;
-  margin: 8px;
+  margin: 4px 8px;
   background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   animation: ${float} 3s ease-in-out infinite;
   border: none;
@@ -31,7 +32,7 @@ const HeaderContent = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 8px 12px;
   max-width: 100%;
   position: relative;
   
@@ -46,10 +47,30 @@ const HeaderContent = styled.div`
   }
 `;
 
+const LogoHorizontal = styled.img`
+  height: 42px;
+  width: auto;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+  
+  &:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
+  }
+  
+  @media (max-width: 480px) {
+    height: 36px;
+    margin-left: 6px;
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.12));
+  }
+`;
+
 const LeftSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 0 0 auto;
 `;
 
@@ -64,14 +85,14 @@ const UserInfo = styled.div`
 `;
 
 const UserName = styled.span`
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #2D5F4F;
   line-height: 1;
 `;
 
 const Tagline = styled.span`
-  font-size: 11px;
+  font-size: 9px;
   font-style: italic;
   color: #666;
   opacity: 0.7;
@@ -98,8 +119,8 @@ const LogoButton = styled.button`
 `;
 
 const LogoDot = styled.div`
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%);
   display: flex;
@@ -109,7 +130,7 @@ const LogoDot = styled.div`
 `;
 
 const LogoText = styled.span`
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   color: #2D5F4F;
   letter-spacing: -0.5px;
@@ -130,14 +151,14 @@ const LogoText = styled.span`
 const RightSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 0 0 auto;
 `;
 
 const IconButton = styled.button`
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: #F8F9FA;
   border: 1px solid rgba(0, 0, 0, 0.08);
   display: flex;
@@ -146,7 +167,7 @@ const IconButton = styled.button`
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
-  font-size: 18px;
+  font-size: 14px;
 
   &:hover {
     background: #2D5F4F;
@@ -163,22 +184,22 @@ const IconButton = styled.button`
 
 const NotificationBadge = styled.div`
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
   background: #FF4444;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 1px solid white;
 `;
 
 const ProfileButton = styled(IconButton)`
   background: linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%);
   border: none;
   color: white;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(45, 95, 79, 0.3);
+  box-shadow: 0 2px 8px rgba(45, 95, 79, 0.2);
 
   &:hover {
     background: linear-gradient(135deg, #1E4039 0%, #3A7A6B 100%);
@@ -191,11 +212,11 @@ const BalanceButton = styled.button`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   background: #F8F9FA;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  padding: 6px 8px;
+  border-radius: 6px;
+  padding: 4px 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   min-width: 60px;
@@ -227,7 +248,7 @@ const BalanceLabel = styled.span`
 `;
 
 const BalanceAmount = styled.span`
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: #2D5F4F;
   line-height: 1;
@@ -338,11 +359,12 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
     setShowBersePointsModal(false);
   };
 
-  const userInitials = user?.fullName
-    ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const displayName = user?.username || user?.fullName || 'User';
+  const userInitials = displayName
+    ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const userName = user?.fullName || 'User';
+  const userName = displayName;
 
 
   return (
@@ -358,6 +380,12 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
               <UserName>{userName}</UserName>
               <Tagline>Welcome Back!</Tagline>
             </UserInfo>
+            
+            <LogoHorizontal 
+              src={berseHorizontalLogo} 
+              alt="Berse" 
+              onClick={handleLogoClick}
+            />
           </LeftSection>
 
           <RightSection>
@@ -410,7 +438,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
             maxWidth: '400px',
             backgroundColor: '#FFFFFF',
             borderRadius: '12px',
-            padding: '20px',
+            padding: '16px',
             border: `3px solid ${isSubscribed ? '#00C851' : '#FF4444'}`,
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -423,7 +451,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
               marginBottom: '16px' 
             }}>
               <h3 style={{ 
-                fontSize: '18px', 
+                fontSize: '14px', 
                 fontWeight: '600', 
                 color: '#333', 
                 margin: 0 
@@ -461,7 +489,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                   {/* Left Column */}
                   <div>
                     <div style={{ 
-                      fontSize: '28px', 
+                      fontSize: '20px', 
                       fontWeight: 'bold', 
                       color: '#333', 
                       lineHeight: '1' 
@@ -545,11 +573,11 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                   padding: '20px 0'
                 }}>
                   <div style={{ 
-                    fontSize: '48px',
+                    fontSize: '32px',
                     marginBottom: '12px'
                   }}>⚠️</div>
                   <div style={{ 
-                    fontSize: '16px', 
+                    fontSize: '12px', 
                     fontWeight: '600', 
                     color: '#FF4444', 
                     marginBottom: '8px'
@@ -576,9 +604,9 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                       background: '#FF4444',
                       color: 'white',
                       border: 'none',
-                      padding: '12px 24px',
+                      padding: '8px 16px',
                       borderRadius: '8px',
-                      fontSize: '14px',
+                      fontSize: '10px',
                       fontWeight: '600',
                       textAlign: 'center',
                       cursor: 'pointer',
@@ -619,7 +647,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
             maxWidth: '400px',
             backgroundColor: '#FFFFFF',
             borderRadius: '12px',
-            padding: '20px',
+            padding: '16px',
             border: '3px solid #FFA500',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
@@ -632,7 +660,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
               marginBottom: '20px' 
             }}>
               <h3 style={{ 
-                fontSize: '18px', 
+                fontSize: '14px', 
                 fontWeight: '600', 
                 color: '#333', 
                 margin: 0 
@@ -659,7 +687,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
               {/* Left Column */}
               <div style={{ flex: '1' }}>
                 <div style={{ 
-                  fontSize: '28px', 
+                  fontSize: '20px', 
                   fontWeight: 'bold', 
                   color: '#FFA500', 
                   lineHeight: '1' 
@@ -688,7 +716,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                   alignItems: 'center' 
                 }}>
                   <div style={{ 
-                    fontSize: '16px', 
+                    fontSize: '12px', 
                     color: '#000', 
                     fontWeight: '600' 
                   }}>RM 347</div>
@@ -705,7 +733,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                   alignItems: 'center' 
                 }}>
                   <div style={{ 
-                    fontSize: '16px', 
+                    fontSize: '12px', 
                     color: '#000', 
                     fontWeight: '600' 
                   }}>+15</div>
@@ -749,39 +777,64 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
               {/* Bottom Row */}
               <div style={{ 
                 display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center' 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                gap: '8px'
               }}>
                 
                 <button style={{
                   background: '#FFA500',
                   color: 'white',
                   border: 'none',
-                  padding: '10px 12px',
-                  borderRadius: '12px',
-                  fontSize: '14px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: '10px',
                   fontWeight: '600',
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 6px rgba(255, 165, 0, 0.2)',
+                  boxShadow: '0 2px 4px rgba(255, 165, 0, 0.2)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  justifyContent: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap',
+                  minWidth: 'fit-content'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#FF8C00';
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 140, 0, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(255, 140, 0, 0.3)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = '#FFA500';
                   e.currentTarget.style.transform = 'translateY(0px)';
-                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(255, 165, 0, 0.2)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(255, 165, 0, 0.2)';
                 }}
                 onClick={() => setIsDualQRModalOpen(true)}>
-                  <span>📱</span>
+                  <span style={{ fontSize: '12px' }}>📱</span>
                   QR
+                </button>
+                
+                <button 
+                  onClick={() => navigate('/my-vouchers')}
+                  style={{
+                    background: '#FFA500',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '10px',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    whiteSpace: 'nowrap',
+                    minWidth: 'fit-content'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#FF8C00'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#FFA500'}
+                >
+                  My Vouchers
                 </button>
                 
                 <button 
@@ -789,18 +842,20 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                   style={{
                     background: '#FFA500',
                     color: 'white',
-                    padding: '10px 20px',
+                    padding: '8px 16px',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: '10px',
                     fontWeight: '500',
                     border: 'none',
                     cursor: 'pointer',
-                    transition: 'background 0.2s ease'
+                    transition: 'background 0.2s ease',
+                    whiteSpace: 'nowrap',
+                    minWidth: 'fit-content'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = '#FF8C00'}
                   onMouseLeave={(e) => e.currentTarget.style.background = '#FFA500'}
                 >
-                  See All Rewards
+                  All Rewards
                 </button>
               </div>
             </div>
