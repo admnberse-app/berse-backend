@@ -4,11 +4,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
-    "build": "rimraf dist && tsc && npm run copy-files",
+    "build": "npx prisma generate && rimraf dist && tsc && npm run copy-files",
     "build:check": "tsc --noEmit",
     "start": "node dist/server.js",
     "start:prod": "cross-env NODE_ENV=production node dist/server.js",
-    "railway:build": "npm run prisma:generate && npm run build && cd frontend && npm install && npm run build",
+    "railway:build": "npm run build && cd frontend && npm install && npm run build",
     "railway:start": "npm run prisma:migrate:prod && npm run start:prod",
     "start:cluster": "cross-env NODE_ENV=production CLUSTER_MODE=true node dist/server.js",
     "copy-files": "copyfiles -u 1 src/**/*.json dist/",
