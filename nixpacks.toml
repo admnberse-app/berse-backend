@@ -19,3 +19,5 @@ cmd = "npm run railway:start"
 [variables]
 NODE_ENV = "production"
 NIXPACKS_NODE_VERSION = "20"
+NIXPACKS_NO_MUSL = "1"
+NIXPACKS_PKGS = "nodejs-20_x npm"
