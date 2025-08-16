@@ -39,17 +39,34 @@ interface CalendarEvent {
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 2px);
+  min-height: 100vh;
+  width: 100%;
   background-color: #F9F3E3;
+  overflow-x: hidden;
+  animation: fadeIn 0.3s ease-in;
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 `;
 
 const Content = styled.div`
   flex: 1;
-  padding: 8px 16px 100px 16px; // Match header margins and space for nav
+  padding: 8px 12px 90px 12px; // Increased bottom padding for larger nav
   overflow-y: auto;
-  max-width: 393px;
+  max-width: 375px; // iPhone standard width
   width: 100%;
   margin: 0 auto;
+  
+  @media (max-width: 375px) {
+    max-width: 100%;
+    padding: 8px 8px 90px 8px;
+  }
 `;
 
 const WelcomeSection = styled.div`
@@ -70,11 +87,16 @@ const Subtitle = styled.p`
 
 
 const SectionTitle = styled.h3`
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
-  margin: 0 0 12px 0;
+  color: #2fce98;
+  margin: 0 0 10px 0;
   text-align: left;
+  
+  @media (max-width: 375px) {
+    font-size: 15px;
+    margin: 0 0 8px 0;
+  }
 `;
 
 const EventsList = styled.div`
@@ -97,16 +119,47 @@ const slideUp = keyframes`
 
 // Calendar Container - MyVouchers card style with blue gradient
 const CalendarContainer = styled.div`
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 `;
 
 const CalendarWidget = styled.div`
-  background: linear-gradient(135deg, #3d4c74, #4a5a85, #566896);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 4px 12px rgba(61, 76, 116, 0.25);
+  background: linear-gradient(135deg, #4a5f8c, #5470a3, #6182ba);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 6px 20px rgba(74, 95, 140, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
   width: 100%;
-  max-width: 400px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    animation: shimmer 8s infinite;
+  }
+  
+  @keyframes shimmer {
+    100% {
+      left: 100%;
+    }
+  }
+  max-width: 100%;
   height: auto;
   display: flex;
   flex-direction: column;
@@ -116,6 +169,11 @@ const CalendarWidget = styled.div`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(61, 76, 116, 0.3);
+  }
+  
+  @media (max-width: 375px) {
+    padding: 10px;
+    border-radius: 10px;
   }
 `;
 
@@ -142,22 +200,26 @@ const BelowCalendarActions = styled.div`
 
 // Separate Quick Actions Section
 const QuickActionsSection = styled.div`
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 `;
 
 const QuickActionsContainer = styled.div`
   width: 100%;
-  max-width: 400px;
+  max-width: 100%;
   height: auto;
   display: flex;
   flex-direction: column;
 `;
 
 const QuickActionsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-top: 4px;
+  
+  @media (max-width: 375px) {
+    gap: 4px;
+  }
 `;
 
 const StreakContainer = styled.div`
@@ -186,7 +248,7 @@ const QuickActionsHeader = styled.div`
 const QuickActionsTitle = styled.h4`
   font-size: 11px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -196,19 +258,78 @@ const QuickActionsTitle = styled.h4`
 const FeaturedRewardsTitle = styled.h4`
   font-size: 11px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   opacity: 0.9;
   padding: 0;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
+  
+  @media (max-width: 375px) {
+    font-size: 8px;
+    margin-bottom: 4px;
+  }
 `;
 
 const FeaturedRewardsContainer = styled.div`
   width: 100%;
-  max-width: 400px;
-  margin-bottom: 16px;
+  max-width: 100%;
+  margin-bottom: 12px;
+  
+  @media (max-width: 375px) {
+    margin-bottom: 10px;
+  }
+`;
+
+const FeaturedRewardsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 6px;
+`;
+
+const AllRewardsButton = styled.button`
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #00BCD4, #0288D1);
+  border: 1px solid #0097A7;
+  border-radius: 6px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  position: relative;
+  
+  &::after {
+    content: '🎁';
+    position: absolute;
+    right: -8px;
+    top: -8px;
+    font-size: 12px;
+    animation: bounce 3s ease-in-out infinite;
+  }
+  
+  @keyframes bounce {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(2px, -2px) rotate(5deg); }
+    50% { transform: translate(-2px, 2px) rotate(-5deg); }
+    75% { transform: translate(1px, -1px) rotate(3deg); }
+  }
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 const TravelFundButton = styled.button`
@@ -263,29 +384,18 @@ const QuickActionsList = styled.div`
 
 const QuickActionButton = styled.button<{ $variant?: string }>`
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  padding: 5px 4px;
-  background: ${({ $variant }) => 
-    $variant === 'events' ? 'linear-gradient(135deg, #FF6B6B, #FF9A00)' :
-    $variant === 'profiles' ? 'linear-gradient(135deg, #FFC107, #FF9800)' :
-    $variant === 'market' ? 'linear-gradient(135deg, #00BCD4, #009688)' :
-    $variant === 'game' ? 'linear-gradient(135deg, #673AB7, #3F51B5)' :
-    '#666666'
-  };
-  border: 1px solid ${({ $variant }) => 
-    $variant === 'events' ? '#FF5722' :
-    $variant === 'profiles' ? '#F57C00' :
-    $variant === 'market' ? '#0097A7' :
-    $variant === 'game' ? '#512DA8' :
-    '#555555'
-  };
-  border-radius: 8px;
+  justify-content: flex-start;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #2fce98, #26b580);
+  border: 1px solid #2fce98;
+  border-radius: 12px;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 42px;
+  min-height: 60px;
+  width: 100%;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
@@ -325,54 +435,61 @@ const ActionLine = styled.div`
 `;
 
 const ActionIcon = styled.span`
-  font-size: 18px;
-  margin-bottom: 2px;
+  font-size: 28px;
+  margin-right: 14px;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   position: relative;
   z-index: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 `;
 
 const ActionText = styled.span`
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 500;
-  text-align: center;
-  line-height: 1.1;
+  text-align: left;
+  line-height: 1.3;
   color: rgba(255, 255, 255, 0.95);
-  font-style: italic;
+  font-style: normal;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   
   strong {
     font-weight: 700;
     display: block;
-    font-size: 9px;
+    font-size: 13px;
     margin-bottom: 1px;
     font-style: normal;
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
 `;
 
 const ActionBadge = styled.div<{ $special?: boolean }>`
-  position: absolute;
-  top: 2px;
-  right: 2px;
   background: ${({ $special }) => $special ? 
     'linear-gradient(135deg, #FFD700, #FFA500)' : 
     'linear-gradient(135deg, #FF6B6B, #FF4444)'
   };
   color: white;
-  padding: 1px 4px;
-  border-radius: 10px;
-  font-size: 7px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 10px;
+  margin-left: auto;
+  margin-right: 8px;
   font-weight: 700;
   white-space: nowrap;
   line-height: 1.2;
-  min-width: 14px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   animation: ${({ $special }) => $special ? 'pulse 2s infinite' : 'none'};
+  flex-shrink: 0;
   
   @keyframes pulse {
     0% { transform: scale(1); }
@@ -394,39 +511,48 @@ const CalendarHeader = styled.div`
 const MonthNavigation = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex: 1;
-  min-width: 0;
+  min-width: 140px;
 `;
 
 const NavButton = styled.button`
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   font-size: 12px;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.2));
+    transform: scale(1.05) translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  &:active {
+    transform: scale(1.02) translateY(0);
   }
 `;
 
 const MonthTitle = styled.h3`
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: white;
   text-transform: uppercase;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.5px;
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   flex: 1;
-  min-width: 0;
+  min-width: 100px;
+  white-space: nowrap;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -440,30 +566,44 @@ const QuickActions = styled.div`
 
 const CalendarViewSwitcher = styled.div`
   display: flex;
-  gap: 2px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
   padding: 3px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 `;
 
 const ViewSwitchButton = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => $active ? 'rgba(255, 255, 255, 0.3)' : 'transparent'};
-  border: none;
-  color: white;
+  background: ${({ $active }) => $active 
+    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85))' 
+    : 'rgba(255, 255, 255, 0.05)'};
+  border: 1px solid ${({ $active }) => $active 
+    ? 'rgba(255, 255, 255, 0.6)' 
+    : 'rgba(255, 255, 255, 0.15)'};
+  color: ${({ $active }) => $active ? '#3d4c74' : 'white'};
   font-size: 9px;
   font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 5px;
+  padding: 4px 10px;
+  border-radius: 7px;
   transition: all 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   min-width: 32px;
+  box-shadow: ${({ $active }) => $active 
+    ? '0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5)' 
+    : 'none'};
   
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: ${({ $active }) => $active 
+      ? 'linear-gradient(135deg, white, rgba(255, 255, 255, 0.95))' 
+      : 'rgba(255, 255, 255, 0.15)'};
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
   }
   
   ${({ $active }) => $active && `
@@ -499,12 +639,18 @@ const ActionButton = styled.button<{ $isActive?: boolean }>`
 const CalendarGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
-  background: rgba(0, 0, 0, 0.1);
-  padding: 1px;
-  border-radius: 6px;
-  height: 180px;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px;
+  border-radius: 8px;
+  height: 160px;
   width: 100%;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  
+  @media (max-width: 375px) {
+    height: 140px;
+  }
 `;
 
 const WeekDayHeader = styled.div`
@@ -522,25 +668,36 @@ const WeekDayHeader = styled.div`
 
 const DayCell = styled.div<{ $isToday?: boolean; $isOtherMonth?: boolean; $hasEvents?: boolean }>`
   background: ${props => {
-    if (props.$isToday) return 'rgba(255, 255, 255, 0.3)';
-    if (props.$hasEvents) return 'rgba(255, 255, 255, 0.2)';
-    return 'rgba(255, 255, 255, 0.1)';
+    if (props.$isOtherMonth) return 'rgba(30, 40, 60, 0.3)';
+    if (props.$isToday) return 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.3))';
+    if (props.$hasEvents) return 'linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15))';
+    return 'rgba(255, 255, 255, 0.08)';
   }};
   padding: 3px 2px;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  backdrop-filter: blur(3px);
+  box-shadow: ${props => props.$isToday ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none'};
+  border: 1px solid ${props => {
+    if (props.$isToday) return 'rgba(255, 255, 255, 0.4)';
+    if (props.$hasEvents) return 'rgba(255, 255, 255, 0.2)';
+    return 'transparent';
+  }};
   justify-content: center;
   cursor: pointer;
   position: relative;
-  opacity: ${props => props.$isOtherMonth ? 0.5 : 1};
+  opacity: ${props => props.$isOtherMonth ? 0.4 : 1};
+  color: ${props => props.$isOtherMonth ? 'rgba(255, 255, 255, 0.4)' : 'inherit'};
   transition: all 0.2s ease;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.25));
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
     z-index: 1;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   ${props => props.$hasEvents && !props.$isOtherMonth && `
@@ -936,6 +1093,8 @@ export const DashboardScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<any[]>([]);
+  const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
@@ -1036,181 +1195,10 @@ export const DashboardScreen: React.FC = () => {
   const currentMonthIndex = today.getMonth();
   const currentDay = today.getDate();
   
-  const [calendarEvents] = useState<CalendarEvent[]>([
-    {
-      id: '1',
-      date: new Date(currentYear, currentMonthIndex, 1),
-      time: '19:00',
-      title: 'New Year Gathering',
-      type: 'social',
-      icon: '🎉',
-      color: '#9C27B0',
-      status: 'confirmed'
-    },
-    {
-      id: '2',
-      date: new Date(currentYear, currentMonthIndex, currentDay), // Today's event
-      time: '09:00',
-      title: 'Cafe Meetup - KLCC',
-      type: 'cafe',
-      icon: '☕',
-      color: '#795548',
-      status: 'confirmed',
-      location: 'Espresso Lab KLCC'
-    },
-    {
-      id: '3',
-      date: new Date(currentYear, currentMonthIndex, currentDay), // Today's event
-      time: '19:00',
-      title: 'AI: Badminton Session',
-      type: 'ai',
-      icon: '🤖',
-      color: '#FF4444',
-      status: 'suggested'
-    },
-    {
-      id: '4',
-      date: new Date(currentYear, currentMonthIndex, 12),
-      time: '10:00',
-      title: 'Ilm Study Circle',
-      type: 'ilm',
-      icon: '📚',
-      color: '#FF9800',
-      status: 'confirmed'
-    },
-    {
-      id: '5',
-      date: new Date(currentYear, currentMonthIndex, 15),
-      time: '07:00',
-      title: 'Beach Cleanup',
-      type: 'volunteer',
-      icon: '🌱',
-      color: '#8BC34A',
-      status: 'confirmed'
-    },
-    {
-      id: '6',
-      date: new Date(currentYear, currentMonthIndex, 20),
-      time: '14:00',
-      title: 'Donation Drive',
-      type: 'donate',
-      icon: '🤲',
-      color: '#4CAF50',
-      status: 'confirmed'
-    },
-    {
-      id: '7',
-      date: new Date(currentYear, currentMonthIndex, 25),
-      time: '06:00',
-      title: 'Cameron Highlands Trip',
-      type: 'trips',
-      icon: '✈️',
-      color: '#00BCD4',
-      status: 'confirmed'
-    },
-    {
-      id: '8',
-      date: new Date(currentYear, currentMonthIndex, 28),
-      time: '16:00',
-      title: 'Sukan Badminton',
-      type: 'sukan',
-      icon: '🏸',
-      color: '#FF5722',
-      status: 'confirmed'
-    }
-  ]);
+  const [calendarEvents] = useState<CalendarEvent[]>([]);
 
   // Mock suggested events for days without committed events
-  const [suggestedEvents] = useState<CalendarEvent[]>([
-    {
-      id: 'suggest_1',
-      date: new Date(currentYear, currentMonthIndex, 2),
-      time: '14:00',
-      title: 'Coffee Chat - Pavilion',
-      type: 'cafe',
-      icon: '☕',
-      color: '#795548',
-      status: 'suggested',
-      location: 'Starbucks Pavilion KL'
-    },
-    {
-      id: 'suggest_2',
-      date: new Date(currentYear, currentMonthIndex, 5),
-      time: '19:00',
-      title: 'Evening Prayers & Discussion',
-      type: 'ilm',
-      icon: '🕌',
-      color: '#FF9800',
-      status: 'suggested',
-      location: 'Masjid Jamek'
-    },
-    {
-      id: 'suggest_3',
-      date: new Date(currentYear, currentMonthIndex, 8),
-      time: '10:00',
-      title: 'Weekend Basketball',
-      type: 'sukan',
-      icon: '🏀',
-      color: '#FF5722',
-      status: 'suggested',
-      location: 'Titiwangsa Sports Complex'
-    },
-    {
-      id: 'suggest_4',
-      date: new Date(currentYear, currentMonthIndex, 11),
-      time: '16:00',
-      title: 'Community Garden Volunteering',
-      type: 'volunteer',
-      icon: '🌱',
-      color: '#8BC34A',
-      status: 'suggested',
-      location: 'Taman Tasik Perdana'
-    },
-    {
-      id: 'suggest_5',
-      date: new Date(currentYear, currentMonthIndex, 14),
-      time: '18:30',
-      title: 'Photography Walk - KLCC',
-      type: 'social',
-      icon: '📸',
-      color: '#9C27B0',
-      status: 'suggested',
-      location: 'KLCC Park'
-    },
-    {
-      id: 'suggest_6',
-      date: new Date(currentYear, currentMonthIndex, 18),
-      time: '20:00',
-      title: 'Ramadan Prep Workshop',
-      type: 'ilm',
-      icon: '📚',
-      color: '#FF9800',
-      status: 'suggested',
-      location: 'Islamic Centre KL'
-    },
-    {
-      id: 'suggest_7',
-      date: new Date(currentYear, currentMonthIndex, 22),
-      time: '08:00',
-      title: 'Morning Hike - Bukit Tabur',
-      type: 'trips',
-      icon: '⛰️',
-      color: '#00BCD4',
-      status: 'suggested',
-      location: 'Bukit Tabur West'
-    },
-    {
-      id: 'suggest_8',
-      date: new Date(currentYear, currentMonthIndex, 26),
-      time: '15:00',
-      title: 'Food Bank Donation Drive',
-      type: 'donate',
-      icon: '🤲',
-      color: '#4CAF50',
-      status: 'suggested',
-      location: 'Kechara Food Bank'
-    }
-  ]);
+  const [suggestedEvents] = useState<CalendarEvent[]>([]);
 
   // Function to get suggested events for a date
   const getSuggestedEventsForDate = (date: Date | null) => {
@@ -1242,10 +1230,10 @@ export const DashboardScreen: React.FC = () => {
 
   // Dashboard reward cards data
   const dashboardRewards = [
-    { id: 'bright', icon: '📚', brand: 'BRIGHT English Centre', title: '20% off English courses', value: '20% off', points: 50, category: 'Education', description: '20% off English courses' },
-    { id: 'university', icon: '🎓', brand: 'University Studies', title: '20% off university fees', value: '20% off', points: 100, category: 'Education', description: '20% off university fees' },
-    { id: 'mukha', icon: '☕', brand: 'Mukha Cafe', title: 'Food & beverage discount', value: 'Discount', points: 25, category: 'Food & Drinks', description: 'Food & beverage discount' },
-    { id: 'umran', icon: '✈️', brand: 'Umran Travel & Tours', title: '10% discount on travel', value: '10% off', points: 75, category: 'Travel', description: '10% discount on travel' }
+    { id: 'mukha', icon: '☕', brand: 'Mukha Cafe', title: 'Food & beverage discount', value: '30% off', points: 30, category: 'Food & Drinks', description: '30% off food at Mukha Cafe (except lamb dishes) on the day of peaceful event 1 hour before and 1 hour after', comingSoon: false },
+    { id: 'bright', icon: '📚', brand: 'BRIGHT English Centre', title: 'Coming Soon', value: '20% off', points: 999, category: 'Education', description: '20% off English courses', comingSoon: true },
+    { id: 'university', icon: '🎓', brand: 'University Studies', title: 'Coming Soon', value: '20% off', points: 999, category: 'Education', description: '20% off university fees', comingSoon: true },
+    { id: 'umran', icon: '✈️', brand: 'Umran Travel & Tours', title: 'Coming Soon', value: '10% off', points: 999, category: 'Travel', description: '10% discount on travel', comingSoon: true }
   ];
 
   // Listen for points updates
@@ -1287,12 +1275,25 @@ export const DashboardScreen: React.FC = () => {
   
   const getEventsForDate = (date: Date | null) => {
     if (!date) return [];
-    return calendarEvents.filter(event => {
+    
+    // Get app events
+    const appEvents = calendarEvents.filter(event => {
       const eventDate = new Date(event.date);
       return eventDate.getDate() === date.getDate() &&
              eventDate.getMonth() === date.getMonth() &&
              eventDate.getFullYear() === date.getFullYear();
     });
+    
+    // Get Google Calendar events for this date
+    const googleEventsForDate = googleEvents.filter(event => {
+      const eventDate = new Date(event.startTime);
+      return eventDate.getDate() === date.getDate() &&
+             eventDate.getMonth() === date.getMonth() &&
+             eventDate.getFullYear() === date.getFullYear();
+    });
+    
+    // Merge both event sources
+    return [...appEvents, ...googleEventsForDate];
   };
   
   const getEventsForWeek = (date: Date) => {
@@ -1346,7 +1347,7 @@ export const DashboardScreen: React.FC = () => {
   };
   
   const getMonthYear = () => {
-    return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
   };
 
   // Compact Calendar Component
@@ -1416,14 +1417,14 @@ export const DashboardScreen: React.FC = () => {
           {/* Compact Header */}
           <CalendarHeader>
             <MonthNavigation>
-              <NavButton onClick={() => navigateMonth('prev')}>
-                ◄
+              <NavButton onClick={() => navigateMonth('prev')} style={{ fontSize: '10px', padding: '4px 8px' }}>
+                ‹
               </NavButton>
               <MonthTitle>
                 {getMonthYear()}
               </MonthTitle>
-              <NavButton onClick={() => navigateMonth('next')}>
-                ►
+              <NavButton onClick={() => navigateMonth('next')} style={{ fontSize: '10px', padding: '4px 8px' }}>
+                ›
               </NavButton>
             </MonthNavigation>
             
@@ -1543,6 +1544,18 @@ export const DashboardScreen: React.FC = () => {
               )}
             </CalendarLeft>
           </CalendarContent>
+          <div style={{ 
+            textAlign: 'center', 
+            fontSize: '8px', 
+            color: 'rgba(255, 255, 255, 0.6)', 
+            marginTop: '4px',
+            marginBottom: '-4px',
+            fontStyle: 'italic',
+            letterSpacing: '0.3px',
+            lineHeight: '1.4'
+          }}>
+            Tap to see event details • Patterned dates = committed events
+          </div>
         </CalendarWidget>
       </CalendarContainer>
     );
@@ -1550,13 +1563,13 @@ export const DashboardScreen: React.FC = () => {
 
   // Travel deals data for dashboard
   const travelDeals = [
-    { title: 'English Course', discount: '20% OFF', points: '💰 50 pts', color: '#70AD47' },
-    { title: 'Mukha Cafe', discount: '20% off', points: '💰 25 pts', color: '#FF6B35' },
-    { title: 'Bali Trip', discount: '20% OFF', points: '500 points', color: '#9B59B6' },
-    { title: 'University Studies', discount: '20% OFF', points: '💰 100 pts', color: '#70AD47' },
-    { title: 'Umrah Package', discount: '25% OFF', points: '600 points', color: '#9B59B6' },
-    { title: 'Dubai Hotel', discount: '30% OFF', points: '400 points', color: '#9B59B6' },
-    { title: 'Flight to Tokyo', discount: '15% OFF', points: '800 points', color: '#4A90E2' },
+    { id: 'mukha', icon: '☕', brand: 'Mukha Cafe', title: 'Mukha Cafe', discount: '30% OFF', points: 30, pointsText: '💰 30 pts', color: '#FF6B35', category: 'Food & Drinks', description: '30% off food at Mukha Cafe (except lamb dishes) on the day of peaceful event 1 hour before and 1 hour after', value: '30% off', comingSoon: false },
+    { id: 'bright', icon: '📚', brand: 'BRIGHT English Centre', title: 'Coming Soon', discount: 'Soon', points: 999, pointsText: 'Coming Soon', color: '#999', category: 'Education', description: '20% off English courses', value: '20% off', comingSoon: true },
+    { id: 'bali', icon: '🏝️', brand: 'Travel Agency', title: 'Coming Soon', discount: 'Soon', points: 999, pointsText: 'Coming Soon', color: '#999', category: 'Travel', description: '20% discount on Bali trip package', value: '20% off', comingSoon: true },
+    { id: 'university', icon: '🎓', brand: 'University Studies', title: 'Coming Soon', discount: 'Soon', points: 999, pointsText: 'Coming Soon', color: '#999', category: 'Education', description: '20% off university fees', value: '20% off', comingSoon: true },
+    { id: 'umrah', icon: '🕋', brand: 'Umrah Travel & Tours', title: 'Coming Soon', discount: 'Soon', points: 999, pointsText: 'Coming Soon', color: '#999', category: 'Travel', description: '25% discount on Umrah package', value: '25% off', comingSoon: true },
+    { id: 'dubai', icon: '🏨', brand: 'Dubai Hotels', title: 'Coming Soon', discount: 'Soon', points: 999, pointsText: 'Coming Soon', color: '#999', category: 'Travel', description: '30% discount on Dubai hotel booking', value: '30% off', comingSoon: true },
+    { id: 'tokyo', icon: '✈️', brand: 'Airlines', title: 'Coming Soon', discount: 'Soon', points: 999, pointsText: 'Coming Soon', color: '#999', category: 'Travel', description: '15% discount on Tokyo flights', value: '15% off', comingSoon: true },
   ];
 
   // Generate QR code data for BersePass
@@ -1633,63 +1646,61 @@ export const DashboardScreen: React.FC = () => {
         return (
           <RewardsContainer>
             <RewardsGrid>
-              <RewardCard $bgColor="#70AD47">
+              <RewardCard $bgColor="#999" style={{ opacity: 0.8 }}>
                 <CategoryLabel>📚 EDUCATION</CategoryLabel>
-                <ClaimedText>60% CLAIMED</ClaimedText>
-                <MiniProgressBar $percentage={60} />
+                <ClaimedText>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
                 
                 <RewardContent>
                   <RewardTitle>BRIGHT English Centre</RewardTitle>
-                  <DiscountBox>20% OFF</DiscountBox>
-                  <FilterRewardPoints>💰 50 pts</FilterRewardPoints>
-                  <ExpiryInfo>⏰ Limited time</ExpiryInfo>
+                  <DiscountBox>Soon</DiscountBox>
+                  <FilterRewardPoints>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Coming Soon</ExpiryInfo>
                 </RewardContent>
                 
                 <FilterRedeemButton 
-                  onClick={() => handleRedeemClick({
-                    id: 'bright',
-                    icon: '📚',
-                    brand: 'BRIGHT English Centre',
-                    title: '20% off English courses',
-                    value: '20% off',
-                    points: 50,
-                    category: 'Education',
-                    description: '20% off English courses'
-                  })}
-                  disabled={!canAfford(50)}
-                  style={{ opacity: canAfford(50) ? 1 : 0.5 }}
+                  onClick={() => {
+                    const interests = JSON.parse(localStorage.getItem('featureInterests') || '{}');
+                    const userId = user?.id || 'demo_user';
+                    if (!interests.brightEnglish) {
+                      interests.brightEnglish = [];
+                    }
+                    if (!interests.brightEnglish.includes(userId)) {
+                      interests.brightEnglish.push(userId);
+                      localStorage.setItem('featureInterests', JSON.stringify(interests));
+                      alert('✅ Thank you for your interest in BRIGHT English Centre rewards! We\'ll notify you when available.');
+                    } else {
+                      alert('You\'ve already expressed interest. We\'ll notify you when it launches!');
+                    }
+                  }}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #FF6B35, #F45B29)',
+                    opacity: 1,
+                    cursor: 'pointer'
+                  }}
                 >
-                  Redeem
+                  I'm Interested
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#70AD47">
+              <RewardCard $bgColor="#999" style={{ opacity: 0.6 }}>
                 <CategoryLabel>📚 EDUCATION</CategoryLabel>
-                <ClaimedText>80% CLAIMED</ClaimedText>
-                <MiniProgressBar $percentage={80} />
+                <ClaimedText>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
                 
                 <RewardContent>
                   <RewardTitle>University Studies</RewardTitle>
-                  <DiscountBox>20% OFF</DiscountBox>
-                  <FilterRewardPoints>💰 100 pts</FilterRewardPoints>
-                  <ExpiryInfo>⏰ Expires in 2 days</ExpiryInfo>
+                  <DiscountBox>Soon</DiscountBox>
+                  <FilterRewardPoints>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Coming Soon</ExpiryInfo>
                 </RewardContent>
                 
                 <FilterRedeemButton 
-                  onClick={() => handleRedeemClick({
-                    id: 'university',
-                    icon: '🎓',
-                    brand: 'University Studies',
-                    title: '20% off university fees',
-                    value: '20% off',
-                    points: 100,
-                    category: 'Education',
-                    description: '20% off university fees'
-                  })}
-                  disabled={!canAfford(100)}
-                  style={{ opacity: canAfford(100) ? 1 : 0.5 }}
+                  onClick={() => null}
+                  disabled={true}
+                  style={{ opacity: 0.5 }}
                 >
-                  Redeem
+                  Soon
                 </FilterRedeemButton>
               </RewardCard>
 
@@ -1700,9 +1711,9 @@ export const DashboardScreen: React.FC = () => {
                 
                 <RewardContent>
                   <RewardTitle>Mukha Cafe</RewardTitle>
-                  <DiscountBox>Food & Beverage</DiscountBox>
-                  <FilterRewardPoints>💰 25 pts</FilterRewardPoints>
-                  <ExpiryInfo>⏰ Today only</ExpiryInfo>
+                  <DiscountBox>30% OFF</DiscountBox>
+                  <FilterRewardPoints>💰 30 pts</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Available now</ExpiryInfo>
                 </RewardContent>
                 
                 <FilterRedeemButton 
@@ -1711,45 +1722,36 @@ export const DashboardScreen: React.FC = () => {
                     icon: '☕',
                     brand: 'Mukha Cafe',
                     title: 'Food & beverage discount',
-                    value: 'Discount',
-                    points: 25,
+                    value: '30% off',
+                    points: 30,
                     category: 'Food & Drinks',
-                    description: 'Food & beverage discount'
+                    description: '30% off food at Mukha Cafe (except lamb dishes) on the day of peaceful event 1 hour before and 1 hour after'
                   })}
-                  disabled={!canAfford(25)}
-                  style={{ opacity: canAfford(25) ? 1 : 0.5 }}
+                  disabled={!canAfford(30)}
+                  style={{ opacity: canAfford(30) ? 1 : 0.5 }}
                 >
                   Redeem
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#9B59B6">
+              <RewardCard $bgColor="#999" style={{ opacity: 0.6 }}>
                 <CategoryLabel>✈️ TRAVEL</CategoryLabel>
-                <ClaimedText>30% CLAIMED</ClaimedText>
-                <MiniProgressBar $percentage={30} />
+                <ClaimedText>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
                 
                 <RewardContent>
                   <RewardTitle>Umrah Travel & Tours</RewardTitle>
-                  <DiscountBox>10% OFF</DiscountBox>
-                  <FilterRewardPoints>💰 75 pts</FilterRewardPoints>
-                  <ExpiryInfo>⏰ Limited spots</ExpiryInfo>
+                  <DiscountBox>Soon</DiscountBox>
+                  <FilterRewardPoints>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo>⏰ Coming Soon</ExpiryInfo>
                 </RewardContent>
                 
                 <FilterRedeemButton 
-                  onClick={() => handleRedeemClick({
-                    id: 'umran',
-                    icon: '✈️',
-                    brand: 'Umrah Travel & Tours',
-                    title: '10% discount on travel',
-                    value: '10% off',
-                    points: 75,
-                    category: 'Travel',
-                    description: '10% discount on travel'
-                  })}
-                  disabled={!canAfford(75)}
-                  style={{ opacity: canAfford(75) ? 1 : 0.5 }}
+                  onClick={() => null}
+                  disabled={true}
+                  style={{ opacity: 0.5 }}
                 >
-                  Redeem
+                  Soon
                 </FilterRedeemButton>
               </RewardCard>
             </RewardsGrid>
@@ -1928,46 +1930,68 @@ export const DashboardScreen: React.FC = () => {
           <QuickActionsContainer>
             <QuickActionsHeader>
               <QuickActionsTitle>Quick Actions</QuickActionsTitle>
-              <TravelFundButton onClick={() => setShowTravelPlansModal(true)}>
-                ✈️ My Travel Fund
+              <TravelFundButton 
+                onClick={() => alert('Coming Soon! 🚀')}
+                style={{ opacity: 0.6, cursor: 'not-allowed' }}
+              >
+                ✈️ My Travel Fund - Soon
               </TravelFundButton>
             </QuickActionsHeader>
             
             <QuickActionsGrid>
               <QuickActionButton $variant="events" onClick={() => navigate('/connect')}>
-                <ActionBadge>3</ActionBadge>
                 <ActionIcon>🎫</ActionIcon>
                 <ActionText>
                   <strong>Find Events</strong>
-                  Sports & gatherings
+                  Gatherings & Socials
                 </ActionText>
+                <ActionBadge>3 new</ActionBadge>
               </QuickActionButton>
               
               <QuickActionButton $variant="profiles" onClick={() => navigate('/match')}>
-                <ActionBadge>5</ActionBadge>
                 <ActionIcon>👥</ActionIcon>
                 <ActionText>
                   <strong>Explore Profiles</strong>
                   Connect & network
                 </ActionText>
+                <ActionBadge>5 new</ActionBadge>
               </QuickActionButton>
               
-              <QuickActionButton $variant="market" onClick={() => navigate('/market')}>
-                <ActionBadge>10</ActionBadge>
+              <QuickActionButton $variant="game" onClick={() => navigate('/bersecardgame')}>
+                <ActionIcon>🃏</ActionIcon>
+                <ActionText>
+                  <strong>BerseCardGame</strong>
+                  Conversation prompts
+                </ActionText>
+                <ActionBadge $special>New!</ActionBadge>
+              </QuickActionButton>
+              
+              <QuickActionButton 
+                $variant="market" 
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  // Track interest in feature
+                  const interests = JSON.parse(localStorage.getItem('featureInterests') || '{}');
+                  const userId = user?.id || 'demo_user';
+                  if (!interests.berseMarket) {
+                    interests.berseMarket = [];
+                  }
+                  if (!interests.berseMarket.includes(userId)) {
+                    interests.berseMarket.push(userId);
+                    localStorage.setItem('featureInterests', JSON.stringify(interests));
+                    alert('✅ Thank you for your interest in BerseMarket! We\'ll notify you when it launches.');
+                  } else {
+                    alert('You\'ve already expressed interest in BerseMarket. We\'ll notify you when it launches!');
+                  }
+                }} 
+                style={{ opacity: 0.8, position: 'relative' }}
+              >
                 <ActionIcon>🛍️</ActionIcon>
                 <ActionText>
                   <strong>BerseMarket</strong>
                   Buy, sell, trade
                 </ActionText>
-              </QuickActionButton>
-              
-              <QuickActionButton $variant="game" onClick={() => navigate('/bersecardgame')}>
-                <ActionBadge $special>!</ActionBadge>
-                <ActionIcon>🃏</ActionIcon>
-                <ActionText>
-                  <strong>BerseCardGame</strong>
-                  Conversational prompts
-                </ActionText>
+                <ActionBadge style={{ background: '#FF6B35' }}>I'm Interested</ActionBadge>
               </QuickActionButton>
             </QuickActionsGrid>
           </QuickActionsContainer>
@@ -2149,7 +2173,7 @@ export const DashboardScreen: React.FC = () => {
                             Check back later or explore other dates for upcoming activities in your area
                           </div>
                           <div style={{
-                            background: '#2D5F4F',
+                            background: '#2fce98',
                             color: 'white',
                             padding: '10px 16px',
                             borderRadius: '8px',
@@ -2242,20 +2266,46 @@ export const DashboardScreen: React.FC = () => {
 
         {/* Featured Rewards */}
         <FeaturedRewardsContainer>
-          <FeaturedRewardsTitle>
-            Featured Rewards
-          </FeaturedRewardsTitle>
+          <FeaturedRewardsHeader>
+            <FeaturedRewardsTitle>
+              Featured Rewards
+            </FeaturedRewardsTitle>
+            <AllRewardsButton 
+              onClick={() => alert('Coming Soon! 🚀')}
+              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+            >
+              🎁 All Rewards - Soon
+            </AllRewardsButton>
+          </FeaturedRewardsHeader>
           <HorizontalScroll>
             {travelDeals.map((deal, index) => (
-              <DealCard key={index} bgColor={deal.color}>
-                <DealCardTitle color="white">{deal.title}</DealCardTitle>
-                <DealCardDiscount color="white">{deal.discount}</DealCardDiscount>
-                <DealCardPoints color="rgba(255,255,255,0.8)">
-                  {deal.points}
-                </DealCardPoints>
-                <DealCardButton>
-                  Redeem
-                </DealCardButton>
+              <DealCard key={index} $bgColor={deal.color} style={{ opacity: deal.comingSoon ? 0.6 : 1 }}>
+                <DealCardTop>
+                  <DealCardTitle color="white">{deal.title}</DealCardTitle>
+                </DealCardTop>
+                <DealCardMiddle>
+                  <DealCardDiscount color="white">{deal.discount}</DealCardDiscount>
+                </DealCardMiddle>
+                <DealCardBottom>
+                  <DealCardPoints color="rgba(255,255,255,0.8)">
+                    {deal.pointsText}
+                  </DealCardPoints>
+                  <DealCardButton
+                    onClick={() => deal.comingSoon ? null : (canAfford(deal.points) ? handleRedeemClick({
+                      id: deal.id,
+                      icon: deal.icon,
+                      brand: deal.brand,
+                      title: deal.description,
+                      value: deal.value,
+                      points: deal.points,
+                      category: deal.category,
+                      description: deal.description
+                    }) : null)}
+                    disabled={deal.comingSoon || !canAfford(deal.points)}
+                  >
+                    {deal.comingSoon ? 'Soon' : (canAfford(deal.points) ? 'Redeem' : 'Not Enough')}
+                  </DealCardButton>
+                </DealCardBottom>
               </DealCard>
             ))}
           </HorizontalScroll>
@@ -2264,34 +2314,26 @@ export const DashboardScreen: React.FC = () => {
         {/* Features Section - Filter Based System */}
         <FeaturesSection>
           <FeaturesGrid>
-            <FeatureButton onClick={() => handleFilterClick('points-leaderboard')}>
-              <FeatureIconContainer $bgColor="#E8D5E8" $active={activeFilter === 'points-leaderboard'}>
+            <FeatureButton 
+              onClick={() => alert('Coming Soon! 🚀')}
+              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+            >
+              <FeatureIconContainer $bgColor="#E8D5E8" $active={false}>
                 <FeatureIcon>🏆</FeatureIcon>
               </FeatureIconContainer>
-              <FeatureTitle>Points Leaderboard</FeatureTitle>
+              <FeatureTitle>Points Leaderboard - Soon</FeatureTitle>
             </FeatureButton>
 
-            <FeatureButton onClick={() => handleFilterClick('recent-activities')}>
-              <FeatureIconContainer $bgColor="#E8F4E8" $active={activeFilter === 'recent-activities'}>
+            <FeatureButton 
+              onClick={() => alert('Coming Soon! 🚀')}
+              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+            >
+              <FeatureIconContainer $bgColor="#E8F4E8" $active={false}>
                 <FeatureIcon>📈</FeatureIcon>
               </FeatureIconContainer>
-              <FeatureTitle>Recent Activities</FeatureTitle>
+              <FeatureTitle>Recent Activities - Soon</FeatureTitle>
             </FeatureButton>
 
-            <FeatureButton onClick={() => navigate('/my-vouchers')}>
-              <FeatureIconContainer $bgColor="#E8F0FF" $active={false}>
-                <FeatureIcon>🎫</FeatureIcon>
-              </FeatureIconContainer>
-              <FeatureTitle>My Vouchers</FeatureTitle>
-            </FeatureButton>
-
-            {/* All Rewards button */}
-            <FeatureButton onClick={() => navigate('/points')}>
-              <FeatureIconContainer $bgColor="#FFE8E8" $active={false}>
-                <FeatureIcon>🎁</FeatureIcon>
-              </FeatureIconContainer>
-              <FeatureTitle>All Rewards</FeatureTitle>
-            </FeatureButton>
           </FeaturesGrid>
         </FeaturesSection>
 
@@ -2414,7 +2456,7 @@ export const DashboardScreen: React.FC = () => {
             <div style={{
               width: '80px',
               height: '80px',
-              backgroundColor: '#2D5F4F',
+              backgroundColor: '#2fce98',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -2456,7 +2498,7 @@ export const DashboardScreen: React.FC = () => {
               <div style={{ 
                 fontSize: '14px', 
                 fontWeight: '600', 
-                color: '#2D5F4F', 
+                color: '#2fce98', 
                 marginBottom: '12px',
                 textAlign: 'center'
               }}>
@@ -2541,7 +2583,7 @@ export const DashboardScreen: React.FC = () => {
                 }}
                 style={{
                   flex: 1,
-                  backgroundColor: '#2D5F4F',
+                  backgroundColor: '#2fce98',
                   color: 'white',
                   border: 'none',
                   padding: '12px',
@@ -2552,7 +2594,7 @@ export const DashboardScreen: React.FC = () => {
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1a4a3a'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2D5F4F'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2fce98'}
               >
                 Connect Setel
               </button>
@@ -2812,8 +2854,11 @@ export const DashboardScreen: React.FC = () => {
                           <span>🏨 Hotel.com -300pts</span>
                           <span style={{ color: '#4CAF50' }}>Save RM 50</span>
                         </div>
-                        <TravelActionButton style={{ width: '100%' }}>
-                          View All Rewards →
+                        <TravelActionButton 
+                          style={{ width: '100%', opacity: 0.6, cursor: 'not-allowed' }}
+                          onClick={() => alert('Coming Soon! 🚀')}
+                        >
+                          View All Rewards - Soon
                         </TravelActionButton>
                       </FundingSection>
                       
@@ -2892,18 +2937,20 @@ export const DashboardScreen: React.FC = () => {
 const FeaturesSection = styled.div`
   margin: 16px 0;
   padding: 0 16px;
+  display: flex;
+  justify-content: center;
 `;
 
 const FeaturesGrid = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 16px;
   padding: 0 4px;
   
   @media (max-width: 350px) {
-    gap: 4px;
+    gap: 8px;
     padding: 0 2px;
   }
 `;
@@ -2933,7 +2980,7 @@ const FeatureIconContainer = styled.div<{ $bgColor: string; $active?: boolean }>
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: ${({ $bgColor, $active }) => $active ? '#2D5F4F' : $bgColor};
+  background: ${({ $bgColor, $active }) => $active ? '#2fce98' : $bgColor};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2942,7 +2989,7 @@ const FeatureIconContainer = styled.div<{ $bgColor: string; $active?: boolean }>
     $active ? '0 2px 8px rgba(45, 95, 79, 0.3)' : '0 1px 4px rgba(0, 0, 0, 0.1)'
   };
   transition: all 0.2s ease;
-  border: ${({ $active }) => $active ? '2px solid #2D5F4F' : 'none'};
+  border: ${({ $active }) => $active ? '2px solid #2fce98' : 'none'};
   
   @media (max-width: 350px) {
     width: 40px;
@@ -3020,32 +3067,42 @@ const RewardsContainer = styled.div`
 const RewardsGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
+  
+  @media (max-width: 375px) {
+    gap: 6px;
+  }
 `;
 
 const RewardCard = styled.div<{ $bgColor: string }>`
   background: ${({ $bgColor }) => $bgColor};
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 10px;
   color: white;
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 200px;
+  min-height: 150px;
+  
+  @media (max-width: 375px) {
+    padding: 8px;
+    min-height: 140px;
+    border-radius: 10px;
+  }
 `;
 
 const ClaimedText = styled.div`
-  font-size: 11px;
+  font-size: 9px;
   font-weight: bold;
   opacity: 0.9;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 `;
 
 const MiniProgressBar = styled.div<{ $percentage: number }>`
-  height: 4px;
+  height: 3px;
   background: rgba(255, 255, 255, 0.3);
   border-radius: 2px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   overflow: hidden;
   
   &::after {
@@ -3060,28 +3117,28 @@ const MiniProgressBar = styled.div<{ $percentage: number }>`
 `;
 
 const DiscountBox = styled.div`
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  padding: 6px 16px;
-  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  padding: 4px 10px;
+  border-radius: 4px;
   font-weight: bold;
-  font-size: 14px;
-  margin-bottom: 12px;
+  font-size: 12px;
+  margin-bottom: 6px;
   display: inline-block;
 `;
 
 const ExpiryInfo = styled.div`
-  font-size: 11px;
+  font-size: 9px;
   opacity: 0.9;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 `;
 
 const CategoryLabel = styled.div`
-  font-size: 10px;
+  font-size: 8px;
   font-weight: bold;
   text-transform: uppercase;
   opacity: 0.9;
-  margin-bottom: 8px;
-  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
 `;
 
 // Travel Fund Modal Styles
@@ -3232,7 +3289,7 @@ const TripFunding = styled.div`
 const ViewDetailsButton = styled.button`
   width: 100%;
   padding: 10px;
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   border-radius: 8px;
@@ -3249,7 +3306,7 @@ const ViewDetailsButton = styled.button`
 
 const AddTripCard = styled(TripCard)`
   background: linear-gradient(135deg, #e8f4f0 0%, #f0f8f5 100%);
-  border: 2px dashed #2D5F4F;
+  border: 2px dashed #2fce98;
   text-align: center;
   cursor: pointer;
   
@@ -3274,12 +3331,12 @@ const DetailTab = styled.button<{ $active: boolean }>`
   border-radius: 6px;
   font-size: 14px;
   font-weight: ${({ $active }) => $active ? '600' : '500'};
-  color: ${({ $active }) => $active ? '#2D5F4F' : '#666'};
+  color: ${({ $active }) => $active ? '#2fce98' : '#666'};
   cursor: pointer;
   transition: all 0.2s;
   
   &:hover {
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -3325,7 +3382,7 @@ const CheckboxItem = styled.label`
 `;
 
 const TravelActionButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   border-radius: 8px;
@@ -3368,14 +3425,19 @@ const RewardContent = styled.div`
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 8px 0;
+  padding: 4px 0;
 `;
 
 const RewardTitle = styled.h4`
-  font-size: 16px;
+  font-size: 12px;
   font-weight: bold;
-  margin: 0 0 12px 0;
-  line-height: 1.2;
+  margin: 0 0 6px 0;
+  line-height: 1.1;
+  
+  @media (max-width: 375px) {
+    font-size: 11px;
+    margin: 0 0 4px 0;
+  }
 `;
 
 const RewardDiscount = styled.p`
@@ -3385,22 +3447,32 @@ const RewardDiscount = styled.p`
 `;
 
 const FilterRewardPoints = styled.div`
-  font-size: 14px;
+  font-size: 11px;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  
+  @media (max-width: 375px) {
+    font-size: 10px;
+  }
 `;
 
 const FilterRedeemButton = styled.button`
   background: rgba(255, 255, 255, 0.9);
   color: ${props => props.disabled ? '#999' : '#333'};
   border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   width: 100%;
   transition: all 0.2s ease;
+  
+  @media (max-width: 375px) {
+    padding: 5px 10px;
+    font-size: 10px;
+    border-radius: 4px;
+  }
   
   &:hover:not(:disabled) {
     background: white;
@@ -3411,27 +3483,39 @@ const FilterRedeemButton = styled.button`
 // Travel Deals Components
 const HorizontalScroll = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 6px;
   overflow-x: auto;
   padding: 0;
-  padding-right: 16px;
+  padding-right: 6px;
   
   &::-webkit-scrollbar {
     display: none;
   }
+  
+  @media (max-width: 375px) {
+    gap: 4px;
+  }
 `;
 
-const DealCard = styled.div<{ bgColor?: string }>`
-  min-width: 160px;
-  background: ${props => props.bgColor || 'white'};
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+const DealCard = styled.div<{ $bgColor?: string }>`
+  min-width: 95px;
+  background: ${props => props.$bgColor || 'white'};
+  border-radius: 8px;
+  padding: 6px 8px 4px 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
-  min-height: 140px;
+  justify-content: space-between;
+  min-height: 75px;
+  
+  @media (max-width: 375px) {
+    min-width: 90px;
+    padding: 5px 6px 3px 6px;
+    min-height: 70px;
+    border-radius: 6px;
+  }
 
   &:hover {
     transform: translateY(-2px);
@@ -3439,41 +3523,95 @@ const DealCard = styled.div<{ bgColor?: string }>`
 `;
 
 const DealCardTitle = styled.h4`
-  font-size: 14px;
+  font-size: 9px;
   font-weight: 600;
   color: ${props => props.color || '#333'};
-  margin-bottom: 8px;
+  margin: 0;
+  line-height: 1.1;
+  flex-shrink: 0;
+  text-align: left;
+  width: 100%;
+  
+  @media (max-width: 375px) {
+    font-size: 8px;
+  }
 `;
 
 const DealCardDiscount = styled.div`
-  font-size: 20px;
+  font-size: 13px;
   font-weight: bold;
   color: ${props => props.color || '#333'};
-  margin-bottom: 4px;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+  
+  @media (max-width: 375px) {
+    font-size: 12px;
+  }
 `;
 
 const DealCardPoints = styled.div`
-  font-size: 12px;
+  font-size: 8px;
   color: ${props => props.color || '#666'};
-  margin-bottom: 12px;
+  margin: 0;
+  flex-shrink: 0;
+  text-align: left;
+  width: 100%;
+  
+  @media (max-width: 375px) {
+    font-size: 7px;
+  }
 `;
 
 const DealCardButton = styled.button`
-  background: white;
-  color: #333;
+  background: ${props => props.disabled ? 'rgba(255, 255, 255, 0.6)' : 'white'};
+  color: ${props => props.disabled ? 'rgba(51, 51, 51, 0.8)' : '#333'};
   border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: ${props => props.disabled ? '8px' : '9px'};
   font-weight: 600;
-  cursor: pointer;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
   transition: all 0.2s;
-  margin-top: auto;
+  margin-top: 3px;
+  margin-bottom: 0;
+  flex-shrink: 0;
   
-  &:hover {
-    background: rgba(255, 255, 255, 0.9);
+  @media (max-width: 375px) {
+    padding: 2px 6px;
+    font-size: ${props => props.disabled ? '7px' : '8px'};
+    border-radius: 3px;
+  }
+  
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.95);
     transform: translateY(-1px);
   }
+  
+  &:disabled {
+    background: rgba(255, 255, 255, 0.6);
+  }
+`;
+
+const DealCardTop = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+`;
+
+const DealCardMiddle = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+`;
+
+const DealCardBottom = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 `;
 
 // Leaderboard Components
@@ -3493,7 +3631,7 @@ const HeaderIcon = styled.div`
 const HeaderTitle = styled.h3`
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
 `;
 
@@ -3511,7 +3649,7 @@ const LeaderboardItem = styled.div<{ $rank: number; $isUser?: boolean }>`
   padding: 12px 16px;
   background: ${({ $isUser }) => $isUser ? '#E8F5E8' : 'white'};
   border-radius: 12px;
-  border: ${({ $isUser }) => $isUser ? '2px solid #2D5F4F' : '1px solid #f0f0f0'};
+  border: ${({ $isUser }) => $isUser ? '2px solid #2fce98' : '1px solid #f0f0f0'};
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 `;
 
@@ -3532,7 +3670,7 @@ const PlayerName = styled.div`
 const PlayerPoints = styled.div`
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const PointsChange = styled.div<{ $positive: boolean }>`
@@ -3542,7 +3680,7 @@ const PointsChange = styled.div<{ $positive: boolean }>`
 `;
 
 const ViewFullButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   border-radius: 12px;
@@ -3621,7 +3759,7 @@ const ActivityTitle = styled.h5`
 const ActivityPoints = styled.div`
   font-size: 12px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const ActivityMeta = styled.div`

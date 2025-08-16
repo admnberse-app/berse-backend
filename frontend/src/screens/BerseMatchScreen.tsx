@@ -5,6 +5,9 @@ import { StatusBar } from '../components/StatusBar/StatusBar';
 import { CompactHeader } from '../components/CompactHeader/CompactHeader';
 import { ProfileSidebar } from '../components/ProfileSidebar/ProfileSidebar';
 import { MainNav } from '../components/MainNav/index';
+import { useAuth } from '../contexts/AuthContext';
+import { generateBerseMukhaEvents, generatePersonAttendance } from '../data/bersemukhaEvents';
+import { JoinCommunityModal, FriendRequestModal, ShareModal } from '../components/CommunityModals';
 
 // Interface for travel history
 interface TravelEntry {
@@ -28,9 +31,9 @@ interface TrustConnection {
 
 // Interface for profile data
 interface ProfileCardData {
-  id: number;
+  id: number | string;
   name: string;
-  age: number;
+  age?: number;
   profession: string;
   location: string;
   origin?: string;
@@ -57,9 +60,59 @@ interface ProfileCardData {
   travelHistory?: TravelEntry[];
   trustChain?: TrustConnection[];
   // Community-specific fields
+  type?: 'user' | 'community';
   memberCount?: number;
+  eventCount?: number;
+  description?: string;
+  category?: string;
   upcomingEvents?: string[];
+  // New fields
+  topInterests?: string[];
+  communities?: string[];
+  eventsAttending?: string[];
+  communityRoles?: { [key: string]: string };
+  offerings?: {
+    berseGuide?: {
+      price: string;
+      duration: string;
+      locations: string[];
+      specialties: string[];
+    };
+    homeSurf?: {
+      available: boolean;
+      maxDays: number;
+      amenities: string[];
+    };
+    berseBuddy?: {
+      activities: string[];
+      availability: string;
+    };
+    berseMentor?: {
+      expertise: string[];
+      rate: string;
+      format: string[];
+    };
+  };
 }
+
+// Define interest options
+const INTEREST_OPTIONS = [
+  { icon: '🌍', label: 'Cultural Networking', value: 'cultural-networking' },
+  { icon: '☕', label: 'Cafe Hopping', value: 'cafe-hopping' },
+  { icon: '✈️', label: 'Travel Stories', value: 'travel-stories' },
+  { icon: '🗣️', label: 'Language Exchange', value: 'language-exchange' },
+  { icon: '🚀', label: 'Startup Networking', value: 'startup-networking' },
+  { icon: '💚', label: 'Social Impact', value: 'social-impact' },
+  { icon: '⚽', label: 'Sports Activities', value: 'sports-activities' },
+  { icon: '🏸', label: 'Badminton Games', value: 'badminton-games' },
+  { icon: '🥾', label: 'Hiking Trails', value: 'hiking-trails' },
+  { icon: '🏛️', label: 'Heritage Walks', value: 'heritage-walks' },
+  { icon: '🍜', label: 'Foodie Meetups', value: 'foodie-meetups' },
+  { icon: '📚', label: 'Book Talks', value: 'book-talks' },
+  { icon: '🎒', label: 'Weekend Trips', value: 'weekend-trips' },
+  { icon: '📸', label: 'Photo Walks', value: 'photo-walks' },
+  { icon: '🏖️', label: 'Beach Outings', value: 'beach-outings' }
+];
 
 const Container = styled.div`
   display: flex;
@@ -70,12 +123,12 @@ const Container = styled.div`
 
 // Connection Mode Selector
 const ConnectionModeCard = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A8B7C);
+  background: linear-gradient(135deg, #2fce98, #26b580);
   border-radius: 12px;
   padding: 8px;
   margin: 4px 16px 8px 16px;
   color: white;
-  box-shadow: 0 4px 12px rgba(45, 95, 79, 0.25), 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(47, 206, 152, 0.25), 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   overflow: hidden;
@@ -161,7 +214,7 @@ const ModeButton = styled.button<{ $active?: boolean }>`
   background: ${props => props.$active 
     ? 'linear-gradient(135deg, white, #f8f8f8)' 
     : 'rgba(255, 255, 255, 0.1)'};
-  color: ${props => props.$active ? '#2D5F4F' : 'white'};
+  color: ${props => props.$active ? '#2fce98' : 'white'};
   border: 1px solid ${props => props.$active 
     ? 'rgba(255, 255, 255, 0.8)' 
     : 'rgba(255, 255, 255, 0.2)'};
@@ -194,21 +247,17 @@ const ModeButton = styled.button<{ $active?: boolean }>`
   }
 `;
 
-const CollabBadge = styled.div`
+const CollabBadge = styled.span`
   position: absolute;
-  top: -6px;
-  right: -6px;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: #2D5F4F;
-  font-size: 5px;
-  padding: 1px 3px;
-  border-radius: 6px;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  z-index: 1;
-  letter-spacing: 0.2px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  top: 2px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 `;
 
 // Tab Navigation
@@ -223,9 +272,9 @@ const Tab = styled.button<{ $active: boolean }>`
   flex: 1;
   padding: 14px 8px;
   background: transparent;
-  color: ${props => props.$active ? '#2D5F4F' : '#999'};
+  color: ${props => props.$active ? '#2fce98' : '#999'};
   border: none;
-  border-bottom: ${props => props.$active ? '3px solid #2D5F4F' : '3px solid transparent'};
+  border-bottom: ${props => props.$active ? '3px solid #2fce98' : '3px solid transparent'};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -236,7 +285,7 @@ const Tab = styled.button<{ $active: boolean }>`
   gap: 2px;
 
   &:hover {
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -253,7 +302,7 @@ const TabSublabel = styled.div`
 // Primary Discover Card
 const DiscoverCard = styled.div<{ $active: boolean }>`
   background: ${props => props.$active 
-    ? 'linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%)' 
+    ? 'linear-gradient(135deg, #2fce98 0%, #4A8B7C 100%)' 
     : 'white'};
   border-radius: 12px;
   padding: 16px;
@@ -285,14 +334,14 @@ const DiscoverHeader = styled.div`
 const DiscoverTitle = styled.div<{ $active: boolean }>`
   font-size: 14px;
   font-weight: 700;
-  color: ${props => props.$active ? 'white' : '#2D5F4F'};
+  color: ${props => props.$active ? 'white' : '#2fce98'};
   letter-spacing: 0.5px;
 `;
 
 const DiscoverCount = styled.div<{ $active: boolean }>`
   font-size: 18px;
   font-weight: bold;
-  color: ${props => props.$active ? 'white' : '#2D5F4F'};
+  color: ${props => props.$active ? 'white' : '#2fce98'};
 `;
 
 const DiscoverSubtitle = styled.div<{ $active: boolean }>`
@@ -310,7 +359,7 @@ const SecondaryTabs = styled.div`
 
 const SecondaryTab = styled.button<{ $active: boolean }>`
   background: white;
-  border: 1px solid ${props => props.$active ? '#2D5F4F' : '#E0E0E0'};
+  border: 1px solid ${props => props.$active ? '#2fce98' : '#E0E0E0'};
   border-radius: 10px;
   padding: 12px;
   cursor: pointer;
@@ -321,7 +370,7 @@ const SecondaryTab = styled.button<{ $active: boolean }>`
   
   &:hover {
     background: ${props => props.$active ? '#F0F7F4' : '#F8F8F8'};
-    border-color: ${props => props.$active ? '#2D5F4F' : '#CCC'};
+    border-color: ${props => props.$active ? '#2fce98' : '#CCC'};
     transform: translateY(-1px);
   }
 `;
@@ -333,7 +382,7 @@ const SecondaryTabInfo = styled.div`
 const SecondaryTabLabel = styled.div<{ $active: boolean }>`
   font-size: 12px;
   font-weight: 600;
-  color: ${props => props.$active ? '#2D5F4F' : '#333'};
+  color: ${props => props.$active ? '#2fce98' : '#333'};
   margin-bottom: 2px;
 `;
 
@@ -345,7 +394,7 @@ const SecondaryTabSublabel = styled.div`
 const SecondaryTabCount = styled.div<{ $active: boolean }>`
   font-size: 16px;
   font-weight: bold;
-  color: ${props => props.$active ? '#2D5F4F' : '#666'};
+  color: ${props => props.$active ? '#2fce98' : '#666'};
 `;
 
 // Content Area
@@ -437,7 +486,7 @@ const CompactDropdown = styled.select`
   height: 24px;
   
   option {
-    background: #2D5F4F;
+    background: #2fce98;
     color: white;
     font-size: 11px;
   }
@@ -573,15 +622,15 @@ const NameBadgesRow = styled.div`
   margin-bottom: 4px;
 `;
 
-const InlineBadge = styled.span`
+const InlineBadge = styled.span<{ $color?: string; $textColor?: string }>`
   display: inline-flex;
   align-items: center;
   gap: 2px;
   padding: 2px 6px;
-  background: ${props => props.color || '#F5F5F5'};
+  background: ${props => props.$color || '#F5F5F5'};
   border-radius: 8px;
   font-size: 9px;
-  color: ${props => props.textColor || '#666'};
+  color: ${props => props.$textColor || '#666'};
   font-weight: 500;
   white-space: nowrap;
 `;
@@ -596,7 +645,7 @@ const ConnectionLocation = styled.div`
   transition: all 0.2s ease;
   
   &:hover {
-    color: #2D5F4F;
+    color: #2fce98;
     text-decoration: underline;
   }
 `;
@@ -669,7 +718,7 @@ const GuideName = styled.h3`
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const GuideSubtitle = styled.p`
@@ -717,7 +766,7 @@ const SectionTitle = styled.h4`
   margin: 0 0 8px 0;
   font-size: 11px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -807,7 +856,7 @@ const GuideButton = styled.button<{ $primary?: boolean }>`
   transition: all 0.2s ease;
   
   ${props => props.$primary ? `
-    background: #2D5F4F;
+    background: #2fce98;
     color: white;
     border: none;
     
@@ -817,8 +866,8 @@ const GuideButton = styled.button<{ $primary?: boolean }>`
     }
   ` : `
     background: white;
-    color: #2D5F4F;
-    border: 1px solid #2D5F4F;
+    color: #2fce98;
+    border: 1px solid #2fce98;
     
     &:hover {
       background: #F8F9FA;
@@ -871,22 +920,22 @@ const ProfileInfoRow = styled.div`
   flex-wrap: wrap;
 `;
 
-const InfoBadge = styled.span`
+const InfoBadge = styled.span<{ $color?: string; $textColor?: string }>`
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: ${props => props.color || '#F5F5F5'};
+  background: ${props => props.$color || '#F5F5F5'};
   border-radius: 12px;
   font-size: 10px;
-  color: ${props => props.textColor || '#666'};
+  color: ${props => props.$textColor || '#666'};
   font-weight: 500;
 `;
 
 const ViewMoreButton = styled.button`
   background: none;
   border: none;
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -946,7 +995,7 @@ const DetailSectionTitle = styled.h4`
   margin: 0 0 12px 0;
   font-size: 12px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -1021,7 +1070,7 @@ const LogbookContent = styled.div`
 `;
 
 const LogbookHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A8B7C);
+  background: linear-gradient(135deg, #2fce98, #4A8B7C);
   color: white;
   padding: 20px;
   position: relative;
@@ -1082,7 +1131,7 @@ const TravelStatItem = styled.div`
 const TravelStatValue = styled.div`
   font-size: 18px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const TravelStatLabel = styled.div`
@@ -1397,9 +1446,9 @@ const MutualTag = styled.span`
 const ActionButton = styled.button<{ $primary?: boolean }>`
   flex: 1;
   padding: 10px;
-  background: ${props => props.$primary ? '#2D5F4F' : 'white'};
-  color: ${props => props.$primary ? 'white' : '#2D5F4F'};
-  border: ${props => props.$primary ? 'none' : '1px solid #2D5F4F'};
+  background: ${props => props.$primary ? '#2fce98' : 'white'};
+  color: ${props => props.$primary ? 'white' : '#2fce98'};
+  border: ${props => props.$primary ? 'none' : '1px solid #2fce98'};
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -1575,7 +1624,7 @@ const StatItem = styled.div`
 const StatValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const StatLabel = styled.div`
@@ -1698,7 +1747,7 @@ const HomestayName = styled.h4`
 const HomestayPrice = styled.div`
   font-size: 16px;
   font-weight: 700;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const HomestayInfo = styled.div`
@@ -1728,7 +1777,7 @@ const HomestayQuote = styled.div`
 
 const HomestayButton = styled.button`
   width: 100%;
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   padding: 8px;
@@ -1971,7 +2020,7 @@ const QuickActionsCard = styled.div`
   gap: 8px;
   padding: 12px;
   margin: 8px 16px;
-  background: linear-gradient(135deg, #2D5F4F, #4A8B7C);
+  background: linear-gradient(135deg, #2fce98, #4A8B7C);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(45, 95, 79, 0.25), 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2037,13 +2086,13 @@ const QuickActionButton = styled.button`
 
 const QuickActionIcon = styled.div`
   font-size: 20px;
-  color: #2D5F4F;
+  color: #2fce98;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 `;
 
 const QuickActionLabel = styled.span`
   font-size: 10px;
-  color: #2D5F4F;
+  color: #2fce98;
   font-weight: 500;
 `;
 
@@ -2099,7 +2148,7 @@ const ModalInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -2145,7 +2194,7 @@ const ModalTextarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -2158,7 +2207,7 @@ const ModalActions = styled.div`
 const ModalButton = styled.button<{ $primary?: boolean }>`
   flex: 1;
   padding: 10px;
-  background: ${props => props.$primary ? '#2D5F4F' : '#F5F5F5'};
+  background: ${props => props.$primary ? '#2fce98' : '#F5F5F5'};
   color: ${props => props.$primary ? 'white' : '#666'};
   border: none;
   border-radius: 8px;
@@ -2191,7 +2240,7 @@ const NetworkWebNode = styled.div<{ $x: number; $y: number; $main?: boolean }>`
   position: absolute;
   width: ${props => props.$main ? '60px' : '50px'};
   height: ${props => props.$main ? '60px' : '50px'};
-  background: ${props => props.$main ? '#2D5F4F' : '#64B5F6'};
+  background: ${props => props.$main ? '#2fce98' : '#64B5F6'};
   color: white;
   border-radius: 50%;
   display: flex;
@@ -2223,6 +2272,7 @@ const NetworkWebLine = styled.svg`
 
 export const BerseMatchScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'discover' | 'matchmaker' | 'myweb'>('discover');
   const [connectionMode, setConnectionMode] = useState<'all' | 'guides' | 'homesurf' | 'mentor' | 'buddy' | 'communities'>('all');
   const [showManualIntro, setShowManualIntro] = useState(false);
@@ -2237,6 +2287,13 @@ export const BerseMatchScreen: React.FC = () => {
   const [users, setUsers] = useState<ProfileCardData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeServiceFilter, setActiveServiceFilter] = useState<string | null>(null);
+  
+  // State for modals
+  const [showFriendRequestModal, setShowFriendRequestModal] = useState(false);
+  const [showJoinCommunityModal, setShowJoinCommunityModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedConnection, setSelectedConnection] = useState<ProfileCardData | null>(null);
+  const [shareData, setShareData] = useState<{ title: string; text: string; url?: string } | null>(null);
 
   // Tab navigation function
   const navigateTab = (direction: 'prev' | 'next') => {
@@ -2267,6 +2324,9 @@ export const BerseMatchScreen: React.FC = () => {
   const [showTravelLogbook, setShowTravelLogbook] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<ProfileCardData | null>(null);
   const [showTrustChain, setShowTrustChain] = useState(false);
+  const [showCommunitiesModal, setShowCommunitiesModal] = useState(false);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const [showOfferingsModal, setShowOfferingsModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState('All');
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [searchQuery, setSearchQuery] = useState('');
@@ -2463,561 +2523,169 @@ export const BerseMatchScreen: React.FC = () => {
       return filteredConnections;
     };
     
-    const allConnections = {
-      all: [], // Will be populated with all profiles
-      communities: [
+    // User's profile data - using AuthContext user data
+    const userProfile = {
+      id: 1,
+      name: user?.fullName || 'Zayd Mahdaly',
+      age: parseInt(user?.age as string) || 28,
+      profession: user?.profession || 'Architect & Photographer',
+      location: user?.currentLocation || 'Kuala Lumpur, Malaysia',
+      origin: user?.originLocation || 'Penang, Malaysia',
+      match: 100,
+      tags: user?.topInterests || ['Cultural Networking', 'Cafe Hopping', 'Heritage Walks', 'Photo Walks'],
+      mutuals: [],
+      bio: user?.bio || 'Architect and photographer passionate about cultural heritage. Love discovering hidden gems, connecting with creative minds over coffee, and documenting stories through my lens.',
+      servicesOffered: {
+        localGuide: user?.offerings?.berseGuide || true,
+        homestay: user?.offerings?.homeSurf || false,
+        marketplace: false,
+        openToConnect: true
+      },
+      personalityType: user?.personalityType || 'ENFJ-A',
+      languages: user?.languages || 'EN, MS, AR',
+      interests: user?.topInterests || ['Cultural Networking', 'Cafe Hopping', 'Heritage Walks', 'Photo Walks'],
+      communities: user?.communities || ['NAMA Foundation', 'Malaysian Architects', 'KL Photography Club'],
+      eventsAttending: user?.eventsAttended?.map(event => event.eventName || event.eventId) || ['Heritage Walk KL', 'Photography Workshop', 'Architecture Conference'],
+      offers: ['Architecture Tours', 'Photography Sessions', 'Heritage Walks', 'Cultural Guides'],
+      travelHistory: [
         {
-          id: 101,
-          name: 'MARA Students Germany',
-          age: 0,
-          profession: 'Community',
-          location: 'Berlin, Germany',
-          match: 95,
-          tags: ['Education', 'Networking', 'Support'],
-          mutuals: [],
-          bio: 'Supporting Malaysian students in Germany with resources, events, and networking',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 234,
-          upcomingEvents: ['Study Group Sessions', 'Career Fair', 'Cultural Night'],
-          travelHistory: [],
-          trustChain: []
+          country: 'Turkey',
+          flag: '🇹🇷',
+          city: 'Istanbul, Ankara, Izmir',
+          dates: '2023-2024',
+          friends: ['Mehmet Ali', 'Ayşe Kaya', 'Omar Yilmaz'],
+          purpose: 'Architecture study and cultural exploration'
         },
         {
-          id: 102,
-          name: 'Ahl Umran Network',
-          age: 0,
-          profession: 'Community',
-          location: 'Global',
-          match: 88,
-          tags: ['Professional', 'Islamic', 'Development'],
-          mutuals: [],
-          bio: 'Professional Muslim network for career development and community building',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 567,
-          upcomingEvents: ['Leadership Workshop', 'Ramadan Iftar Series', 'Business Networking'],
-          travelHistory: [],
-          trustChain: []
-        },
-        {
-          id: 103,
-          name: 'Peacemeal KL',
-          age: 0,
-          profession: 'Community',
-          location: 'Kuala Lumpur, Malaysia',
-          match: 92,
-          tags: ['Food', 'Charity', 'Social Impact'],
-          mutuals: [],
-          bio: 'Bringing communities together through food and meaningful conversations',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 189,
-          upcomingEvents: ['Community Dinner', 'Soup Kitchen Volunteer', 'Potluck Gathering'],
-          travelHistory: [],
-          trustChain: []
-        },
-        {
-          id: 104,
-          name: 'Malaysians in Morocco',
-          age: 0,
-          profession: 'Community',
-          location: 'Morocco',
-          match: 85,
-          tags: ['Expat Support', 'Cultural Exchange', 'Students'],
-          mutuals: [],
-          bio: 'Supporting Malaysian expats and students living in Morocco',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 78,
-          upcomingEvents: ['Eid Celebration', 'Student Orientation', 'Traditional Food Festival'],
-          travelHistory: [],
-          trustChain: []
-        },
-        {
-          id: 105,
-          name: 'MASAT Türkiye',
-          age: 0,
-          profession: 'Community',
-          location: 'Istanbul, Turkey',
-          match: 90,
-          tags: ['Student Association', 'Academic', 'Culture'],
-          mutuals: [],
-          bio: 'Malaysian Students Association in Turkey - fostering unity and academic excellence',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 145,
-          upcomingEvents: ['Freshers Week', 'Academic Workshop', 'Sports Tournament'],
-          travelHistory: [],
-          trustChain: []
-        },
-        {
-          id: 106,
-          name: 'Indonesian Muslims in Malaysia',
-          age: 0,
-          profession: 'Community',
-          location: 'Kuala Lumpur, Malaysia',
-          match: 93,
-          tags: ['Indonesian', 'Islamic', 'Support Network'],
-          mutuals: [],
-          bio: 'Supporting Indonesian Muslim students and professionals in Malaysia',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 342,
-          upcomingEvents: ['Ramadan Iftar', 'Job Fair', 'Cultural Night'],
-          travelHistory: [],
-          trustChain: []
-        },
-        {
-          id: 107,
-          name: 'Thai Students Malaysia',
-          age: 0,
-          profession: 'Community',
-          location: 'Petaling Jaya, Malaysia',
-          match: 87,
-          tags: ['Thai', 'Students', 'Cultural Exchange'],
-          mutuals: [],
-          bio: 'Thai student community fostering friendship and academic support in Malaysia',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 178,
-          upcomingEvents: ['Songkran Festival', 'Thai Food Fair', 'Study Groups'],
-          travelHistory: [],
-          trustChain: []
-        },
-        {
-          id: 108,
-          name: 'Vietnamese Professionals Network',
-          age: 0,
-          profession: 'Community',
-          location: 'Singapore',
-          match: 85,
-          tags: ['Vietnamese', 'Professional', 'Networking'],
-          mutuals: [],
-          bio: 'Connecting Vietnamese professionals across Southeast Asia',
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          memberCount: 267,
-          upcomingEvents: ['Career Workshop', 'Tet Celebration', 'Business Networking'],
-          travelHistory: [],
-          trustChain: []
+          country: 'Malaysia',
+          flag: '🇲🇾',
+          city: 'KL, Penang, Langkawi',
+          dates: '2020-Present',
+          friends: ['Ahmad Hassan', 'Sarah Chen', 'Raj Kumar'],
+          purpose: 'Home base for architecture practice'
         }
       ],
-      guides: [
+      trustChain: [
         {
-          id: 7,
-          name: 'Mehmet Yilmaz',
-          age: 30,
-          profession: 'Tour Guide',
-          location: 'Istanbul, Turkey',
-          match: 89,
-          tags: ['Local Expert', 'Historical Tours', 'Halal Food'],
-          mutuals: ['Ali', 'Zeynep'],
-          bio: 'Professional tour guide specializing in Ottoman history and halal culinary experiences',
-          offers: ['Historical Tours', 'Food Tours', 'Airport Transfers', 'Shopping Guide'],
-          servicesOffered: {
-            localGuide: true,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          availability: {
-            'Mon-Wed': 'Morning tours',
-            'Thu-Sun': 'Full day'
-          },
-          personalityType: 'ENFP-A',
-          languages: 'TR, EN, AR',
-          interests: ['History', 'Architecture', 'Turkish Cuisine', 'Islamic Art'],
-          communities: ['Istanbul Tour Guides', 'Halal Tourism Turkey'],
-          eventsAttending: ['Tourism Fair', 'Cultural Festival'],
-          guideLanguages: 'Turkish, English, Arabic'
-        },
-        {
-          id: 8,
-          name: 'Siti Nurhaliza',
-          age: 26,
-          profession: 'Cultural Ambassador',
-          location: 'Jakarta, Indonesia',
-          match: 91,
-          tags: ['Jakarta Insider', 'Cultural Expert', 'Halal Lifestyle'],
-          mutuals: ['Farah', 'Dian'],
-          bio: 'Passionate about sharing Indonesian culture and helping visitors discover authentic Jakarta',
-          offers: ['City Tours', 'Traditional Markets', 'Batik Workshops', 'Local Cuisine'],
-          servicesOffered: {
-            localGuide: true,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          availability: {
-            'Weekdays': 'After 5pm',
-            'Weekends': 'Full day'
-          },
-          personalityType: 'ISFJ-A',
-          languages: 'ID, EN, MS',
-          interests: ['Batik Art', 'Indonesian Cuisine', 'Traditional Dance', 'Social Impact'],
-          communities: ['Jakarta Youth Network', 'Indonesian Heritage Society'],
-          eventsAttending: ['Jakarta Food Festival', 'Batik Exhibition'],
-          guideLanguages: 'Indonesian, English, Malay'
-        },
-        {
-          id: 1,
-          name: 'Sarah Lim',
-          age: 28,
-          profession: 'UX Designer',
-          location: 'KLCC, Kuala Lumpur',
-          match: 92,
-          tags: ['Local Friend', 'City Guide', 'Coffee Expert'],
-          mutuals: ['Ahmad', 'Fatima'],
-          bio: 'Know all the best cafes and hidden gems in KL! Happy to show you around',
-          offers: ['Weekend city tours', 'Best food spots', 'Local hangouts'],
-          servicesOffered: {
-            localGuide: true,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          availability: {
-            'Mon-Wed': 'Morning tours',
-            'Thu-Sat': 'Full day',
-            'Sunday': 'By request'
-          },
-          hangoutOptions: [
-            { icon: '🥘', name: 'Food Adventure', duration: '2-3h', exchange: 'Buy me lunch' },
-            { icon: '🌆', name: 'City Tour', duration: 'Half day', exchange: '50 BersePoints' },
-            { icon: '🎯', name: 'Full Day', duration: 'Full day', exchange: 'RM80 or skill trade' }
-          ],
-          testimonial: {
-            text: 'Sarah is like having a best friend show you around! So genuine and fun.',
-            author: 'Ahmed, Dubai',
-            rating: 4.9
-          },
-          personalityType: 'ENFJ-A',
-          languages: 'EN, MS, CN',
-          interests: ['Photography', 'Coffee Culture', 'Street Art', 'Food Markets', 'Architecture'],
-          communities: ['NAMA Foundation', 'KL Photography Club', 'Malaysian Architects'],
-          eventsAttending: ['KL Coffee Festival', 'Art After Dark', 'Weekend Market Tour'],
-          offers: ['City Photography Tours', 'Best Coffee Spots', 'Local Food Adventures', 'Art Gallery Walks'],
-          trustChain: [
-            {
-              name: 'Ahmad Rahman',
-              relationship: 'Best Friend (5 years)',
-              rating: 5.0,
-              feedback: 'Sarah is absolutely amazing! Most reliable and caring person I know. She helped me settle in KL and showed me all the best spots.',
-              trustLevel: 'Most Trusted'
-            },
-            {
-              name: 'Fatima Hassan',
-              relationship: 'Close Friend (3 years)',
-              rating: 4.9,
-              feedback: 'Super friendly and always helpful. Great at organizing group events and knows the city like the back of her hand.',
-              trustLevel: 'Close Friend'
-            },
-            {
-              name: 'David Wong',
-              relationship: 'Colleague',
-              rating: 4.8,
-              feedback: 'Professional, punctual, and great to work with. Amazing at connecting people.',
-              trustLevel: 'Friend'
-            },
-            {
-              name: 'Emma Chen',
-              relationship: 'Travel Buddy',
-              rating: 4.7,
-              feedback: 'Traveled to 3 countries together. Always organized and fun to be around!',
-              trustLevel: 'Friend'
-            }
-          ],
-          travelHistory: [
-            {
-              country: 'Thailand',
-              city: 'Bangkok',
-              dates: 'Nov 2024',
-              friends: ['Emma Chen', 'David Wong'],
-              purpose: 'Food Tour & Temple Visits',
-              flag: '🇹🇭'
-            },
-            {
-              country: 'Japan',
-              city: 'Tokyo & Kyoto',
-              dates: 'Apr 2024',
-              friends: ['Yuki Tanaka', 'Mike Lee', 'Sara Ali'],
-              purpose: 'Cherry Blossom Season',
-              flag: '🇯🇵'
-            },
-            {
-              country: 'Indonesia',
-              city: 'Bali',
-              dates: 'Dec 2023',
-              friends: ['Ahmad Rahman', 'Fatima Hassan'],
-              purpose: 'New Year Celebration',
-              flag: '🇮🇩'
-            },
-            {
-              country: 'Singapore',
-              city: 'Singapore',
-              dates: 'Sep 2023',
-              friends: ['Local Friends Group'],
-              purpose: 'Weekend Getaway',
-              flag: '🇸🇬'
-            }
-          ]
-        },
-        {
-          id: 2,
-          name: 'Ahmad Rahman',
-          age: 32,
-          profession: 'Software Engineer',
-          location: 'Berlin, Germany',
-          origin: 'Kuala Lumpur, Malaysia',
-          match: 95,
-          tags: ['Local Guide', 'Free Tours'],
-          languages: ['EN', 'DE', 'MS'],
-          mutuals: ['Sarah', 'Amir', 'Zara'],
-          bio: 'Helping Malaysians navigate life in Germany since 2019',
-          offers: ['City tours (Free)', 'Uni applications help', 'Halal food spots map'],
-          servicesOffered: {
-            localGuide: true,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          availability: {
-            'Weekdays': 'After 6pm',
-            'Weekends': 'Flexible',
-            'Holidays': 'Full day'
-          },
-          hangoutOptions: [
-            { icon: '🏛️', name: 'Berlin Walk', duration: '2-3h', exchange: 'Free for Malaysians!' },
-            { icon: '🍺', name: 'Local Experience', duration: 'Evening', exchange: 'Split the bill' },
-            { icon: '🎓', name: 'Uni Help', duration: '1h', exchange: 'Pay it forward' }
-          ],
-          testimonial: {
-            text: 'Ahmad made me feel at home in Berlin. More like a brother than a guide!',
-            author: 'Sarah, KL',
-            rating: 5.0
-          },
-          personalityType: 'ISTJ-T',
-          languages: 'EN, MS, DE, AR',
-          interests: ['Tech', 'History', 'German Culture', 'Halal Food', 'Startups'],
-          communities: ['MARA Students Germany', 'Berlin Tech Community', 'Malaysian Diaspora EU'],
-          eventsAttending: ['Berlin Tech Week', 'Malaysian Night', 'Startup Meetup'],
-          offers: ['Free Tours for Malaysians', 'Uni Application Help', 'Tech Career Advice', 'Halal Food Map'],
-          trustChain: [
-            {
-              name: 'Sarah Lim',
-              relationship: 'Best Friend (5 years)',
-              rating: 5.0,
-              feedback: 'Ahmad is my go-to person for everything tech and travel. Super trustworthy and always there when you need help.',
-              trustLevel: 'Most Trusted'
-            },
-            {
-              name: 'Amir Hassan',
-              relationship: 'University Friend',
-              rating: 4.9,
-              feedback: 'Helped me with my move to Berlin. Incredibly generous with his time and knowledge.',
-              trustLevel: 'Close Friend'
-            },
-            {
-              name: 'Zara Ali',
-              relationship: 'Tech Community',
-              rating: 4.8,
-              feedback: 'Great mentor in the tech community. Always willing to help newcomers.',
-              trustLevel: 'Close Friend'
-            },
-            {
-              name: 'Omar Sheikh',
-              relationship: 'Mosque Community',
-              rating: 4.7,
-              feedback: 'Active in the community, organizing events and helping new Muslims in Berlin.',
-              trustLevel: 'Friend'
-            }
-          ],
-          travelHistory: [
-            {
-              country: 'France',
-              city: 'Paris',
-              dates: 'Oct 2024',
-              friends: ['Marie Dubois', 'Hassan Ali'],
-              purpose: 'Architecture Study Tour',
-              flag: '🇫🇷'
-            },
-            {
-              country: 'Netherlands',
-              city: 'Amsterdam',
-              dates: 'Jul 2024',
-              friends: ['Jan van der Berg', 'Fatima'],
-              purpose: 'Tech Conference',
-              flag: '🇳🇱'
-            },
-            {
-              country: 'Turkey',
-              city: 'Istanbul',
-              dates: 'Mar 2024',
-              friends: ['Mehmet Yilmaz', 'Local Muslim Community'],
-              purpose: 'Ramadan Experience',
-              flag: '🇹🇷'
-            },
-            {
-              country: 'United Kingdom',
-              city: 'London',
-              dates: 'Jan 2024',
-              friends: ['British Malaysian Society'],
-              purpose: 'Malaysian Community Meetup',
-              flag: '🇬🇧'
-            },
-            {
-              country: 'Czech Republic',
-              city: 'Prague',
-              dates: 'Dec 2023',
-              friends: ['European Muslim Network'],
-              purpose: 'Winter Holiday',
-              flag: '🇨🇿'
-            }
-          ]
-        }
-      ],
-      homesurf: [
-        {
-          id: 3,
-          name: "Fatima's Family",
-          age: 45,
-          profession: 'Homestay Host',
-          location: 'Bangsar, KL',
-          match: 98,
-          tags: ['Homestay', 'Student-Friendly', 'Halal'],
-          price: 'RM 80/night',
-          amenities: ['Halal kitchen', 'WiFi', 'Laundry', 'Family meals'],
-          bio: 'Cozy family home perfect for students. We treat you like family!',
-          reviews: 12,
+          name: 'Ahmad Hassan',
+          relationship: 'Architecture Colleague',
           rating: 5,
-          servicesOffered: {
-            localGuide: false,
-            homestay: true,
-            marketplace: false,
-            openToConnect: true
-          },
-          personalityType: 'ISFJ-T',
-          languages: 'EN, MS, AR',
-          interests: ['Cooking', 'Family Activities', 'Malaysian Culture', 'Islamic Studies', 'Traditional Crafts'],
-          communities: ['Bangsar Community', 'Malaysian Homestay Network', 'Islamic Center KL'],
-          eventsAttending: ['Community Iftar', 'Weekend Market', 'Cultural Festival'],
-          offers: ['Halal Home Cooking', 'Family Environment', 'Cultural Exchange', 'Student Support']
+          feedback: 'Excellent photographer and reliable friend',
+          trustLevel: 'Most Trusted' as const
         },
         {
-          id: 4,
-          name: 'Jason Tan',
-          age: 35,
-          profession: 'Property Manager',
-          location: 'Subang Jaya',
-          match: 85,
-          tags: ['Room Rental', 'Near University'],
-          price: 'RM 50/night',
-          amenities: ['Private room', 'Shared kitchen', 'Near LRT'],
-          bio: 'Spare room available for students. 5 mins to Sunway University',
-          reviews: 8,
-          rating: 4.5,
-          servicesOffered: {
-            localGuide: false,
-            homestay: true,
-            marketplace: false,
-            openToConnect: true
-          },
-          personalityType: 'ENTJ-A',
-          languages: 'EN, MS, CN',
-          interests: ['Real Estate', 'Investment', 'Badminton', 'Tech Gadgets', 'Entrepreneurship'],
-          communities: ['Subang Property Owners', 'Malaysian Entrepreneurs', 'Badminton Club SJ'],
-          eventsAttending: ['Property Expo', 'Startup Weekend', 'Badminton Tournament'],
-          offers: ['Property Advice', 'Investment Tips', 'Room Rentals', 'Business Networking']
-        }
-      ],
-      mentor: [
-        {
-          id: 5,
-          name: 'Dr. Farah Ibrahim',
-          age: 38,
-          profession: 'AI Researcher',
-          location: 'Singapore',
-          match: 88,
-          tags: ['Tech Mentor', 'AI Expert'],
-          company: 'Google Singapore',
-          mutuals: ['Khalid', 'Omar'],
-          bio: 'Mentoring aspiring tech professionals in SEA',
-          expertise: ['Machine Learning', 'Career Growth', 'Tech Interviews'],
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          personalityType: 'INFJ-T',
-          languages: 'EN, MS, AR',
-          interests: ['Medicine', 'Research', 'Women Empowerment', 'Healthcare Innovation', 'Public Speaking'],
-          communities: ['Malaysian Medical Association', 'Women in STEM', 'Healthcare Innovation Hub'],
-          eventsAttending: ['Medical Conference', 'Women in Leadership', 'Health Tech Summit'],
-          offers: ['Career Mentoring', 'Medical School Guidance', 'Research Opportunities', 'Professional Development']
-        }
-      ],
-      buddy: [
-        {
-          id: 6,
-          name: 'Kim Ji-won',
-          age: 21,
-          profession: 'CS Student',
-          location: 'UM Campus',
-          origin: 'Seoul, Korea',
-          match: 90,
-          tags: ['Study Buddy', 'EMGS Support'],
-          education: 'Computer Science Year 2',
-          mutuals: ['Lisa', 'Ahmed'],
-          bio: 'Exchange student helping other internationals settle in',
-          looking: ['Study groups', 'Campus tours', 'Food adventures'],
-          servicesOffered: {
-            localGuide: false,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          },
-          personalityType: 'ESFP-A',
-          languages: 'KO, EN, JP',
-          interests: ['K-Pop', 'Fashion', 'Makeup', 'Korean Drama', 'Dance', 'Cooking'],
-          communities: ['Korean Students Malaysia', 'K-Pop Dance Club', 'International Student Union'],
-          eventsAttending: ['K-Culture Festival', 'Dance Competition', 'International Food Fair'],
-          offers: ['Korean Language Exchange', 'K-Beauty Tips', 'Seoul Travel Guide', 'Korean Cooking Classes']
+          name: 'Sarah Chen',
+          relationship: 'Photography Mentor',
+          rating: 5,
+          feedback: 'Talented architect with great eye for heritage',
+          trustLevel: 'Close Friend' as const
         }
       ]
+    };
+
+    // Community profiles for communities mode
+    const communityProfiles = [
+      {
+        id: 'comm-1',
+        name: 'BerseMuka Community',
+        type: 'community',
+        category: 'Social',
+        profession: 'Community Organization',
+        description: 'The main BerseMuka community for connecting travelers and locals',
+        location: 'Global',
+        bio: 'Connect with travelers and locals worldwide through cultural exchanges and meaningful connections',
+        memberCount: 2450,
+        eventCount: 156,
+        isVerified: true,
+        verificationBadge: 'gold',
+        tags: ['Travel', 'Culture', 'Networking', 'Events'],
+        upcomingEvents: ['Weekly Meetup', 'Cultural Night'],
+        match: 95,
+        servicesOffered: {
+          localGuide: false,
+          homestay: false,
+          marketplace: false,
+          openToConnect: true
+        }
+      },
+      {
+        id: 'comm-2',
+        name: 'Digital Nomads Malaysia',
+        type: 'community',
+        category: 'Professional',
+        profession: 'Professional Network',
+        description: 'Connect with remote workers and digital nomads',
+        location: 'Kuala Lumpur, Malaysia',
+        bio: 'Building a thriving community of remote workers, digital nomads, and location-independent professionals across Malaysia',
+        memberCount: 890,
+        eventCount: 45,
+        isVerified: true,
+        verificationBadge: 'silver',
+        tags: ['Remote Work', 'Tech', 'Coworking', 'Networking'],
+        upcomingEvents: ['Coworking Day', 'Startup Pitch Night'],
+        match: 88,
+        servicesOffered: {
+          localGuide: false,
+          homestay: false,
+          marketplace: false,
+          openToConnect: true
+        }
+      },
+      {
+        id: 'comm-3',
+        name: 'KL Hiking Club',
+        type: 'community',
+        category: 'Sports',
+        profession: 'Sports & Adventure',
+        description: 'Weekly hiking adventures around KL',
+        location: 'Kuala Lumpur, Malaysia',
+        bio: 'Join us for weekly hiking adventures to explore the natural beauty around Kuala Lumpur and beyond',
+        memberCount: 567,
+        eventCount: 120,
+        isVerified: true,
+        verificationBadge: 'bronze',
+        tags: ['Hiking', 'Nature', 'Fitness', 'Adventure'],
+        upcomingEvents: ['Broga Hill Sunrise', 'Jungle Trek'],
+        match: 75,
+        servicesOffered: {
+          localGuide: false,
+          homestay: false,
+          marketplace: false,
+          openToConnect: true
+        }
+      },
+      {
+        id: 'comm-4',
+        name: 'Volunteer Malaysia',
+        type: 'community',
+        category: 'Volunteer',
+        profession: 'Social Impact',
+        description: 'Making a difference through community service',
+        location: 'Malaysia',
+        bio: 'Unite for social impact through volunteer work, community service, and environmental initiatives across Malaysia',
+        memberCount: 1234,
+        eventCount: 89,
+        isVerified: true,
+        verificationBadge: 'gold',
+        tags: ['Social Impact', 'Charity', 'Environment', 'Community Service'],
+        upcomingEvents: ['Beach Cleanup', 'Food Bank Drive'],
+        match: 82,
+        servicesOffered: {
+          localGuide: false,
+          homestay: false,
+          marketplace: false,
+          openToConnect: true
+        }
+      }
+    ];
+
+    const allConnections = {
+      all: [userProfile],
+      communities: communityProfiles,
+      guides: [userProfile],
+      homesurf: [],
+      mentor: [],
+      buddy: []
     };
 
     // For 'all' mode, combine all profiles except communities
@@ -3115,6 +2783,72 @@ export const BerseMatchScreen: React.FC = () => {
   }, []);
 
   // Handler functions
+  const handleConnect = (connection: ProfileCardData) => {
+    if (connection.type === 'community') {
+      // For communities, show join community modal
+      setSelectedConnection(connection);
+      setShowJoinCommunityModal(true);
+    } else {
+      // For regular profiles, show friend request modal
+      setSelectedConnection(connection);
+      setShowFriendRequestModal(true);
+    }
+  };
+
+  const handleShareProfile = (connection: ProfileCardData) => {
+    const shareText = connection.type === 'community' 
+      ? `🏘️ Join ${connection.name} on BerseMuka!\n\n${connection.description || connection.bio}\n\n👥 ${connection.memberCount} members\n📅 ${connection.eventCount} events\n📍 ${connection.location}\n\nDiscover amazing communities on BerseMuka!`
+      : `🤝 Check out ${connection.name} on BerseMuka!\n\n👤 ${connection.age} years old • ${connection.profession}\n📍 ${connection.location}\n\n"${connection.bio}"\n\n💼 Interests: ${connection.tags.slice(0, 3).join(', ')}\n${(connection as any).personalityType ? `🧠 ${(connection as any).personalityType}` : ''}\n${(connection as any).languages ? `🗣️ ${(connection as any).languages}` : ''}\n\nConnect with amazing people on BerseMuka app!`;
+    
+    setShareData({
+      title: connection.name,
+      text: shareText,
+      url: window.location.href
+    });
+    setShowShareModal(true);
+  };
+  
+  const handleSendFriendRequest = (eventId: string, note: string) => {
+    if (selectedConnection) {
+      // Create friend request with event information
+      const request = {
+        toUserId: selectedConnection.id,
+        fromUserId: user?.id,
+        note: note,
+        eventId: eventId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Store in local storage for demo purposes
+      const requests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
+      requests.push(request);
+      localStorage.setItem('friendRequests', JSON.stringify(requests));
+      
+      alert(`Friend request sent to ${selectedConnection.name}!`);
+      setShowFriendRequestModal(false);
+    }
+  };
+  
+  const handleJoinCommunity = (note: string) => {
+    if (selectedConnection) {
+      // Create join request
+      const request = {
+        communityId: selectedConnection.id,
+        userId: user?.id,
+        note: note,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Store in local storage for demo purposes
+      const requests = JSON.parse(localStorage.getItem('communityRequests') || '[]');
+      requests.push(request);
+      localStorage.setItem('communityRequests', JSON.stringify(requests));
+      
+      alert(`Join request sent to ${selectedConnection.name}!`);
+      setShowJoinCommunityModal(false);
+    }
+  };
+  
   const handleSkipMatch = () => {
     setCurrentMatchIndex((prev) => (prev + 1) % friendshipMatches.length);
   };
@@ -3233,16 +2967,20 @@ export const BerseMatchScreen: React.FC = () => {
             All
           </ModeButton>
           <ModeButton 
-            $active={connectionMode === 'guides'}
-            onClick={() => setConnectionMode('guides')}
+            $active={false}
+            onClick={(e) => { e.preventDefault(); alert('BerseGuide coming soon!'); }}
+            style={{ opacity: 0.7, cursor: 'not-allowed' }}
           >
             BerseGuide
+            <CollabBadge>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
-            $active={connectionMode === 'homesurf'}
-            onClick={() => setConnectionMode('homesurf')}
+            $active={false}
+            onClick={(e) => { e.preventDefault(); alert('HomeSurf coming soon!'); }}
+            style={{ opacity: 0.7, cursor: 'not-allowed' }}
           >
             HomeSurf
+            <CollabBadge>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
             $active={connectionMode === 'communities'}
@@ -3251,18 +2989,20 @@ export const BerseMatchScreen: React.FC = () => {
             Communities
           </ModeButton>
           <ModeButton 
-            $active={connectionMode === 'buddy'}
-            onClick={() => setConnectionMode('buddy')}
+            $active={false}
+            onClick={(e) => { e.preventDefault(); alert('BerseBuddy coming soon!'); }}
+            style={{ opacity: 0.7, cursor: 'not-allowed' }}
           >
             BerseBuddy
-            <CollabBadge>EMGS</CollabBadge>
+            <CollabBadge>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
-            $active={connectionMode === 'mentor'}
-            onClick={() => setConnectionMode('mentor')}
+            $active={false}
+            onClick={(e) => { e.preventDefault(); alert('BerseMentor coming soon!'); }}
+            style={{ opacity: 0.7, cursor: 'not-allowed' }}
           >
             BerseMentor
-            <CollabBadge>TalentCorp</CollabBadge>
+            <CollabBadge>Soon</CollabBadge>
           </ModeButton>
         </ModeSelector>
         
@@ -3409,12 +3149,12 @@ export const BerseMatchScreen: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                           <GuideName>{connection.name}</GuideName>
                           {connection.personalityType && (
-                            <InlineBadge color="#E8F5E9" textColor="#2E7D32">
+                            <InlineBadge $color="#E8F5E9" $textColor="#2E7D32">
                               🧠 {connection.personalityType}
                             </InlineBadge>
                           )}
                           {(connection.languages || connection.guideLanguages) && (
-                            <InlineBadge color="#E3F2FD" textColor="#1976D2">
+                            <InlineBadge $color="#E3F2FD" $textColor="#1976D2">
                               🗣️ {connection.languages || connection.guideLanguages}
                             </InlineBadge>
                           )}
@@ -3557,12 +3297,12 @@ export const BerseMatchScreen: React.FC = () => {
                     <NameBadgesRow>
                       <ConnectionName>{connection.name}</ConnectionName>
                       {connection.personalityType && (
-                        <InlineBadge color="#E8F5E9" textColor="#2E7D32">
+                        <InlineBadge $color="#E8F5E9" $textColor="#2E7D32">
                           🧠 {connection.personalityType}
                         </InlineBadge>
                       )}
                       {(connection.languages || connection.guideLanguages) && (
-                        <InlineBadge color="#E3F2FD" textColor="#1976D2">
+                        <InlineBadge $color="#E3F2FD" $textColor="#1976D2">
                           🗣️ {connection.languages || connection.guideLanguages}
                         </InlineBadge>
                       )}
@@ -3585,24 +3325,90 @@ export const BerseMatchScreen: React.FC = () => {
                   </ConnectionInfo>
                 </ConnectionHeader>
                 <ConnectionTags>
-                  {connection.tags.map(tag => (
-                    <Tag key={tag}>{tag}</Tag>
-                  ))}
+                  {/* Display top 4 interests if available, otherwise use tags */}
+                  {(() => {
+                    // Map tags to interests
+                    const getInterestFromTag = (tag) => {
+                      const tagToInterest = {
+                        'Local Expert': 'heritage-walks',
+                        'Historical Tours': 'heritage-walks',
+                        'Halal Food': 'foodie-meetups',
+                        'Photography': 'photo-walks',
+                        'Coffee': 'cafe-hopping',
+                        'Tech': 'startup-networking',
+                        'Sports': 'sports-activities',
+                        'Arts': 'cultural-networking',
+                        'Nature': 'hiking-trails',
+                        'Family': 'weekend-trips'
+                      };
+                      return tagToInterest[tag] || null;
+                    };
+                    
+                    // Get interests from tags or use default
+                    const interests = connection.tags.map(tag => {
+                      const interestValue = getInterestFromTag(tag);
+                      const interest = INTEREST_OPTIONS.find(opt => opt.value === interestValue);
+                      return interest || { icon: '🏷️', label: tag, value: tag };
+                    }).slice(0, 4);
+                    
+                    return interests.map((interest, idx) => (
+                      <Tag key={idx} style={{ 
+                        background: '#F0F7F4',
+                        color: '#2fce98',
+                        border: '1px solid #E0E0E0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {interest.label}
+                      </Tag>
+                    ));
+                  })()}
                 </ConnectionTags>
                 <ConnectionBio>"{connection.bio}"</ConnectionBio>
                 
                 {/* Compact Info Display - Communities and Events only */}
                 <ProfileInfoRow>
                   {connection.communities && connection.communities.length > 0 && (
-                    <InfoBadge color="#FFF3E0" textColor="#E65100">
+                    <InfoBadge 
+                      $color="#FFF3E0" 
+                      $textColor="#E65100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProfile(connection);
+                        setShowCommunitiesModal(true);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       👥 {connection.communities.length} communities
                     </InfoBadge>
                   )}
                   {connection.eventsAttending && connection.eventsAttending.length > 0 && (
-                    <InfoBadge color="#F3E5F5" textColor="#7B1FA2">
-                      📅 {connection.eventsAttending.length} events
+                    <InfoBadge 
+                      $color="#F3E5F5" 
+                      $textColor="#7B1FA2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProfile(connection);
+                        setShowEventsModal(true);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      🤝 {connection.eventsAttending.length} BerseMukha
                     </InfoBadge>
                   )}
+                  <InfoBadge 
+                    $color="#E8F5E9" 
+                    $textColor="#2E7D32"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedProfile(connection);
+                      setShowOfferingsModal(true);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    🎯 Offerings
+                  </InfoBadge>
                 </ProfileInfoRow>
                 
                 {/* View More Button */}
@@ -3616,14 +3422,97 @@ export const BerseMatchScreen: React.FC = () => {
                 </ViewMoreButton>
                 
                 {/* Community-specific info */}
-                {connectionMode === 'communities' && connection.memberCount && (
-                  <div style={{ marginTop: '12px', padding: '8px', background: '#F5F5F5', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#2D5F4F', marginBottom: '4px' }}>
-                      👥 {connection.memberCount} members
+                {connectionMode === 'communities' && connection.type === 'community' && (
+                  <div style={{ marginTop: '12px' }}>
+                    {/* Verification Badge */}
+                    {connection.isVerified && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        marginBottom: '12px'
+                      }}>
+                        <div style={{
+                          background: connection.verificationBadge === 'gold' ? 'linear-gradient(135deg, #FFD700, #FFA500)' :
+                                     connection.verificationBadge === 'silver' ? 'linear-gradient(135deg, #C0C0C0, #808080)' :
+                                     'linear-gradient(135deg, #CD7F32, #8B4513)',
+                          color: 'white',
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          ✓ Verified {connection.verificationBadge?.charAt(0).toUpperCase() + connection.verificationBadge?.slice(1)}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#666' }}>
+                          {connection.category} Community
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Community Stats */}
+                    <div style={{ 
+                      padding: '12px', 
+                      background: 'linear-gradient(135deg, #F5F5F5, #FAFAFA)', 
+                      borderRadius: '12px',
+                      border: '1px solid #E0E0E0'
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#2fce98' }}>
+                            {connection.memberCount?.toLocaleString()}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#666' }}>Active Members</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#4A90A4' }}>
+                            {connection.eventCount}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#666' }}>Events Hosted</div>
+                        </div>
+                      </div>
+                      
+                      {connection.upcomingEvents && connection.upcomingEvents.length > 0 && (
+                        <div style={{ 
+                          padding: '8px',
+                          background: '#FFF',
+                          borderRadius: '8px',
+                          marginTop: '8px'
+                        }}>
+                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#333', marginBottom: '6px' }}>
+                            📅 Upcoming Events
+                          </div>
+                          {connection.upcomingEvents.map((event, idx) => (
+                            <div key={idx} style={{ 
+                              fontSize: '11px', 
+                              color: '#666',
+                              padding: '4px 8px',
+                              background: '#F9F9F9',
+                              borderRadius: '4px',
+                              marginBottom: '4px'
+                            }}>
+                              • {event}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {connection.upcomingEvents && (
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        📅 Upcoming: {connection.upcomingEvents.join(' • ')}
+                    
+                    {/* Community Description */}
+                    {connection.description && (
+                      <div style={{ 
+                        marginTop: '12px',
+                        padding: '10px',
+                        background: '#E8F4F0',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#2fce98',
+                        lineHeight: '1.5'
+                      }}>
+                        {connection.description}
                       </div>
                     )}
                   </div>
@@ -3658,10 +3547,10 @@ export const BerseMatchScreen: React.FC = () => {
                 )}
                 
                 <ConnectionActions>
-                  <ActionButton>💬 Message</ActionButton>
-                  <ActionButton $primary>
+                  <ActionButton onClick={() => handleShareProfile(connection)}>📤 Share</ActionButton>
+                  <ActionButton $primary onClick={() => handleConnect(connection)}>
                     {connectionMode === 'homesurf' ? '🏠 Book Stay' : 
-                     connectionMode === 'communities' ? '👥 Join Community' : '🤝 Connect'}
+                     connectionMode === 'communities' ? '👥 Join Community' : '🤝 Friend Request'}
                   </ActionButton>
                 </ConnectionActions>
                   </>
@@ -4143,9 +4032,38 @@ export const BerseMatchScreen: React.FC = () => {
                       
                       <FriendsList>
                         <FriendsLabel>Travel Friends:</FriendsLabel>
-                        {trip.friends.map((friend, friendIndex) => (
-                          <FriendTag key={friendIndex}>{friend}</FriendTag>
-                        ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                          {trip.friends.map((friend, friendIndex) => (
+                            <div key={friendIndex} style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px',
+                              background: '#F0F7F4',
+                              borderRadius: '8px',
+                              border: '1px solid #E0E0E0'
+                            }}>
+                              <span style={{ fontSize: '12px', color: '#333' }}>{friend}</span>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  alert(`Requesting introduction to ${friend}`);
+                                }}
+                                style={{
+                                  background: '#2fce98',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '4px 12px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Request Intro
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </FriendsList>
                     </TravelDetails>
                   </TravelItem>
@@ -4246,7 +4164,7 @@ export const BerseMatchScreen: React.FC = () => {
         <ProfileDetailContent onClick={(e) => e.stopPropagation()}>
           <ProfileDetailHeader>
             <CloseModalButton onClick={() => setShowProfileDetail(false)}>×</CloseModalButton>
-            <h2 style={{ margin: 0, fontSize: '20px', color: '#2D5F4F' }}>
+            <h2 style={{ margin: 0, fontSize: '20px', color: '#2fce98' }}>
               {selectedDetailProfile?.name}
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#666' }}>
@@ -4291,7 +4209,7 @@ export const BerseMatchScreen: React.FC = () => {
               <DetailSectionTitle>Interests</DetailSectionTitle>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {selectedDetailProfile.interests.map((interest: string, index: number) => (
-                  <InfoBadge key={index} color="#E8F5E9" textColor="#2E7D32">
+                  <InfoBadge key={index} $color="#E8F5E9" $textColor="#2E7D32">
                     {interest}
                   </InfoBadge>
                 ))}
@@ -4365,6 +4283,456 @@ export const BerseMatchScreen: React.FC = () => {
           </ProfileDetailSection>
         </ProfileDetailContent>
       </ProfileDetailModal>
+
+      {/* Communities Modal */}
+      <TravelLogbookModal $isOpen={showCommunitiesModal} onClick={() => setShowCommunitiesModal(false)}>
+        <LogbookContent onClick={(e) => e.stopPropagation()}>
+          <LogbookHeader>
+            <LogbookTitle>👥 Communities</LogbookTitle>
+            <LogbookSubtitle>{selectedProfile?.name}'s Communities & Roles</LogbookSubtitle>
+            <CloseButton onClick={() => setShowCommunitiesModal(false)}>×</CloseButton>
+          </LogbookHeader>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+            {selectedProfile?.communities?.map((community, idx) => {
+              const roles = {
+                'NAMA Foundation': 'Active Member',
+                'KL Photography Club': 'Event Coordinator', 
+                'Malaysian Architects': 'President',
+                'MARA Students Germany': 'Admin',
+                'Berlin Tech Community': 'Member',
+                'Istanbul Tour Guides': 'Senior Guide'
+              };
+              
+              return (
+                <div key={idx} style={{
+                  background: '#F8F8F8',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  border: '1px solid #E0E0E0'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                    <h4 style={{ margin: 0, color: '#2fce98' }}>{community}</h4>
+                    <span style={{
+                      background: '#2fce98',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '11px'
+                    }}>
+                      {roles[community] || 'Member'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+                    <div>Since: 2022</div>
+                    <div>245 active members</div>
+                  </div>
+                  <button style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'white',
+                    border: '1px solid #2fce98',
+                    borderRadius: '8px',
+                    color: '#2fce98',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}>
+                    View Community
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </LogbookContent>
+      </TravelLogbookModal>
+
+      {/* BerseMukha Events Modal */}
+      <TravelLogbookModal $isOpen={showEventsModal} onClick={() => setShowEventsModal(false)}>
+        <LogbookContent onClick={(e) => e.stopPropagation()}>
+          <LogbookHeader>
+            <LogbookTitle>🤝 BerseMukha Events</LogbookTitle>
+            <LogbookSubtitle>{selectedProfile?.name}'s BerseMukha Journey (Jan 2023 - Jul 2025)</LogbookSubtitle>
+            <CloseButton onClick={() => setShowEventsModal(false)}>×</CloseButton>
+          </LogbookHeader>
+          
+          {/* Generate person's attendance data */}
+          {(() => {
+            const allEvents = generateBerseMukhaEvents();
+            const personAttendance = generatePersonAttendance(selectedProfile?.name || 'User');
+            const attendedEvents = personAttendance.filter(a => a.attended);
+            const totalFriends = attendedEvents.reduce((sum, event) => sum + event.friendsMade.length, 0);
+            
+            return (
+              <>
+                {/* BerseMukha Stats */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '12px',
+                  marginBottom: '20px',
+                  padding: '16px',
+                  background: 'linear-gradient(135deg, #2fce98, #4A8B7C)',
+                  borderRadius: '12px',
+                  color: 'white'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                      {attendedEvents.length}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.9 }}>Events Attended</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{totalFriends}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.9 }}>Friends Made</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                      {Math.round((attendedEvents.length / allEvents.length) * 100)}%
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.9 }}>Attendance Rate</div>
+                  </div>
+                </div>
+          
+                <h4 style={{ color: '#2fce98', marginBottom: '12px' }}>
+                  Monthly BerseMukha Events Attended ({attendedEvents.length} of {allEvents.length} total):
+                </h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '400px', overflowY: 'auto' }}>
+                  {attendedEvents.map((attendance) => {
+                    const event = allEvents.find(e => e.id === attendance.eventId);
+                    if (!event) return null;
+                    
+                    return (
+                      <div key={attendance.eventId} style={{
+                        background: '#F8F8F8',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '2px solid #E8F5E9',
+                        position: 'relative'
+                      }}>
+                        {/* Event Header */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          marginBottom: '12px'
+                        }}>
+                          <div>
+                            <h4 style={{ margin: '0 0 4px 0', color: '#2fce98' }}>
+                              {event.month} {event.year} - {event.theme}
+                            </h4>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              📍 {event.venue}, {event.location}
+                            </div>
+                          </div>
+                          <div style={{
+                            background: '#2fce98',
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            fontSize: '10px',
+                            fontWeight: '600'
+                          }}>
+                            ✅ Attended
+                          </div>
+                        </div>
+                        
+                        {/* Event Details */}
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: '1fr 1fr', 
+                          gap: '8px', 
+                          marginBottom: '12px',
+                          fontSize: '11px',
+                          color: '#666'
+                        }}>
+                          <div>🏠 Host: {event.host}</div>
+                          <div>👥 {event.attendees} attendees</div>
+                        </div>
+                        
+                        {/* Friends Made Section */}
+                        {attendance.friendsMade.length > 0 && (
+                          <div style={{
+                            background: 'white',
+                            borderRadius: '8px',
+                            padding: '12px',
+                            marginTop: '12px'
+                          }}>
+                            <h5 style={{ 
+                              margin: '0 0 8px 0', 
+                              color: '#2fce98',
+                              fontSize: '12px'
+                            }}>
+                              🤝 Friends Made ({attendance.friendsMade.length})
+                            </h5>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {attendance.friendsMade.map((friend, idx) => (
+                                <div key={idx} style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '8px',
+                                  background: '#F8F8F8',
+                                  borderRadius: '6px'
+                                }}>
+                                  <div>
+                                    <div style={{ 
+                                      fontSize: '12px', 
+                                      fontWeight: '600',
+                                      color: '#333'
+                                    }}>
+                                      {friend.name}
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: '10px', 
+                                      color: '#666' 
+                                    }}>
+                                      {friend.profession}
+                                    </div>
+                                  </div>
+                                  <button 
+                                    style={{
+                                      padding: '4px 12px',
+                                      background: friend.connected ? '#E8F5E9' : '#2fce98',
+                                      color: friend.connected ? '#2E7D32' : 'white',
+                                      border: friend.connected ? '1px solid #2E7D32' : 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '10px',
+                                      fontWeight: '600',
+                                      cursor: friend.connected ? 'default' : 'pointer',
+                                      transition: 'all 0.2s'
+                                    }}
+                                    disabled={friend.connected}
+                                    onClick={() => {
+                                      if (!friend.connected) {
+                                        alert(`Requesting connection to ${friend.name} through ${selectedProfile?.name}...`);
+                                      }
+                                    }}
+                                  >
+                                    {friend.connected ? '✓ Connected' : 'Request Connection'}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Show More Events Section */}
+                {attendedEvents.length === 0 && (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '32px',
+                    background: '#F8F8F8',
+                    borderRadius: '12px',
+                    color: '#666'
+                  }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>🎭</div>
+                    <div>No BerseMukha events attended yet</div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </LogbookContent>
+      </TravelLogbookModal>
+
+      {/* Offerings Modal */}
+      <TravelLogbookModal $isOpen={showOfferingsModal} onClick={() => setShowOfferingsModal(false)}>
+        <LogbookContent onClick={(e) => e.stopPropagation()}>
+          <LogbookHeader>
+            <LogbookTitle>🎯 Offerings</LogbookTitle>
+            <LogbookSubtitle>{selectedProfile?.name}'s Services & Offerings</LogbookSubtitle>
+            <CloseButton onClick={() => setShowOfferingsModal(false)}>×</CloseButton>
+          </LogbookHeader>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {/* BerseGuide */}
+            <div style={{ background: '#F8F8F8', borderRadius: '12px', padding: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#2fce98' }}>🗺️ BerseGuide</h4>
+              <div style={{ fontSize: '12px', marginBottom: '12px' }}>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Price:</strong> RM50-80/day or skill trade
+                </div>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Duration:</strong> Half day / Full day
+                </div>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Locations:</strong> KL, Penang, Langkawi
+                </div>
+                <div>
+                  <strong>Specialties:</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {['Food Tours', 'Historical Sites', 'Hidden Gems'].map((item, i) => (
+                      <span key={i} style={{
+                        background: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        color: '#2fce98'
+                      }}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button style={{
+                width: '100%',
+                padding: '8px',
+                background: '#2fce98',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>Book Guide</button>
+            </div>
+
+            {/* HomeSurf */}
+            <div style={{ background: '#F8F8F8', borderRadius: '12px', padding: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#2fce98' }}>🏠 HomeSurf</h4>
+              <div style={{ fontSize: '12px', marginBottom: '12px' }}>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Available:</strong> ✅ Yes
+                </div>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Max Days:</strong> 3 nights
+                </div>
+                <div>
+                  <strong>Amenities:</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {['WiFi', 'Kitchen', 'Private Room'].map((item, i) => (
+                      <span key={i} style={{
+                        background: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        color: '#2fce98'
+                      }}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button style={{
+                width: '100%',
+                padding: '8px',
+                background: '#2fce98',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>Request Stay</button>
+            </div>
+
+            {/* BerseBuddy */}
+            <div style={{ background: '#F8F8F8', borderRadius: '12px', padding: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#2fce98' }}>👫 BerseBuddy</h4>
+              <div style={{ fontSize: '12px', marginBottom: '12px' }}>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Activities:</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {['Coffee Meetups', 'Weekend Trips'].map((item, i) => (
+                      <span key={i} style={{
+                        background: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        color: '#2fce98'
+                      }}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <strong>Availability:</strong> Weekends & Evenings
+                </div>
+              </div>
+              <button style={{
+                width: '100%',
+                padding: '8px',
+                background: '#2fce98',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>Be Buddies</button>
+            </div>
+
+            {/* BerseMentor */}
+            <div style={{ background: '#F8F8F8', borderRadius: '12px', padding: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: '#2fce98' }}>🎓 BerseMentor</h4>
+              <div style={{ fontSize: '12px', marginBottom: '12px' }}>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Expertise:</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {['Architecture', 'Photography'].map((item, i) => (
+                      <span key={i} style={{
+                        background: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        color: '#2fce98'
+                      }}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginBottom: '6px' }}>
+                  <strong>Rate:</strong> 100 BersePoints/hour
+                </div>
+                <div>
+                  <strong>Format:</strong> Online, In-person
+                </div>
+              </div>
+              <button style={{
+                width: '100%',
+                padding: '8px',
+                background: '#2fce98',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}>Book Session</button>
+            </div>
+          </div>
+        </LogbookContent>
+      </TravelLogbookModal>
+
+
+      {/* Community Modals */}
+      <JoinCommunityModal
+        isOpen={showJoinCommunityModal}
+        onClose={() => setShowJoinCommunityModal(false)}
+        community={selectedConnection ? {
+          id: selectedConnection.id.toString(),
+          name: selectedConnection.name,
+          memberCount: selectedConnection.memberCount || 0,
+          eventCount: selectedConnection.eventCount || 0,
+          description: selectedConnection.description || selectedConnection.bio,
+          category: selectedConnection.category
+        } : null}
+        onSubmit={handleJoinCommunity}
+      />
+
+      <FriendRequestModal
+        isOpen={showFriendRequestModal}
+        onClose={() => setShowFriendRequestModal(false)}
+        profile={selectedConnection ? {
+          id: selectedConnection.id,
+          name: selectedConnection.name,
+          bio: selectedConnection.bio
+        } : null}
+        onSubmit={handleSendFriendRequest}
+      />
+
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareData={shareData}
+      />
 
       <MainNav 
         activeTab="match"
