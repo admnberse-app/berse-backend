@@ -53,7 +53,7 @@ export const userProfiles: UserProfile[] = [
     firstName: 'Amina',
     lastName: 'Hadzic',
     initials: 'AH',
-    avatarColor: 'linear-gradient(135deg, #2D5F4F, #4A90A4)',
+    avatarColor: 'linear-gradient(135deg, #2fce98, #4A90A4)',
     bio: 'Architect and photographer exploring traditions and architecture worldwide. Love discovering hidden gems and meeting new people over coffee.',
     profession: 'Architect & Photographer',
     age: 28,

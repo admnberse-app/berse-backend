@@ -1,4 +1,4 @@
-import { body, param, query, ValidationChain } from 'express-validator';
+import { body, param, query } from 'express-validator';
 
 // Common validators
 export const emailValidator = body('email')
@@ -8,7 +8,7 @@ export const emailValidator = body('email')
 
 export const passwordValidator = body('password')
   .isLength({ min: 8 })
-  .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+  .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
   .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
 
 export const phoneValidator = body('phoneNumber')
@@ -38,6 +38,34 @@ export const registerValidators = [
     .isLength({ min: 2, max: 100 })
     .matches(/^[a-zA-Z\s'-]+$/)
     .withMessage('Full name must be 2-100 characters, letters only'),
+  body('username')
+    .trim()
+    .isLength({ min: 2, max: 30 })
+    .matches(/^[a-zA-Z0-9\s_-]+$/)
+    .withMessage('Username must be 2-30 characters, alphanumeric with spaces, underscores and hyphens allowed'),
+  body('nationality')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Nationality must be 2-50 characters'),
+  body('countryOfResidence')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Country of residence must be 2-50 characters'),
+  body('city')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('City must be 2-50 characters'),
+  body('gender')
+    .optional()
+    .isIn(['male', 'female'])
+    .withMessage('Gender must be either male or female'),
+  body('dateOfBirth')
+    .optional()
+    .isISO8601()
+    .withMessage('Date of birth must be a valid date'),
   phoneValidator,
 ];
 

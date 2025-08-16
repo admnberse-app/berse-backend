@@ -34,7 +34,7 @@ const BackButton = styled.button`
   gap: 4px;
   background: none;
   border: none;
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 16px;
   cursor: pointer;
   padding: 8px;
@@ -88,7 +88,7 @@ const Content = styled.div`
   }
   
   &::-webkit-scrollbar-thumb {
-    background: #2D5F4F;
+    background: #2fce98;
     border-radius: 10px;
   }
   
@@ -107,7 +107,7 @@ const IntroSection = styled.div`
 
 const IntroTitle = styled.h2`
   font-size: 20px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -127,7 +127,7 @@ const HowItWorksSection = styled.div`
 
 const HowItWorksTitle = styled.h3`
   font-size: 16px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 12px 0;
   display: flex;
   align-items: center;
@@ -152,7 +152,7 @@ const TopicsSection = styled.div`
 
 const TopicsTitle = styled.h3`
   font-size: 18px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 16px 0;
   text-align: center;
 `;
@@ -247,7 +247,7 @@ const SessionHeader = styled.div`
 
 const SessionTitle = styled.h3`
   font-size: 18px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
 `;
 
@@ -532,7 +532,7 @@ const ModeratorHeader = styled.div`
 
 const ModeratorTitle = styled.h2`
   font-size: 20px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
   display: flex;
   align-items: center;
@@ -545,7 +545,7 @@ const ModeratorContent = styled.div`
   color: #333;
   
   h3 {
-    color: #2D5F4F;
+    color: #2fce98;
     font-size: 16px;
     margin: 20px 0 10px 0;
     font-weight: 600;
@@ -565,12 +565,12 @@ const ModeratorContent = styled.div`
   }
   
   strong {
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
 const ModeratorButton = styled.button`
-  background: linear-gradient(135deg, #2D5F4F, #4A7C59);
+  background: linear-gradient(135deg, #2fce98, #4A7C59);
   color: white;
   border: none;
   border-radius: 12px;
@@ -1034,23 +1034,6 @@ export const BerseCardGameScreen: React.FC = () => {
           <IntroTitle>
             🃏 BerseMukha Card Game: A Friendship-Building Toolkit
           </IntroTitle>
-          
-          <IntroText>
-            <strong>Purpose:</strong> The BerseMukha Card Game is a <em>conversational card game</em> designed to foster <strong>meaningful connection</strong>, <strong>self-reflection</strong>, and <strong>community bonding</strong>. It's perfect for strangers becoming friends, teams building trust, or communities deepening their ties.
-          </IntroText>
-
-          <HowItWorksSection>
-            <HowItWorksTitle>
-              🔧 How It Works
-            </HowItWorksTitle>
-            <FeatureList>
-              <FeatureItem><strong>Each card</strong> contains a <em>prompt, question, or challenge</em>.</FeatureItem>
-              <FeatureItem>The questions are crafted to <strong>spark stories</strong>, <strong>invite vulnerability</strong>, or <strong>encourage fun insights</strong>.</FeatureItem>
-              <FeatureItem>Players take turns drawing cards and responding.</FeatureItem>
-              <FeatureItem>Others listen, reflect, or join in if prompted.</FeatureItem>
-              <FeatureItem>No one is forced to answer – it's built on <strong>psychological safety and consent</strong>.</FeatureItem>
-            </FeatureList>
-          </HowItWorksSection>
 
           <ModeratorButton onClick={() => setShowModeratorModal(true)}>
             📋 Moderator Guidelines

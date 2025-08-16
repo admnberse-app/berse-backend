@@ -77,7 +77,7 @@ const SearchInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
   
   &::placeholder {
@@ -107,13 +107,13 @@ const OptionItem = styled.label<{ isRadio?: boolean }>`
 const RadioInput = styled.input`
   width: 16px;
   height: 16px;
-  accent-color: #2D5F4F;
+  accent-color: #2fce98;
 `;
 
 const CheckboxInput = styled.input`
   width: 16px;
   height: 16px;
-  accent-color: #2D5F4F;
+  accent-color: #2fce98;
 `;
 
 const OptionLabel = styled.span`
@@ -131,17 +131,17 @@ const QuickOptionsGrid = styled.div`
 
 const QuickOptionButton = styled.button<{ isActive: boolean }>`
   padding: 12px 16px;
-  border: 1px solid ${({ isActive }) => isActive ? '#2D5F4F' : '#e0e0e0'};
+  border: 1px solid ${({ isActive }) => isActive ? '#2fce98' : '#e0e0e0'};
   border-radius: 8px;
   background: ${({ isActive }) => isActive ? '#f0f8f5' : 'white'};
-  color: ${({ isActive }) => isActive ? '#2D5F4F' : '#666'};
+  color: ${({ isActive }) => isActive ? '#2fce98' : '#666'};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   
   &:hover {
-    border-color: #2D5F4F;
+    border-color: #2fce98;
     background-color: #f0f8f5;
   }
 `;
@@ -161,7 +161,7 @@ const DateInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -194,7 +194,7 @@ const ApplyButton = styled.button`
   padding: 12px;
   border: none;
   border-radius: 8px;
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   font-size: 14px;
   font-weight: 600;

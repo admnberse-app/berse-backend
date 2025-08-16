@@ -98,7 +98,7 @@ const ProfileIndicator = styled.div`
   right: -2px;
   width: 14px;
   height: 14px;
-  background: #2D5F4F;
+  background: #2fce98;
   border-radius: 50%;
   display: flex;
   align-items: center;

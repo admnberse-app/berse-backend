@@ -10,7 +10,7 @@ const Container = styled.div<{ $fadeOut?: boolean }>`
   align-items: center;
   justify-content: center;
   height: 100vh;
-  background: linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%);
+  background: linear-gradient(135deg, #2fce98 0%, #4A8B7C 100%);
   color: ${({ theme }) => theme.colors.common.white};
   transition: opacity 0.3s ease-out;
   opacity: 1;

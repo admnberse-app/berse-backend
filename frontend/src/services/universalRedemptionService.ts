@@ -229,7 +229,7 @@ class UniversalRedemptionService {
       text: canAfford ? 'Redeem' : 'Not enough pts',
       disabled: !canAfford,
       style: {
-        background: canAfford ? '#2D5F4F' : '#ccc',
+        background: canAfford ? '#2fce98' : '#ccc',
         cursor: canAfford ? 'pointer' : 'not-allowed',
         opacity: canAfford ? 1 : 0.7
       }

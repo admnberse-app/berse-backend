@@ -37,7 +37,7 @@ const HeaderTitle = styled.h1`
   margin: 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const Content = styled.div`
@@ -47,7 +47,7 @@ const Content = styled.div`
 `;
 
 const IntroSection = styled.div`
-  background: linear-gradient(135deg, #2D5F4F 0%, #4A90A4 100%);
+  background: linear-gradient(135deg, #2fce98 0%, #4A90A4 100%);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 24px;
@@ -96,7 +96,7 @@ const SlotHeader = styled.div`
 const SlotDate = styled.div`
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 4px;
 `;
 
@@ -111,7 +111,7 @@ const SlotStatus = styled.div<{ isBooked: boolean }>`
   font-size: 12px;
   font-weight: 600;
   background-color: ${({ isBooked }) => isBooked ? '#4CAF50' : '#E8F4F0'};
-  color: ${({ isBooked }) => isBooked ? 'white' : '#2D5F4F'};
+  color: ${({ isBooked }) => isBooked ? 'white' : '#2fce98'};
 `;
 
 const LocationInfo = styled.div`
@@ -141,7 +141,7 @@ const ParticipantInfo = styled.div`
 const ParticipantCount = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 4px;
 `;
 
@@ -163,7 +163,7 @@ const BookButton = styled.button<{ isBooked: boolean }>`
     background-color: #4CAF50;
     color: white;
   ` : `
-    background-color: #2D5F4F;
+    background-color: #2fce98;
     color: white;
     
     &:hover {
@@ -198,7 +198,7 @@ const ModalTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   text-align: center;
 `;
 
@@ -225,7 +225,7 @@ const ModalButton = styled.button<{ primary?: boolean }>`
   cursor: pointer;
   
   ${({ primary }) => primary ? `
-    background-color: #2D5F4F;
+    background-color: #2fce98;
     color: white;
     
     &:hover {

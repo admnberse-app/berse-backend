@@ -67,6 +67,37 @@ const FormSection = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 `;
 
+const CommunitySelect = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const CommunityOption = styled.div<{ $selected: boolean }>`
+  padding: 12px;
+  border: 2px solid ${({ $selected }) => $selected ? '#2fce98' : '#E5E5E5'};
+  border-radius: 8px;
+  background: ${({ $selected }) => $selected ? '#E8F4F0' : 'white'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: #2fce98;
+  }
+`;
+
+const CommunityName = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+`;
+
+const CommunityDescription = styled.div`
+  font-size: 12px;
+  color: #666;
+`;
+
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
@@ -172,7 +203,7 @@ const ImageUploadInput = styled.input`
 
 const ImagePreview = styled.div`
   width: 100%;
-  height: 120px;
+  height: 180px;
   background: linear-gradient(45deg, #E8F4F0, #D4E9E3);
   border-radius: 8px;
   display: flex;
@@ -180,6 +211,8 @@ const ImagePreview = styled.div`
   justify-content: center;
   font-size: 40px;
   margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
 `;
 
 const UploadText = styled.div`
@@ -449,12 +482,6 @@ const AddCoHostButton = styled.button`
   }
 `;
 
-const CommunitySelect = styled(Select)`
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232D5F4F' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
-`;
 
 const ToggleSwitch = styled.label`
   position: relative;
@@ -573,22 +600,6 @@ const TopicNumber = styled.div`
   font-weight: 600;
 `;
 
-const PreviewButton = styled.button`
-  width: 100%;
-  background: #F8F9FA;
-  color: #333;
-  border: 1px solid #E5E5E5;
-  border-radius: 12px;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 16px;
-  
-  &:hover {
-    background-color: #f0f0f0;
-  }
-`;
 
 const CreateButton = styled.button`
   width: 100%;
@@ -934,6 +945,7 @@ export const CreateEventScreen: React.FC = () => {
     title: '',
     description: '',
     category: 'SOCIAL',
+    community: '',
     date: '',
     time: '',
     endTime: '',
@@ -1152,8 +1164,8 @@ export const CreateEventScreen: React.FC = () => {
   const handleCreateEvent = async () => {
     try {
       // Validate required fields
-      if (!formData.title || !formData.description || !formData.date || !formData.location) {
-        alert('Please fill in all required fields');
+      if (!formData.title || !formData.description || !formData.date || !formData.location || !formData.community) {
+        alert('Please fill in all required fields including community');
         return;
       }
 
@@ -1171,17 +1183,50 @@ export const CreateEventScreen: React.FC = () => {
         return;
       }
 
-      // Create event object
+      // Get hosts list (including main organizer and co-hosts)
+      const hostsList = [user?.fullName || 'Current User'];
+      coHosts.forEach(host => {
+        if (host.name && host.name.trim()) {
+          hostsList.push(host.name.trim());
+        }
+      });
+
+      // Create event object in the format expected by BerseConnect
       const newEvent = {
-        ...formData,
         id: Date.now().toString(),
+        title: formData.title,
+        date: formData.date,
+        time: formData.time || '09:00',
+        location: formData.location,
+        venue: formData.venue || formData.location,
+        category: formData.category || 'social',
+        description: formData.description,
+        organizer: user?.fullName || 'Current User',
+        organizerAvatar: '⭐',
+        organization: formData.community,
+        hosts: hostsList.slice(0, 5), // Maximum 5 hosts
+        coverImage: imagePreview || '/images/event-default.jpg',
+        price: parseFloat(formData.eventFee) || 0,
+        currency: 'RM',
+        attendees: 1,
+        maxAttendees: maxPart || 50,
+        tags: formData.tags || [],
+        isOnline: formData.isOnline || false,
+        meetingLink: formData.meetingLink || undefined,
+        whatsappGroup: formData.groupLink || undefined,
+        friends: [],
+        committedProfiles: [],
+        trending: false,
+        highlights: formData.highlights || [],
+        agenda: formData.agenda || [],
+        requirements: requirements.filter(req => req.trim() !== ''),
+        // Additional fields from the original form
         hostName: user?.fullName || 'Current User',
         hostInitials: user?.fullName?.split(' ').map(n => n[0]).join('') || 'CU',
         participantCount: 1,
         eventFee: parseFloat(formData.eventFee) || 0,
         minParticipants: minPart || 1,
         maxParticipants: maxPart || null,
-        requirements: requirements.filter(req => req.trim() !== ''),
         organizingCommunity: formData.organizingCommunity || null,
         coHosts: formData.coHosts.filter(coHost => coHost.name && coHost.contact),
         sponsors: formData.sponsors.filter(sponsor => sponsor.name),
@@ -1205,6 +1250,11 @@ export const CreateEventScreen: React.FC = () => {
       };
 
       console.log('Creating event:', newEvent);
+      
+      // Save event to localStorage for BerseConnect screen
+      const existingEvents = JSON.parse(localStorage.getItem('userCreatedEvents') || '[]');
+      existingEvents.push(newEvent);
+      localStorage.setItem('userCreatedEvents', JSON.stringify(existingEvents));
       
       // Here you would make an API call to create the event
       // await eventService.createEvent(newEvent);
@@ -1287,18 +1337,6 @@ export const CreateEventScreen: React.FC = () => {
     }
   };
 
-  const handlePreview = () => {
-    // Navigate to a preview of the event
-    const previewData = {
-      ...formData,
-      hostName: user?.fullName || 'Current User',
-      hostInitials: user?.fullName?.split(' ').map(n => n[0]).join('') || 'CU',
-      participantCount: 1,
-      requirements: requirements.filter(req => req.trim() !== ''),
-      preview: true
-    };
-    navigate('/event/preview', { state: { eventData: previewData } });
-  };
 
   const getCategoryEmoji = (categoryId: string) => {
     return categories.find(cat => cat.id === categoryId)?.emoji || '📅';
@@ -1330,7 +1368,7 @@ export const CreateEventScreen: React.FC = () => {
                 <img 
                   src={imagePreview} 
                   alt="Event preview" 
-                  style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }}
+                  style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px' }}
                 />
                 <div style={{
                   position: 'absolute',
@@ -1414,24 +1452,22 @@ export const CreateEventScreen: React.FC = () => {
 
           <FormGroup>
             <Label>Organizing Community *</Label>
-            <CommunitySelect
-              value={formData.organizingCommunity}
-              onChange={(e) => handleInputChange('organizingCommunity', e.target.value)}
-              required
-            >
-              <option value="">Select a community</option>
-              {userCommunities.map((community) => (
-                <option key={community.id} value={community.id}>
-                  {community.name}
-                  {community.isVerified && '✓'}
-                </option>
-              ))}
+            <CommunitySelect>
+              <CommunityOption
+                $selected={formData.community === "Ahl 'Umran Network"}
+                onClick={() => handleInputChange('community', "Ahl 'Umran Network")}
+              >
+                <CommunityName>Ahl 'Umran Network</CommunityName>
+                <CommunityDescription>Global Islamic knowledge & spiritual development community</CommunityDescription>
+              </CommunityOption>
+              <CommunityOption
+                $selected={formData.community === 'PeaceMeal MY'}
+                onClick={() => handleInputChange('community', 'PeaceMeal MY')}
+              >
+                <CommunityName>PeaceMeal MY</CommunityName>
+                <CommunityDescription>Malaysian community for sharing meals & building peace</CommunityDescription>
+              </CommunityOption>
             </CommunitySelect>
-            {userCommunities.length === 0 && (
-              <p style={{ fontSize: '12px', color: '#FF6B6B', marginTop: '8px' }}>
-                You must be an admin of a verified community to create events
-              </p>
-            )}
           </FormGroup>
         </FormSection>
 
@@ -2164,10 +2200,6 @@ export const CreateEventScreen: React.FC = () => {
         </FormSection>
 
         {/* Action Buttons */}
-        <PreviewButton onClick={handlePreview}>
-          👁️ Preview Event
-        </PreviewButton>
-
         <CreateButton onClick={handleCreateEvent}>
           🎉 Create Event
         </CreateButton>
@@ -2178,7 +2210,7 @@ export const CreateEventScreen: React.FC = () => {
         onClose={() => setShowCropper(false)}
         imageSrc={tempImageSrc || ''}
         onCropComplete={handleCropComplete}
-        aspectRatio={16/9}
+        aspectRatio={2.5}
         shape="rect"
         title="Crop your event image"
       />

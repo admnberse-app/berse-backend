@@ -8,10 +8,10 @@ dotenv.config();
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url('Invalid database URL'),
-  DATABASE_MAX_CONNECTIONS: z.string().transform((val) => parseInt(val, 10)).default('20'),
+  DATABASE_MAX_CONNECTIONS: z.string().default('20').transform((val) => parseInt(val, 10)),
   
   // Server
-  PORT: z.string().transform((val) => parseInt(val, 10)).default('3001'),
+  PORT: z.string().default('3001').transform((val) => parseInt(val, 10)),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   API_URL: z.string().url().default('http://localhost:3001'),
   
@@ -26,13 +26,13 @@ const envSchema = z.object({
   
   // Redis
   REDIS_HOST: z.string().default('localhost'),
-  REDIS_PORT: z.string().transform((val) => parseInt(val, 10)).default('6379'),
+  REDIS_PORT: z.string().default('6379').transform((val) => parseInt(val, 10)),
   REDIS_PASSWORD: z.string().optional(),
-  REDIS_DB: z.string().transform((val) => parseInt(val, 10)).default('0'),
+  REDIS_DB: z.string().default('0').transform((val) => parseInt(val, 10)),
   
   // Security
   COOKIE_SECRET: z.string().min(16, 'Cookie secret must be at least 16 characters'),
-  BCRYPT_ROUNDS: z.string().transform((val) => parseInt(val, 10)).default('12'),
+  BCRYPT_ROUNDS: z.string().default('12').transform((val) => parseInt(val, 10)),
   
   // File Upload
   MAX_FILE_SIZE: z.string().default('10mb'),
@@ -40,7 +40,7 @@ const envSchema = z.object({
   
   // Email
   SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.string().transform((val) => parseInt(val, 10)).default('587'),
+  SMTP_PORT: z.string().default('587').transform((val) => parseInt(val, 10)),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   FROM_EMAIL: z.string().email().optional(),
@@ -64,22 +64,22 @@ const envSchema = z.object({
   GOOGLE_ANALYTICS_ID: z.string().optional(),
   
   // Rate Limiting
-  RATE_LIMIT_WINDOW_MS: z.string().transform((val) => parseInt(val, 10)).default('900000'),
-  RATE_LIMIT_MAX_REQUESTS: z.string().transform((val) => parseInt(val, 10)).default('100'),
-  RATE_LIMIT_AUTH_MAX: z.string().transform((val) => parseInt(val, 10)).default('5'),
-  RATE_LIMIT_LOGIN_MAX: z.string().transform((val) => parseInt(val, 10)).default('3'),
+  RATE_LIMIT_WINDOW_MS: z.string().default('900000').transform((val) => parseInt(val, 10)),
+  RATE_LIMIT_MAX_REQUESTS: z.string().default('100').transform((val) => parseInt(val, 10)),
+  RATE_LIMIT_AUTH_MAX: z.string().default('5').transform((val) => parseInt(val, 10)),
+  RATE_LIMIT_LOGIN_MAX: z.string().default('3').transform((val) => parseInt(val, 10)),
   
   // Security
-  SESSION_TIMEOUT_MINUTES: z.string().transform((val) => parseInt(val, 10)).default('60'),
-  MAX_LOGIN_ATTEMPTS: z.string().transform((val) => parseInt(val, 10)).default('5'),
-  ACCOUNT_LOCKOUT_MINUTES: z.string().transform((val) => parseInt(val, 10)).default('30'),
+  SESSION_TIMEOUT_MINUTES: z.string().default('60').transform((val) => parseInt(val, 10)),
+  MAX_LOGIN_ATTEMPTS: z.string().default('5').transform((val) => parseInt(val, 10)),
+  ACCOUNT_LOCKOUT_MINUTES: z.string().default('30').transform((val) => parseInt(val, 10)),
   
   // Feature Flags
-  ENABLE_REGISTRATION: z.string().transform((val) => val === 'true').default('true'),
-  ENABLE_EMAIL_VERIFICATION: z.string().transform((val) => val === 'true').default('false'),
-  ENABLE_SMS_VERIFICATION: z.string().transform((val) => val === 'true').default('false'),
-  ENABLE_OAUTH: z.string().transform((val) => val === 'true').default('false'),
-  ENABLE_MFA: z.string().transform((val) => val === 'true').default('false'),
+  ENABLE_REGISTRATION: z.string().default('true').transform((val) => val === 'true'),
+  ENABLE_EMAIL_VERIFICATION: z.string().default('false').transform((val) => val === 'true'),
+  ENABLE_SMS_VERIFICATION: z.string().default('false').transform((val) => val === 'true'),
+  ENABLE_OAUTH: z.string().default('false').transform((val) => val === 'true'),
+  ENABLE_MFA: z.string().default('false').transform((val) => val === 'true'),
   
   // Webhooks
   WEBHOOK_SECRET: z.string().optional(),
@@ -87,8 +87,8 @@ const envSchema = z.object({
   
   // Development/Testing
   TEST_DATABASE_URL: z.string().optional(),
-  ENABLE_DEBUG_LOGS: z.string().transform((val) => val === 'true').default('false'),
-  MOCK_EXTERNAL_APIS: z.string().transform((val) => val === 'true').default('false'),
+  ENABLE_DEBUG_LOGS: z.string().default('false').transform((val) => val === 'true'),
+  MOCK_EXTERNAL_APIS: z.string().default('false').transform((val) => val === 'true'),
 });
 
 // Validate and parse environment variables
@@ -99,7 +99,7 @@ try {
 } catch (error) {
   console.error('Environment validation failed:');
   if (error instanceof z.ZodError) {
-    error.errors.forEach((err) => {
+    error.issues.forEach((err: any) => {
       console.error(`${err.path.join('.')}: ${err.message}`);
     });
   }

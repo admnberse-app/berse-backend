@@ -18,35 +18,9 @@ export const MyEventsScreen: React.FC = () => {
     window.open(calendarUrl, '_blank');
   };
 
-  const mockEvents = [
-    {
-      id: '1',
-      title: 'KL Heritage Walking Tour',
-      date: '2025-01-15T14:00:00',
-      location: 'Kuala Lumpur Heritage Trail',
-      status: 'confirmed',
-      description: 'Explore the rich heritage of Kuala Lumpur with fellow architecture enthusiasts.',
-      reminder: true
-    },
-    {
-      id: '2',
-      title: 'Photography Meetup - Chinatown',
-      date: '2025-01-20T18:00:00',
-      location: 'Chinatown, KL',
-      status: 'pending',
-      description: 'Capture the vibrant street life and culture of Chinatown.',
-      reminder: false
-    },
-    {
-      id: '3',
-      title: 'BerseMukha Coffee Session',
-      date: '2025-01-22T16:00:00',
-      location: 'Mukha Cafe, KLCC',
-      status: 'confirmed',
-      description: 'Casual coffee meetup to discuss upcoming projects.',
-      reminder: true
-    }
-  ];
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
+
+  const mockEvents: any[] = [];
 
   return (
     <Container>
@@ -58,58 +32,111 @@ export const MyEventsScreen: React.FC = () => {
       </Header>
 
       <Content>
-        <EventsHeader>
-          <EventsCount>You have {mockEvents.length} upcoming events</EventsCount>
-          <SyncButton onClick={() => console.log('Sync with Google Calendar')}>
-            📅 Sync Calendar
-          </SyncButton>
-        </EventsHeader>
+        <TabContainer>
+          <TabButton
+            $active={activeTab === 'upcoming'}
+            onClick={() => setActiveTab('upcoming')}
+          >
+            Upcoming ({mockEvents.filter(e => e.status === 'upcoming').length})
+          </TabButton>
+          <TabButton
+            $active={activeTab === 'completed'}
+            onClick={() => setActiveTab('completed')}
+          >
+            Completed ({mockEvents.filter(e => e.status === 'completed').length})
+          </TabButton>
+        </TabContainer>
 
         <EventsList>
-          {mockEvents.map((event) => (
-            <EventCard key={event.id}>
-              <EventHeader>
-                <EventDate>
-                  {new Date(event.date).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short'
-                  })}
-                </EventDate>
-                <EventStatus $status={event.status}>
-                  {event.status === 'confirmed' ? 'CONFIRMED' : 'PENDING'}
-                </EventStatus>
-              </EventHeader>
-
-              <EventContent>
-                <EventTitle>{event.title}</EventTitle>
-                <EventDetails>
-                  <EventTime>
-                    ⏰ {new Date(event.date).toLocaleTimeString('en-GB', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </EventTime>
-                  <EventLocation>📍 {event.location}</EventLocation>
-                </EventDetails>
-                <EventDescription>{event.description}</EventDescription>
-              </EventContent>
-
-              <EventActions>
-                <EventActionButton 
-                  $primary
-                  onClick={() => addToGoogleCalendar(event)}
+          {mockEvents.filter(event => event.status === activeTab).length === 0 ? (
+            <EmptyState>
+              <EmptyIcon>📅</EmptyIcon>
+              <EmptyTitle>No {activeTab} events</EmptyTitle>
+              <EmptyMessage>
+                {activeTab === 'upcoming' 
+                  ? 'Join events from BerseConnect to see them here!'
+                  : 'Completed events will appear here after you attend them.'
+                }
+              </EmptyMessage>
+              <EmptyActions>
+                <EmptyActionButton onClick={() => navigate('/connect')}>
+                  🔍 Browse Events
+                </EmptyActionButton>
+                <EmptyActionButton 
+                  onClick={() => {
+                    // Test calendar functionality with dummy event
+                    const dummyEvent = {
+                      title: 'Test Event',
+                      date: new Date().toISOString(),
+                      description: 'Test calendar integration'
+                    };
+                    addToGoogleCalendar(dummyEvent);
+                  }}
+                  style={{ opacity: 0.7 }}
                 >
-                  📅 Add to Calendar
-                </EventActionButton>
-                <EventActionButton onClick={() => console.log('Set reminder')}>
-                  🔔 {event.reminder ? 'Reminder Set' : 'Set Reminder'}
-                </EventActionButton>
-                <EventActionButton onClick={() => console.log('View details')}>
-                  ℹ️ Details
-                </EventActionButton>
-              </EventActions>
-            </EventCard>
-          ))}
+                  📅 Test Calendar
+                </EmptyActionButton>
+              </EmptyActions>
+            </EmptyState>
+          ) : (
+            mockEvents
+              .filter(event => event.status === activeTab)
+              .map((event) => (
+              <EventCard key={event.id}>
+                <EventHeader>
+                  <EventDate>
+                    {new Date(event.date).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short'
+                    })}
+                  </EventDate>
+                  <EventStatus $status={event.status}>
+                    {event.status === 'upcoming' ? 'UPCOMING' : 'COMPLETED'}
+                  </EventStatus>
+                </EventHeader>
+
+                <EventContent>
+                  <EventTitle>{event.title}</EventTitle>
+                  <EventDetails>
+                    <EventTime>
+                      ⏰ {new Date(event.date).toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </EventTime>
+                    <EventLocation>📍 {event.location}</EventLocation>
+                  </EventDetails>
+                  <EventDescription>{event.description}</EventDescription>
+                </EventContent>
+
+                {event.groupInfo && (
+                  <GroupInfo>
+                    <GroupTitle>🎭 BerseMuka Group Assignment</GroupTitle>
+                    <GroupDetails>
+                      You are in <strong>{event.groupInfo.color} Group #{event.groupInfo.number}</strong>
+                      <br />
+                      Look for the {event.groupInfo.color.toLowerCase()} colored signs at the venue!
+                    </GroupDetails>
+                  </GroupInfo>
+                )}
+
+                <EventActions>
+                  <EventActionButton 
+                    $primary
+                    onClick={() => addToGoogleCalendar(event)}
+                  >
+                    📅 Add to Calendar
+                  </EventActionButton>
+                  <EventActionButton onClick={() => console.log('Set reminder for:', event.title)}>
+                    🔔 {event.reminder ? 'Reminder Set' : 'Set Reminder'}
+                  </EventActionButton>
+                  <EventActionButton onClick={() => console.log('View details for:', event.title)}>
+                    ℹ️ Details
+                  </EventActionButton>
+                </EventActions>
+              </EventCard>
+            ))
+          )}
         </EventsList>
       </Content>
 
@@ -154,7 +181,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   margin-right: 12px;
   
@@ -166,7 +193,7 @@ const BackButton = styled.button`
 const HeaderTitle = styled.h1`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
 `;
 
@@ -215,7 +242,7 @@ const EventCard = styled.div`
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #2D5F4F;
+  border-left: 4px solid #2fce98;
 `;
 
 const EventHeader = styled.div`
@@ -226,7 +253,7 @@ const EventHeader = styled.div`
 `;
 
 const EventDate = styled.div`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   padding: 8px 12px;
   border-radius: 8px;
@@ -299,5 +326,109 @@ const EventActionButton = styled.button<{ $primary?: boolean }>`
   
   &:hover {
     background: ${({ $primary }) => $primary ? '#3367D6' : '#F5F5F5'};
+  }
+`;
+
+// New styled components for tabs and group info
+const TabContainer = styled.div`
+  display: flex;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  flex: 1;
+  background: ${({ $active }) => $active ? '#2fce98' : 'transparent'};
+  color: ${({ $active }) => $active ? 'white' : '#666'};
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: ${({ $active }) => $active ? 'white' : '#2fce98'};
+    background: ${({ $active }) => $active ? '#2fce98' : 'rgba(45, 95, 79, 0.1)'};
+  }
+`;
+
+const GroupInfo = styled.div`
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin: 12px 0;
+  text-align: center;
+`;
+
+const GroupTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+`;
+
+const GroupDetails = styled.div`
+  font-size: 12px;
+  opacity: 0.9;
+  line-height: 1.4;
+`;
+
+// Empty State Components
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+`;
+
+const EmptyTitle = styled.h3`
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+`;
+
+const EmptyMessage = styled.p`
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+  max-width: 280px;
+`;
+
+const EmptyActions = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+`;
+
+const EmptyActionButton = styled.button`
+  background: #2fce98;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #1E4039;
+    transform: translateY(-1px);
   }
 `;

@@ -320,7 +320,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   position: absolute;
   left: 20px;
@@ -330,7 +330,7 @@ const BackButton = styled.button`
 const HeaderTitle = styled.h1`
   font-size: 24px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
   text-align: center;
 `;
@@ -369,7 +369,7 @@ const ComingSoonIcon = styled.div`
 
 const ComingSoonTitle = styled.h2`
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
 `;
 
@@ -421,7 +421,7 @@ const ConnectContent = styled.div`
 const ConnectTitle = styled.h3`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 12px 0;
 `;
 
@@ -438,7 +438,7 @@ const FeatureList = styled.div`
 `;
 
 const FeatureItem = styled.div`
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 14px;
   margin: 8px 0;
   display: flex;
@@ -446,7 +446,7 @@ const FeatureItem = styled.div`
 `;
 
 const ConnectButton = styled.button`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   border: none;
   border-radius: 12px;
@@ -480,7 +480,7 @@ const ProfileAvatar = styled.div`
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -496,7 +496,7 @@ const ProfileInfo = styled.div`
 const ProfileName = styled.h4`
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 4px 0;
 `;
 
@@ -539,7 +539,7 @@ const TypeSelector = styled.div`
 
 const TypeButton = styled.button<{ $active: boolean }>`
   flex: 1;
-  background: ${props => props.$active ? 'linear-gradient(135deg, #2D5F4F, #4A90A4)' : 'transparent'};
+  background: ${props => props.$active ? 'linear-gradient(135deg, #2fce98, #4A90A4)' : 'transparent'};
   color: ${props => props.$active ? 'white' : '#666'};
   border: none;
   border-radius: 8px;
@@ -561,7 +561,7 @@ const SectionHeader = styled.div`
 const SectionTitle = styled.h3`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
 `;
 
@@ -582,7 +582,7 @@ const NetworkingTabs = styled.div`
 
 const TabButton = styled.button<{ $active: boolean }>`
   flex: 1;
-  background: ${props => props.$active ? 'linear-gradient(135deg, #2D5F4F, #4A90A4)' : 'transparent'};
+  background: ${props => props.$active ? 'linear-gradient(135deg, #2fce98, #4A90A4)' : 'transparent'};
   color: ${props => props.$active ? 'white' : '#666'};
   border: none;
   border-radius: 8px;
@@ -616,7 +616,7 @@ const SessionHeader = styled.div`
 const SessionTitle = styled.h4`
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
   flex: 1;
 `;
@@ -671,7 +671,7 @@ const ParticipantsBar = styled.div`
 const ParticipantsProgress = styled.div<{ $percentage: number }>`
   width: ${props => props.$percentage}%;
   height: 100%;
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   border-radius: 2px;
   transition: width 0.3s ease;
 `;
@@ -741,7 +741,7 @@ const MentorAvatar = styled.div`
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -757,7 +757,7 @@ const MentorInfo = styled.div`
 const MentorName = styled.h5`
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 4px 0;
 `;
 
@@ -785,7 +785,7 @@ const MentorActions = styled.div`
 `;
 
 const ConnectMentorButton = styled.button`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   border: none;
   border-radius: 8px;

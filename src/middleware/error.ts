@@ -76,7 +76,7 @@ export const errorHandler = (
   _next: NextFunction
 ): void => {
   // Log error details
-  const errorInfo = {
+  const errorInfo: any = {
     name: err.name,
     message: err.message,
     stack: err.stack,
@@ -88,10 +88,10 @@ export const errorHandler = (
   };
 
   if (err instanceof AppError) {
-    errorInfo['statusCode'] = err.statusCode;
-    errorInfo['code'] = err.code;
-    errorInfo['isOperational'] = err.isOperational;
-    errorInfo['details'] = err.details;
+    errorInfo.statusCode = err.statusCode;
+    errorInfo.code = err.code;
+    errorInfo.isOperational = err.isOperational;
+    errorInfo.details = err.details;
   }
 
   // Log based on error type
@@ -104,20 +104,24 @@ export const errorHandler = (
   // Handle specific error types
   if (err.name === 'CastError') {
     const message = 'Invalid ID format';
-    return sendError(res, message, 400);
+    sendError(res, message, 400);
+    return;
   }
 
   if (err.name === 'ValidationError') {
     const message = 'Validation failed';
-    return sendError(res, message, 400);
+    sendError(res, message, 400);
+    return;
   }
 
   if (err.name === 'JsonWebTokenError') {
-    return sendError(res, 'Invalid token', 401);
+    sendError(res, 'Invalid token', 401);
+    return;
   }
 
   if (err.name === 'TokenExpiredError') {
-    return sendError(res, 'Token expired', 401);
+    sendError(res, 'Token expired', 401);
+    return;
   }
 
   if (err.name === 'MulterError') {
@@ -125,7 +129,8 @@ export const errorHandler = (
     if (err.message === 'File too large') {
       message = 'File size exceeds limit';
     }
-    return sendError(res, message, 400);
+    sendError(res, message, 400);
+    return;
   }
 
   // Handle AppError instances
@@ -144,7 +149,8 @@ export const errorHandler = (
       response.details = err.details;
     }
 
-    return res.status(err.statusCode).json(response);
+    res.status(err.statusCode).json(response);
+    return;
   }
 
   // Default error response

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { DualQRModal } from '../DualQRModal';
-import { berseHorizontalLogo } from '../../assets/images';
+import { pwaIcon } from '../../assets/images';
 
 const float = keyframes`
   0%, 100% { transform: translateY(0px); }
@@ -34,14 +34,14 @@ const HeaderContent = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   max-width: 100%;
   position: relative;
   gap: 8px;
   
   @media (max-width: 480px) {
-    padding: 8px 10px;
-    gap: 6px;
+    padding: 10px 12px;
+    gap: 8px;
   }
   
   &::before {
@@ -55,34 +55,16 @@ const HeaderContent = styled.div`
   }
 `;
 
-const LogoHorizontal = styled.img`
-  height: 36px;
-  width: auto;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
-  flex-shrink: 0;
-  
-  &:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
-  }
-  
-  @media (max-width: 480px) {
-    height: 32px;
-    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.12));
-  }
-`;
 
 const LeftSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   
   @media (max-width: 480px) {
-    gap: 4px;
+    gap: 6px;
   }
 `;
 
@@ -99,28 +81,28 @@ const UserInfo = styled.div`
 `;
 
 const UserName = styled.span`
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   
   @media (max-width: 480px) {
-    font-size: 12px;
+    font-size: 13px;
   }
 `;
 
 const Tagline = styled.span`
-  font-size: 10px;
+  font-size: 11px;
   font-style: italic;
   color: #666;
   opacity: 0.7;
   line-height: 1;
   
   @media (max-width: 480px) {
-    font-size: 9px;
+    font-size: 10px;
   }
 `;
 
@@ -147,7 +129,7 @@ const LogoDot = styled.div`
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%);
+  background: linear-gradient(135deg, #2fce98 0%, #4A8B7C 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +139,7 @@ const LogoDot = styled.div`
 const LogoText = styled.span`
   font-size: 14px;
   font-weight: 700;
-  color: #2D5F4F;
+  color: #2fce98;
   letter-spacing: -0.5px;
   text-shadow: 0 1px 2px rgba(45, 95, 79, 0.1);
   transition: all 0.3s ease;
@@ -176,17 +158,17 @@ const LogoText = styled.span`
 const RightSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
   
   @media (max-width: 400px) {
-    gap: 3px;
+    gap: 4px;
   }
 `;
 
 const IconButton = styled.button`
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
   background: #F8F9FA;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -196,15 +178,15 @@ const IconButton = styled.button`
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
-  font-size: 14px;
+  font-size: 18px;
   flex-shrink: 0;
 
   &:hover {
-    background: #2D5F4F;
+    background: #2fce98;
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(45, 95, 79, 0.3);
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 
   &:active {
@@ -223,18 +205,31 @@ const NotificationBadge = styled.div`
   border: 1px solid white;
 `;
 
-const ProfileButton = styled(IconButton)`
-  background: linear-gradient(135deg, #2D5F4F 0%, #4A8B7C 100%);
-  border: none;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
+const ProfileButton = styled.button`
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: transparent;
+  border: 2px solid #2fce98;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(45, 95, 79, 0.2);
 
   &:hover {
-    background: linear-gradient(135deg, #1E4039 0%, #3A7A6B 100%);
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(45, 95, 79, 0.4);
+    border-color: #1E4039;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 `;
 
@@ -242,27 +237,27 @@ const BalanceButton = styled.button`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   background: #F8F9FA;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  padding: 5px 6px;
+  border-radius: 10px;
+  padding: 7px 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 62px;
+  min-width: 68px;
   flex-shrink: 0;
   
   @media (max-width: 400px) {
-    min-width: 58px;
-    padding: 4px 5px;
+    min-width: 64px;
+    padding: 6px 7px;
   }
 
   &:hover {
-    background: #2D5F4F;
+    background: #2fce98;
     color: white;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(45, 95, 79, 0.2);
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 
   &:active {
@@ -271,14 +266,14 @@ const BalanceButton = styled.button`
 `;
 
 const BalanceLabel = styled.span`
-  font-size: 9px;
+  font-size: 10px;
   font-style: italic;
   color: #666;
   opacity: 0.7;
   line-height: 1;
   
   @media (max-width: 400px) {
-    font-size: 8px;
+    font-size: 9px;
   }
   
   ${BalanceButton}:hover & {
@@ -288,13 +283,13 @@ const BalanceLabel = styled.span`
 `;
 
 const BalanceAmount = styled.span`
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  color: #2D5F4F;
+  color: #2fce98;
   line-height: 1;
   
   @media (max-width: 400px) {
-    font-size: 9px;
+    font-size: 10px;
   }
   
   ${BalanceButton}:hover & {
@@ -357,24 +352,29 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [hasNotifications, setHasNotifications] = useState(true);
-  const [bersePassBalance, setBersePassBalance] = useState(250);
-  const [bersePointsBalance, setBersePointsBalance] = useState(1850);
+  const [bersePassBalance, setBersePassBalance] = useState(user?.bersePassBalance || 250);
+  const [bersePointsBalance, setBersePointsBalance] = useState(user?.points || 245);
   const [showBersePassModal, setShowBersePassModal] = useState(false);
   const [showBersePointsModal, setShowBersePointsModal] = useState(false);
   
   // Dashboard card variables
   const [setelBalance, setSetelBalance] = useState(23.45);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [currentPoints, setCurrentPoints] = useState(245);
+  const [currentPoints, setCurrentPoints] = useState(user?.points || 245);
   const [isSetelConnected, setIsSetelConnected] = useState(true);
   const [showSetelOnboarding, setShowSetelOnboarding] = useState(false);
   const [isDualQRModalOpen, setIsDualQRModalOpen] = useState(false);
   const [isManagePassModalOpen, setIsManagePassModalOpen] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(true); // true = active/paid, false = not subscribed
-
-  const handleLogoClick = () => {
-    navigate('/dashboard');
-  };
+  
+  // Update values when user changes
+  useEffect(() => {
+    if (user) {
+      setBersePassBalance(user.bersePassBalance || 250);
+      setBersePointsBalance(user.points || 245);
+      setCurrentPoints(user.points || 245);
+    }
+  }, [user]);
 
   const handleNotificationClick = () => {
     setHasNotifications(false);
@@ -388,7 +388,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
   };
 
   const handleBersePassClick = () => {
-    setShowBersePassModal(true);
+    alert('Coming Soon! 🚀');
   };
 
   const handleBersePointsClick = () => {
@@ -404,10 +404,6 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
   };
 
   const displayName = user?.username || user?.fullName || 'User';
-  const userInitials = displayName
-    ? displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'U';
-
   const userName = displayName;
 
 
@@ -417,30 +413,26 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
         <HeaderContent>
           <LeftSection>
             <ProfileButton onClick={handleProfileClick}>
-              {userInitials}
+              <img src={pwaIcon} alt="Profile" />
             </ProfileButton>
             
             <UserInfo>
               <UserName>{userName}</UserName>
               <Tagline>Welcome Back!</Tagline>
             </UserInfo>
-            
-            <LogoHorizontal 
-              src={berseHorizontalLogo} 
-              alt="Berse" 
-              onClick={handleLogoClick}
-            />
           </LeftSection>
 
           <RightSection>
             <BalanceButton 
               onClick={handleBersePassClick}
               style={{
-                border: isSubscribed ? '1px solid #00C851' : '1px solid #FF4444',
-                boxShadow: isSubscribed ? '0 0 0 1px rgba(0, 200, 81, 0.1)' : '0 0 0 1px rgba(255, 68, 68, 0.1)'
+                border: '1px solid #999',
+                boxShadow: '0 0 0 1px rgba(153, 153, 153, 0.1)',
+                opacity: 0.6,
+                cursor: 'not-allowed'
               }}
             >
-              <BalanceAmount>RM {bersePassBalance}</BalanceAmount>
+              <BalanceAmount>Soon</BalanceAmount>
               <BalanceLabel>BersePass</BalanceLabel>
             </BalanceButton>
             

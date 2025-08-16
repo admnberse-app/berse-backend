@@ -356,7 +356,7 @@ const Container = styled.div`
 const Header = styled.div`
   padding: 16px 20px;
   background: #F5F3EF;
-  color: #2D5F4F;
+  color: #2fce98;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -366,7 +366,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
 `;
 
@@ -378,7 +378,7 @@ const HeaderTitle = styled.h1`
   font-size: 18px;
   font-weight: bold;
   margin: 0 0 4px 0;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const HeaderSubtext = styled.p`
@@ -390,7 +390,7 @@ const HeaderSubtext = styled.p`
 
 const PartnershipBadge = styled.div`
   background: rgba(45, 95, 79, 0.1);
-  color: #2D5F4F;
+  color: #2fce98;
   padding: 4px 8px;
   border-radius: 8px;
   font-size: 10px;

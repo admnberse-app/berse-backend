@@ -51,7 +51,7 @@ const EventTitle = styled.h2`
   margin: 0 0 8px 0;
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const EventDetails = styled.div`
@@ -132,7 +132,7 @@ const ParticipantAvatar = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F, #1F4A3A);
+  background: linear-gradient(135deg, #2fce98, #1F4A3A);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -331,7 +331,7 @@ const QRCanvas = styled.canvas`
 const QRTitle = styled.h4`
   margin: 0 0 8px 0;
   font-size: 16px;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const QRInstructions = styled.div`
@@ -405,7 +405,7 @@ export const SportsEventBookingModal: React.FC<SportsEventBookingModalProps> = (
         const ticketId = `BM-${Date.now().toString().slice(-6)}`;
         
         // Background
-        ctx.fillStyle = '#2D5F4F';
+        ctx.fillStyle = '#2fce98';
         ctx.fillRect(0, 0, 116, 116);
         
         // White border
@@ -413,7 +413,7 @@ export const SportsEventBookingModal: React.FC<SportsEventBookingModalProps> = (
         ctx.fillRect(4, 4, 108, 108);
         
         // Logo/Brand area
-        ctx.fillStyle = '#2D5F4F';
+        ctx.fillStyle = '#2fce98';
         ctx.fillRect(8, 8, 100, 20);
         
         // BerseMuka text
@@ -423,7 +423,7 @@ export const SportsEventBookingModal: React.FC<SportsEventBookingModalProps> = (
         ctx.fillText('BERSEMUKA', 58, 21);
         
         // Ticket ID
-        ctx.fillStyle = '#2D5F4F';
+        ctx.fillStyle = '#2fce98';
         ctx.font = 'bold 12px Arial';
         ctx.fillText(ticketId, 58, 45);
         
@@ -447,7 +447,7 @@ export const SportsEventBookingModal: React.FC<SportsEventBookingModalProps> = (
         ctx.fillText('✓ VALID', 58, 102);
         
         // Create a simple pattern for "QR-like" appearance
-        ctx.fillStyle = '#2D5F4F';
+        ctx.fillStyle = '#2fce98';
         for (let i = 0; i < 5; i++) {
           for (let j = 0; j < 5; j++) {
             if ((i + j) % 2 === 0) {
@@ -647,7 +647,7 @@ export const SportsEventBookingModal: React.FC<SportsEventBookingModalProps> = (
         {bookingStep === 'payment' && (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>💳</div>
-            <h3 style={{ color: '#2D5F4F', marginBottom: '8px' }}>Processing Payment...</h3>
+            <h3 style={{ color: '#2fce98', marginBottom: '8px' }}>Processing Payment...</h3>
             <p style={{ color: '#666', fontSize: '14px' }}>
               Connecting to Setel Wallet
             </p>
@@ -658,7 +658,7 @@ export const SportsEventBookingModal: React.FC<SportsEventBookingModalProps> = (
           <>
             <div style={{ padding: '20px', textAlign: 'center' }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
-              <h3 style={{ color: '#2D5F4F', marginBottom: '8px' }}>Booking Confirmed!</h3>
+              <h3 style={{ color: '#2fce98', marginBottom: '8px' }}>Booking Confirmed!</h3>
               <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>
                 Payment successful. See you at the event!
               </p>

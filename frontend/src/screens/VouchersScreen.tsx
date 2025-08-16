@@ -120,7 +120,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   margin-right: 12px;
   
@@ -136,7 +136,7 @@ const HeaderContent = styled.div`
 const HeaderTitle = styled.h1`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 4px 0;
 `;
 
@@ -220,7 +220,7 @@ const RedeemButton = styled.button<{ disabled?: boolean }>`
 `;
 
 const MyVouchersButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   border-radius: 12px;

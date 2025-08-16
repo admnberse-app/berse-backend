@@ -14,39 +14,19 @@ export const MessagesScreen: React.FC = () => {
       <StatusBar onProfileClick={() => setShowProfileSidebar(true)} />
       
       <Header>
-        <BackButton onClick={() => setShowProfileSidebar(true)}>←</BackButton>
+        <BackButton onClick={() => navigate('/dashboard')}>←</BackButton>
         <HeaderTitle>💬 Private Messages</HeaderTitle>
       </Header>
 
       <Content>
         <MessagesList>
-          <MessageItem>
-            <MessageAvatar>AH</MessageAvatar>
-            <MessageInfo>
-              <MessageName>Ahmad Hassan</MessageName>
-              <MessagePreview>Hey! Are you joining the heritage tour?</MessagePreview>
-              <MessageTime>2 hours ago</MessageTime>
-            </MessageInfo>
-            <UnreadBadge>2</UnreadBadge>
-          </MessageItem>
-          
-          <MessageItem>
-            <MessageAvatar>SC</MessageAvatar>
-            <MessageInfo>
-              <MessageName>Sarah Chen</MessageName>
-              <MessagePreview>Thanks for the photography tips!</MessagePreview>
-              <MessageTime>5 hours ago</MessageTime>
-            </MessageInfo>
-          </MessageItem>
-
-          <MessageItem>
-            <MessageAvatar>RK</MessageAvatar>
-            <MessageInfo>
-              <MessageName>Raj Kumar</MessageName>
-              <MessagePreview>Let's connect at the community meetup</MessagePreview>
-              <MessageTime>1 day ago</MessageTime>
-            </MessageInfo>
-          </MessageItem>
+          <EmptyState>
+            <EmptyStateIcon>💬</EmptyStateIcon>
+            <EmptyStateTitle>No Messages Yet</EmptyStateTitle>
+            <EmptyStateText>
+              Connect with community members from events, matches, or the forum to start chatting!
+            </EmptyStateText>
+          </EmptyState>
         </MessagesList>
       </Content>
 
@@ -91,7 +71,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   margin-right: 12px;
   
@@ -103,7 +83,7 @@ const BackButton = styled.button`
 const HeaderTitle = styled.h1`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
 `;
 
@@ -141,7 +121,7 @@ const MessageAvatar = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   display: flex;
   align-items: center;
@@ -183,4 +163,34 @@ const UnreadBadge = styled.span`
   font-weight: bold;
   min-width: 20px;
   text-align: center;
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  margin-top: 20px;
+`;
+
+const EmptyStateIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+`;
+
+const EmptyStateTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: #2fce98;
+  margin: 0 0 8px 0;
+`;
+
+const EmptyStateText = styled.p`
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 280px;
 `;

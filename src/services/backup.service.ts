@@ -4,7 +4,7 @@ import { join } from 'path';
 import { createReadStream, createWriteStream } from 'fs';
 import { createGzip, createGunzip } from 'zlib';
 import { pipeline } from 'stream/promises';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import { cacheService } from './cache.service';
 
 interface BackupConfig {

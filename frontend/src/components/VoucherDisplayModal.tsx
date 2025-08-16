@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { mukhaCafeVoucher } from '../assets/images';
 
 interface VoucherDisplayModalProps {
   isOpen: boolean;
@@ -17,14 +18,14 @@ interface VoucherDisplayModalProps {
 }
 
 // Styled Components
-const ModalOverlay = styled.div<{ isOpen: boolean }>`
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.8);
-  display: ${({ isOpen }) => isOpen ? 'flex' : 'none'};
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 2000;
@@ -79,7 +80,7 @@ const VoucherContent = styled.div`
 
 const VoucherCard = styled.div`
   background: linear-gradient(135deg, #F5F3EF, #E8F4F0);
-  border: 2px dashed #2D5F4F;
+  border: 2px dashed #2fce98;
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
@@ -89,7 +90,7 @@ const VoucherCard = styled.div`
 const VoucherBrand = styled.div`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 8px;
 `;
 
@@ -102,7 +103,7 @@ const VoucherTitle = styled.div`
 const VoucherValue = styled.div`
   font-size: 32px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 20px;
 `;
 
@@ -113,6 +114,64 @@ const QRCodeContainer = styled.div`
   display: inline-block;
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: zoom-in;
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.02);
+  }
+`;
+
+const ZoomModalOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 20px;
+`;
+
+const ZoomContainer = styled.div`
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ZoomedImage = styled.img`
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+`;
+
+const ZoomCloseButton = styled.button`
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #333;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  
+  &:hover {
+    background: white;
+  }
 `;
 
 const QRCodeImage = styled.img`
@@ -122,7 +181,7 @@ const QRCodeImage = styled.img`
 `;
 
 const VoucherCode = styled.div`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   padding: 12px 24px;
   border-radius: 8px;
@@ -215,7 +274,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' | 'success' }>`
     '1px solid #e0e0e0'};
   border-radius: 12px;
   background: ${({ variant }) => 
-    variant === 'primary' ? '#2D5F4F' : 
+    variant === 'primary' ? '#2fce98' : 
     variant === 'success' ? '#10B981' :
     'white'};
   color: ${({ variant }) => 
@@ -264,6 +323,7 @@ export const VoucherDisplayModal: React.FC<VoucherDisplayModalProps> = ({
   onNavigateToVouchers
 }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
 
   useEffect(() => {
     if (isOpen && voucher) {
@@ -271,6 +331,16 @@ export const VoucherDisplayModal: React.FC<VoucherDisplayModalProps> = ({
       setQrCodeUrl('placeholder');
     }
   }, [isOpen, voucher]);
+
+  const handleImageClick = () => {
+    if (voucher.brand === 'Mukha Cafe') {
+      setIsImageZoomed(true);
+    }
+  };
+
+  const closeZoom = () => {
+    setIsImageZoomed(false);
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -315,7 +385,7 @@ export const VoucherDisplayModal: React.FC<VoucherDisplayModalProps> = ({
   };
 
   return (
-    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+    <ModalOverlay $isOpen={isOpen} onClick={onClose}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <SuccessHeader>
           <CloseButton onClick={onClose}>×</CloseButton>
@@ -330,7 +400,28 @@ export const VoucherDisplayModal: React.FC<VoucherDisplayModalProps> = ({
             <VoucherTitle>{voucher.title}</VoucherTitle>
             <VoucherValue>{voucher.value}</VoucherValue>
             
-            {qrCodeUrl && (
+            {voucher.brand === 'Mukha Cafe' ? (
+              <QRCodeContainer onClick={handleImageClick}>
+                <img 
+                  src={mukhaCafeVoucher} 
+                  alt="Mukha Cafe Voucher" 
+                  style={{
+                    width: '300px',
+                    height: 'auto',
+                    borderRadius: '8px',
+                    maxWidth: '100%'
+                  }}
+                />
+                <div style={{
+                  textAlign: 'center',
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: '#666'
+                }}>
+                  Tap to zoom
+                </div>
+              </QRCodeContainer>
+            ) : qrCodeUrl && (
               <QRCodeContainer>
                 <div style={{
                   width: '180px',
@@ -360,7 +451,12 @@ export const VoucherDisplayModal: React.FC<VoucherDisplayModalProps> = ({
           
           <ExpiryInfo>
             <ExpiryIcon>⏰</ExpiryIcon>
-            <ExpiryText>Valid until {formatDate(voucher.expiryDate)}</ExpiryText>
+            <ExpiryText>
+              {voucher.brand === 'Mukha Cafe' 
+                ? 'Valid only on the day of peaceful event (24 hours only)' 
+                : `Valid until ${formatDate(voucher.expiryDate)}`
+              }
+            </ExpiryText>
           </ExpiryInfo>
           
           <InstructionsSection>
@@ -408,6 +504,17 @@ export const VoucherDisplayModal: React.FC<VoucherDisplayModalProps> = ({
           </ButtonContainer>
         </VoucherContent>
       </ModalContainer>
+      
+      {/* Zoom Modal for Mukha Cafe Voucher */}
+      <ZoomModalOverlay $isOpen={isImageZoomed} onClick={closeZoom}>
+        <ZoomContainer onClick={(e) => e.stopPropagation()}>
+          <ZoomCloseButton onClick={closeZoom}>×</ZoomCloseButton>
+          <ZoomedImage 
+            src={mukhaCafeVoucher} 
+            alt="Mukha Cafe Voucher - Zoomed"
+          />
+        </ZoomContainer>
+      </ZoomModalOverlay>
     </ModalOverlay>
   );
 };

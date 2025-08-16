@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar';
 import { MainNav } from '../components/MainNav';
 import { voucherService, Voucher } from '../services/voucherService';
+import { mukhaCafeVoucher } from '../assets/images';
 // QR code functionality temporarily disabled
 
 // Styled Components
@@ -36,7 +37,7 @@ const BackButton = styled.button`
   padding: 4px;
   
   &:hover {
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -81,7 +82,7 @@ const StatCard = styled.div`
 const StatValue = styled.div`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 4px;
 `;
 
@@ -110,7 +111,7 @@ const TabContainer = styled.div`
 
 const TabButton = styled.button<{ $active: boolean }>`
   flex: 1;
-  background: ${({ $active }) => $active ? '#2D5F4F' : 'transparent'};
+  background: ${({ $active }) => $active ? '#2fce98' : 'transparent'};
   color: ${({ $active }) => $active ? 'white' : '#666'};
   border: none;
   padding: 10px 16px;
@@ -121,8 +122,8 @@ const TabButton = styled.button<{ $active: boolean }>`
   transition: all 0.2s ease;
   
   &:hover {
-    color: ${({ $active }) => $active ? 'white' : '#2D5F4F'};
-    background: ${({ $active }) => $active ? '#2D5F4F' : 'rgba(45, 95, 79, 0.1)'};
+    color: ${({ $active }) => $active ? 'white' : '#2fce98'};
+    background: ${({ $active }) => $active ? '#2fce98' : 'rgba(45, 95, 79, 0.1)'};
   }
 `;
 
@@ -285,7 +286,7 @@ const EmptySubtitle = styled.p`
 `;
 
 const EmptyButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -313,6 +314,7 @@ const ModalOverlay = styled.div<{ isOpen: boolean }>`
   justify-content: center;
   z-index: 2000;
   padding: 20px;
+  overflow-y: auto;
 `;
 
 const ModalContainer = styled.div`
@@ -321,6 +323,9 @@ const ModalContainer = styled.div`
   width: 100%;
   max-width: 360px;
   overflow: hidden;
+  position: relative;
+  transform-origin: center;
+  transition: transform 0.3s ease;
 `;
 
 const ModalHeader = styled.div<{ $gradient: string }>`
@@ -374,7 +379,7 @@ const QRCodeImage = styled.img`
 `;
 
 const VoucherDetailCode = styled.div`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   padding: 16px 24px;
   border-radius: 12px;
@@ -414,12 +419,40 @@ const InfoValue = styled.span`
   font-size: 14px;
 `;
 
+const ZoomableImageContainer = styled.div`
+  position: relative;
+  margin-bottom: 16px;
+  cursor: zoom-in;
+`;
+
+const ZoomableImage = styled.img<{ $zoomed: boolean }>`
+  width: ${({ $zoomed }) => $zoomed ? '400px' : '300px'};
+  height: auto;
+  border-radius: 8px;
+  max-width: ${({ $zoomed }) => $zoomed ? '120%' : '100%'};
+  transition: all 0.3s ease;
+  cursor: ${({ $zoomed }) => $zoomed ? 'zoom-out' : 'zoom-in'};
+  box-shadow: ${({ $zoomed }) => $zoomed ? '0 8px 24px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
+  transform: ${({ $zoomed }) => $zoomed ? 'scale(1.1)' : 'scale(1)'};
+  position: relative;
+  z-index: ${({ $zoomed }) => $zoomed ? '10' : '1'};
+`;
+
+const ZoomText = styled.div`
+  text-align: center;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+`;
+
 export const MyVouchersScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'active' | 'used' | 'expired'>('active');
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
   const [vouchers, setVouchers] = useState<{
     active: Voucher[];
     used: Voucher[];
@@ -476,6 +509,7 @@ export const MyVouchersScreen: React.FC = () => {
   const closeModal = () => {
     setSelectedVoucher(null);
     setQrCodeUrl('');
+    setIsImageZoomed(false);
   };
 
   const getVoucherGradient = (voucher: Voucher) => {
@@ -579,7 +613,7 @@ export const MyVouchersScreen: React.FC = () => {
       <StatusBar />
       
       <Header>
-        <BackButton onClick={() => navigate('/profile')}>←</BackButton>
+        <BackButton onClick={() => navigate('/dashboard')}>←</BackButton>
         <HeaderText>
           <HeaderTitle>My Vouchers</HeaderTitle>
           <HeaderSubtitle>Your redeemed rewards</HeaderSubtitle>
@@ -653,7 +687,20 @@ export const MyVouchersScreen: React.FC = () => {
                   {selectedVoucher.value}
                 </VoucherValue>
                 
-                {qrCodeUrl && (
+                {selectedVoucher.brand === 'Mukha Cafe' ? (
+                  <ZoomableImageContainer>
+                    <ZoomableImage 
+                      src={mukhaCafeVoucher} 
+                      alt="Mukha Cafe Voucher" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsImageZoomed(!isImageZoomed);
+                      }}
+                      $zoomed={isImageZoomed}
+                    />
+                    <ZoomText>Tap to {isImageZoomed ? 'minimize' : 'zoom'}</ZoomText>
+                  </ZoomableImageContainer>
+                ) : qrCodeUrl && (
                   <QRCodeContainer>
                     <div style={{
                       width: '200px',

@@ -26,7 +26,7 @@ const HeaderTop = styled.div`
 `;
 
 const BackButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   border: none;
   color: white;
   width: 40px;
@@ -88,7 +88,7 @@ const Tab = styled.button<{ active: boolean }>`
   padding: 12px 16px;
   border: none;
   border-radius: 8px;
-  background: ${({ active }) => active ? '#2D5F4F' : 'transparent'};
+  background: ${({ active }) => active ? '#2fce98' : 'transparent'};
   color: ${({ active }) => active ? 'white' : '#666'};
   font-size: 14px;
   font-weight: ${({ active }) => active ? '600' : '500'};
@@ -96,7 +96,7 @@ const Tab = styled.button<{ active: boolean }>`
   transition: all 0.2s ease;
   
   &:hover {
-    color: ${({ active }) => active ? 'white' : '#2D5F4F'};
+    color: ${({ active }) => active ? 'white' : '#2fce98'};
   }
 `;
 
@@ -111,7 +111,7 @@ const LeaderboardItem = styled.div<{ isCurrentUser?: boolean }>`
   background: ${({ isCurrentUser }) => 
     isCurrentUser ? 'linear-gradient(45deg, #F5F3EF, #E8F4F0)' : 'white'};
   border: ${({ isCurrentUser }) => 
-    isCurrentUser ? '1px solid #2D5F4F' : 'none'};
+    isCurrentUser ? '1px solid #2fce98' : 'none'};
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -153,7 +153,7 @@ const UserInfo = styled.div``;
 
 const UserName = styled.div<{ isCurrentUser?: boolean }>`
   font-weight: 600;
-  color: ${({ isCurrentUser }) => isCurrentUser ? '#2D5F4F' : '#333'};
+  color: ${({ isCurrentUser }) => isCurrentUser ? '#2fce98' : '#333'};
   font-size: 16px;
   margin-bottom: 2px;
 `;
@@ -175,7 +175,7 @@ const TotalPoints = styled.div`
 
 const PointsValue = styled.div<{ isCurrentUser?: boolean }>`
   font-weight: bold;
-  color: ${({ isCurrentUser }) => isCurrentUser ? '#2D5F4F' : '#333'};
+  color: ${({ isCurrentUser }) => isCurrentUser ? '#2fce98' : '#333'};
   font-size: 18px;
   margin-bottom: 2px;
 `;
@@ -199,7 +199,7 @@ const CurrentUserArrow = styled.div`
   left: -10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 20px;
   font-weight: bold;
 `;
@@ -210,7 +210,7 @@ const ShowMoreButton = styled.button`
   border: 1px solid #e0e0e0;
   border-radius: 12px;
   padding: 16px;
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -219,7 +219,7 @@ const ShowMoreButton = styled.button`
   
   &:hover {
     background: #f8f9fa;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -234,7 +234,7 @@ const MotivationalTitle = styled.h3`
   margin: 0 0 16px 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -270,7 +270,7 @@ const TipLeft = styled.div`
 const TipIcon = styled.div`
   width: 32px;
   height: 32px;
-  background: #2D5F4F;
+  background: #2fce98;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -292,7 +292,7 @@ const TipDescription = styled.div`
 `;
 
 const TipPoints = styled.div`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   padding: 4px 8px;
   border-radius: 6px;

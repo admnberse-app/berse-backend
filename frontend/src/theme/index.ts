@@ -14,8 +14,15 @@ export const theme = {
   // Device dimensions
   device: {
     mobile: {
-      width: '393px',
-      height: '852px',
+      width: '100%',
+      maxWidth: '428px', // iPhone Pro Max
+      height: '100vh',
+    },
+    breakpoints: {
+      xs: '320px', // Small phones
+      sm: '375px', // iPhone SE, standard
+      md: '390px', // iPhone Pro
+      lg: '428px', // iPhone Pro Max
     },
   },
   

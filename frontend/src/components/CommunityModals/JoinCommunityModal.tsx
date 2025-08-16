@@ -222,6 +222,14 @@ export const JoinCommunityModal: React.FC<JoinCommunityModalProps> = ({
   const handleSubmit = () => {
     if (note.trim().length >= 20) {
       onSubmit(note.trim());
+      
+      // Show special message for Ahl 'umran Network
+      if (community?.name === "Ahl 'umran Network") {
+        setTimeout(() => {
+          alert("✅ Your request to join Ahl 'umran Network has been submitted!\n\n🔒 This community requires admin approval. The admin will review your request and you'll be notified once approved.\n\n⏰ Review typically takes 24-48 hours.");
+        }, 100);
+      }
+      
       setNote('');
       onClose();
     }

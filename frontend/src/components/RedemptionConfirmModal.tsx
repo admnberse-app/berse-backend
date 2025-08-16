@@ -16,14 +16,14 @@ interface RedemptionConfirmModalProps {
 }
 
 // Styled Components
-const ModalOverlay = styled.div<{ isOpen: boolean }>`
+const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  display: ${({ isOpen }) => isOpen ? 'flex' : 'none'};
+  display: ${({ $isOpen }) => $isOpen ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   z-index: 2000;
@@ -134,7 +134,7 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   padding: 14px 20px;
   border: ${({ $variant }) => $variant === 'primary' ? 'none' : '1px solid #e0e0e0'};
   border-radius: 12px;
-  background: ${({ $variant }) => $variant === 'primary' ? '#2D5F4F' : 'white'};
+  background: ${({ $variant }) => $variant === 'primary' ? '#2fce98' : 'white'};
   color: ${({ $variant }) => $variant === 'primary' ? 'white' : '#333'};
   font-size: 16px;
   font-weight: 600;
@@ -184,7 +184,7 @@ export const RedemptionConfirmModal: React.FC<RedemptionConfirmModalProps> = ({
   const needMorePoints = reward.points - currentPoints;
 
   return (
-    <ModalOverlay isOpen={isOpen} onClick={onClose}>
+    <ModalOverlay $isOpen={isOpen} onClick={onClose}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <ModalTitle>Confirm Redemption</ModalTitle>

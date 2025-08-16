@@ -70,9 +70,24 @@ const ErrorMessage = styled.div`
   margin-top: ${({ theme }) => theme.spacing.sm};
 `;
 
+const ForgotPasswordLink = styled.div`
+  text-align: center;
+  margin-top: ${({ theme }) => theme.spacing.md};
+  font-size: ${({ theme }) => theme.typography.body.small.fontSize};
+  
+  a {
+    color: ${({ theme }) => theme.colors.primary.main};
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
 const RegisterLink = styled.div`
   text-align: center;
-  margin-top: ${({ theme }) => theme.spacing.xl};
+  margin-top: ${({ theme }) => theme.spacing.lg};
   font-size: ${({ theme }) => theme.typography.body.medium.fontSize};
   color: ${({ theme }) => theme.colors.text.secondary};
 
@@ -87,6 +102,37 @@ const RegisterLink = styled.div`
   }
 `;
 
+const EyeIcon = styled.div`
+  cursor: pointer;
+  font-size: 20px;
+  user-select: none;
+  
+  &:hover {
+    opacity: 0.7;
+  }
+`;
+
+const RememberMeContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  margin-top: ${({ theme }) => theme.spacing.sm};
+`;
+
+const Checkbox = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: ${({ theme }) => theme.colors.primary.main};
+`;
+
+const CheckboxLabel = styled.label`
+  font-size: ${({ theme }) => theme.typography.body.medium.fontSize};
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: pointer;
+  user-select: none;
+`;
+
 export const LoginScreen: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -94,6 +140,8 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +150,12 @@ export const LoginScreen: React.FC = () => {
 
     try {
       await login(email, password);
+      // Save rememberMe preference
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberMe');
+      }
       // Navigation should happen immediately after successful login
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
@@ -121,7 +175,7 @@ export const LoginScreen: React.FC = () => {
       </Header>
       <Content>
         <Title>Welcome Back</Title>
-        <Subtitle>Login to continue your BerseMuka experience</Subtitle>
+        <Subtitle>Login to continue your Berse App experience</Subtitle>
         
         <Form onSubmit={handleSubmit}>
           <TextField
@@ -135,12 +189,29 @@ export const LoginScreen: React.FC = () => {
           
           <TextField
             label="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             required
+            endIcon={
+              <EyeIcon onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </EyeIcon>
+            }
           />
+          
+          <RememberMeContainer>
+            <Checkbox
+              type="checkbox"
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <CheckboxLabel htmlFor="rememberMe">
+              Keep me signed in
+            </CheckboxLabel>
+          </RememberMeContainer>
           
           {error && <ErrorMessage>{error}</ErrorMessage>}
           
@@ -154,6 +225,15 @@ export const LoginScreen: React.FC = () => {
             {isLoading ? 'Logging in...' : 'Login'}
           </Button>
         </Form>
+        
+        <ForgotPasswordLink>
+          <a href="#" onClick={(e) => {
+            e.preventDefault();
+            alert('Password reset feature coming soon!\nPlease contact support at support@berseapp.com');
+          }}>
+            Forgot password?
+          </a>
+        </ForgotPasswordLink>
         
         <RegisterLink>
           Don't have an account? <Link to="/register">Register here</Link>

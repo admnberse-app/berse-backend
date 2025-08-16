@@ -9,7 +9,7 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #1F4A3A);
+  background: linear-gradient(135deg, #2fce98, #1F4A3A);
   color: white;
   padding: 20px;
   text-align: center;
@@ -36,15 +36,15 @@ const Tab = styled.button<{ active: boolean }>`
   flex: 1;
   padding: 12px;
   border: none;
-  background: ${({ active }) => active ? '#2D5F4F' : 'white'};
+  background: ${({ active }) => active ? '#2fce98' : 'white'};
   color: ${({ active }) => active ? 'white' : '#666'};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border-bottom: ${({ active }) => active ? '2px solid #2D5F4F' : '2px solid transparent'};
+  border-bottom: ${({ active }) => active ? '2px solid #2fce98' : '2px solid transparent'};
   
   &:hover {
-    background: ${({ active }) => active ? '#2D5F4F' : '#f5f5f5'};
+    background: ${({ active }) => active ? '#2fce98' : '#f5f5f5'};
   }
 `;
 
@@ -114,7 +114,7 @@ const StatItem = styled.div`
 const StatValue = styled.div`
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 2px;
 `;
 
@@ -136,7 +136,7 @@ const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  background: ${({ variant }) => variant === 'primary' ? '#2D5F4F' : '#f5f5f5'};
+  background: ${({ variant }) => variant === 'primary' ? '#2fce98' : '#f5f5f5'};
   color: ${({ variant }) => variant === 'primary' ? 'white' : '#666'};
   
   &:hover {
@@ -155,7 +155,7 @@ const QRScanner = styled.div`
 const ScannerFrame = styled.div`
   width: 200px;
   height: 200px;
-  border: 2px dashed #2D5F4F;
+  border: 2px dashed #2fce98;
   border-radius: 8px;
   margin: 16px auto;
   display: flex;
@@ -167,7 +167,7 @@ const ScannerFrame = styled.div`
 
 const ScannerIcon = styled.div`
   font-size: 48px;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const ParticipantsList = styled.div`
@@ -198,7 +198,7 @@ const ParticipantAvatar = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F, #1F4A3A);
+  background: linear-gradient(135deg, #2fce98, #1F4A3A);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -464,7 +464,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = () => {
             {scanResult && <ScanSuccess>{scanResult}</ScanSuccess>}
             
             <QRScanner>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#2D5F4F' }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#2fce98' }}>
                 Ticket Scanner
               </h3>
               <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#666' }}>
@@ -519,8 +519,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = () => {
                   <span style={{ fontSize: '14px', color: '#666' }}>RM {(totalRevenue * 0.3).toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #f0f0f0' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2D5F4F' }}>Your Share (70%)</span>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2D5F4F' }}>RM {hostEarnings.toFixed(2)}</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2fce98' }}>Your Share (70%)</span>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2fce98' }}>RM {hostEarnings.toFixed(2)}</span>
                 </div>
               </div>
 

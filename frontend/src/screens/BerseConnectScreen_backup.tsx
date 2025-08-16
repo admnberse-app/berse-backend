@@ -38,7 +38,7 @@ const Avatar = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,7 +50,7 @@ const Avatar = styled.div`
 const Title = styled.h1`
   margin: 0;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   font-weight: bold;
 `;
 
@@ -111,10 +111,10 @@ const FilterDropdowns = styled.div`
 const FilterDropdown = styled.button<{ isActive?: boolean; disabled?: boolean }>`
   flex: 1;
   padding: 4px 8px;
-  border: 1px solid ${({ isActive, disabled }) => disabled ? '#E5E5E5' : (isActive ? '#2D5F4F' : '#E5E5E5')};
+  border: 1px solid ${({ isActive, disabled }) => disabled ? '#E5E5E5' : (isActive ? '#2fce98' : '#E5E5E5')};
   border-radius: 4px;
   background: ${({ isActive, disabled }) => disabled ? '#F5F5F5' : (isActive ? '#F0F8F5' : 'white')};
-  color: ${({ isActive, disabled }) => disabled ? '#999' : (isActive ? '#2D5F4F' : '#333')};
+  color: ${({ isActive, disabled }) => disabled ? '#999' : (isActive ? '#2fce98' : '#333')};
   font-size: 11px;
   font-weight: ${({ isActive }) => isActive ? '600' : '500'};
   cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
@@ -127,7 +127,7 @@ const FilterDropdown = styled.button<{ isActive?: boolean; disabled?: boolean }>
   min-height: 28px;
   
   &:hover {
-    border-color: ${({ disabled }) => disabled ? '#E5E5E5' : '#2D5F4F'};
+    border-color: ${({ disabled }) => disabled ? '#E5E5E5' : '#2fce98'};
     background-color: ${({ disabled }) => disabled ? '#F5F5F5' : '#F0F8F5'};
   }
   
@@ -135,7 +135,7 @@ const FilterDropdown = styled.button<{ isActive?: boolean; disabled?: boolean }>
     content: '▼';
     font-size: 8px;
     margin-left: 3px;
-    color: ${({ isActive, disabled }) => disabled ? '#999' : (isActive ? '#2D5F4F' : '#666')};
+    color: ${({ isActive, disabled }) => disabled ? '#999' : (isActive ? '#2fce98' : '#666')};
   }
 `;
 
@@ -214,7 +214,7 @@ const CategoryIcon = styled.div<{ color: string; isSelected?: boolean }>`
 
 const CategoryName = styled.span<{ isSelected?: boolean }>`
   font-size: 11px;
-  color: ${({ isSelected }) => isSelected ? '#2D5F4F' : '#333'};
+  color: ${({ isSelected }) => isSelected ? '#2fce98' : '#333'};
   text-align: center;
   font-weight: ${({ isSelected }) => isSelected ? '600' : '500'};
   transition: all 0.2s ease;
@@ -236,13 +236,13 @@ const SectionTitle = styled.h3`
   margin: 0;
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const SeeAllLink = styled.button`
   background: none;
   border: none;
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -361,7 +361,7 @@ const CompactJoinButton = styled.button<{ variant?: 'default' | 'cafe' | 'paid' 
     switch (variant) {
       case 'cafe':
         return `
-          background: linear-gradient(135deg, #2D5F4F, #1F4A3A);
+          background: linear-gradient(135deg, #2fce98, #1F4A3A);
           color: white;
           &:hover { background: linear-gradient(135deg, #1F4A3A, #0F2A20); }
         `;
@@ -379,7 +379,7 @@ const CompactJoinButton = styled.button<{ variant?: 'default' | 'cafe' | 'paid' 
         `;
       default:
         return `
-          background: #2D5F4F;
+          background: #2fce98;
           color: white;
           &:hover { background: #1F4A3A; }
         `;
@@ -400,7 +400,7 @@ const CompactLearnMoreButton = styled.button`
   
   &:hover {
     background: #f5f5f5;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -424,7 +424,7 @@ const OriginalPrice = styled.span`
 
 const DiscountedPrice = styled.span`
   font-size: 14px;
-  color: #2D5F4F;
+  color: #2fce98;
   font-weight: 600;
 `;
 
@@ -476,7 +476,7 @@ const SearchInput = styled.input`
   box-sizing: border-box;
   
   &:focus {
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
   
   &::placeholder {
@@ -493,7 +493,7 @@ const FilterBadgesContainer = styled.div`
 `;
 
 const FilterBadge = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #1F4A3A);
+  background: linear-gradient(135deg, #2fce98, #1F4A3A);
   color: white;
   padding: 2px 6px;
   border-radius: 8px;
@@ -527,7 +527,7 @@ const ClearAllButton = styled.button`
 const AllCitiesOption = styled.div`
   padding: 12px 0;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   border-bottom: 1px solid #f0f0f0;
   margin-bottom: 8px;
   cursor: pointer;
@@ -540,10 +540,10 @@ const AllCitiesOption = styled.div`
 const FilterButtonStyled = styled.button<{ hasFilter?: boolean }>`
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid ${({ hasFilter }) => hasFilter ? '#2D5F4F' : '#E5E5E5'};
+  border: 1px solid ${({ hasFilter }) => hasFilter ? '#2fce98' : '#E5E5E5'};
   border-radius: 8px;
   background: ${({ hasFilter }) => hasFilter ? '#F0F8F5' : 'white'};
-  color: ${({ hasFilter }) => hasFilter ? '#2D5F4F' : '#333'};
+  color: ${({ hasFilter }) => hasFilter ? '#2fce98' : '#333'};
   font-size: 14px;
   font-weight: ${({ hasFilter }) => hasFilter ? '600' : '400'};
   text-align: left;
@@ -554,7 +554,7 @@ const FilterButtonStyled = styled.button<{ hasFilter?: boolean }>`
   justify-content: space-between;
   
   &:hover {
-    border-color: #2D5F4F;
+    border-color: #2fce98;
     background-color: #F0F8F5;
   }
   
@@ -642,7 +642,7 @@ const Checkbox = styled.input`
   margin-top: 2px;
   width: 16px;
   height: 16px;
-  accent-color: #2D5F4F;
+  accent-color: #2fce98;
   flex-shrink: 0;
 `;
 
@@ -665,7 +665,7 @@ const FilterActionButton = styled.button`
 `;
 
 const ApplyButton = styled(FilterActionButton)`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   
   &:hover {
@@ -713,7 +713,7 @@ const EventBadge = styled.div`
   position: absolute;
   top: 12px;
   left: 12px;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   padding: 6px 12px;
   border-radius: 16px;
@@ -756,7 +756,7 @@ const HostAvatar = styled.div`
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -816,7 +816,7 @@ const EventActions = styled.div`
 `;
 
 const JoinButton = styled.button`
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   border: none;
   border-radius: 8px;
@@ -854,7 +854,7 @@ const ShareButton = styled.button`
 `;
 
 const CreateEventButton = styled.button`
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   border: none;
   border-radius: 10px;
@@ -900,7 +900,7 @@ const ModalTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   text-align: center;
 `;
 
@@ -927,7 +927,7 @@ const ModalButton = styled.button<{ primary?: boolean }>`
   cursor: pointer;
   
   ${({ primary }) => primary ? `
-    background-color: #2D5F4F;
+    background-color: #2fce98;
     color: white;
     
     &:hover {
@@ -1211,7 +1211,7 @@ export const BerseConnectScreen: React.FC = () => {
 
   const categories = [
     { id: 'social', name: 'Social', icon: '👥', color: '#FF6B6B' },
-    { id: 'cafe', name: 'Cafe Meetups', icon: '☕', color: '#2D5F4F' },
+    { id: 'cafe', name: 'Cafe Meetups', icon: '☕', color: '#2fce98' },
     { id: 'ilm', name: 'Ilm', icon: '📚', color: '#FF9800' },
     { id: 'donate', name: 'Donate', icon: '💝', color: '#E91E63' },
     { id: 'trips', name: 'Trips', icon: '🏝️', color: '#7B68EE' },
@@ -1899,7 +1899,7 @@ export const BerseConnectScreen: React.FC = () => {
                 <div style={{ 
                   padding: '8px 0',
                   fontWeight: selectedCity === city ? '600' : '400',
-                  color: selectedCity === city ? '#2D5F4F' : '#333'
+                  color: selectedCity === city ? '#2fce98' : '#333'
                 }}>
                   {city}
                 </div>
@@ -1911,7 +1911,7 @@ export const BerseConnectScreen: React.FC = () => {
                 <div style={{ 
                   padding: '8px 0',
                   fontWeight: '500',
-                  color: '#2D5F4F',
+                  color: '#2fce98',
                   fontStyle: 'italic'
                 }}>
                   Add "{citySearchQuery}"
@@ -1936,7 +1936,7 @@ export const BerseConnectScreen: React.FC = () => {
                 <div style={{ 
                   padding: '8px 0',
                   fontWeight: selectedCountry === country.name ? '600' : '400',
-                  color: selectedCountry === country.name ? '#2D5F4F' : '#333',
+                  color: selectedCountry === country.name ? '#2fce98' : '#333',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
@@ -1972,7 +1972,7 @@ export const BerseConnectScreen: React.FC = () => {
                 <div style={{ 
                   padding: '8px 0',
                   fontWeight: selectedDateRange === dateRange ? '600' : '400',
-                  color: selectedDateRange === dateRange ? '#2D5F4F' : '#333'
+                  color: selectedDateRange === dateRange ? '#2fce98' : '#333'
                 }}>
                   {dateRange}
                 </div>

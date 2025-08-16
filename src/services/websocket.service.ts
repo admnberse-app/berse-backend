@@ -2,7 +2,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import { cacheService, CacheKeys, CacheTTL } from './cache.service';
 
 const prisma = new PrismaClient();

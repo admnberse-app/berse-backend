@@ -81,11 +81,11 @@ const SectionTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const StatusCard = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   border-radius: 12px;
   padding: 16px;
   color: white;
@@ -152,7 +152,7 @@ const PaymentHeader = styled.div`
 const PaymentIcon = styled.div`
   width: 40px;
   height: 40px;
-  background: #2D5F4F;
+  background: #2fce98;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -184,7 +184,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' | 'danger' }>`
     '1px solid #e0e0e0'};
   border-radius: 8px;
   background: ${({ variant }) => 
-    variant === 'primary' ? '#2D5F4F' : 
+    variant === 'primary' ? '#2fce98' : 
     variant === 'danger' ? '#FEF2F2' : 
     'white'};
   color: ${({ variant }) => 
@@ -262,7 +262,7 @@ const UsageLabel = styled.div`
 const UsageValue = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const ROIHighlight = styled.div`

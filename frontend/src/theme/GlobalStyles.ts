@@ -14,6 +14,14 @@ export const GlobalStyles = createGlobalStyle`
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    
+    @media (max-width: 375px) {
+      font-size: 14px;
+    }
+    
+    @media (max-width: 320px) {
+      font-size: 13px;
+    }
   }
 
   body {
@@ -50,7 +58,7 @@ export const GlobalStyles = createGlobalStyle`
     
     &:disabled {
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.5;
     }
   }
 
@@ -69,10 +77,14 @@ export const GlobalStyles = createGlobalStyle`
   #root {
     min-height: 100vh;
     width: 100%;
-    max-width: ${({ theme }) => theme.device.mobile.width};
+    max-width: ${({ theme }) => theme.device.mobile.maxWidth};
     margin: 0 auto;
     position: relative;
     background-color: ${({ theme }) => theme.colors.warmCream.primary};
+    
+    @media (max-width: ${({ theme }) => theme.device.breakpoints.sm}) {
+      max-width: 100%;
+    }
   }
 
   /* Scanner animation */

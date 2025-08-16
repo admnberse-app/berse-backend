@@ -35,7 +35,7 @@ setInterval(cleanExpiredTokens, 5 * 60 * 1000); // Every 5 minutes
 
 // CSRF token generation middleware
 export const csrfTokenGenerator = (req: Request, res: Response, next: NextFunction) => {
-  const sessionId = (req as any).user?.id || req.sessionID || req.ip;
+  const sessionId = (req as any).user?.id || (req as any).sessionID || req.ip;
   
   if (!sessionId) {
     return next();
@@ -66,7 +66,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
     return next();
   }
 
-  const sessionId = (req as any).user?.id || req.sessionID || req.ip;
+  const sessionId = (req as any).user?.id || (req as any).sessionID || req.ip;
   
   if (!sessionId) {
     return sendError(res, 'Session required for CSRF protection', 403);
@@ -105,7 +105,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
 
 // Double submit cookie CSRF protection (alternative implementation)
 export const doubleSubmitCsrf = {
-  generate: (req: Request, res: Response, next: NextFunction) => {
+  generate: (_req: Request, res: Response, next: NextFunction) => {
     const token = generateCsrfToken();
     
     // Set token in cookie
@@ -142,11 +142,12 @@ export const doubleSubmitCsrf = {
 };
 
 // CSRF token endpoint
-export const csrfTokenEndpoint = (req: Request, res: Response) => {
-  const sessionId = (req as any).user?.id || req.sessionID || req.ip;
+export const csrfTokenEndpoint = (req: Request, res: Response): void => {
+  const sessionId = (req as any).user?.id || (req as any).sessionID || req.ip;
   
   if (!sessionId) {
-    return sendError(res, 'Session required', 401);
+    sendError(res, 'Session required', 401);
+    return;
   }
 
   const token = generateCsrfToken();

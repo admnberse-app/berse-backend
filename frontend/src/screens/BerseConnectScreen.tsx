@@ -7,6 +7,9 @@ import { ProfileSidebar } from '../components/ProfileSidebar/ProfileSidebar';
 import { MainNav } from '../components/MainNav/index';
 import { googleCalendarService } from '../services/googleCalendar';
 import { useAuth } from '../contexts/AuthContext';
+import { BerseMintonPayment } from '../components/BerseMintonPayment';
+import { UnifiedParticipants } from '../components/UnifiedParticipants';
+import { EditEventModal } from '../components/EditEventModal';
 
 // Event Interface
 interface Event {
@@ -20,6 +23,8 @@ interface Event {
   description: string;
   organizer: string;
   organizerAvatar?: string;
+  organization?: string;
+  hosts?: string[];
   coverImage?: string;
   price: number;
   currency: string;
@@ -28,12 +33,16 @@ interface Event {
   tags: string[];
   isOnline: boolean;
   meetingLink?: string;
+  whatsappGroup?: string;
+  mapLink?: string;
   friends: string[];
   committedProfiles: CommittedProfile[];
   trending?: boolean;
   highlights?: string[];
   agenda?: AgendaItem[];
   requirements?: string[];
+  recurringType?: string;
+  recurringDay?: string;
 }
 
 interface CommittedProfile {
@@ -548,6 +557,27 @@ const ShareButton = styled.button`
   }
 `;
 
+const ParticipantsButton = styled.button`
+  background: #f0f9f6;
+  border: 1px solid #2fce98;
+  color: #2fce98;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  
+  &:hover {
+    background: #2fce98;
+    color: white;
+  }
+`;
+
 // Event Detail Modal
 const EventDetailModal = styled.div<{ $isOpen: boolean }>`
   position: fixed;
@@ -947,13 +977,17 @@ export const BerseConnectScreen: React.FC = () => {
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [eventMode, setEventMode] = useState<'all' | 'social' | 'sports' | 'volunteer' | 'donate' | 'trips'>('all');
   const [activeTab, setActiveTab] = useState<'today' | 'week' | 'month' | 'friends' | 'trending'>('month');
-  const [selectedCountry, setSelectedCountry] = useState('Malaysia');
-  const [selectedCity, setSelectedCity] = useState('Kuala Lumpur');
+  const [selectedCountry, setSelectedCountry] = useState('All');
+  const [selectedCity, setSelectedCity] = useState('All Cities');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDetail, setShowEventDetail] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<CommittedProfile | null>(null);
   const [showProfileDetail, setShowProfileDetail] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [showEditEventModal, setShowEditEventModal] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
 
   // Tab navigation
   const navigateTab = (direction: 'prev' | 'next') => {
@@ -993,10 +1027,31 @@ export const BerseConnectScreen: React.FC = () => {
 
   // Countries and cities data
   const countriesWithCities = {
-    'Malaysia': ['Kuala Lumpur', 'Penang', 'Johor Bahru', 'Ipoh', 'Melaka'],
-    'Indonesia': ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Bali'],
-    'Singapore': ['Central', 'Orchard', 'Marina Bay', 'Sentosa'],
-    'Thailand': ['Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya']
+    'All': ['All Cities'],
+    // ASEAN Countries
+    'Malaysia': ['All Cities', 'Kuala Lumpur', 'Penang', 'Johor Bahru', 'Ipoh', 'Melaka', 'Kota Kinabalu', 'Kuching', 'Shah Alam', 'Petaling Jaya', 'Cyberjaya', 'Putrajaya', 'Seremban', 'Kuantan', 'Alor Setar'],
+    'Indonesia': ['All Cities', 'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang', 'Makassar', 'Palembang', 'Tangerang', 'Depok', 'Bekasi', 'Bali (Denpasar)', 'Yogyakarta', 'Malang', 'Bogor', 'Batam'],
+    'Singapore': ['All Areas', 'Central', 'Orchard', 'Marina Bay', 'Sentosa', 'Jurong', 'Woodlands', 'Tampines', 'Ang Mo Kio'],
+    'Thailand': ['All Cities', 'Bangkok', 'Chiang Mai', 'Phuket', 'Pattaya', 'Krabi', 'Koh Samui', 'Hua Hin', 'Ayutthaya', 'Khon Kaen', 'Hat Yai'],
+    'Philippines': ['All Cities', 'Manila', 'Quezon City', 'Makati', 'Cebu City', 'Davao City', 'Baguio', 'Iloilo City', 'Cagayan de Oro', 'Zamboanga City'],
+    'Vietnam': ['All Cities', 'Ho Chi Minh City', 'Hanoi', 'Da Nang', 'Hue', 'Nha Trang', 'Can Tho', 'Hai Phong', 'Vung Tau', 'Da Lat'],
+    'Myanmar': ['All Cities', 'Yangon', 'Mandalay', 'Naypyidaw', 'Bagan', 'Inle Lake', 'Mawlamyine'],
+    'Cambodia': ['All Cities', 'Phnom Penh', 'Siem Reap', 'Sihanoukville', 'Battambang', 'Kampot'],
+    'Laos': ['All Cities', 'Vientiane', 'Luang Prabang', 'Pakse', 'Savannakhet', 'Vang Vieng'],
+    'Brunei': ['All Areas', 'Bandar Seri Begawan', 'Kuala Belait', 'Seria', 'Tutong'],
+    // Turkey
+    'Turkey': ['All Cities', 'Istanbul', 'Ankara', 'Izmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep', 'Kayseri', 'Eskisehir', 'Trabzon', 'Bodrum', 'Cappadocia'],
+    // Middle East
+    'Saudi Arabia': ['All Cities', 'Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar'],
+    'UAE': ['All Cities', 'Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah'],
+    'Qatar': ['All Cities', 'Doha', 'Al Wakrah', 'Al Khor', 'Al Rayyan'],
+    // Other Popular Destinations
+    'Germany': ['All Cities', 'Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Stuttgart', 'Dusseldorf', 'Dortmund', 'Essen'],
+    'United Kingdom': ['All Cities', 'London', 'Manchester', 'Birmingham', 'Edinburgh', 'Glasgow', 'Liverpool', 'Bristol', 'Leeds', 'Newcastle'],
+    'United States': ['All Cities', 'New York', 'Los Angeles', 'Chicago', 'Houston', 'San Francisco', 'Seattle', 'Boston', 'Miami', 'Washington DC'],
+    'Australia': ['All Cities', 'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle'],
+    'Japan': ['All Cities', 'Tokyo', 'Osaka', 'Kyoto', 'Yokohama', 'Nagoya', 'Kobe', 'Fukuoka', 'Sapporo'],
+    'South Korea': ['All Cities', 'Seoul', 'Busan', 'Incheon', 'Daegu', 'Daejeon', 'Gwangju', 'Ulsan']
   };
 
   // Mock committed profiles
@@ -1054,226 +1109,59 @@ export const BerseConnectScreen: React.FC = () => {
     }
   ];
 
-  // Mock events data
-  const mockEvents: Event[] = [
-    {
-      id: 'bersemukha-july-2025',
-      title: 'BerseMukha July 2025: Slow Down You\'re Doing Fine',
-      date: '2025-07-12',
-      time: '14:00',
-      location: 'KL Convention Centre',
-      venue: 'Main Hall A',
-      category: 'social',
-      description: 'Join us for an inspiring afternoon of connection, mindfulness, and self-care. This month\'s theme reminds us to slow down, appreciate our journey, and connect with like-minded individuals in a supportive environment.',
-      organizer: 'BerseMukha Official',
-      organizerAvatar: '🌟',
-      coverImage: '/images/bersemukha-july.jpg',
-      price: 0,
-      currency: 'RM',
-      attendees: 245,
-      maxAttendees: 300,
-      tags: ['BerseMukha', 'Mindfulness', 'Community', 'Self-Care'],
-      isOnline: false,
-      friends: ['Sarah', 'Ahmad', 'Fatima', 'David'],
-      committedProfiles: [
-        {
-          id: 101,
-          name: 'Aisha Mohamed',
-          age: 26,
-          profession: 'Wellness Coach',
-          location: 'Mont Kiara, KL',
-          match: 95,
-          personalityType: 'ENFP-A',
-          languages: 'EN, MS, AR',
-          tags: ['Mindfulness', 'Yoga', 'Community'],
-          bio: 'Helping others find balance and peace in their journey',
-          mutuals: ['Sarah', 'Fatima'],
+  // Mock events data - Get user created events from localStorage
+  const getUserEvents = () => {
+    const storedEvents = localStorage.getItem('userCreatedEvents');
+    return storedEvents ? JSON.parse(storedEvents) : [];
+  };
+
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+
+  // Load events on component mount and when navigating to the page
+  useEffect(() => {
+    const baseEvents = [];
+    
+    const userEvents = getUserEvents();
+    
+    // Load committed profiles for all events
+    const eventsWithProfiles = [...baseEvents, ...userEvents].map(event => {
+      const eventJoinsKey = `event_joins_${event.id}`;
+      const joins = JSON.parse(localStorage.getItem(eventJoinsKey) || '[]');
+      
+      // Convert joins to committed profiles
+      const committedProfiles = joins.map((join: any) => {
+        if (join.profile) {
+          return join.profile;
+        }
+        // Create profile for older joins without profile data
+        return {
+          id: join.id || Date.now(),
+          name: join.name,
+          age: 25,
+          profession: 'Professional',
+          location: 'Kuala Lumpur',
+          match: Math.floor(Math.random() * 20) + 80,
+          personalityType: 'ENFJ',
+          languages: 'EN, MS',
+          tags: ['Community', 'Events'],
+          bio: 'Event enthusiast',
+          mutuals: [],
           isOnline: true
-        },
-        {
-          id: 102,
-          name: 'Daniel Wong',
-          age: 30,
-          profession: 'Mental Health Advocate',
-          location: 'Petaling Jaya',
-          match: 89,
-          personalityType: 'INFJ-T',
-          languages: 'EN, MS, CN',
-          tags: ['Mental Health', 'Writing', 'Music'],
-          bio: 'Breaking stigmas, one conversation at a time',
-          mutuals: ['Ahmad'],
-          isOnline: false
-        },
-        {
-          id: 103,
-          name: 'Priya Nair',
-          age: 29,
-          profession: 'Life Coach',
-          location: 'Damansara Heights',
-          match: 91,
-          personalityType: 'ENFJ-T',
-          languages: 'EN, MS, TM',
-          tags: ['Personal Growth', 'Meditation'],
-          bio: 'Your journey matters, let\'s grow together',
-          mutuals: ['Sarah', 'David'],
-          isOnline: true
-        },
-        ...mockCommittedProfiles.slice(0, 5)
-      ],
-      trending: true,
-      highlights: [
-        '🧘 Guided meditation session',
-        '☕ Coffee & conversation circles',
-        '🎨 Creative expression workshop',
-        '🤝 Speed networking session',
-        '🎁 Self-care goodie bags'
-      ],
-      agenda: [
-        { time: '14:00', activity: 'Registration & Welcome Coffee' },
-        { time: '14:30', activity: 'Opening Circle & Theme Introduction' },
-        { time: '15:00', activity: 'Guided Meditation: Slow Down & Breathe' },
-        { time: '15:30', activity: 'Small Group Discussions' },
-        { time: '16:15', activity: 'Creative Expression Workshop' },
-        { time: '17:00', activity: 'Speed Networking & Connection Time' },
-        { time: '18:00', activity: 'Closing Circle & Reflections' }
-      ],
-      requirements: [
-        'Open mind and heart',
-        'Comfortable clothing',
-        'Personal journal (optional)'
-      ]
-    },
-    {
-      id: '1',
-      title: 'Badminton @ KLCC Sports Complex',
-      date: '2024-12-25',
-      time: '19:00',
-      location: 'KLCC Sports Complex',
-      venue: 'Court 3 & 4',
-      category: 'sports',
-      description: 'Weekly badminton session for all skill levels. Come join us for some fun games and make new friends!',
-      organizer: 'KL Badminton Club',
-      price: 15,
-      currency: 'RM',
-      attendees: 12,
-      maxAttendees: 20,
-      tags: ['Badminton', 'Sports', 'Fitness'],
-      isOnline: false,
-      friends: ['Sarah', 'Ahmad'],
-      committedProfiles: mockCommittedProfiles.slice(0, 3),
-      trending: true,
-      highlights: ['All levels welcome', 'Equipment provided', 'Post-game dinner'],
-      agenda: [
-        { time: '19:00', activity: 'Warm-up & Team Formation' },
-        { time: '19:30', activity: 'Game Sessions' },
-        { time: '21:00', activity: 'Cool Down & Social' }
-      ]
-    },
-    {
-      id: '2',
-      title: 'Coffee & Code Meetup',
-      date: '2024-12-25',
-      time: '10:00',
-      location: 'Common Ground, Damansara',
-      venue: 'Event Space',
-      category: 'social',
-      description: 'Monthly gathering for developers to share knowledge, work on projects, and network over coffee.',
-      organizer: 'Tech Community KL',
-      price: 0,
-      currency: 'RM',
-      attendees: 25,
-      maxAttendees: 30,
-      tags: ['Tech', 'Networking', 'Coffee'],
-      isOnline: false,
-      friends: ['David'],
-      committedProfiles: mockCommittedProfiles,
-      highlights: ['Free coffee', 'Lightning talks', 'Project showcase']
-    },
-    {
-      id: '3',
-      title: 'Beach Cleanup Drive',
-      date: '2024-12-26',
-      time: '07:00',
-      location: 'Port Dickson Beach',
-      venue: 'Teluk Kemang',
-      category: 'volunteer',
-      description: 'Join us in keeping our beaches clean! All equipment provided.',
-      organizer: 'Green Earth Malaysia',
-      price: 0,
-      currency: 'RM',
-      attendees: 45,
-      maxAttendees: 100,
-      tags: ['Environment', 'Volunteer', 'Community'],
-      isOnline: false,
-      friends: ['Fatima', 'Sarah', 'Ahmad'],
-      committedProfiles: mockCommittedProfiles.slice(1, 4),
-      trending: true,
-      requirements: ['Bring water bottle', 'Wear comfortable clothes', 'Sun protection']
-    },
-    {
-      id: '4',
-      title: 'Charity Iftar for Orphans',
-      date: '2024-12-27',
-      time: '18:00',
-      location: 'Masjid Wilayah',
-      venue: 'Main Hall',
-      category: 'donate',
-      description: 'Annual iftar gathering to support local orphanages. Donations welcome.',
-      organizer: 'Mercy Malaysia',
-      price: 50,
-      currency: 'RM',
-      attendees: 200,
-      maxAttendees: 300,
-      tags: ['Charity', 'Iftar', 'Community'],
-      isOnline: false,
-      friends: [],
-      committedProfiles: mockCommittedProfiles.slice(0, 2)
-    },
-    {
-      id: '5',
-      title: 'Cameron Highlands Weekend Trip',
-      date: '2024-12-28',
-      time: '06:00',
-      location: 'Meeting: KL Sentral',
-      venue: 'Main Entrance',
-      category: 'trips',
-      description: '3D2N trip to Cameron Highlands. Includes transport, accommodation, and guided tours.',
-      organizer: 'Adventure Club KL',
-      price: 350,
-      currency: 'RM',
-      attendees: 18,
-      maxAttendees: 25,
-      tags: ['Travel', 'Nature', 'Adventure'],
-      isOnline: false,
-      friends: ['Sarah', 'Ahmad', 'David', 'Fatima'],
-      committedProfiles: mockCommittedProfiles,
-      trending: true,
-      highlights: ['Tea plantation visit', 'Strawberry farm', 'Mossy forest trek']
-    },
-    {
-      id: '6',
-      title: 'Online Islamic Finance Workshop',
-      date: '2024-12-25',
-      time: '20:00',
-      location: 'Online',
-      venue: 'Zoom',
-      category: 'social',
-      description: 'Learn about Islamic finance principles and halal investment opportunities.',
-      organizer: 'Islamic Finance Institute',
-      price: 25,
-      currency: 'RM',
-      attendees: 78,
-      maxAttendees: 100,
-      tags: ['Education', 'Finance', 'Islamic'],
-      isOnline: true,
-      meetingLink: 'https://zoom.us/j/123456',
-      friends: [],
-      committedProfiles: []
-    }
-  ];
+        };
+      });
+      
+      return {
+        ...event,
+        committedProfiles: committedProfiles || [],
+        attendees: event.attendees || committedProfiles.length
+      };
+    });
+    
+    setAllEvents(eventsWithProfiles);
+  }, []);
 
   const getFilteredEvents = () => {
-    let filtered = [...mockEvents];
+    let filtered = [...allEvents];
     
     // Filter by category
     if (eventMode !== 'all') {
@@ -1310,6 +1198,29 @@ export const BerseConnectScreen: React.FC = () => {
         break;
     }
     
+    // Filter by location
+    if (selectedCountry && selectedCountry !== 'All' && selectedCountry !== '') {
+      filtered = filtered.filter(event => {
+        const eventLocation = event.location?.toLowerCase() || '';
+        const countryLower = selectedCountry.toLowerCase();
+        
+        // Check if event location includes the country
+        const countryMatch = eventLocation.includes(countryLower) || 
+                            eventLocation.includes('malaysia') && selectedCountry === 'Malaysia';
+        
+        // If no city selected or "All Cities", just match country
+        if (!selectedCity || selectedCity === 'All Cities') {
+          return countryMatch;
+        }
+        
+        // Check if city matches
+        const cityLower = selectedCity.toLowerCase();
+        const cityMatch = eventLocation.includes(cityLower);
+        
+        return countryMatch || cityMatch;
+      });
+    }
+    
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(event =>
@@ -1335,7 +1246,71 @@ export const BerseConnectScreen: React.FC = () => {
   const handleJoinEvent = async () => {
     if (!selectedEvent) return;
     
+    // Check if this is a BerseMinton event that requires payment
+    if (selectedEvent.id.includes('berseminton') && selectedEvent.price > 0) {
+      setShowPaymentModal(true);
+      setShowEventDetail(false);
+      return;
+    }
+    
     try {
+      // Create committed profile data
+      const committedProfile: CommittedProfile = {
+        id: Date.now(),
+        name: user?.fullName || 'Anonymous User',
+        age: user?.age || 25,
+        profession: user?.profession || 'Professional',
+        location: user?.city || 'Kuala Lumpur',
+        match: Math.floor(Math.random() * 20) + 80,
+        personalityType: user?.personalityType || 'ENFJ',
+        languages: user?.languages || 'EN, MS',
+        tags: user?.topInterests?.slice(0, 2) || ['Community', 'Events'],
+        bio: user?.bio || 'Event enthusiast',
+        mutuals: [],
+        isOnline: true
+      };
+      
+      // Get user profile data for join tracking
+      const userProfile = {
+        id: Date.now(),
+        name: user?.fullName || 'Anonymous User',
+        email: user?.email || '',
+        joinedAt: new Date().toISOString(),
+        eventId: selectedEvent.id,
+        eventTitle: selectedEvent.title,
+        profile: committedProfile
+      };
+      
+      // Store profile data in localStorage
+      const eventJoinsKey = `event_joins_${selectedEvent.id}`;
+      const existingJoins = JSON.parse(localStorage.getItem(eventJoinsKey) || '[]');
+      
+      // Check if user already joined
+      const alreadyJoined = existingJoins.some((join: any) => join.email === userProfile.email);
+      
+      if (!alreadyJoined) {
+        existingJoins.push(userProfile);
+        localStorage.setItem(eventJoinsKey, JSON.stringify(existingJoins));
+        
+        // Also store in a general list of all event joins
+        const allJoins = JSON.parse(localStorage.getItem('all_event_joins') || '[]');
+        allJoins.push(userProfile);
+        localStorage.setItem('all_event_joins', JSON.stringify(allJoins));
+        
+        // Update the event's committed profiles
+        const updatedEvent = { ...selectedEvent };
+        updatedEvent.committedProfiles = [...(updatedEvent.committedProfiles || []), committedProfile];
+        updatedEvent.attendees = (updatedEvent.attendees || 0) + 1;
+        
+        // Update the event in allEvents
+        setAllEvents(prevEvents => 
+          prevEvents.map(evt => evt.id === selectedEvent.id ? updatedEvent : evt)
+        );
+        
+        // Update selected event
+        setSelectedEvent(updatedEvent);
+      }
+      
       // Show initial success message
       alert(`Successfully joined "${selectedEvent.title}"! You'll receive a confirmation email.`);
       
@@ -1527,6 +1502,42 @@ export const BerseConnectScreen: React.FC = () => {
     }
   };
 
+  const getParticipantCount = (eventId: string) => {
+    if (eventId.includes('berseminton')) {
+      const registrations = JSON.parse(localStorage.getItem('berseMintonRegistrations') || '[]');
+      return registrations.filter((reg: any) => reg.eventId === eventId).length;
+    } else {
+      const eventJoinsKey = `event_joins_${eventId}`;
+      const participants = JSON.parse(localStorage.getItem(eventJoinsKey) || '[]');
+      return participants.length;
+    }
+  };
+
+  const handleViewParticipants = (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedEvent(event);
+    setShowParticipantsModal(true);
+  };
+
+  const handleEditEvent = (event: Event, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEventToEdit(event);
+    setShowEditEventModal(true);
+  };
+
+  const handleSaveEvent = (updatedEvent: Event) => {
+    // Update the event in allEvents
+    setAllEvents(prevEvents => 
+      prevEvents.map(evt => evt.id === updatedEvent.id ? updatedEvent : evt)
+    );
+  };
+
+  // Check if an event is user-created
+  const isUserCreatedEvent = (eventId: string) => {
+    const userEvents = getUserEvents();
+    return userEvents.some((e: Event) => e.id === eventId);
+  };
+
   const handleShareEvent = (event?: Event) => {
     const eventToShare = event || selectedEvent;
     if (!eventToShare) return;
@@ -1625,40 +1636,75 @@ export const BerseConnectScreen: React.FC = () => {
             Sports
           </ModeButton>
           <ModeButton 
-            $active={false} 
-            onClick={(e) => { e.preventDefault(); alert('Volunteer feature coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={eventMode === 'volunteer'} 
+            onClick={() => setEventMode('volunteer')}
+            style={{ 
+              background: eventMode === 'volunteer' ? '' : '#757575',
+              opacity: eventMode === 'volunteer' ? 1 : 0.8,
+              color: eventMode === 'volunteer' ? '' : '#ccc',
+              border: eventMode === 'volunteer' ? '' : '1px solid #555'
+            }}
           >
             Volunteer
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
-            $active={false} 
-            onClick={(e) => { e.preventDefault(); alert('Donate feature coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={eventMode === 'donate'} 
+            onClick={() => setEventMode('donate')}
+            style={{ 
+              background: eventMode === 'donate' ? '' : '#757575',
+              opacity: eventMode === 'donate' ? 1 : 0.8,
+              color: eventMode === 'donate' ? '' : '#ccc',
+              border: eventMode === 'donate' ? '' : '1px solid #555'
+            }}
           >
             Donate
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
-            $active={false} 
-            onClick={(e) => { e.preventDefault(); alert('Trips feature coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={eventMode === 'trips'} 
+            onClick={() => setEventMode('trips')}
+            style={{ 
+              background: eventMode === 'trips' ? '' : '#757575',
+              opacity: eventMode === 'trips' ? 1 : 0.8,
+              color: eventMode === 'trips' ? '' : '#ccc',
+              border: eventMode === 'trips' ? '' : '1px solid #555'
+            }}
           >
             Trips
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
         </ModeSelector>
         
         <FilterDivider />
         
         <LocationFilterSection>
-          <LocationFilterLabel>Find events everywhere</LocationFilterLabel>
+          <LocationFilterLabel>
+            {(selectedCountry && selectedCountry !== 'All' && selectedCountry !== '') ? (
+              <span style={{ fontSize: '8px', opacity: 0.7 }}>
+                {selectedCity && selectedCity !== 'All Cities' ? `${selectedCity}, ` : ''}{selectedCountry}
+              </span>
+            ) : (
+              <span>Find events everywhere</span>
+            )}
+          </LocationFilterLabel>
           <FilterOptions>
             <CompactDropdown 
               value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
+              onChange={(e) => {
+                const newCountry = e.target.value;
+                setSelectedCountry(newCountry);
+                
+                // Reset city when country changes
+                if (newCountry === '' || newCountry === 'All') {
+                  setSelectedCity('All Cities');
+                } else {
+                  setSelectedCity('All Cities'); // Default to All Cities for new country
+                }
+              }}
+              title="Select Country"
             >
+              <option value="">Clear</option>
               {Object.keys(countriesWithCities).map(country => (
                 <option key={country} value={country}>{country}</option>
               ))}
@@ -1666,16 +1712,21 @@ export const BerseConnectScreen: React.FC = () => {
             <CompactDropdown 
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
+              disabled={!selectedCountry || selectedCountry === ''}
+              title="Select City"
             >
-              {selectedCountry && countriesWithCities[selectedCountry as keyof typeof countriesWithCities].map(city => (
+              {selectedCountry && countriesWithCities[selectedCountry as keyof typeof countriesWithCities]?.map(city => (
                 <option key={city} value={city}>{city}</option>
               ))}
             </CompactDropdown>
             <SearchInput
               type="text"
-              placeholder="Search events..."
+              placeholder={selectedCountry && selectedCountry !== 'All' ? 'search events' : 'Search events...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                fontStyle: selectedCountry && selectedCountry !== 'All' && !searchQuery ? 'italic' : 'normal'
+              }}
             />
           </FilterOptions>
         </LocationFilterSection>
@@ -1754,6 +1805,21 @@ export const BerseConnectScreen: React.FC = () => {
                     </AttendeeSection>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {isUserCreatedEvent(event.id) && (
+                        <ParticipantsButton
+                          onClick={(e) => handleEditEvent(event, e)}
+                          title="Edit event"
+                          style={{ background: '#fff3cd', borderColor: '#ffc107', color: '#856404' }}
+                        >
+                          ✏️ Edit
+                        </ParticipantsButton>
+                      )}
+                      <ParticipantsButton
+                        onClick={(e) => handleViewParticipants(event, e)}
+                        title="View participants"
+                      >
+                        👥 {getParticipantCount(event.id) || 0}
+                      </ParticipantsButton>
                       <ShareButton 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1835,13 +1901,35 @@ export const BerseConnectScreen: React.FC = () => {
                 </div>
               </EventDetailMetaItem>
               <EventDetailMetaItem>
-                <span>👤</span>
-                <span>Organized by {selectedEvent?.organizer}</span>
+                <span>🏢</span>
+                <span>By {selectedEvent?.organization || selectedEvent?.organizer}</span>
               </EventDetailMetaItem>
+              {selectedEvent?.hosts && selectedEvent.hosts.length > 0 && (
+                <EventDetailMetaItem>
+                  <span>👤</span>
+                  <span>Host{selectedEvent.hosts.length > 1 ? 's' : ''}: {selectedEvent.hosts.slice(0, 5).join(', ')}</span>
+                </EventDetailMetaItem>
+              )}
               <EventDetailMetaItem>
                 <span>👥</span>
                 <span>{selectedEvent?.attendees}/{selectedEvent?.maxAttendees} attendees</span>
               </EventDetailMetaItem>
+              {selectedEvent?.whatsappGroup && (
+                <EventDetailMetaItem>
+                  <span>💬</span>
+                  <a href={selectedEvent.whatsappGroup} target="_blank" rel="noopener noreferrer" style={{ color: '#2fce98', textDecoration: 'none' }}>
+                    Join WhatsApp Group
+                  </a>
+                </EventDetailMetaItem>
+              )}
+              {selectedEvent?.mapLink && (
+                <EventDetailMetaItem>
+                  <span>🗺️</span>
+                  <a href={selectedEvent.mapLink} target="_blank" rel="noopener noreferrer" style={{ color: '#2fce98', textDecoration: 'none' }}>
+                    View on Map
+                  </a>
+                </EventDetailMetaItem>
+              )}
               {selectedEvent?.isOnline && (
                 <EventDetailMetaItem>
                   <span>🌐</span>
@@ -1930,6 +2018,14 @@ export const BerseConnectScreen: React.FC = () => {
           <EventActionButtons>
             <ActionButton onClick={handleShareEvent}>
               📤 Share
+            </ActionButton>
+            <ActionButton 
+              onClick={() => {
+                setShowParticipantsModal(true);
+                setShowEventDetail(false);
+              }}
+            >
+              👥 Participants
             </ActionButton>
             <ActionButton $primary onClick={handleJoinEvent}>
               {selectedEvent?.price === 0 ? '✓ Join Event' : `💳 Pay ${selectedEvent?.currency} ${selectedEvent?.price}`}
@@ -2114,6 +2210,51 @@ export const BerseConnectScreen: React.FC = () => {
             navigate(`/${tab === 'home' ? 'dashboard' : tab}`);
           }
         }}
+      />
+
+      {/* Payment Modal for BerseMinton */}
+      {selectedEvent && selectedEvent.id.includes('berseminton') && (
+        <BerseMintonPayment
+          event={{
+            id: selectedEvent.id,
+            title: selectedEvent.title,
+            location: selectedEvent.location,
+            date: selectedEvent.date,
+            fee: selectedEvent.price.toString()
+          }}
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedEvent(null);
+          }}
+        />
+      )}
+      
+      {/* Unified Participants Modal for All Events */}
+      {selectedEvent && (
+        <UnifiedParticipants
+          eventId={selectedEvent.id}
+          eventTitle={selectedEvent.title}
+          isSportsEvent={selectedEvent.id.includes('berseminton')}
+          isOpen={showParticipantsModal}
+          onClose={() => {
+            setShowParticipantsModal(false);
+            if (selectedEvent) {
+              setShowEventDetail(true);
+            }
+          }}
+        />
+      )}
+      
+      {/* Edit Event Modal */}
+      <EditEventModal
+        event={eventToEdit}
+        isOpen={showEditEventModal}
+        onClose={() => {
+          setShowEditEventModal(false);
+          setEventToEdit(null);
+        }}
+        onSave={handleSaveEvent}
       />
     </Container>
   );

@@ -25,6 +25,7 @@ const mockUsers: MockUser[] = [
     id: '1',
     email: 'test@example.com',
     fullName: 'Test User',
+    username: 'TestUser',
     firstName: 'Test',
     lastName: 'User',
     phone: '+60123456789',
@@ -33,15 +34,20 @@ const mockUsers: MockUser[] = [
     age: 28,
     location: 'Kuala Lumpur, Malaysia',
     interests: ['Technology', 'Coffee', 'Travel'],
-    points: 245,
+    points: 0,
+    bersePassBalance: 250,
+    mutualFriends: 12,
     isVerified: true,
-    level: 3,
+    referralCode: 'TEST-USER-12345',
+    membershipId: 'AUN100001',
+    level: 1,
     role: 'USER'
   },
   {
     id: '2', 
     email: 'admin@bersemuka.com',
     fullName: 'Admin User',
+    username: 'Admin',
     firstName: 'Admin',
     lastName: 'User',
     phone: '+60987654321',
@@ -50,15 +56,20 @@ const mockUsers: MockUser[] = [
     age: 32,
     location: 'Kuala Lumpur, Malaysia',
     interests: ['Management', 'Community Building'],
-    points: 1000,
+    points: 0,
+    bersePassBalance: 500,
+    mutualFriends: 45,
     isVerified: true,
-    level: 5,
+    referralCode: 'ADMIN-BERSE-99999',
+    membershipId: 'AUN100000',
+    level: 1,
     role: 'ADMIN'
   },
   {
     id: '3',
     email: 'zara@example.com', 
     fullName: 'Zara Aisha',
+    username: 'Zara',
     firstName: 'Zara',
     lastName: 'Aisha',
     phone: '+60123456789',
@@ -67,9 +78,13 @@ const mockUsers: MockUser[] = [
     age: 25,
     location: 'Kuala Lumpur, Malaysia',
     interests: ['Marketing', 'Photography', 'Coffee'],
-    points: 245,
+    points: 0,
+    bersePassBalance: 250,
+    mutualFriends: 8,
     isVerified: true,
-    level: 3,
+    referralCode: 'ZARA-CAFE-67890',
+    membershipId: 'AUN100002',
+    level: 1,
     role: 'USER'
   }
 ];
@@ -130,7 +145,7 @@ class MockAuthService {
   /**
    * Mock registration
    */
-  async register(email: string, password: string, fullName: string, phone?: string): Promise<MockAuthResponse> {
+  async register(email: string, password: string, fullName: string, username: string, phone?: string): Promise<MockAuthResponse> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -143,11 +158,17 @@ class MockAuthService {
       };
     }
 
+    // Generate membership ID and referral code (same format)
+    const memberNumber = 100001 + mockUsers.length;
+    const membershipId = `AUN${memberNumber}`;
+    const referralCode = `AUN${memberNumber}`;
+
     // Create new mock user
     const newUser: MockUser = {
       id: (mockUsers.length + 1).toString(),
       email,
       fullName,
+      username,
       firstName: fullName.split(' ')[0],
       lastName: fullName.split(' ').slice(1).join(' ') || '',
       phone,
@@ -157,7 +178,11 @@ class MockAuthService {
       location: '',
       interests: [],
       points: 0,
+      bersePassBalance: 50,
+      mutualFriends: 0,
       isVerified: false,
+      referralCode,
+      membershipId,
       level: 1,
       role: 'USER'
     };

@@ -36,11 +36,11 @@ const HeaderTitle = styled.h1`
   margin: 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const PostButton = styled.button<{ disabled?: boolean }>`
-  background: ${({ disabled }) => disabled ? '#CCC' : '#2D5F4F'};
+  background: ${({ disabled }) => disabled ? '#CCC' : '#2fce98'};
   color: white;
   border: none;
   border-radius: 8px;
@@ -101,7 +101,7 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
     background: white;
   }
   
@@ -124,7 +124,7 @@ const TextArea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
     background: white;
   }
   
@@ -145,7 +145,7 @@ const Select = styled.select`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
     background: white;
   }
 `;
@@ -214,7 +214,7 @@ const TagTextInput = styled.input`
 const AddTagButton = styled.button`
   padding: 8px 12px;
   background: #E8F4F0;
-  color: #2D5F4F;
+  color: #2fce98;
   border: none;
   border-radius: 6px;
   font-size: 12px;
@@ -244,8 +244,8 @@ const SuggestedTag = styled.button`
   
   &:hover {
     background: #E8F4F0;
-    border-color: #2D5F4F;
-    color: #2D5F4F;
+    border-color: #2fce98;
+    color: #2fce98;
   }
 `;
 
@@ -307,7 +307,7 @@ const PreviewAvatar = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -344,7 +344,7 @@ const PreviewCategory = styled.div`
   display: inline-block;
   padding: 4px 8px;
   background-color: #E8F4F0;
-  color: #2D5F4F;
+  color: #2fce98;
   border-radius: 12px;
   font-size: 10px;
   font-weight: 600;
@@ -409,7 +409,7 @@ const PreviewButton = styled.button`
 
 const SubmitButton = styled.button<{ disabled?: boolean }>`
   flex: 1;
-  background-color: ${({ disabled }) => disabled ? '#CCC' : '#2D5F4F'};
+  background-color: ${({ disabled }) => disabled ? '#CCC' : '#2fce98'};
   color: white;
   border: none;
   border-radius: 12px;

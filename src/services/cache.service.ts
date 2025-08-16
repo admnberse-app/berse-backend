@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 interface CacheOptions {
   ttl?: number; // Time to live in seconds
@@ -23,7 +23,6 @@ class CacheService {
       port: parseInt(process.env.REDIS_PORT || '6379'),
       password: process.env.REDIS_PASSWORD,
       db: parseInt(process.env.REDIS_DB || '0'),
-      retryDelayOnFailover: 100,
       enableReadyCheck: false,
       maxRetriesPerRequest: null,
       lazyConnect: true,

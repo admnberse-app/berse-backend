@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult, ValidationError } from 'express-validator';
 import { sendError } from '../utils/response';
-import { ApiResponse } from '../types';
 
 export const handleValidationErrors = (
   req: Request,
@@ -30,7 +29,7 @@ export const handleValidationErrors = (
 // XSS Prevention middleware
 export const xssProtection = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   // Sanitize common fields susceptible to XSS
@@ -62,7 +61,10 @@ export const xssProtection = (
   }
   
   if (req.query) {
-    req.query = sanitizeValue(req.query);
+    const sanitizedQuery = sanitizeValue(req.query);
+    Object.keys(sanitizedQuery).forEach(key => {
+      (req.query as any)[key] = sanitizedQuery[key];
+    });
   }
   
   next();

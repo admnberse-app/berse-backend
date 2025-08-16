@@ -18,7 +18,7 @@ export default defineConfig({
         name: 'BerseMuka - Malaysian Community App',
         short_name: 'BerseMuka',
         description: 'Connect, meet, and build meaningful relationships in Malaysia',
-        theme_color: '#2D5F4F',
+        theme_color: '#2fce98',
         background_color: '#F5F3EF',
         display: 'standalone',
         orientation: 'portrait',

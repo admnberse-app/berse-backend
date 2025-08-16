@@ -1,30 +1,60 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { DualQRModal } from '../DualQRModal';
+import { useAuth } from '../../contexts/AuthContext';
+import { generateBerseMukhaEvents, generatePersonAttendance } from '../../data/bersemukhaEvents';
 
 interface ProfileSidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+// Interest options
+const INTEREST_OPTIONS = [
+  { icon: '🌍', label: 'Cultural Networking', value: 'cultural-networking' },
+  { icon: '☕', label: 'Cafe Hopping', value: 'cafe-hopping' },
+  { icon: '✈️', label: 'Travel Stories', value: 'travel-stories' },
+  { icon: '🗣️', label: 'Language Exchange', value: 'language-exchange' },
+  { icon: '🚀', label: 'Startup Networking', value: 'startup-networking' },
+  { icon: '💚', label: 'Social Impact', value: 'social-impact' },
+  { icon: '⚽', label: 'Sports Activities', value: 'sports-activities' },
+  { icon: '🏸', label: 'Badminton Games', value: 'badminton-games' },
+  { icon: '🥾', label: 'Hiking Trails', value: 'hiking-trails' },
+  { icon: '🏛️', label: 'Heritage Walks', value: 'heritage-walks' },
+  { icon: '🍜', label: 'Foodie Meetups', value: 'foodie-meetups' },
+  { icon: '📚', label: 'Book Talks', value: 'book-talks' },
+  { icon: '🎒', label: 'Weekend Trips', value: 'weekend-trips' },
+  { icon: '📸', label: 'Photo Walks', value: 'photo-walks' },
+  { icon: '🏖️', label: 'Beach Outings', value: 'beach-outings' }
+];
+
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const [setelBalance, setSetelBalance] = useState(45.60);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [currentPoints, setCurrentPoints] = useState(245);
-  const [isDualQRModalOpen, setIsDualQRModalOpen] = useState(false);
-  const [isManagePassModalOpen, setIsManagePassModalOpen] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(true); // true = active/paid, false = not subscribed
+  const { user, logout } = useAuth();
+  const [showTravelModal, setShowTravelModal] = useState(false);
+  const [showCommunitiesModal, setShowCommunitiesModal] = useState(false);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const [showOfferingsModal, setShowOfferingsModal] = useState(false);
 
   const handleNavigation = (path: string) => {
     navigate(path);
     onClose(); // Close sidebar after navigation
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      localStorage.removeItem('rememberMe');
+      navigate('/login');
+      onClose();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <>
-      {isOpen && <Overlay onClick={onClose} />}
+      {isOpen && <SidebarOverlay onClick={onClose} />}
       <SidebarContainer $isOpen={isOpen}>
         <SidebarHeader>
           <CloseButton onClick={onClose}>×</CloseButton>
@@ -32,373 +62,116 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
         </SidebarHeader>
 
         <ProfileCard>
-          <ProfileSection>
-            <ProfileAvatar>ZM</ProfileAvatar>
-            <ProfileInfo>
-              <ProfileName>Zayd Mahdaly</ProfileName>
-              <ProfileRole>28 • Architect & Photographer</ProfileRole>
-              <ProfileBadges>
-                <LevelBadge>Lv.7</LevelBadge>
-                <TypeBadge>ENFJ-A</TypeBadge>
-              </ProfileBadges>
-            </ProfileInfo>
-            <ProfileRating>
-              <RatingIcon>⭐</RatingIcon>
-              <RatingScore>7.1</RatingScore>
-            </ProfileRating>
-          </ProfileSection>
+          {/* Profile Header - Exact same as BerseMatch */}
+          <ConnectionHeader>
+            <Avatar>👤</Avatar>
+            <ConnectionInfo>
+              <NameBadgesRow>
+                <ConnectionName>{user?.fullName || 'User'}</ConnectionName>
+                {user?.personalityType && (
+                  <InlineBadge $color="#E8F5E9" $textColor="#2E7D32">
+                    🧠 {user.personalityType}
+                  </InlineBadge>
+                )}
+                {user?.languages && (
+                  <InlineBadge $color="#E3F2FD" $textColor="#1976D2">
+                    🗣️ {user.languages}
+                  </InlineBadge>
+                )}
+              </NameBadgesRow>
+              <ConnectionLocation onClick={() => setShowTravelModal(true)}>
+                📍 {user?.currentLocation || user?.location || 'Location not set'} 
+                {user?.originLocation && ` • From: ${user.originLocation}`}
+              </ConnectionLocation>
+              <ProfileMeta>
+                {user?.age && <span>{user.age} years</span>}
+                {user?.age && (user?.profession || user?.occupation) && <span>•</span>}
+                <span>{user?.profession || user?.occupation || 'Profession not set'}</span>
+              </ProfileMeta>
+            </ConnectionInfo>
+          </ConnectionHeader>
 
-          <TagsSection>
-            <TagsRow>
-              <InterestTag>Architecture</InterestTag>
-              <InterestTag>Photography</InterestTag>
-            </TagsRow>
-            <TagsRow>
-              <InterestTag>Coffee Culture</InterestTag>
-              <InterestTag>Travel</InterestTag>
-            </TagsRow>
-          </TagsSection>
+          {/* Interests/Tags - From user data */}
+          <ConnectionTags>
+            {(user?.topInterests || user?.interests || []).slice(0, 4).map((interest, idx) => {
+              const interestOption = INTEREST_OPTIONS.find(option => 
+                option.value === interest || option.label === interest
+              );
+              return (
+                <Tag key={idx}>
+                  {interestOption?.label || interest}
+                </Tag>
+              );
+            })}
+            {(!user?.topInterests || user.topInterests.length === 0) && (!user?.interests || user.interests.length === 0) && (
+              <Tag>Interests not set</Tag>
+            )}
+          </ConnectionTags>
 
-          <BioSection>
-            <BioText>
-              Architect and photographer exploring traditions and architecture worldwide. 
-              Love discovering hidden gems and meeting new people over coffee.
-            </BioText>
-          </BioSection>
+          {/* Bio - From user data */}
+          <ConnectionBio>
+            "{user?.bio || 'No bio available. Update your profile to share more about yourself!'}"
+          </ConnectionBio>
 
-          <BadgesSection>
-            <CommunityBadge>🏢 NAMA Foundation</CommunityBadge>
-            <CommunityBadge>🏗️ Malaysian Architects</CommunityBadge>
-            <CommunityBadge>📸 KL Photography Club</CommunityBadge>
-          </BadgesSection>
+          {/* Info Badges - Exact same as BerseMatch */}
+          <ProfileInfoRow>
+            <InfoBadge 
+              $color="#FFF3E0" 
+              $textColor="#E65100"
+              onClick={() => setShowCommunitiesModal(true)}
+            >
+              👥 5 communities
+            </InfoBadge>
+            <InfoBadge 
+              $color="#F3E5F5" 
+              $textColor="#7B1FA2"
+              onClick={() => setShowEventsModal(true)}
+            >
+              🤝 12 BerseMukha
+            </InfoBadge>
+            <InfoBadge 
+              $color="#E8F5E9" 
+              $textColor="#2E7D32"
+              onClick={() => setShowOfferingsModal(true)}
+            >
+              🎯 Offerings
+            </InfoBadge>
+          </ProfileInfoRow>
 
-          <EditButton>
-            ✏️ Edit Profile
-          </EditButton>
+
+          {/* Action Buttons */}
+          <ConnectionActions>
+            <EditButton onClick={() => handleNavigation('/edit-profile')}>
+              ✏️ Edit Profile
+            </EditButton>
+          </ConnectionActions>
+          
         </ProfileCard>
 
-        {/* BersePass Card */}
-        <BersePassCard $isSubscribed={isSubscribed}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '16px' 
-          }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '600', 
-              color: '#333', 
-              margin: 0 
-            }}>BersePass</h3>
-            <div style={{
-              background: isSubscribed ? '#00C851' : '#FF4444',
-              color: 'white',
-              padding: '4px 12px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
+        {/* Membership ID & Referral Code Section */}
+        <ReferralCard>
+          <ReferralTitle>🆔 Membership ID & Referral Code</ReferralTitle>
+          <ReferralCode>{user?.membershipId || 'AUN100001'}</ReferralCode>
+          <ReferralActions>
+            <CopyButton onClick={() => {
+              const membershipId = user?.membershipId || 'AUN100001';
+              navigator.clipboard.writeText(membershipId);
+              alert('Membership ID copied to clipboard!');
             }}>
-              <div style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: 'white'
-              }}></div>
-              {isSubscribed ? 'Active' : 'Expired'}
-            </div>
-          </div>
-          
-{isSubscribed ? (
-            <>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'flex-start', 
-                marginBottom: '20px' 
-              }}>
-                <div>
-                  <div style={{ 
-                    fontSize: '28px', 
-                    fontWeight: 'bold', 
-                    color: '#333', 
-                    lineHeight: '1' 
-                  }}>
-                    RM {isLoadingBalance ? '...' : setelBalance.toFixed(2)}
-                  </div>
-                  <div style={{ 
-                    fontSize: '11px', 
-                    color: '#666', 
-                    marginTop: '4px' 
-                  }}>Current Balance</div>
-                </div>
-                
-                <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
-                  <div style={{ fontSize: '12px', color: '#666' }}>RM 19.99/month</div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Next: Dec 15</div>
-                </div>
-              </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                gap: '8px' 
-              }}>
-                <button style={{
-                  background: '#f8f9fa',
-                  color: '#333',
-                  border: '1px solid #e9ecef',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  textAlign: 'center',
-                  flex: '1',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease'
-                }}>
-                  Top-up in Setel
-                </button>
-                
-                <button style={{
-                  background: '#f8f9fa',
-                  color: '#333',
-                  border: '1px solid #e9ecef',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  textAlign: 'center',
-                  flex: '1',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease'
-                }}>
-                  Manage Pass
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                marginBottom: '20px',
-                padding: '20px 0'
-              }}>
-                <div style={{ 
-                  fontSize: '48px',
-                  marginBottom: '12px'
-                }}>⚠️</div>
-                <div style={{ 
-                  fontSize: '16px', 
-                  fontWeight: '600', 
-                  color: '#FF4444', 
-                  marginBottom: '8px'
-                }}>
-                  Subscription Expired
-                </div>
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: '#666',
-                  lineHeight: '1.4'
-                }}>
-                  Renew your BersePass to enjoy premium benefits and exclusive features
-                </div>
-              </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '8px' 
-              }}>
-                <button 
-                  style={{
-                    background: '#FF4444',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s ease'
-                  }}
-                  onClick={() => {
-                    // In real app, this would redirect to subscription page
-                    alert('Redirecting to subscription renewal...');
-                  }}
-                >
-                  Renew Subscription
-                </button>
-              </div>
-            </>
-          )}
-        </BersePassCard>
+              📋 Copy Code
+            </CopyButton>
+            <ShareButton onClick={() => {
+              const membershipId = user?.membershipId || 'AUN100001';
+              const message = `Join Berse App with my referral code: ${membershipId}\nBoth of us will get bonus points! 🎉`;
+              navigator.clipboard.writeText(message);
+              alert('Referral message copied! Share it with your friends.');
+            }}>
+              📤 Share
+            </ShareButton>
+          </ReferralActions>
+          <ReferralInfo>Your unique membership ID • Share to earn bonus points!</ReferralInfo>
+        </ReferralCard>
 
-        {/* BersePoints Card */}
-        <BersePointsCard>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '20px' 
-          }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '600', 
-              color: '#333', 
-              margin: 0 
-            }}>BersePoints & Rewards</h3>
-            <div style={{
-              background: '#8E44AD',
-              color: 'white',
-              padding: '4px 12px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: '500'
-            }}>
-              Level 3
-            </div>
-          </div>
-          
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start', 
-            marginBottom: '16px' 
-          }}>
-            <div style={{ flex: '1' }}>
-              <div style={{ 
-                fontSize: '28px', 
-                fontWeight: 'bold', 
-                color: '#FFA500', 
-                lineHeight: '1' 
-              }}>
-                {currentPoints}
-              </div>
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#666', 
-                marginTop: '2px' 
-              }}>points available</div>
-            </div>
-            
-            <div style={{ 
-              flex: '1', 
-              display: 'flex', 
-              flexDirection: 'row', 
-              gap: '12px', 
-              justifyContent: 'flex-end' 
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center' 
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  color: '#000', 
-                  fontWeight: '600' 
-                }}>RM 347</div>
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: '#666' 
-                }}>Redeemed</div>
-              </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center' 
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  color: '#000', 
-                  fontWeight: '600' 
-                }}>+15</div>
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: '#666' 
-                }}>This week</div>
-              </div>
-            </div>
-          </div>
-          
-          <div>
-            <div style={{
-              width: '100%',
-              height: '8px',
-              background: '#E0E0E0',
-              borderRadius: '4px',
-              overflow: 'hidden',
-              marginBottom: '8px'
-            }}>
-              <div style={{
-                width: '82%',
-                height: '100%',
-                background: '#FFA500',
-                borderRadius: '4px'
-              }}></div>
-            </div>
-            
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#666',
-              fontStyle: 'italic',
-              marginBottom: '12px'
-            }}>
-              {currentPoints}/300 to Level 4
-            </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
-            }}>
-              <button style={{
-                background: '#FFA500',
-                color: 'white',
-                border: 'none',
-                padding: '10px 12px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '600',
-                textAlign: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 6px rgba(255, 165, 0, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-              onClick={() => setIsDualQRModalOpen(true)}>
-                <span>📱</span>
-                QR
-              </button>
-              
-              <button 
-                onClick={() => navigate('/points')}
-                style={{
-                  background: '#FFA500',
-                  color: 'white',
-                  padding: '10px 20px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s ease'
-                }}
-              >
-                See All Rewards
-              </button>
-            </div>
-          </div>
-        </BersePointsCard>
 
         <MenuSection>
           {/* 1. Private Messages */}
@@ -411,47 +184,26 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
             <MenuArrow>→</MenuArrow>
           </MenuItem>
 
-          {/* 2. Notifications */}
-          <MenuItem onClick={() => handleNavigation('/notifications')}>
-            <MenuIcon>🔔</MenuIcon>
+          {/* 2. Forum */}
+          <MenuItem onClick={() => handleNavigation('/forum')}>
+            <MenuIcon>💭</MenuIcon>
             <MenuContent>
-              <MenuTitle>Notifications</MenuTitle>
+              <MenuTitle>Forum</MenuTitle>
             </MenuContent>
-            <MenuBadge $color="#E74C3C">5</MenuBadge>
             <MenuArrow>→</MenuArrow>
           </MenuItem>
 
-          {/* 3. Explore Vouchers */}
-          <MenuItem onClick={() => handleNavigation('/vouchers')}>
-            <MenuIcon>🎫</MenuIcon>
-            <MenuContent>
-              <MenuTitle>Explore Vouchers</MenuTitle>
-            </MenuContent>
-            <MenuBadge $color="#FF9800">248 pts</MenuBadge>
-            <MenuArrow>→</MenuArrow>
-          </MenuItem>
-
-          {/* 4. My Events */}
+          {/* 3. My Events */}
           <MenuItem onClick={() => handleNavigation('/my-events')}>
             <MenuIcon>📅</MenuIcon>
             <MenuContent>
               <MenuTitle>My Events</MenuTitle>
             </MenuContent>
-            <MenuBadge $color="#666">4 events</MenuBadge>
+            <MenuBadge $color="#3B82F6">2</MenuBadge>
             <MenuArrow>→</MenuArrow>
           </MenuItem>
 
-          {/* 5. BerseCardGame */}
-          <MenuItem onClick={() => handleNavigation('/bersecardgame')}>
-            <MenuIcon>🃏</MenuIcon>
-            <MenuContent>
-              <MenuTitle>BerseCardGame</MenuTitle>
-              <MenuSubtitle>Interactive conversation starter</MenuSubtitle>
-            </MenuContent>
-            <MenuArrow>→</MenuArrow>
-          </MenuItem>
-
-          {/* 6. Manage Events (Admin) */}
+          {/* 4. Manage Events (Admin) */}
           <MenuItem onClick={() => handleNavigation('/manage-events')}>
             <MenuIcon>⚡</MenuIcon>
             <MenuContent>
@@ -461,28 +213,207 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
             <MenuArrow>→</MenuArrow>
           </MenuItem>
 
+          {/* 4. Settings */}
+          <MenuItem onClick={() => handleNavigation('/settings')}>
+            <MenuIcon>⚙️</MenuIcon>
+            <MenuContent>
+              <MenuTitle>Settings</MenuTitle>
+            </MenuContent>
+            <MenuArrow>→</MenuArrow>
+          </MenuItem>
+
           {/* REMOVED: My Communities */}
         </MenuSection>
+
+        {/* Logout Button */}
+        <LogoutSection>
+          <LogoutButton onClick={handleLogout}>
+            <LogoutIcon>🚪</LogoutIcon>
+            <LogoutText>Logout</LogoutText>
+          </LogoutButton>
+        </LogoutSection>
       </SidebarContainer>
-      
-      {/* DualQRModal for QR Code functionality */}
-      <DualQRModal 
-        isOpen={isDualQRModalOpen} 
-        onClose={() => setIsDualQRModalOpen(false)} 
-      />
+
+      {/* Travel Logbook Modal */}
+      {showTravelModal && (
+        <ModalOverlay onClick={() => setShowTravelModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h2>✈️ My Travel Logbook</h2>
+              <ModalCloseButton onClick={() => setShowTravelModal(false)}>×</ModalCloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <TravelStats>
+                <StatCard>
+                  <StatNumber>15</StatNumber>
+                  <StatLabel>Countries</StatLabel>
+                </StatCard>
+                <StatCard>
+                  <StatNumber>42</StatNumber>
+                  <StatLabel>Cities</StatLabel>
+                </StatCard>
+                <StatCard>
+                  <StatNumber>156</StatNumber>
+                  <StatLabel>Friends</StatLabel>
+                </StatCard>
+              </TravelStats>
+              
+              <CountryList>
+                {[
+                  { country: 'Malaysia', flag: '🇲🇾', cities: 'KL, Penang, Langkawi', friends: 45 },
+                  { country: 'Turkey', flag: '🇹🇷', cities: 'Istanbul, Ankara, Izmir', friends: 28 },
+                  { country: 'Indonesia', flag: '🇮🇩', cities: 'Jakarta, Bali, Yogyakarta', friends: 22 },
+                  { country: 'Singapore', flag: '🇸🇬', cities: 'Singapore', friends: 18 },
+                  { country: 'Thailand', flag: '🇹🇭', cities: 'Bangkok, Phuket', friends: 15 }
+                ].map((item, idx) => (
+                  <CountryCard key={idx}>
+                    <CountryHeader>
+                      <span>{item.flag} {item.country}</span>
+                      <span>{item.friends} friends</span>
+                    </CountryHeader>
+                    <CountryDetails>{item.cities}</CountryDetails>
+                  </CountryCard>
+                ))}
+              </CountryList>
+            </ModalBody>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Communities Modal */}
+      {showCommunitiesModal && (
+        <ModalOverlay onClick={() => setShowCommunitiesModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h2>👥 My Communities</h2>
+              <ModalCloseButton onClick={() => setShowCommunitiesModal(false)}>×</ModalCloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <CommunitiesGrid>
+                {[
+                  { name: 'NAMA Foundation', role: 'Active Member', members: 245 },
+                  { name: 'Malaysian Architects', role: 'President', members: 180 },
+                  { name: 'KL Photography Club', role: 'Event Coordinator', members: 320 },
+                  { name: 'Istanbul Tour Guides', role: 'Senior Guide', members: 156 },
+                  { name: 'Halal Tourism Turkey', role: 'Founding Member', members: 89 }
+                ].map((community, idx) => (
+                  <CommunityCardModal key={idx}>
+                    <CommunityName>{community.name}</CommunityName>
+                    <CommunityRole>{community.role}</CommunityRole>
+                    <CommunityMembers>{community.members} members</CommunityMembers>
+                  </CommunityCardModal>
+                ))}
+              </CommunitiesGrid>
+            </ModalBody>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Events Modal */}
+      {showEventsModal && (
+        <ModalOverlay onClick={() => setShowEventsModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h2>🤝 BerseMukha Events</h2>
+              <ModalCloseButton onClick={() => setShowEventsModal(false)}>×</ModalCloseButton>
+            </ModalHeader>
+            <ModalBody>
+              {(() => {
+                const allEvents = generateBerseMukhaEvents();
+                const myAttendance = generatePersonAttendance('Zayd Mahdaly');
+                const attendedEvents = myAttendance.filter(a => a.attended);
+                
+                return (
+                  <>
+                    <EventStats>
+                      <StatCard>
+                        <StatNumber>{attendedEvents.length}</StatNumber>
+                        <StatLabel>Events Attended</StatLabel>
+                      </StatCard>
+                      <StatCard>
+                        <StatNumber>
+                          {attendedEvents.reduce((sum, e) => sum + e.friendsMade.length, 0)}
+                        </StatNumber>
+                        <StatLabel>Friends Made</StatLabel>
+                      </StatCard>
+                    </EventStats>
+                    
+                    <EventsList>
+                      {attendedEvents.slice(0, 5).map((attendance) => {
+                        const event = allEvents.find(e => e.id === attendance.eventId);
+                        if (!event) return null;
+                        
+                        return (
+                          <EventCard key={attendance.eventId}>
+                            <EventName>{event.month} {event.year} - {event.theme}</EventName>
+                            <EventDetails>📍 {event.venue}, {event.location}</EventDetails>
+                            <EventFriends>🤝 {attendance.friendsMade.length} friends made</EventFriends>
+                          </EventCard>
+                        );
+                      })}
+                    </EventsList>
+                  </>
+                );
+              })()}
+            </ModalBody>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Offerings Modal */}
+      {showOfferingsModal && (
+        <ModalOverlay onClick={() => setShowOfferingsModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h2>🎯 My Offerings</h2>
+              <ModalCloseButton onClick={() => setShowOfferingsModal(false)}>×</ModalCloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <OfferingsGrid>
+                <OfferingCard>
+                  <OfferingTitle>🗺️ BerseGuide</OfferingTitle>
+                  <OfferingDetail>Price: RM50-80/day</OfferingDetail>
+                  <OfferingDetail>Locations: KL, Penang, Langkawi</OfferingDetail>
+                  <OfferingDetail>Specialties: Architecture, Photography, Hidden Gems</OfferingDetail>
+                </OfferingCard>
+                
+                <OfferingCard>
+                  <OfferingTitle>🏠 HomeSurf</OfferingTitle>
+                  <OfferingDetail>Available: ✅ Yes</OfferingDetail>
+                  <OfferingDetail>Max Days: 3 nights</OfferingDetail>
+                  <OfferingDetail>Amenities: WiFi, Kitchen, Private Room</OfferingDetail>
+                </OfferingCard>
+                
+                <OfferingCard>
+                  <OfferingTitle>👫 BerseBuddy</OfferingTitle>
+                  <OfferingDetail>Activities: Coffee, Photography, Architecture Tours</OfferingDetail>
+                  <OfferingDetail>Availability: Weekends & Evenings</OfferingDetail>
+                </OfferingCard>
+                
+                <OfferingCard>
+                  <OfferingTitle>🎓 BerseMentor</OfferingTitle>
+                  <OfferingDetail>Expertise: Architecture, Photography, Career</OfferingDetail>
+                  <OfferingDetail>Rate: 100 BersePoints/hour</OfferingDetail>
+                  <OfferingDetail>Format: Online, In-person</OfferingDetail>
+                </OfferingCard>
+              </OfferingsGrid>
+            </ModalBody>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </>
   );
 };
 
 // Styled Components
-const Overlay = styled.div`
+const SidebarOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 998;
+  z-index: 9998;
 `;
 
 const SidebarContainer = styled.div<{ $isOpen: boolean }>`
@@ -492,8 +423,8 @@ const SidebarContainer = styled.div<{ $isOpen: boolean }>`
   width: 100%;
   max-width: 393px;
   height: 100vh;
-  background: #F5F3EF;
-  z-index: 999;
+  background: #F9F3E3;
+  z-index: 9999;
   transform: ${({ $isOpen }) => $isOpen ? 'translateX(0)' : 'translateX(-100%)'};
   transition: transform 0.3s ease-in-out;
   overflow-y: auto;
@@ -511,7 +442,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   margin-right: 16px;
 `;
@@ -519,7 +450,7 @@ const CloseButton = styled.button`
 const HeaderTitle = styled.h2`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
 `;
 
@@ -531,146 +462,126 @@ const ProfileCard = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
-const ProfileSection = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
-`;
 
-const ProfileAvatar = styled.div`
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F, #1F4A3A);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(45, 95, 79, 0.3);
-`;
-
-const ProfileInfo = styled.div`
-  flex: 1;
-`;
-
-const ProfileName = styled.h3`
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-  margin: 0 0 4px 0;
-`;
-
-const ProfileRole = styled.p`
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 8px 0;
-`;
-
-const ProfileBadges = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const LevelBadge = styled.span`
-  background: #FFD700;
-  color: #333;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-`;
-
-const TypeBadge = styled.span`
-  background: #8E44AD;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-`;
-
-const ProfileRating = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
-const RatingIcon = styled.div`
-  font-size: 16px;
-`;
-
-const RatingScore = styled.div`
-  font-size: 16px;
-  font-weight: bold;
-  color: #FFD700;
-`;
-
-const TagsSection = styled.div`
-  margin-bottom: 16px;
-`;
-
-const TagsRow = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-`;
-
-const InterestTag = styled.span`
-  background: #E8F4FD;
-  color: #1976D2;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-`;
-
-const BioSection = styled.div`
-  margin-bottom: 16px;
-`;
-
-const BioText = styled.p`
-  font-size: 13px;
-  color: #333;
-  line-height: 1.5;
-  margin: 0;
-`;
-
-const BadgesSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-`;
-
-const CommunityBadge = styled.div`
-  background: #F0F0F0;
-  color: #333;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-`;
 
 
 const EditButton = styled.button`
-  background: #007bff;
+  background: #2fce98;
   color: white;
   border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-size: 14px;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   
   &:hover {
-    background: #0056b3;
+    background: #1E4039;
   }
 `;
+
+
+const ConnectionActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+const ProfileActionsRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #E0E0E0;
+`;
+
+const ProfileActionLink = styled.button`
+  background: none;
+  border: none;
+  color: #2fce98;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const MutualFriendsInfo = styled.span`
+  font-size: 13px;
+  color: #666;
+`;
+
+const ReferralCard = styled.div`
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 20px;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  color: white;
+`;
+
+const ReferralTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: white;
+`;
+
+const ReferralCode = styled.div`
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: monospace;
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+`;
+
+const ReferralActions = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+`;
+
+const CopyButton = styled.button`
+  flex: 1;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+`;
+
+const ShareButton = styled(CopyButton)``;
+
+const ReferralInfo = styled.p`
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  margin: 0;
+`;
+
 
 const MenuSection = styled.div`
   background: white;
@@ -757,22 +668,366 @@ const MenuItem = styled.div`
   }
 `;
 
-const BersePassCard = styled.div<{ $isSubscribed: boolean }>`
-  background: white;
-  margin: 0 20px 20px 20px;
-  border-radius: 12px;
-  padding: 20px;
-  border: 3px solid ${({ $isSubscribed }) => $isSubscribed ? '#00C851' : '#FF4444'};
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  font-family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+const LogoutSection = styled.div`
+  margin: 20px;
+  margin-bottom: 40px;
 `;
 
-const BersePointsCard = styled.div`
-  background: white;
-  margin: 0 20px 20px 20px;
+const LogoutButton = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
   border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+  
+  &:hover {
+    background: #c82333;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const LogoutIcon = styled.span`
+  font-size: 20px;
+`;
+
+const LogoutText = styled.span`
+  font-size: 16px;
+  font-weight: 600;
+`;
+
+// BerseMatch exact styled components
+const ConnectionHeader = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+`;
+
+const Avatar = styled.div`
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  flex-shrink: 0;
+`;
+
+const ConnectionInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const NameBadgesRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+`;
+
+const ConnectionName = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #2fce98;
+  margin: 0;
+`;
+
+const InlineBadge = styled.span<{ $color: string; $textColor: string }>`
+  background: ${props => props.$color};
+  color: ${props => props.$textColor};
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
+const ConnectionLocation = styled.div`
+  font-size: 12px;
+  color: #666;
+  margin: 2px 0;
+  cursor: pointer;
+  
+  &:hover {
+    color: #2fce98;
+    text-decoration: underline;
+  }
+`;
+
+const ProfileMeta = styled.div`
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+`;
+
+const ConnectionTags = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+`;
+
+const Tag = styled.span`
+  background: #F0F7F4;
+  color: #2fce98;
+  border: 1px solid #E0E0E0;
+  padding: 6px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 500;
+  display: inline-block;
+`;
+
+const ConnectionBio = styled.p`
+  font-size: 13px;
+  color: #333;
+  font-style: italic;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+`;
+
+const ProfileInfoRow = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+`;
+
+const InfoBadge = styled.button<{ $color: string; $textColor: string }>`
+  background: ${props => props.$color};
+  color: ${props => props.$textColor};
+  border: none;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+// Modal styled components
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
   padding: 20px;
-  border: 3px solid #FFA500;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  font-family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #E0E0E0;
+  
+  h2 {
+    margin: 0;
+    color: #2fce98;
+    font-size: 20px;
+  }
+`;
+
+const ModalCloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  
+  &:hover {
+    color: #2fce98;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 24px;
+`;
+
+// Travel Modal Components
+const TravelStats = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+`;
+
+const StatCard = styled.div`
+  background: #F8F8F8;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+`;
+
+const StatNumber = styled.div`
+  font-size: 24px;
+  font-weight: bold;
+  color: #2fce98;
+  margin-bottom: 4px;
+`;
+
+const StatLabel = styled.div`
+  font-size: 12px;
+  color: #666;
+`;
+
+const CountryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const CountryCard = styled.div`
+  background: #F8F8F8;
+  border-radius: 12px;
+  padding: 16px;
+`;
+
+const CountryHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2fce98;
+`;
+
+const CountryDetails = styled.div`
+  color: #666;
+  font-size: 14px;
+`;
+
+// Communities Modal Components
+const CommunitiesGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+`;
+
+const CommunityCardModal = styled.div`
+  background: #F8F8F8;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+`;
+
+const CommunityName = styled.h4`
+  color: #2fce98;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+`;
+
+const CommunityRole = styled.div`
+  background: #2fce98;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  display: inline-block;
+  margin-bottom: 8px;
+`;
+
+const CommunityMembers = styled.div`
+  font-size: 12px;
+  color: #666;
+`;
+
+// Events Modal Components
+const EventStats = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+`;
+
+const EventsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const EventCard = styled.div`
+  background: #F8F8F8;
+  border-radius: 12px;
+  padding: 16px;
+`;
+
+const EventName = styled.h4`
+  color: #2fce98;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+`;
+
+const EventDetails = styled.div`
+  color: #666;
+  font-size: 12px;
+  margin-bottom: 4px;
+`;
+
+const EventFriends = styled.div`
+  color: #2E7D32;
+  font-size: 12px;
+`;
+
+// Offerings Modal Components
+const OfferingsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+`;
+
+const OfferingCard = styled.div`
+  background: #F8F8F8;
+  border-radius: 12px;
+  padding: 16px;
+`;
+
+const OfferingTitle = styled.h3`
+  color: #2fce98;
+  margin: 0 0 12px 0;
+  font-size: 16px;
+`;
+
+const OfferingDetail = styled.div`
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
 `;

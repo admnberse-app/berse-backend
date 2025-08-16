@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -12,17 +12,15 @@ import { securityMiddleware } from './middleware/validation';
 import { csrfTokenEndpoint } from './middleware/csrf';
 import logger, { stream } from './utils/logger';
 
-// Import routes
-import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import eventRoutes from './routes/event.routes';
-import pointsRoutes from './routes/points.routes';
-import rewardsRoutes from './routes/rewards.routes';
-import badgeRoutes from './routes/badge.routes';
-import notificationRoutes from './routes/notification.routes';
-import matchingRoutes from './routes/matching.routes';
+// Import API routers
+import apiV1Router from './routes/api/v1';
 
 const app: Application = express();
+
+// Trust proxy for production
+if (config.isProduction) {
+  app.set('trust proxy', 1);
+}
 
 // Security middleware
 app.use(helmet({
@@ -34,71 +32,146 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
     },
   },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
+  crossOriginEmbedderPolicy: !config.isDevelopment,
 }));
 
 // CORS configuration
-app.use(cors({
-  origin: config.cors.origin,
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    const allowedOrigins = config.cors.origin;
+    if (!origin || allowedOrigins.includes(origin) || config.isDevelopment) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  maxAge: 86400, // 24 hours
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
-}));
+};
 
-// General middleware
-app.use(compression());
-app.use(morgan('combined', { stream }));
-app.use(cookieParser(process.env.COOKIE_SECRET || 'your-cookie-secret-here'));
-app.use(express.json({ limit: '10mb' }));
+app.use(cors(corsOptions));
+
+// Body parsing middleware
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Apply general rate limiting to all routes
-app.use(generalLimiter);
+// Cookie parser
+app.use(cookieParser(config.security.cookieSecret));
 
-// Apply security middleware to all routes
+// Compression
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6,
+}));
+
+// Logging
+if (config.isDevelopment) {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined', { 
+    stream,
+    skip: (req, res) => res.statusCode < 400
+  }));
+}
+
+// Rate limiting
+// app.use('/api/', generalLimiter); // TEMPORARILY DISABLED FOR TESTING
+
+// Additional security
 app.use(securityMiddleware);
 
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/points', pointsRoutes);
-app.use('/api/rewards', rewardsRoutes);
-app.use('/api/badges', badgeRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/matches', matchingRoutes);
-
-// Root route
-app.get('/', (_req, res) => {
-  res.json({ message: 'BerseMuka API is running!' });
+// Request ID middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  req.id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  res.setHeader('X-Request-ID', req.id);
+  next();
 });
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Health check endpoints (no rate limiting)
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+  });
 });
+
+app.get('/ready', async (_req: Request, res: Response) => {
+  try {
+    // Check database connection
+    const { prisma } = await import('./config/database');
+    await prisma.$queryRaw`SELECT 1`;
+    
+    res.json({ 
+      status: 'ready',
+      services: {
+        database: true,
+        cache: true, // Add Redis check when implemented
+      }
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'not ready',
+      services: {
+        database: false,
+        cache: false,
+      }
+    });
+  }
+});
+
+// Static files with caching
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  maxAge: '30d',
+  etag: true,
+  lastModified: true,
+}));
+
+// API Routes with versioning
+app.use('/api/v1', apiV1Router);
 
 // CSRF token endpoint
 app.get('/api/csrf-token', csrfTokenEndpoint);
 
-// 404 handler for undefined routes
-app.use('*', notFoundHandler);
+// Root route
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ 
+    name: 'BerseMuka API',
+    version: '1.0.0',
+    status: 'running',
+    documentation: '/api/docs',
+    health: '/health',
+  });
+});
 
-// Error handling
+// 404 handler
+app.use(notFoundHandler);
+
+// Error handler (must be last)
 app.use(errorHandler);
 
-// Log application startup
-logger.info('BerseMuka API initialized', {
-  environment: config.env,
-  cors: config.cors.origin,
-});
+// Extend Express Request type
+declare global {
+  namespace Express {
+    interface Request {
+      id?: string;
+      rawBody?: string;
+      user?: any;
+    }
+  }
+}
 
 export default app;

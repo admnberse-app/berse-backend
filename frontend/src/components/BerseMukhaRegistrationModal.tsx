@@ -29,7 +29,7 @@ const RegistrationModal = styled.div`
 `;
 
 const ModalHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   padding: 16px 20px;
   display: flex;
@@ -74,16 +74,16 @@ const TabButton = styled.button<{ $active: boolean }>`
   flex: 1;
   padding: 12px 8px;
   border: none;
-  background: ${({ $active }) => $active ? '#2D5F4F' : 'transparent'};
+  background: ${({ $active }) => $active ? '#2fce98' : 'transparent'};
   color: ${({ $active }) => $active ? 'white' : '#666'};
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-bottom: ${({ $active }) => $active ? '2px solid #2D5F4F' : '2px solid transparent'};
+  border-bottom: ${({ $active }) => $active ? '2px solid #2fce98' : '2px solid transparent'};
   
   &:hover {
-    background: ${({ $active }) => $active ? '#2D5F4F' : '#f0f0f0'};
+    background: ${({ $active }) => $active ? '#2fce98' : '#f0f0f0'};
   }
 `;
 
@@ -109,7 +109,7 @@ const FormInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -133,7 +133,7 @@ const SelectField = styled.div`
     
     &:focus {
       outline: none;
-      border-color: #2D5F4F;
+      border-color: #2fce98;
     }
   }
 `;
@@ -156,8 +156,8 @@ const InterestsGrid = styled.div`
 
 const InterestChip = styled.button<{ $selected: boolean }>`
   padding: 6px 12px;
-  border: 1px solid ${({ $selected }) => $selected ? '#2D5F4F' : '#e5e5e5'};
-  background: ${({ $selected }) => $selected ? '#2D5F4F' : 'white'};
+  border: 1px solid ${({ $selected }) => $selected ? '#2fce98' : '#e5e5e5'};
+  background: ${({ $selected }) => $selected ? '#2fce98' : 'white'};
   color: ${({ $selected }) => $selected ? 'white' : '#666'};
   border-radius: 16px;
   font-size: 12px;
@@ -175,7 +175,7 @@ const InterestChip = styled.button<{ $selected: boolean }>`
 `;
 
 const RegisterButton = styled.button`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   border: none;
   padding: 14px;
@@ -247,7 +247,7 @@ const GroupHeader = styled.h4`
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const GroupInfo = styled.div`
@@ -259,10 +259,10 @@ const GroupInfo = styled.div`
 const GroupNumber = styled.div`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   text-align: center;
   background: white;
-  border: 2px solid #2D5F4F;
+  border: 2px solid #2fce98;
   border-radius: 50%;
   width: 60px;
   height: 60px;
@@ -348,7 +348,7 @@ const TextArea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -488,14 +488,14 @@ Thank you for registering! 🎉`);
     canvas.height = 180;
     
     // Draw mock QR code pattern
-    ctx.fillStyle = '#2D5F4F';
+    ctx.fillStyle = '#2fce98';
     ctx.fillRect(0, 0, 180, 180);
     
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(10, 10, 160, 160);
     
     // Draw QR pattern (simplified)
-    ctx.fillStyle = '#2D5F4F';
+    ctx.fillStyle = '#2fce98';
     for (let i = 0; i < 15; i++) {
       for (let j = 0; j < 15; j++) {
         if ((i + j) % 3 === 0) {
@@ -507,7 +507,7 @@ Thank you for registering! 🎉`);
     // Add center logo area
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(70, 70, 40, 40);
-    ctx.fillStyle = '#2D5F4F';
+    ctx.fillStyle = '#2fce98';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('BM', 90, 95);
@@ -571,7 +571,7 @@ We appreciate your participation! ✨`);
         <TabContent>
           {activeTab === 'register' && (
             <RegistrationForm onSubmit={handleRegistration}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2D5F4F' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2fce98' }}>
                 Event Registration
               </h3>
               
@@ -658,7 +658,7 @@ We appreciate your participation! ✨`);
 
           {activeTab === 'checkin' && (
             <QRCodeSection>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2D5F4F' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2fce98' }}>
                 Event Check-in
               </h3>
               <QRCodeContainer>
@@ -678,7 +678,7 @@ We appreciate your participation! ✨`);
 
           {activeTab === 'groups' && (
             <GroupsContainer>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2D5F4F' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2fce98' }}>
                 👥 My Groups
               </h3>
               
@@ -689,7 +689,7 @@ We appreciate your participation! ✨`);
                   <GroupMembers>
                     {mockGroupData.session1Members.map(member => (
                       <MemberChip key={member.id} style={{
-                        background: member.name === 'You' ? '#2D5F4F' : 'white',
+                        background: member.name === 'You' ? '#2fce98' : 'white',
                         color: member.name === 'You' ? 'white' : '#666',
                         fontWeight: member.name === 'You' ? '600' : 'normal'
                       }}>
@@ -735,7 +735,7 @@ We appreciate your participation! ✨`);
 
           {activeTab === 'feedback' && (
             <FeedbackForm onSubmit={handleFeedbackSubmit}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2D5F4F' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', color: '#2fce98' }}>
                 ⭐ Event Feedback
               </h3>
               

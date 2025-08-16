@@ -1,0 +1,82 @@
+import { Router } from 'express';
+import authRouter from './auth.routes';
+import usersRouter from './users.routes';
+import eventsRouter from './events.routes';
+import communitiesRouter from './communities.routes';
+import pushRouter from '../../push.routes';
+// import paymentsRouter from './payments.routes';
+// import notificationsRouter from './notifications.routes';
+// import messagesRouter from './messages.routes';
+// import analyticsRouter from './analytics.routes';
+
+const router = Router();
+
+// API v1 routes
+router.use('/auth', authRouter);
+router.use('/users', usersRouter);
+router.use('/events', eventsRouter);
+router.use('/communities', communitiesRouter);
+router.use('/push', pushRouter);
+// router.use('/payments', paymentsRouter);
+// router.use('/notifications', notificationsRouter);
+// router.use('/messages', messagesRouter);
+// router.use('/analytics', analyticsRouter);
+
+// API v1 health check
+router.get('/health', (req, res) => {
+  res.json({
+    version: 'v1',
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// API v1 documentation
+router.get('/docs', (req, res) => {
+  res.json({
+    version: 'v1',
+    endpoints: {
+      auth: {
+        'POST /auth/register': 'Register new user',
+        'POST /auth/login': 'User login',
+        'POST /auth/refresh': 'Refresh access token',
+        'POST /auth/logout': 'User logout',
+        'POST /auth/forgot-password': 'Request password reset',
+        'POST /auth/reset-password': 'Reset password',
+        'POST /auth/verify-email': 'Verify email address',
+      },
+      users: {
+        'GET /users/profile': 'Get user profile',
+        'PUT /users/profile': 'Update user profile',
+        'GET /users/search': 'Search users',
+        'POST /users/follow/:id': 'Follow user',
+        'DELETE /users/follow/:id': 'Unfollow user',
+        'GET /users/:id': 'Get user by ID',
+      },
+      events: {
+        'GET /events': 'List events',
+        'POST /events': 'Create event',
+        'GET /events/:id': 'Get event details',
+        'PUT /events/:id': 'Update event',
+        'DELETE /events/:id': 'Delete event',
+        'POST /events/:id/join': 'Join event',
+        'POST /events/:id/leave': 'Leave event',
+      },
+      communities: {
+        'GET /communities': 'List all communities',
+        'GET /communities/search': 'Search communities',
+        'GET /communities/my': 'Get user communities',
+        'POST /communities': 'Create new community',
+        'POST /communities/:id/join': 'Join community',
+      },
+      payments: {
+        'POST /payments/process': 'Process payment',
+        'POST /payments/refund': 'Process refund',
+        'GET /payments/history': 'Payment history',
+        'POST /payments/webhook': 'Payment webhook',
+      },
+    },
+  });
+});
+
+export default router;

@@ -60,12 +60,8 @@ class VoucherService {
     const code = this.generateVoucherCode(reward.brand);
     const now = new Date();
     
-    // Use provided expiry date or calculate default
-    const expiryDate = reward.expiryDate || (() => {
-      const defaultExpiry = new Date(now);
-      defaultExpiry.setDate(defaultExpiry.getDate() + this.VOUCHER_EXPIRY_DAYS);
-      return defaultExpiry;
-    })();
+    // Set expiry date to 23rd August 2025 for all vouchers
+    const expiryDate = new Date('2025-08-23T23:59:59');
 
     const voucher: Voucher = {
       id: `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -206,6 +202,22 @@ class VoucherService {
       };
     }
 
+    // Check if today is exactly 23rd August 2025
+    const today = new Date();
+    const validDate = new Date('2025-08-23');
+    const isValidDay = today.getFullYear() === validDate.getFullYear() &&
+                      today.getMonth() === validDate.getMonth() &&
+                      today.getDate() === validDate.getDate();
+
+    if (!isValidDay) {
+      return {
+        isValid: false,
+        voucher,
+        error: 'NOT_VALID_DATE',
+        message: 'Voucher is only valid on 23rd August 2025'
+      };
+    }
+
     if (voucher.status === 'expired' || voucher.expiryDate < new Date()) {
       return {
         isValid: false,
@@ -218,7 +230,7 @@ class VoucherService {
     return {
       isValid: true,
       voucher,
-      message: 'Valid voucher'
+      message: 'Valid voucher - Redeemable today only!'
     };
   }
 

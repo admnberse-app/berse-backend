@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { useAuth } from '../../contexts/AuthContext';
 
 const NavContainer = styled.div`
   position: fixed;
@@ -10,11 +11,12 @@ const NavContainer = styled.div`
   max-width: 393px;
   margin: 0 auto;
   background-color: white;
-  padding: 16px;
+  padding: 2px 4px 4px 4px;
   border-top: 1px solid #E5E5E5;
   display: flex;
   justify-content: space-around;
   z-index: 100;
+  height: 42px;
 `;
 
 const NavButton = styled.button<{ $active?: boolean }>`
@@ -24,14 +26,14 @@ const NavButton = styled.button<{ $active?: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 8px;
+  gap: 1px;
+  padding: 2px 4px;
+  border-radius: 4px;
   transition: all 0.2s ease;
   
   ${({ $active }) => $active && `
     background-color: #E8F4F0;
-    color: #2D5F4F;
+    color: #2fce98;
   `}
   
   &:hover {
@@ -40,12 +42,32 @@ const NavButton = styled.button<{ $active?: boolean }>`
 `;
 
 const NavIcon = styled.span`
-  font-size: 20px;
+  font-size: 14px;
 `;
 
 const NavLabel = styled.span`
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 500;
+  line-height: 1;
+`;
+
+const LockIcon = styled.span`
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 8px;
+  background: #ff6b6b;
+  color: white;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const NavButtonWrapper = styled.div`
+  position: relative;
 `;
 
 interface BottomNavProps {
@@ -55,6 +77,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   // Determine active tab from current route if not provided
   const currentActiveTab = activeTab || (() => {
@@ -85,13 +108,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
         <NavLabel>Connect</NavLabel>
       </NavButton>
       
-      <NavButton 
-        $active={currentActiveTab === 'match'}
-        onClick={() => navigate('/match')}
-      >
-        <NavIcon>💫</NavIcon>
-        <NavLabel>Match</NavLabel>
-      </NavButton>
+      <NavButtonWrapper>
+        <NavButton 
+          $active={currentActiveTab === 'match'}
+          onClick={() => navigate('/match')}
+        >
+          <NavIcon>💫</NavIcon>
+          <NavLabel>Match</NavLabel>
+        </NavButton>
+        {!isAuthenticated && <LockIcon>🔒</LockIcon>}
+      </NavButtonWrapper>
       
       <NavButton 
         $active={currentActiveTab === 'forum'}

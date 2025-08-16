@@ -87,7 +87,7 @@ const Tab = styled.button<{ $active: boolean }>`
   border: none;
   border-radius: 6px;
   background: ${({ $active }) => $active ? 'white' : 'transparent'};
-  color: ${({ $active }) => $active ? '#2D5F4F' : '#666'};
+  color: ${({ $active }) => $active ? '#2fce98' : '#666'};
   font-size: 14px;
   font-weight: ${({ $active }) => $active ? '600' : '500'};
   cursor: pointer;
@@ -98,7 +98,7 @@ const Tab = styled.button<{ $active: boolean }>`
   gap: 6px;
   
   &:hover {
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -132,7 +132,7 @@ const UserName = styled.h3`
   margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const ValidityInfo = styled.p`
@@ -141,7 +141,7 @@ const ValidityInfo = styled.p`
   color: #666;
 `;
 
-const StatusBadge = styled.div<{ status: string }>`
+const StatusBadge = styled.div<{ $status: string }>`
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -149,8 +149,8 @@ const StatusBadge = styled.div<{ status: string }>`
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
-  background: ${({ status }) => status === 'active' ? '#e8f5e8' : '#fff3e0'};
-  color: ${({ status }) => status === 'active' ? '#2D5F4F' : '#f57c00'};
+  background: ${({ $status }) => $status === 'active' ? '#e8f5e8' : '#fff3e0'};
+  color: ${({ $status }) => $status === 'active' ? '#2fce98' : '#f57c00'};
 `;
 
 const ActionButtons = styled.div`
@@ -165,7 +165,7 @@ const ActionButton = styled.button`
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: white;
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -176,7 +176,7 @@ const ActionButton = styled.button`
   
   &:hover {
     background: #f8f9fa;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -217,7 +217,7 @@ const ScanFrame = styled.div`
   transform: translate(-50%, -50%);
   width: 200px;
   height: 200px;
-  border: 2px solid #2D5F4F;
+  border: 2px solid #2fce98;
   border-radius: 12px;
   
   &::before, &::after {
@@ -230,16 +230,16 @@ const ScanFrame = styled.div`
   &::before {
     top: -2px;
     left: -2px;
-    border-top: 4px solid #2D5F4F;
-    border-left: 4px solid #2D5F4F;
+    border-top: 4px solid #2fce98;
+    border-left: 4px solid #2fce98;
     border-radius: 4px 0 0 0;
   }
   
   &::after {
     top: -2px;
     right: -2px;
-    border-top: 4px solid #2D5F4F;
-    border-right: 4px solid #2D5F4F;
+    border-top: 4px solid #2fce98;
+    border-right: 4px solid #2fce98;
     border-radius: 0 4px 0 0;
   }
 `;
@@ -250,8 +250,8 @@ const ScanFrameCorners = styled.div`
   left: -2px;
   width: 20px;
   height: 20px;
-  border-bottom: 4px solid #2D5F4F;
-  border-left: 4px solid #2D5F4F;
+  border-bottom: 4px solid #2fce98;
+  border-left: 4px solid #2fce98;
   border-radius: 0 0 0 4px;
   
   &::after {
@@ -261,8 +261,8 @@ const ScanFrameCorners = styled.div`
     right: -196px;
     width: 20px;
     height: 20px;
-    border-bottom: 4px solid #2D5F4F;
-    border-right: 4px solid #2D5F4F;
+    border-bottom: 4px solid #2fce98;
+    border-right: 4px solid #2fce98;
     border-radius: 0 0 4px 0;
   }
 `;
@@ -286,7 +286,7 @@ const ControlButton = styled.button`
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: white;
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -297,7 +297,7 @@ const ControlButton = styled.button`
   
   &:hover {
     background: #f8f9fa;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
   
   &:disabled {
@@ -325,7 +325,7 @@ const ResultIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #2D5F4F;
+  background: #2fce98;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -364,18 +364,23 @@ export const DualQRModal: React.FC<DualQRModalProps> = ({ isOpen, onClose }) => 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate QR code data for the user
+  // Generate unique QR code data for the user
   const generateQRData = () => {
     const qrData = {
       type: 'berseuser',
       userId: user?.id || 'user_123',
+      membershipId: user?.membershipId || 'AUN100001',
       userName: user?.fullName || 'Zayd Aisha',
       bersePassStatus: 'ACTIVE',
+      bersePoints: user?.points || 245,
       profileLink: `https://bersemuka.com/profile/${user?.id || 'user_123'}`,
       phone: user?.phone || '',
       joinedDate: user?.joinedDate || '2024-01-01',
       timestamp: new Date().toISOString(),
-      validUntil: '2025-09-30'
+      validUntil: '2025-09-30',
+      // For event attendance tracking
+      eventCheckIn: true,
+      uniqueId: `${user?.membershipId || 'AUN100001'}_${Date.now()}`
     };
     return JSON.stringify(qrData);
   };
@@ -561,7 +566,7 @@ export const DualQRModal: React.FC<DualQRModalProps> = ({ isOpen, onClose }) => 
       <UserInfo>
         <UserName>{user?.fullName || 'Zayd'}'s BersePass</UserName>
         <ValidityInfo>Valid until: 30 September 2025</ValidityInfo>
-        <StatusBadge status="active">
+        <StatusBadge $status="active">
           ✅ Active
         </StatusBadge>
       </UserInfo>

@@ -7,11 +7,13 @@ const StatusBarContainer = styled.div<{ $showBackground: boolean; $darkMode: boo
   top: 0;
   left: 0;
   right: 0;
-  height: 50px;
+  height: 30px;
+  max-width: 393px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 ${({ theme }) => theme.spacing[5]};
+  padding: 0 12px;
   z-index: ${({ theme }) => theme.zIndex.statusBar};
   
   ${({ $showBackground, theme }) => $showBackground ? css`
@@ -27,7 +29,7 @@ const StatusBarContainer = styled.div<{ $showBackground: boolean; $darkMode: boo
 `;
 
 const Time = styled.span`
-  font-size: ${({ theme }) => theme.typography.fontSize.base};
+  font-size: 12px;
   font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
   color: ${({ theme }) => theme.colors.neutral.darkGray};
 `;
@@ -39,11 +41,15 @@ const Icons = styled.div`
 `;
 
 const Icon = styled.div`
-  width: 18px;
-  height: 12px;
+  width: 14px;
+  height: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  svg {
+    transform: scale(0.8);
+  }
 `;
 
 const SignalIcon = () => (

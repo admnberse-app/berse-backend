@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { MainNav } from '../components/MainNav';
+import { googleCalendarService } from '../services/googleCalendar';
 
 const Container = styled.div`
   display: flex;
@@ -37,7 +38,7 @@ const HeaderTitle = styled.h1`
   margin: 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const Content = styled.div`
@@ -53,7 +54,7 @@ const SettingsSection = styled.div`
 const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 16px 0;
 `;
 
@@ -128,7 +129,7 @@ const Toggle = styled.div<{ active: boolean }>`
   width: 44px;
   height: 24px;
   border-radius: 12px;
-  background-color: ${({ active }) => active ? '#2D5F4F' : '#E5E5E5'};
+  background-color: ${({ active }) => active ? '#2fce98' : '#E5E5E5'};
   position: relative;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -173,19 +174,116 @@ const VersionInfo = styled.div`
 
 export const SettingsScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [locationServices, setLocationServices] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Check Google Calendar connection status on mount
+  useEffect(() => {
+    const checkCalendarStatus = async () => {
+      try {
+        await googleCalendarService.initClient();
+        const isConnected = googleCalendarService.isUserSignedIn();
+        setGoogleCalendarConnected(isConnected);
+        
+        // Update user context if different
+        if (user && user.googleCalendarConnected !== isConnected) {
+          updateUser({ ...user, googleCalendarConnected: isConnected });
+        }
+      } catch (error) {
+        console.error('Failed to check calendar status:', error);
+      }
+    };
+    
+    checkCalendarStatus();
+  }, []);
 
   const handleLogout = async () => {
     try {
+      // Disconnect from Google Calendar first
+      if (googleCalendarConnected) {
+        await googleCalendarService.signOut();
+      }
       await logout();
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleGoogleCalendarConnect = async () => {
+    if (isConnecting) return;
+    
+    setIsConnecting(true);
+    try {
+      if (!googleCalendarConnected) {
+        // Connect to Google Calendar
+        await googleCalendarService.initClient();
+        await googleCalendarService.signIn();
+        
+        // Verify connection
+        const isConnected = googleCalendarService.isUserSignedIn();
+        if (isConnected) {
+          setGoogleCalendarConnected(true);
+          
+          // Update user context
+          if (user) {
+            updateUser({ ...user, googleCalendarConnected: true });
+          }
+          
+          // Show success notification
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10B981;
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+          `;
+          notification.innerHTML = `
+            <span style="font-size: 24px;">✅</span>
+            <div>
+              <div style="font-weight: 600;">Google Calendar Connected!</div>
+              <div style="font-size: 14px; opacity: 0.9;">Events will now sync automatically</div>
+            </div>
+          `;
+          document.body.appendChild(notification);
+          
+          setTimeout(() => {
+            document.body.removeChild(notification);
+          }, 5000);
+        }
+      } else {
+        // Disconnect from Google Calendar
+        await googleCalendarService.signOut();
+        setGoogleCalendarConnected(false);
+        
+        // Update user context
+        if (user) {
+          updateUser({ ...user, googleCalendarConnected: false });
+        }
+        
+        // Show disconnection notification
+        alert('Google Calendar has been disconnected');
+      }
+    } catch (error) {
+      console.error('Google Calendar connection failed:', error);
+      alert('Failed to connect Google Calendar. Please make sure pop-ups are enabled and try again.');
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -210,6 +308,34 @@ export const SettingsScreen: React.FC = () => {
           title: 'Email & Password',
           subtitle: 'Change email or password',
           action: () => navigate('/settings/account')
+        }
+      ]
+    },
+    {
+      title: 'Integrations',
+      items: [
+        {
+          icon: '📅',
+          title: 'Google Calendar',
+          subtitle: googleCalendarConnected 
+            ? 'Connected - Events sync automatically' 
+            : isConnecting 
+              ? 'Connecting...' 
+              : 'Sync your events with Google Calendar',
+          action: handleGoogleCalendarConnect,
+          statusIcon: googleCalendarConnected ? '✅' : isConnecting ? '⏳' : '🔗'
+        },
+        {
+          icon: '📧',
+          title: 'Email Integration',
+          subtitle: 'Manage email sync preferences',
+          action: () => navigate('/settings/email-integration')
+        },
+        {
+          icon: '🔔',
+          title: 'Webhook Settings',
+          subtitle: 'Configure external integrations',
+          action: () => navigate('/settings/webhooks')
         }
       ]
     },
@@ -379,6 +505,11 @@ export const SettingsScreen: React.FC = () => {
                     </ItemText>
                   </ItemLeft>
                   <ItemRight>
+                    {item.statusIcon && (
+                      <span style={{ fontSize: '16px', marginRight: '8px' }}>
+                        {item.statusIcon}
+                      </span>
+                    )}
                     {item.toggle ? (
                       <Toggle
                         active={item.value || false}

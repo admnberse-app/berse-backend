@@ -95,7 +95,7 @@ const EventDeepLinkHandler: React.FC = () => {
         marginBottom: '16px'
       }}>🎯</div>
       <h2 style={{
-        color: '#2D5F4F',
+        color: '#2fce98',
         marginBottom: '8px',
         textAlign: 'center'
       }}>Loading BerseMukha Event...</h2>
@@ -115,7 +115,7 @@ const EventDeepLinkHandler: React.FC = () => {
         <div style={{
           width: '100%',
           height: '100%',
-          background: 'linear-gradient(90deg, #2D5F4F, #4A90A4)',
+          background: 'linear-gradient(90deg, #2fce98, #4A90A4)',
           borderRadius: '2px',
           animation: 'loading 2s ease-in-out infinite'
         }} />

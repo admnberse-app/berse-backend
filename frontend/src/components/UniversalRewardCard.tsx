@@ -83,7 +83,7 @@ const RewardValue = styled.div<{ variant: 'small' | 'medium' | 'large' }>`
     variant === 'small' ? '14px' : 
     variant === 'medium' ? '16px' : '20px'};
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 12px;
   text-align: center;
 `;
@@ -106,7 +106,7 @@ const RedeemButton = styled.button<{
   padding: ${({ variant }) => 
     variant === 'small' ? '6px 12px' : 
     variant === 'medium' ? '8px 16px' : '12px 20px'};
-  background: ${({ disabled }) => disabled ? '#ccc' : '#2D5F4F'};
+  background: ${({ disabled }) => disabled ? '#ccc' : '#2fce98'};
   color: white;
   border: none;
   border-radius: 6px;
@@ -128,7 +128,7 @@ const CategoryTag = styled.div`
   top: 8px;
   left: 8px;
   background: rgba(45, 95, 79, 0.1);
-  color: #2D5F4F;
+  color: #2fce98;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 8px;

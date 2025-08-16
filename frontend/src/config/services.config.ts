@@ -4,12 +4,12 @@
 
 export const SERVICES_CONFIG = {
   // Base configuration - everything goes through port 5173
-  BASE_URL: 'http://localhost:5173',
-  WS_BASE_URL: 'ws://localhost:5173',
+  BASE_URL: 'http://localhost:3000',
+  WS_BASE_URL: 'ws://localhost:3000',
   
   // Main API Service (consolidated from multiple ports)
   MAIN_API: {
-    baseUrl: 'http://localhost:5173/api',
+    baseUrl: 'http://localhost:3000/api',
     endpoints: {
       // User management
       auth: '/auth',
@@ -38,9 +38,9 @@ export const SERVICES_CONFIG = {
     }
   },
   
-  // Authentication Service (formerly on port 3000/3001)
+  // Authentication Service (using test server on port 3003)
   AUTH_SERVICE: {
-    baseUrl: 'http://localhost:5173/api/auth',
+    baseUrl: 'http://localhost:3003/api/v1/auth',
     endpoints: {
       login: '/login',
       register: '/register',
@@ -181,6 +181,9 @@ export const getWebSocketUrl = () => {
   // Default to port 5173
   return SERVICES_CONFIG.REALTIME_SERVICE.websocket;
 };
+
+// Export API_BASE_URL for backward compatibility
+export const API_BASE_URL = SERVICES_CONFIG.BASE_URL;
 
 // Export default configuration
 export default SERVICES_CONFIG;

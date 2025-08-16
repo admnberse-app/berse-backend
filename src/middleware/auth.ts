@@ -41,7 +41,7 @@ export const authenticateToken = async (
     }
 
     // Add user to request object
-    req.user = user;
+    req.user = user as any;
     next();
   } catch (error) {
     if (error.message === 'Invalid access token' || error.name === 'JsonWebTokenError') {
@@ -92,7 +92,7 @@ export const optionalAuth = async (
     });
 
     if (user) {
-      req.user = user;
+      req.user = user as any;
     }
     
     next();

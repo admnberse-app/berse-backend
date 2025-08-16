@@ -6,6 +6,7 @@ import { ThemeProvider } from 'styled-components';
 import { AuthProvider } from './contexts/AuthContext';
 import { MessagingProvider } from './contexts/MessagingContext';
 import { ProtectedRoute } from './components/ProtectedRoute/ProtectedRoute';
+import { OptionalProtectedRoute } from './components/OptionalProtectedRoute';
 import { UnifiedMessagingModal } from './components/UnifiedMessagingModal';
 import { GlobalStyles } from './theme/GlobalStyles';
 import { theme } from './theme';
@@ -19,6 +20,7 @@ import './utils/initializePoints'; // Initialize points system
 import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { RegisterScreen } from './screens/RegisterScreen';
+import { BerseMukhaAdminScreen } from './screens/BerseMukhaAdminScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { BerseConnectScreen } from './screens/BerseConnectScreen';
 import { BerseMatchScreen } from './screens/BerseMatchScreen';
@@ -27,7 +29,9 @@ import { PointsDetailScreen } from './screens/PointsDetailScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { EventDetailsScreen } from './screens/EventDetailsScreen';
 import { EditProfileScreen } from './screens/EditProfileScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
 import { CreateEventScreen } from './screens/CreateEventScreen';
+import { CreateCommunityScreen } from './screens/CreateCommunityScreen';
 import { ForumScreen } from './screens/ForumScreen';
 import { CreateForumPostScreen } from './screens/CreateForumPostScreen';
 import { BookMeetupScreen } from './screens/BookMeetupScreen';
@@ -35,6 +39,7 @@ import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { MyVouchersScreen } from './screens/MyVouchersScreen';
 import { VouchersScreen } from './screens/VouchersScreen';
 import { MessagesScreen } from './screens/MessagesScreen';
+import { ChatScreen } from './screens/ChatScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
 import { BerseCardGameScreen } from './screens/BerseCardGameScreen';
 import { BerseMukhaEventScreen } from './screens/BerseMukhaEventScreen';
@@ -50,7 +55,8 @@ import { TripsScreen } from './screens/TripsScreen';
 import { CommunitiesScreen } from './screens/CommunitiesScreen';
 import { SukanSquadScreen } from './screens/SukanSquadScreen';
 import { VolunteerScreen } from './screens/VolunteerScreen';
-import { EventManagementScreen } from './screens/EventManagementScreen';
+import { CommunityManagementScreen } from './screens/CommunityManagementScreen';
+import { EditCommunityScreen } from './screens/EditCommunityScreen';
 import { MyEventsScreen } from './screens/MyEventsScreen';
 import { deepLinkHandler } from './utils/deepLinkHandler';
 import { useAuth } from './contexts/AuthContext';
@@ -96,7 +102,7 @@ const EventDeepLinkHandler: React.FC = () => {
         marginBottom: '16px'
       }}>🎯</div>
       <h2 style={{
-        color: '#2D5F4F',
+        color: '#2fce98',
         marginBottom: '8px',
         textAlign: 'center'
       }}>Loading BerseMukha Event...</h2>
@@ -116,7 +122,7 @@ const EventDeepLinkHandler: React.FC = () => {
         <div style={{
           width: '100%',
           height: '100%',
-          background: 'linear-gradient(90deg, #2D5F4F, #4A90A4)',
+          background: 'linear-gradient(90deg, #2fce98, #4A90A4)',
           borderRadius: '2px',
           animation: 'loading 2s ease-in-out infinite'
         }} />
@@ -152,12 +158,16 @@ function App() {
               
               {/* Protected routes */}
               <Route
-                path="/dashboard"
+                path="/bersemukha-admin/:eventId"
                 element={
                   <ProtectedRoute>
-                    <DashboardScreen />
+                    <BerseMukhaAdminScreen />
                   </ProtectedRoute>
                 }
+              />
+              <Route
+                path="/dashboard"
+                element={<DashboardScreen />}
               />
               <Route
                 path="/connect"
@@ -170,42 +180,34 @@ function App() {
               <Route
                 path="/match"
                 element={
-                  <ProtectedRoute>
+                  <OptionalProtectedRoute requireAuth={true} featureName="BerseMatch">
                     <BerseMatchScreen />
-                  </ProtectedRoute>
+                  </OptionalProtectedRoute>
                 }
               />
               <Route
                 path="/market"
                 element={
-                  <ProtectedRoute>
+                  <OptionalProtectedRoute requireAuth={true} featureName="BerseMarket">
                     <BerseMarketScreen />
-                  </ProtectedRoute>
+                  </OptionalProtectedRoute>
                 }
               />
               <Route
                 path="/manage-events"
-                element={
-                  <ProtectedRoute>
-                    <EventManagementScreen />
-                  </ProtectedRoute>
-                }
+                element={<CommunityManagementScreen />}
+              />
+              <Route
+                path="/communities/edit/:communityId"
+                element={<EditCommunityScreen />}
               />
               <Route
                 path="/rewards"
-                element={
-                  <ProtectedRoute>
-                    <RewardsScreen />
-                  </ProtectedRoute>
-                }
+                element={<RewardsScreen />}
               />
               <Route
                 path="/points"
-                element={
-                  <ProtectedRoute>
-                    <PointsDetailScreen />
-                  </ProtectedRoute>
-                }
+                element={<PointsDetailScreen />}
               />
               <Route
                 path="/settings"
@@ -217,9 +219,13 @@ function App() {
               />
               <Route
                 path="/event/:eventId"
+                element={<EventDetailsScreen />}
+              />
+              <Route
+                path="/profile"
                 element={
                   <ProtectedRoute>
-                    <EventDetailsScreen />
+                    <ProfileScreen />
                   </ProtectedRoute>
                 }
               />
@@ -248,12 +254,16 @@ function App() {
                 }
               />
               <Route
-                path="/forum"
+                path="/communities/create"
                 element={
                   <ProtectedRoute>
-                    <ForumScreen />
+                    <CreateCommunityScreen />
                   </ProtectedRoute>
                 }
+              />
+              <Route
+                path="/forum"
+                element={<ForumScreen />}
               />
               <Route
                 path="/create-forum-post"
@@ -273,11 +283,7 @@ function App() {
               />
               <Route
                 path="/leaderboard"
-                element={
-                  <ProtectedRoute>
-                    <LeaderboardScreen />
-                  </ProtectedRoute>
-                }
+                element={<LeaderboardScreen />}
               />
               <Route
                 path="/vouchers"
@@ -300,6 +306,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MessagesScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chat/:userId"
+                element={
+                  <ProtectedRoute>
+                    <ChatScreen />
                   </ProtectedRoute>
                 }
               />

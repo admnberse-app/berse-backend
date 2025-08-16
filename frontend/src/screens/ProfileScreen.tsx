@@ -9,6 +9,139 @@ import { GoogleFormsIntegration } from '../components/GoogleFormsIntegration';
 import { RegistrationTracker } from '../components/RegistrationTracker';
 import { ChatGroupManager } from '../components/ChatGroupManager';
 
+// Connected Accounts Modal Styles
+const ConnectedAccountsModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+`;
+
+const ConnectedAccountsContent = styled.div`
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const ConnectedAccountsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const ConnectedAccountsTitle = styled.h2`
+  font-size: 20px;
+  font-weight: 600;
+  color: #2fce98;
+  margin: 0;
+`;
+
+const ConnectedAccountsClose = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  
+  &:hover {
+    background: #F0F0F0;
+  }
+`;
+
+const AccountItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #F8F9FA;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #E5E5E5;
+`;
+
+const AccountInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+`;
+
+const AccountIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4285F4 0%, #34A853 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+`;
+
+const AccountDetails = styled.div`
+  flex: 1;
+`;
+
+const AccountName = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+`;
+
+const AccountStatus = styled.div`
+  font-size: 12px;
+  color: #666;
+`;
+
+const ConnectButton = styled.button<{ connected?: boolean }>`
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  ${({ connected }) => connected ? `
+    background: #E8F5E9;
+    color: #4CAF50;
+    border: 1px solid #4CAF50;
+    
+    &:hover {
+      background: #FFE5E5;
+      color: #FF4444;
+      border-color: #FF4444;
+    }
+  ` : `
+    background: linear-gradient(135deg, #4285F4 0%, #34A853 100%);
+    color: white;
+    border: none;
+    
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+    }
+  `}
+`;
+
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -2374,16 +2507,16 @@ const ProfileTabButton = styled.button<{ $active: boolean }>`
   padding: 16px 8px;
   border: none;
   background: transparent;
-  color: ${({ $active }) => $active ? '#2D5F4F' : '#666'};
+  color: ${({ $active }) => $active ? '#2fce98' : '#666'};
   font-size: 14px;
   font-weight: ${({ $active }) => $active ? '600' : '500'};
   cursor: pointer;
   transition: all 0.2s ease;
-  border-bottom: ${({ $active }) => $active ? '3px solid #2D5F4F' : '3px solid transparent'};
+  border-bottom: ${({ $active }) => $active ? '3px solid #2fce98' : '3px solid transparent'};
   position: relative;
   
   &:hover {
-    color: #2D5F4F;
+    color: #2fce98;
     background: rgba(45, 95, 79, 0.05);
   }
 `;
@@ -2403,8 +2536,8 @@ const EventsViewToggle = styled.div`
 
 const ViewToggleButton = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  border: 1px solid ${({ $active }) => $active ? '#2D5F4F' : '#e9ecef'};
-  background: ${({ $active }) => $active ? '#2D5F4F' : 'white'};
+  border: 1px solid ${({ $active }) => $active ? '#2fce98' : '#e9ecef'};
+  background: ${({ $active }) => $active ? '#2fce98' : 'white'};
   color: ${({ $active }) => $active ? 'white' : '#666'};
   border-radius: 20px;
   font-size: 12px;
@@ -2435,7 +2568,7 @@ const CalendarMonth = styled.h3`
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const CalendarGrid = styled.div`
@@ -2456,7 +2589,7 @@ const CalendarDay = styled.div<{ $hasEvent?: boolean; $today?: boolean }>`
   transition: all 0.2s ease;
   
   ${({ $today }) => $today && `
-    background: #2D5F4F;
+    background: #2fce98;
     color: white;
     font-weight: bold;
   `}
@@ -2518,7 +2651,7 @@ const MyEventTitle = styled.h4`
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
   flex: 1;
 `;
 
@@ -2593,11 +2726,11 @@ const MyEventActions = styled.div`
 const MyEventActionButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   padding: 8px 12px;
   border: 1px solid ${({ $variant }) => 
-    $variant === 'primary' ? '#2D5F4F' : 
+    $variant === 'primary' ? '#2fce98' : 
     $variant === 'danger' ? '#dc3545' : '#e9ecef'
   };
   background: ${({ $variant }) => 
-    $variant === 'primary' ? '#2D5F4F' : 
+    $variant === 'primary' ? '#2fce98' : 
     $variant === 'danger' ? '#dc3545' : 'white'
   };
   color: ${({ $variant }) => 
@@ -2623,7 +2756,7 @@ const MyEventActionButton = styled.button<{ $variant?: 'primary' | 'secondary' |
 `;
 
 const EventsStatsSection = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   border-radius: 12px;
   padding: 16px;
@@ -2667,7 +2800,7 @@ const MyEventsModal = styled.div`
 `;
 
 const MyEventsModalHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   padding: 16px 20px;
   display: flex;
@@ -2706,9 +2839,9 @@ const EventFilterTabs = styled.div`
 `;
 
 const FilterTab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => $active ? '#2D5F4F' : 'transparent'};
+  background: ${({ $active }) => $active ? '#2fce98' : 'transparent'};
   color: ${({ $active }) => $active ? 'white' : '#666'};
-  border: 1px solid ${({ $active }) => $active ? '#2D5F4F' : '#ddd'};
+  border: 1px solid ${({ $active }) => $active ? '#2fce98' : '#ddd'};
   padding: 8px 16px;
   border-radius: 16px;
   font-size: 12px;
@@ -2752,7 +2885,7 @@ const EventIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   border-radius: 50%;
   color: white;
   flex-shrink: 0;
@@ -2769,7 +2902,7 @@ const UserEventTitle = styled.h4`
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const UserEventMeta = styled.div`
@@ -2806,7 +2939,7 @@ const GroupInfo = styled.div`
 
 const GroupDetail = styled.div`
   font-size: 11px;
-  color: #2D5F4F;
+  color: #2fce98;
   font-weight: 500;
   margin-bottom: 2px;
   
@@ -2823,7 +2956,7 @@ const UserEventActions = styled.div`
 `;
 
 const ModalActionButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   padding: 4px 8px;
@@ -2852,7 +2985,7 @@ const EmptyIcon = styled.div`
 const EmptyTitle = styled.h3`
   margin: 0 0 8px 0;
   font-size: 16px;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const EmptyMessage = styled.p`
@@ -2875,7 +3008,7 @@ const EventDetailsModal = styled.div`
 `;
 
 const EventDetailsHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   padding: 16px 20px;
   display: flex;
@@ -2931,7 +3064,7 @@ const EventDetailsSectionTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const EventInfo = styled.div`
@@ -3024,7 +3157,7 @@ const GroupAssignmentHeader = styled.div`
 const GroupAssignmentValue = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const GroupNote = styled.div`
@@ -3249,7 +3382,7 @@ const StatCard = styled.div`
 const StatNumber = styled.div`
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 2px;
 `;
 
@@ -3267,7 +3400,7 @@ const AdminEventActions = styled.div`
 `;
 
 const AdminActionButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   padding: 6px 10px;
@@ -3296,7 +3429,7 @@ const BerseMukhaModal = styled.div`
 `;
 
 const BerseMukhaModalHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   padding: 16px 20px;
   display: flex;
@@ -3341,16 +3474,16 @@ const BerseMukhaTabButton = styled.button<{ $active: boolean }>`
   flex: 1;
   padding: 12px 8px;
   border: none;
-  background: ${({ $active }) => $active ? '#2D5F4F' : 'transparent'};
+  background: ${({ $active }) => $active ? '#2fce98' : 'transparent'};
   color: ${({ $active }) => $active ? 'white' : '#666'};
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  border-bottom: ${({ $active }) => $active ? '2px solid #2D5F4F' : '2px solid transparent'};
+  border-bottom: ${({ $active }) => $active ? '2px solid #2fce98' : '2px solid transparent'};
   
   &:hover {
-    background: ${({ $active }) => $active ? '#2D5F4F' : '#f0f0f0'};
+    background: ${({ $active }) => $active ? '#2fce98' : '#f0f0f0'};
   }
 `;
 
@@ -3378,7 +3511,7 @@ const BerseMukhaQRContainer = styled.div`
   h3 {
     margin: 0 0 16px 0;
     font-size: 16px;
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -3419,19 +3552,19 @@ const RegenerateQRButton = styled.button`
 const QRScannerSection = styled.div`
   text-align: center;
   padding: 20px;
-  border: 2px solid #2D5F4F;
+  border: 2px solid #2fce98;
   border-radius: 12px;
   background: linear-gradient(135deg, #E8F4F0, #F0F8F5);
   
   h3 {
     margin: 0 0 16px 0;
     font-size: 16px;
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
 const QRScanButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -3459,7 +3592,7 @@ const AttendanceHeader = styled.div`
   h3 {
     margin: 0;
     font-size: 16px;
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -3472,7 +3605,7 @@ const AttendanceSearchInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -3544,7 +3677,7 @@ const GroupManagementHeader = styled.div`
   h3 {
     margin: 0;
     font-size: 18px;
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -3556,8 +3689,8 @@ const SessionTabs = styled.div`
 
 const SessionTab = styled.button<{ $active: boolean }>`
   padding: 8px 16px;
-  border: 1px solid ${({ $active }) => $active ? '#2D5F4F' : '#e9ecef'};
-  background: ${({ $active }) => $active ? '#2D5F4F' : 'white'};
+  border: 1px solid ${({ $active }) => $active ? '#2fce98' : '#e9ecef'};
+  background: ${({ $active }) => $active ? '#2fce98' : 'white'};
   color: ${({ $active }) => $active ? 'white' : '#666'};
   border-radius: 20px;
   font-size: 12px;
@@ -3578,7 +3711,7 @@ const DiversityPreferences = styled.div`
   h4 {
     margin: 0 0 16px 0;
     font-size: 14px;
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -3588,7 +3721,7 @@ const PreferenceSlider = styled.div`
   input[type="range"] {
     width: 100%;
     margin: 8px 0;
-    accent-color: #2D5F4F;
+    accent-color: #2fce98;
   }
 `;
 
@@ -3606,7 +3739,7 @@ const GroupingActions = styled.div`
 `;
 
 const GenerateGroupsButton = styled.button`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   border: none;
   padding: 12px 16px;
@@ -3661,7 +3794,7 @@ const GroupHeader = styled.div`
 const GroupIdentifier = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const DiversityScore = styled.div`
@@ -3724,7 +3857,7 @@ const FeedbackHeader = styled.div`
   h3 {
     margin: 0;
     font-size: 16px;
-    color: #2D5F4F;
+    color: #2fce98;
   }
 `;
 
@@ -3842,6 +3975,10 @@ export const ProfileScreen: React.FC = () => {
   
   // State for modals and editing
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showConnectedAccountsModal, setShowConnectedAccountsModal] = useState(false);
+  const [isGoogleCalendarConnected, setIsGoogleCalendarConnected] = useState(
+    localStorage.getItem('googleCalendarConnected') === 'true'
+  );
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [showInlineEditor, setShowInlineEditor] = useState<string | null>(null);
   const [showPhotoCropper, setShowPhotoCropper] = useState(false);
@@ -4003,7 +4140,7 @@ export const ProfileScreen: React.FC = () => {
       whatsapp: '+60123456789'
     },
     services: ['Local Guides', 'Photography', 'Architecture Tours'],
-    avatarColor: 'linear-gradient(135deg, #2D5F4F, #4A90A4)'
+    avatarColor: 'linear-gradient(135deg, #2fce98, #4A90A4)'
   };
   
   // Mock notifications
@@ -4225,7 +4362,7 @@ export const ProfileScreen: React.FC = () => {
       type: 'cultural',
       organizer: 'NAMA Foundation',
       groupAssignments: [
-        { session: 'Session 1', type: 'number', value: 7, color: '#2D5F4F' },
+        { session: 'Session 1', type: 'number', value: 7, color: '#2fce98' },
         { session: 'Session 2', type: 'color', value: 'Red Team', color: '#FF6B6B' }
       ],
       description: 'Explore the rich heritage and culture of Kuala Lumpur through historic sites and traditional architecture.',
@@ -5139,14 +5276,14 @@ export const ProfileScreen: React.FC = () => {
     canvas.height = 140;
     
     // Draw mock QR code pattern
-    ctx.fillStyle = '#2D5F4F';
+    ctx.fillStyle = '#2fce98';
     ctx.fillRect(0, 0, 140, 140);
     
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(8, 8, 124, 124);
     
     // Draw QR pattern (simplified)
-    ctx.fillStyle = '#2D5F4F';
+    ctx.fillStyle = '#2fce98';
     for (let i = 0; i < 12; i++) {
       for (let j = 0; j < 12; j++) {
         if ((i + j) % 3 === 0) {
@@ -5158,7 +5295,7 @@ export const ProfileScreen: React.FC = () => {
     // Add center logo area
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(55, 55, 30, 30);
-    ctx.fillStyle = '#2D5F4F';
+    ctx.fillStyle = '#2fce98';
     ctx.font = 'bold 10px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('BM', 70, 75);
@@ -5600,7 +5737,103 @@ export const ProfileScreen: React.FC = () => {
             <MenuBadge $color="#666">3 communities</MenuBadge>
             <MenuArrow>→</MenuArrow>
           </ProfileMenuItem>
+
+          {/* 8. Connected Accounts */}
+          <ProfileMenuItem onClick={() => setShowConnectedAccountsModal(true)}>
+            <MenuIcon>🔗</MenuIcon>
+            <MenuContent>
+              <MenuTitle>Connected Accounts</MenuTitle>
+            </MenuContent>
+            <MenuBadge $color={isGoogleCalendarConnected ? "#4CAF50" : "#FFA500"}>
+              {isGoogleCalendarConnected ? 'Connected' : 'Connect'}
+            </MenuBadge>
+            <MenuArrow>→</MenuArrow>
+          </ProfileMenuItem>
         </ProfileMenuSection>
+
+      {/* Connected Accounts Modal */}
+      {showConnectedAccountsModal && (
+        <ConnectedAccountsModal onClick={() => setShowConnectedAccountsModal(false)}>
+          <ConnectedAccountsContent onClick={(e) => e.stopPropagation()}>
+            <ConnectedAccountsHeader>
+              <ConnectedAccountsTitle>Connected Accounts</ConnectedAccountsTitle>
+              <ConnectedAccountsClose onClick={() => setShowConnectedAccountsModal(false)}>×</ConnectedAccountsClose>
+            </ConnectedAccountsHeader>
+
+            <AccountItem>
+              <AccountInfo>
+                <AccountIcon>📅</AccountIcon>
+                <AccountDetails>
+                  <AccountName>Google Calendar</AccountName>
+                  <AccountStatus>
+                    {isGoogleCalendarConnected 
+                      ? 'Sync your events automatically' 
+                      : 'Connect to sync BerseMuka events'}
+                  </AccountStatus>
+                </AccountDetails>
+              </AccountInfo>
+              <ConnectButton 
+                connected={isGoogleCalendarConnected}
+                onClick={async () => {
+                  try {
+                    const { GoogleCalendarService } = await import('../services/googleCalendar');
+                    if (!isGoogleCalendarConnected) {
+                      await GoogleCalendarService.init();
+                      await GoogleCalendarService.signIn();
+                      setIsGoogleCalendarConnected(true);
+                      localStorage.setItem('googleCalendarConnected', 'true');
+                      alert('Google Calendar connected successfully!');
+                    } else {
+                      await GoogleCalendarService.signOut();
+                      setIsGoogleCalendarConnected(false);
+                      localStorage.setItem('googleCalendarConnected', 'false');
+                      alert('Google Calendar disconnected');
+                    }
+                  } catch (error) {
+                    console.error('Failed to connect Google Calendar:', error);
+                    alert('Failed to connect Google Calendar. Please try again.');
+                  }
+                }}
+              >
+                {isGoogleCalendarConnected ? 'Disconnect' : 'Connect'}
+              </ConnectButton>
+            </AccountItem>
+
+            <AccountItem>
+              <AccountInfo>
+                <AccountIcon style={{ background: 'linear-gradient(135deg, #0077B5 0%, #00A0DC 100%)' }}>💼</AccountIcon>
+                <AccountDetails>
+                  <AccountName>LinkedIn</AccountName>
+                  <AccountStatus>Share your professional profile</AccountStatus>
+                </AccountDetails>
+              </AccountInfo>
+              <ConnectButton>Connect</ConnectButton>
+            </AccountItem>
+
+            <AccountItem>
+              <AccountInfo>
+                <AccountIcon style={{ background: 'linear-gradient(135deg, #E1306C 0%, #F77737 100%)' }}>📷</AccountIcon>
+                <AccountDetails>
+                  <AccountName>Instagram</AccountName>
+                  <AccountStatus>Share your social moments</AccountStatus>
+                </AccountDetails>
+              </AccountInfo>
+              <ConnectButton>Connect</ConnectButton>
+            </AccountItem>
+
+            <AccountItem>
+              <AccountInfo>
+                <AccountIcon style={{ background: 'linear-gradient(135deg, #1DA1F2 0%, #14171A 100%)' }}>🐦</AccountIcon>
+                <AccountDetails>
+                  <AccountName>Twitter / X</AccountName>
+                  <AccountStatus>Share your thoughts and updates</AccountStatus>
+                </AccountDetails>
+              </AccountInfo>
+              <ConnectButton>Connect</ConnectButton>
+            </AccountItem>
+          </ConnectedAccountsContent>
+        </ConnectedAccountsModal>
+      )}
 
       </Content>
 
@@ -7301,7 +7534,7 @@ export const ProfileScreen: React.FC = () => {
                         <div style={{
                           width: '150px',
                           height: '150px',
-                          background: '#2D5F4F',
+                          background: '#2fce98',
                           color: 'white',
                           display: 'flex',
                           alignItems: 'center',
@@ -7426,7 +7659,7 @@ export const ProfileScreen: React.FC = () => {
                     color: '#666'
                   }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎲</div>
-                    <h3 style={{ color: '#2D5F4F', marginBottom: '8px' }}>Group Generation Ready</h3>
+                    <h3 style={{ color: '#2fce98', marginBottom: '8px' }}>Group Generation Ready</h3>
                     <p style={{ fontSize: '14px' }}>
                       Adjust diversity settings above and click "Generate Groups" to create optimized participant groups
                     </p>
@@ -7482,7 +7715,7 @@ export const ProfileScreen: React.FC = () => {
                         color: '#666'
                       }}>
                         <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-                        <h3 style={{ color: '#2D5F4F', marginBottom: '8px' }}>No Feedback Yet</h3>
+                        <h3 style={{ color: '#2fce98', marginBottom: '8px' }}>No Feedback Yet</h3>
                         <p style={{ fontSize: '14px' }}>
                           Feedback will appear here after participants submit their event reviews
                         </p>

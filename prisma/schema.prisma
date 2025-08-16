@@ -7,6 +7,321 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                 String            @id @default(uuid())
+  email              String            @unique
+  phone              String?           @unique
+  password           String
+  fullName           String
+  profilePicture     String?
+  bio                String?
+  city               String?
+  interests          String[]
+  instagramHandle    String?
+  linkedinHandle     String?
+  referralCode       String            @unique @default(uuid())
+  role               UserRole          @default(GENERAL_USER)
+  isHostCertified    Boolean           @default(false)
+  totalPoints        Int               @default(0)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  referredById       String?
+  mfaBackupCodes     String[]          @default([])
+  mfaEnabled         Boolean           @default(false)
+  mfaSecret          String?
+  username           String?           @unique
+  countryOfResidence String?
+  gender             String?
+  nationality        String?
+  dateOfBirth        DateTime?
+  hostedEvents       Event[]           @relation("EventHost")
+  attendedEvents     EventAttendance[]
+  rsvpEvents         EventRSVP[]
+  sentFollows        Follow[]          @relation("FollowSender")
+  receivedFollows    Follow[]          @relation("FollowReceiver")
+  receivedMatches    Match[]           @relation("MatchReceiver")
+  sentMatches        Match[]           @relation("MatchSender")
+  receivedMessages   Message[]         @relation("MessageReceiver")
+  sentMessages       Message[]         @relation("MessageSender")
+  notifications      Notification[]
+  pointsHistory      PointHistory[]
+  redemptions        Redemption[]
+  refreshTokens      RefreshToken[]
+  referredBy         User?             @relation("Referrals", fields: [referredById], references: [id])
+  referrals          User[]            @relation("Referrals")
+  badges             UserBadge[]
+  communityMembers   CommunityMember[]
+  createdCommunities Community[]       @relation("CommunityCreator")
+  pushSubscription   PushSubscription?
+
+  @@index([email])
+  @@index([totalPoints])
+  @@index([city])
+  @@index([role])
+  @@index([isHostCertified])
+  @@index([mfaEnabled])
+  @@index([createdAt])
+  @@index([referredById])
+}
+
+model Event {
+  id           String            @id @default(uuid())
+  title        String
+  description  String?
+  type         EventType
+  date         DateTime
+  location     String
+  mapLink      String?
+  maxAttendees Int?
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  hostId       String
+  host         User              @relation("EventHost", fields: [hostId], references: [id])
+  attendance   EventAttendance[]
+  rsvps        EventRSVP[]
+
+  @@index([hostId])
+  @@index([type])
+  @@index([date])
+  @@index([location])
+  @@index([createdAt])
+  @@index([type, date])
+  @@index([hostId, date])
+}
+
+model EventRSVP {
+  id        String   @id @default(uuid())
+  qrCode    String   @unique
+  createdAt DateTime @default(now())
+  userId    String
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model EventAttendance {
+  id          String   @id @default(uuid())
+  checkedInAt DateTime @default(now())
+  userId      String
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([checkedInAt])
+}
+
+model PointHistory {
+  id          String   @id @default(uuid())
+  points      Int
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  type        BadgeType   @unique
+  name        String
+  description String
+  criteria    String
+  imageUrl    String?
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(uuid())
+  earnedAt DateTime @default(now())
+  userId   String
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, badgeId])
+}
+
+model Reward {
+  id             String       @id @default(uuid())
+  title          String
+  description    String
+  pointsRequired Int
+  category       String
+  partner        String
+  quantity       Int          @default(0)
+  imageUrl       String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  redemptions    Redemption[]
+}
+
+model Redemption {
+  id          String           @id @default(uuid())
+  status      RedemptionStatus @default(PENDING)
+  notes       String?
+  redeemedAt  DateTime         @default(now())
+  processedAt DateTime?
+  userId      String
+  rewardId    String
+  reward      Reward           @relation(fields: [rewardId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  followerId  String
+  followingId String
+  follower    User     @relation("FollowSender", fields: [followerId], references: [id])
+  following   User     @relation("FollowReceiver", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  senderId   String
+  receiverId String
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([receiverId, isRead])
+  @@index([senderId, receiverId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model Community {
+  id          String            @id @default(uuid())
+  name        String            @unique
+  description String?
+  imageUrl    String?
+  category    String?
+  isVerified  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  createdById String
+  createdBy   User              @relation("CommunityCreator", fields: [createdById], references: [id])
+  members     CommunityMember[]
+
+  @@index([name])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model CommunityMember {
+  id           String         @id @default(uuid())
+  role         CommunityRole  @default(MEMBER)
+  joinedAt     DateTime       @default(now())
+  isApproved   Boolean        @default(false)
+  userId       String
+  communityId  String
+  user         User           @relation(fields: [userId], references: [id])
+  community    Community      @relation(fields: [communityId], references: [id])
+
+  @@unique([userId, communityId])
+  @@index([userId])
+  @@index([communityId])
+  @@index([role])
+}
+
+model Match {
+  id            String      @id @default(uuid())
+  type          MatchType
+  status        MatchStatus @default(PENDING)
+  compatibility Float
+  reason        String
+  interests     String[]
+  availability  Json?
+  location      String?
+  message       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  expiresAt     DateTime
+  senderId      String
+  receiverId    String
+  receiver      User        @relation("MatchReceiver", fields: [receiverId], references: [id])
+  sender        User        @relation("MatchSender", fields: [senderId], references: [id])
+
+  @@unique([senderId, receiverId, type])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+  @@index([type])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@index([senderId, status])
+  @@index([receiverId, status])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  tokenHash   String   @unique
+  tokenFamily String
+  userId      String
+  isRevoked   Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 enum UserRole {
   GENERAL_USER
   GUIDE
@@ -72,298 +387,9 @@ enum MatchType {
   HOBBY
 }
 
-model User {
-  id                String      @id @default(uuid())
-  email             String      @unique
-  phone             String?     @unique
-  password          String
-  fullName          String
-  profilePicture    String?
-  bio               String?
-  city              String?
-  interests         String[]
-  instagramHandle   String?
-  linkedinHandle    String?
-  referralCode      String      @unique @default(uuid())
-  role              UserRole    @default(GENERAL_USER)
-  isHostCertified   Boolean     @default(false)
-  totalPoints       Int         @default(0)
-  mfaEnabled        Boolean     @default(false)
-  mfaSecret         String?
-  mfaBackupCodes    String[]    @default([])
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-
-  // Relations
-  hostedEvents      Event[]     @relation("EventHost")
-  rsvpEvents        EventRSVP[]
-  attendedEvents    EventAttendance[]
-  referredBy        User?       @relation("Referrals", fields: [referredById], references: [id])
-  referredById      String?
-  referrals         User[]      @relation("Referrals")
-  pointsHistory     PointHistory[]
-  badges            UserBadge[]
-  redemptions       Redemption[]
-  sentFollows       Follow[]    @relation("FollowSender")
-  receivedFollows   Follow[]    @relation("FollowReceiver")
-  sentMessages      Message[]   @relation("MessageSender")
-  receivedMessages  Message[]   @relation("MessageReceiver")
-  notifications     Notification[]
-  sentMatches       Match[]     @relation("MatchSender")
-  receivedMatches   Match[]     @relation("MatchReceiver")
-  refreshTokens     RefreshToken[]
-
-  // Performance Indexes
-  @@index([email])
-  @@index([totalPoints])
-  @@index([city])
-  @@index([role])
-  @@index([isHostCertified])
-  @@index([mfaEnabled])
-  @@index([createdAt])
-  @@index([referredById])
-}
-
-model Event {
-  id                String      @id @default(uuid())
-  title             String
-  description       String?
-  type              EventType
-  date              DateTime
-  location          String
-  mapLink           String?
-  maxAttendees      Int?
-  notes             String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-
-  // Relations
-  host              User        @relation("EventHost", fields: [hostId], references: [id])
-  hostId            String
-  rsvps             EventRSVP[]
-  attendance        EventAttendance[]
-
-  // Performance Indexes
-  @@index([hostId])
-  @@index([type])
-  @@index([date])
-  @@index([location])
-  @@index([createdAt])
-  @@index([type, date])
-  @@index([hostId, date])
-}
-
-model EventRSVP {
-  id                String      @id @default(uuid())
-  qrCode            String      @unique
-  createdAt         DateTime    @default(now())
-
-  // Relations
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-  event             Event       @relation(fields: [eventId], references: [id])
-  eventId           String
-
-  // Performance Indexes
-  @@index([userId])
-  @@index([eventId])
-  @@index([createdAt])
-  @@unique([userId, eventId])
-}
-
-model EventAttendance {
-  id                String      @id @default(uuid())
-  checkedInAt       DateTime    @default(now())
-  
-  // Relations
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-  event             Event       @relation(fields: [eventId], references: [id])
-  eventId           String
-
-  // Performance Indexes
-  @@index([userId])
-  @@index([eventId])
-  @@index([checkedInAt])
-  @@unique([userId, eventId])
-}
-
-model PointHistory {
-  id                String      @id @default(uuid())
-  points            Int
-  action            String
-  description       String?
-  createdAt         DateTime    @default(now())
-
-  // Relations
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-
-  // Performance Indexes
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@index([userId, createdAt])
-}
-
-model Badge {
-  id                String      @id @default(uuid())
-  type              BadgeType   @unique
-  name              String
-  description       String
-  criteria          String
-  imageUrl          String?
-  
-  // Relations
-  userBadges        UserBadge[]
-}
-
-model UserBadge {
-  id                String      @id @default(uuid())
-  earnedAt          DateTime    @default(now())
-
-  // Relations
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-  badge             Badge       @relation(fields: [badgeId], references: [id])
-  badgeId           String
-
-  @@unique([userId, badgeId])
-}
-
-model Reward {
-  id                String      @id @default(uuid())
-  title             String
-  description       String
-  pointsRequired    Int
-  category          String
-  partner           String
-  quantity          Int         @default(0)
-  imageUrl          String?
-  isActive          Boolean     @default(true)
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-
-  // Relations
-  redemptions       Redemption[]
-}
-
-model Redemption {
-  id                String      @id @default(uuid())
-  status            RedemptionStatus @default(PENDING)
-  notes             String?
-  redeemedAt        DateTime    @default(now())
-  processedAt       DateTime?
-
-  // Relations
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-  reward            Reward      @relation(fields: [rewardId], references: [id])
-  rewardId          String
-}
-
-model Follow {
-  id                String      @id @default(uuid())
-  createdAt         DateTime    @default(now())
-
-  // Relations
-  follower          User        @relation("FollowSender", fields: [followerId], references: [id])
-  followerId        String
-  following         User        @relation("FollowReceiver", fields: [followingId], references: [id])
-  followingId       String
-
-  @@unique([followerId, followingId])
-}
-
-model Message {
-  id                String      @id @default(uuid())
-  content           String
-  isRead            Boolean     @default(false)
-  createdAt         DateTime    @default(now())
-
-  // Relations
-  sender            User        @relation("MessageSender", fields: [senderId], references: [id])
-  senderId          String
-  receiver          User        @relation("MessageReceiver", fields: [receiverId], references: [id])
-  receiverId        String
-
-  // Performance Indexes
-  @@index([senderId])
-  @@index([receiverId])
-  @@index([isRead])
-  @@index([createdAt])
-  @@index([receiverId, isRead])
-  @@index([senderId, receiverId])
-}
-
-model Notification {
-  id                String      @id @default(uuid())
-  type              NotificationType
-  title             String
-  message           String
-  isRead            Boolean     @default(false)
-  actionUrl         String?
-  metadata          Json?
-  createdAt         DateTime    @default(now())
-
-  // Relations
-  user              User        @relation(fields: [userId], references: [id])
-  userId            String
-
-  // Performance Indexes
-  @@index([userId])
-  @@index([isRead])
-  @@index([type])
-  @@index([createdAt])
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
-}
-
-model Match {
-  id                String      @id @default(uuid())
-  type              MatchType
-  status            MatchStatus @default(PENDING)
-  compatibility     Float       // Score between 0 and 1
-  reason            String      // Why they were matched
-  interests         String[]    // Common interests
-  availability      Json?       // Availability preferences
-  location          String?     // Meeting location preference
-  message           String?     // Initial message from sender
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  expiresAt         DateTime    // Match expires after certain time
-
-  // Relations
-  sender            User        @relation("MatchSender", fields: [senderId], references: [id])
-  senderId          String
-  receiver          User        @relation("MatchReceiver", fields: [receiverId], references: [id])
-  receiverId        String
-
-  // Performance Indexes
-  @@index([senderId])
-  @@index([receiverId])
-  @@index([status])
-  @@index([type])
-  @@index([expiresAt])
-  @@index([createdAt])
-  @@index([senderId, status])
-  @@index([receiverId, status])
-  @@unique([senderId, receiverId, type])
-}
-
-model RefreshToken {
-  id            String      @id @default(uuid())
-  tokenHash     String      @unique
-  tokenFamily   String      // For token rotation security
-  userId        String
-  isRevoked     Boolean     @default(false)
-  expiresAt     DateTime
-  createdAt     DateTime    @default(now())
-  
-  // Relations
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([tokenHash])
-  @@index([expiresAt])
+enum CommunityRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+  OWNER
 }

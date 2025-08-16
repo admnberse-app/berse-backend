@@ -10,7 +10,7 @@ import logger from '../utils/logger';
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, phone, password, fullName, referralCode } = req.body;
+      const { email, phone, password, fullName, username, nationality, countryOfResidence, city, gender, dateOfBirth, referralCode } = req.body;
 
       // Check if user already exists
       const existingUser = await prisma.user.findFirst({
@@ -18,6 +18,7 @@ export class AuthController {
           OR: [
             { email },
             { phone: phone || undefined },
+            { username: username || undefined },
           ],
         },
       });
@@ -46,12 +47,24 @@ export class AuthController {
           phone,
           password: hashedPassword,
           fullName,
+          username,
+          nationality,
+          countryOfResidence,
+          city,
+          gender,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           referredById: referredBy?.id,
         },
         select: {
           id: true,
           email: true,
           fullName: true,
+          username: true,
+          nationality: true,
+          countryOfResidence: true,
+          city: true,
+          gender: true,
+          dateOfBirth: true,
           role: true,
           referralCode: true,
         },
@@ -89,7 +102,7 @@ export class AuthController {
       }, 'User registered successfully', 201);
     } catch (error) {
       logger.error('Registration failed', { 
-        error: error.message, 
+        error: error instanceof Error ? error.message : 'Unknown error', 
         email: req.body.email 
       });
       next(error);
@@ -143,7 +156,7 @@ export class AuthController {
       }, 'Login successful');
     } catch (error) {
       logger.error('Login failed', { 
-        error: error.message, 
+        error: error instanceof Error ? error.message : 'Unknown error', 
         email: req.body.email 
       });
       next(error);
@@ -175,7 +188,7 @@ export class AuthController {
     } catch (error) {
       // Clear invalid refresh token
       res.clearCookie('refreshToken');
-      logger.warn('Token refresh failed', { error: error.message });
+      logger.warn('Token refresh failed', { error: error instanceof Error ? error.message : 'Unknown error' });
       next(new AppError('Invalid refresh token', 401));
     }
   }
@@ -200,7 +213,7 @@ export class AuthController {
 
       sendSuccess(res, null, 'Logged out successfully');
     } catch (error) {
-      logger.error('Logout failed', { error: error.message });
+      logger.error('Logout failed', { error: error instanceof Error ? error.message : 'Unknown error' });
       next(error);
     }
   }
@@ -224,7 +237,7 @@ export class AuthController {
 
       sendSuccess(res, null, 'Logged out from all devices successfully');
     } catch (error) {
-      logger.error('Logout all failed', { error: error.message });
+      logger.error('Logout all failed', { error: error instanceof Error ? error.message : 'Unknown error' });
       next(error);
     }
   }
@@ -309,7 +322,7 @@ export class AuthController {
       sendSuccess(res, null, 'Password changed successfully. Please log in again.');
     } catch (error) {
       logger.error('Password change failed', { 
-        error: error.message, 
+        error: error instanceof Error ? error.message : 'Unknown error', 
         userId: (req as any).user?.id 
       });
       next(error);

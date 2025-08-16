@@ -70,7 +70,7 @@ const EventBadge = styled.div`
   position: absolute;
   top: 20px;
   left: 20px;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   padding: 8px 16px;
   border-radius: 20px;
@@ -241,7 +241,7 @@ const TagsList = styled.div`
 
 const Tag = styled.span`
   background: #E8F4F0;
-  color: #2D5F4F;
+  color: #2fce98;
   padding: 6px 12px;
   border-radius: 16px;
   font-size: 12px;
@@ -275,7 +275,7 @@ const ActionButtons = styled.div`
 
 const JoinButton = styled.button<{ joined?: boolean }>`
   flex: 1;
-  background-color: ${({ joined }) => joined ? '#4CAF50' : '#2D5F4F'};
+  background-color: ${({ joined }) => joined ? '#4CAF50' : '#2fce98'};
   color: white;
   border: none;
   border-radius: 12px;
@@ -1338,7 +1338,7 @@ export const EventDetailsScreen: React.FC = () => {
             style={{
               marginTop: '20px',
               padding: '12px 24px',
-              backgroundColor: '#2D5F4F',
+              backgroundColor: '#2fce98',
               color: 'white',
               border: 'none',
               borderRadius: '8px',

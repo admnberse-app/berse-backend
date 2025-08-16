@@ -54,7 +54,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   position: absolute;
   left: 20px;
@@ -64,7 +64,7 @@ const BackButton = styled.button`
 const HeaderTitle = styled.h1`
   font-size: 24px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
   text-align: center;
 `;
@@ -103,7 +103,7 @@ const ComingSoonIcon = styled.div`
 
 const ComingSoonTitle = styled.h2`
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
 `;
 

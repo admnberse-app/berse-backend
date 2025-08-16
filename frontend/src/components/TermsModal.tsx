@@ -69,7 +69,7 @@ const SectionTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #2D5F4F;
+  color: #2fce98;
 `;
 
 const SectionContent = styled.div`
@@ -89,7 +89,7 @@ const SectionContent = styled.div`
 
 const HighlightBox = styled.div`
   background: #f0f8f5;
-  border: 1px solid #2D5F4F;
+  border: 1px solid #2fce98;
   border-radius: 8px;
   padding: 12px;
   margin: 12px 0;
@@ -184,7 +184,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
               onClick={onClose}
               style={{
                 padding: '12px 24px',
-                background: '#2D5F4F',
+                background: '#2fce98',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',

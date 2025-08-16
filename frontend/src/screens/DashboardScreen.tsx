@@ -1683,24 +1683,29 @@ export const DashboardScreen: React.FC = () => {
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#999" style={{ opacity: 0.6 }}>
-                <CategoryLabel>📚 EDUCATION</CategoryLabel>
-                <ClaimedText>COMING SOON</ClaimedText>
+              <RewardCard $bgColor="#757575" style={{ opacity: 0.8 }}>
+                <CategoryLabel style={{ color: '#aaa' }}>📚 EDUCATION</CategoryLabel>
+                <ClaimedText style={{ color: '#999' }}>COMING SOON</ClaimedText>
                 <MiniProgressBar $percentage={0} />
                 
                 <RewardContent>
-                  <RewardTitle>University Studies</RewardTitle>
-                  <DiscountBox>Soon</DiscountBox>
-                  <FilterRewardPoints>Coming Soon</FilterRewardPoints>
-                  <ExpiryInfo>⏰ Coming Soon</ExpiryInfo>
+                  <RewardTitle style={{ color: '#ccc' }}>University Studies</RewardTitle>
+                  <DiscountBox style={{ background: '#666', color: '#aaa' }}>Soon</DiscountBox>
+                  <FilterRewardPoints style={{ color: '#999' }}>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo style={{ color: '#999' }}>⏰ Coming Soon</ExpiryInfo>
                 </RewardContent>
                 
                 <FilterRedeemButton 
                   onClick={() => null}
                   disabled={true}
-                  style={{ opacity: 0.5 }}
+                  style={{ 
+                    background: '#555',
+                    color: '#999',
+                    border: '1px solid #444',
+                    cursor: 'not-allowed'
+                  }}
                 >
-                  Soon
+                  Coming Soon
                 </FilterRedeemButton>
               </RewardCard>
 
@@ -1734,24 +1739,133 @@ export const DashboardScreen: React.FC = () => {
                 </FilterRedeemButton>
               </RewardCard>
 
-              <RewardCard $bgColor="#999" style={{ opacity: 0.6 }}>
-                <CategoryLabel>✈️ TRAVEL</CategoryLabel>
-                <ClaimedText>COMING SOON</ClaimedText>
+              <RewardCard $bgColor="#757575" style={{ opacity: 0.8 }}>
+                <CategoryLabel style={{ color: '#aaa' }}>✈️ TRAVEL</CategoryLabel>
+                <ClaimedText style={{ color: '#999' }}>COMING SOON</ClaimedText>
                 <MiniProgressBar $percentage={0} />
                 
                 <RewardContent>
-                  <RewardTitle>Umrah Travel & Tours</RewardTitle>
-                  <DiscountBox>Soon</DiscountBox>
-                  <FilterRewardPoints>Coming Soon</FilterRewardPoints>
-                  <ExpiryInfo>⏰ Coming Soon</ExpiryInfo>
+                  <RewardTitle style={{ color: '#ccc' }}>Umrah Travel & Tours</RewardTitle>
+                  <DiscountBox style={{ background: '#666', color: '#aaa' }}>Soon</DiscountBox>
+                  <FilterRewardPoints style={{ color: '#999' }}>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo style={{ color: '#999' }}>⏰ Coming Soon</ExpiryInfo>
                 </RewardContent>
                 
                 <FilterRedeemButton 
                   onClick={() => null}
                   disabled={true}
-                  style={{ opacity: 0.5 }}
+                  style={{ 
+                    background: '#555',
+                    color: '#999',
+                    border: '1px solid #444',
+                    cursor: 'not-allowed'
+                  }}
                 >
-                  Soon
+                  Coming Soon
+                </FilterRedeemButton>
+              </RewardCard>
+
+              <RewardCard $bgColor="#757575" style={{ opacity: 0.8 }}>
+                <CategoryLabel style={{ color: '#aaa' }}>🏥 HEALTHCARE</CategoryLabel>
+                <ClaimedText style={{ color: '#999' }}>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
+                
+                <RewardContent>
+                  <RewardTitle style={{ color: '#ccc' }}>KPJ Healthcare</RewardTitle>
+                  <DiscountBox style={{ background: '#666', color: '#aaa' }}>Soon</DiscountBox>
+                  <FilterRewardPoints style={{ color: '#999' }}>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo style={{ color: '#999' }}>⏰ Coming Soon</ExpiryInfo>
+                </RewardContent>
+                
+                <FilterRedeemButton 
+                  onClick={() => null}
+                  disabled={true}
+                  style={{ 
+                    background: '#555',
+                    color: '#999',
+                    border: '1px solid #444',
+                    cursor: 'not-allowed'
+                  }}
+                >
+                  Coming Soon
+                </FilterRedeemButton>
+              </RewardCard>
+
+              <RewardCard $bgColor="#757575" style={{ opacity: 0.8 }}>
+                <CategoryLabel style={{ color: '#aaa' }}>🏊 SPORTS</CategoryLabel>
+                <ClaimedText style={{ color: '#999' }}>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
+                
+                <RewardContent>
+                  <RewardTitle style={{ color: '#ccc' }}>Fit Malaysia Gym</RewardTitle>
+                  <DiscountBox style={{ background: '#666', color: '#aaa' }}>Soon</DiscountBox>
+                  <FilterRewardPoints style={{ color: '#999' }}>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo style={{ color: '#999' }}>⏰ Coming Soon</ExpiryInfo>
+                </RewardContent>
+                
+                <FilterRedeemButton 
+                  onClick={() => null}
+                  disabled={true}
+                  style={{ 
+                    background: '#555',
+                    color: '#999',
+                    border: '1px solid #444',
+                    cursor: 'not-allowed'
+                  }}
+                >
+                  Coming Soon
+                </FilterRedeemButton>
+              </RewardCard>
+
+              <RewardCard $bgColor="#757575" style={{ opacity: 0.8 }}>
+                <CategoryLabel style={{ color: '#aaa' }}>🎬 ENTERTAINMENT</CategoryLabel>
+                <ClaimedText style={{ color: '#999' }}>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
+                
+                <RewardContent>
+                  <RewardTitle style={{ color: '#ccc' }}>GSC Cinemas</RewardTitle>
+                  <DiscountBox style={{ background: '#666', color: '#aaa' }}>Soon</DiscountBox>
+                  <FilterRewardPoints style={{ color: '#999' }}>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo style={{ color: '#999' }}>⏰ Coming Soon</ExpiryInfo>
+                </RewardContent>
+                
+                <FilterRedeemButton 
+                  onClick={() => null}
+                  disabled={true}
+                  style={{ 
+                    background: '#555',
+                    color: '#999',
+                    border: '1px solid #444',
+                    cursor: 'not-allowed'
+                  }}
+                >
+                  Coming Soon
+                </FilterRedeemButton>
+              </RewardCard>
+
+              <RewardCard $bgColor="#757575" style={{ opacity: 0.8 }}>
+                <CategoryLabel style={{ color: '#aaa' }}>🛍️ SHOPPING</CategoryLabel>
+                <ClaimedText style={{ color: '#999' }}>COMING SOON</ClaimedText>
+                <MiniProgressBar $percentage={0} />
+                
+                <RewardContent>
+                  <RewardTitle style={{ color: '#ccc' }}>Mydin Hypermarket</RewardTitle>
+                  <DiscountBox style={{ background: '#666', color: '#aaa' }}>Soon</DiscountBox>
+                  <FilterRewardPoints style={{ color: '#999' }}>Coming Soon</FilterRewardPoints>
+                  <ExpiryInfo style={{ color: '#999' }}>⏰ Coming Soon</ExpiryInfo>
+                </RewardContent>
+                
+                <FilterRedeemButton 
+                  onClick={() => null}
+                  disabled={true}
+                  style={{ 
+                    background: '#555',
+                    color: '#999',
+                    border: '1px solid #444',
+                    cursor: 'not-allowed'
+                  }}
+                >
+                  Coming Soon
                 </FilterRedeemButton>
               </RewardCard>
             </RewardsGrid>
@@ -1932,7 +2046,13 @@ export const DashboardScreen: React.FC = () => {
               <QuickActionsTitle>Quick Actions</QuickActionsTitle>
               <TravelFundButton 
                 onClick={() => alert('Coming Soon! 🚀')}
-                style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                style={{ 
+                  background: '#757575',
+                  opacity: 0.8,
+                  cursor: 'not-allowed',
+                  color: '#ccc',
+                  border: '1px solid #555'
+                }}
               >
                 ✈️ My Travel Fund - Soon
               </TravelFundButton>
@@ -1984,14 +2104,19 @@ export const DashboardScreen: React.FC = () => {
                     alert('You\'ve already expressed interest in BerseMarket. We\'ll notify you when it launches!');
                   }
                 }} 
-                style={{ opacity: 0.8, position: 'relative' }}
+                style={{ 
+                  background: 'linear-gradient(135deg, #757575, #616161)',
+                  opacity: 0.7,
+                  position: 'relative',
+                  border: '1px solid #555'
+                }}
               >
-                <ActionIcon>🛍️</ActionIcon>
-                <ActionText>
+                <ActionIcon style={{ opacity: 0.6 }}>🛍️</ActionIcon>
+                <ActionText style={{ color: '#ccc' }}>
                   <strong>BerseMarket</strong>
                   Buy, sell, trade
                 </ActionText>
-                <ActionBadge style={{ background: '#FF6B35' }}>I'm Interested</ActionBadge>
+                <ActionBadge style={{ background: '#666', color: '#aaa' }}>Coming Soon</ActionBadge>
               </QuickActionButton>
             </QuickActionsGrid>
           </QuickActionsContainer>
@@ -2272,7 +2397,13 @@ export const DashboardScreen: React.FC = () => {
             </FeaturedRewardsTitle>
             <AllRewardsButton 
               onClick={() => alert('Coming Soon! 🚀')}
-              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+              style={{ 
+                background: '#757575',
+                opacity: 0.8,
+                cursor: 'not-allowed',
+                color: '#ccc',
+                border: '1px solid #555'
+              }}
             >
               🎁 All Rewards - Soon
             </AllRewardsButton>

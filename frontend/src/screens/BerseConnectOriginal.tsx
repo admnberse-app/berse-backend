@@ -39,7 +39,7 @@ const Avatar = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,7 +58,7 @@ const HeaderText = styled.div`
   h2 {
     margin: 0;
     font-size: 18px;
-    color: #2D5F4F;
+    color: #2fce98;
     font-weight: bold;
   }
 `;
@@ -132,10 +132,10 @@ const FilterRow = styled.div`
 const FilterButtonStyled = styled.button<{ hasFilter?: boolean }>`
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid ${({ hasFilter }) => hasFilter ? '#2D5F4F' : '#E5E5E5'};
+  border: 1px solid ${({ hasFilter }) => hasFilter ? '#2fce98' : '#E5E5E5'};
   border-radius: 8px;
   background: ${({ hasFilter }) => hasFilter ? '#F0F8F5' : 'white'};
-  color: ${({ hasFilter }) => hasFilter ? '#2D5F4F' : '#333'};
+  color: ${({ hasFilter }) => hasFilter ? '#2fce98' : '#333'};
   font-size: 14px;
   font-weight: ${({ hasFilter }) => hasFilter ? '600' : '400'};
   text-align: left;
@@ -146,7 +146,7 @@ const FilterButtonStyled = styled.button<{ hasFilter?: boolean }>`
   justify-content: space-between;
   
   &:hover {
-    border-color: #2D5F4F;
+    border-color: #2fce98;
     background-color: #F0F8F5;
   }
   
@@ -234,7 +234,7 @@ const Checkbox = styled.input`
   margin-top: 2px;
   width: 16px;
   height: 16px;
-  accent-color: #2D5F4F;
+  accent-color: #2fce98;
   flex-shrink: 0;
 `;
 
@@ -257,7 +257,7 @@ const FilterActionButton = styled.button`
 `;
 
 const ApplyButton = styled(FilterActionButton)`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   
   &:hover {
@@ -305,7 +305,7 @@ const EventBadge = styled.div`
   position: absolute;
   top: 12px;
   left: 12px;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   padding: 6px 12px;
   border-radius: 16px;
@@ -348,7 +348,7 @@ const HostAvatar = styled.div`
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -408,7 +408,7 @@ const EventActions = styled.div`
 `;
 
 const JoinButton = styled.button`
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   border: none;
   border-radius: 8px;
@@ -446,7 +446,7 @@ const ShareButton = styled.button`
 `;
 
 const CreateEventButton = styled.button`
-  background-color: #2D5F4F;
+  background-color: #2fce98;
   color: white;
   border: none;
   border-radius: 12px;
@@ -492,7 +492,7 @@ const ModalTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   text-align: center;
 `;
 
@@ -519,7 +519,7 @@ const ModalButton = styled.button<{ primary?: boolean }>`
   cursor: pointer;
   
   ${({ primary }) => primary ? `
-    background-color: #2D5F4F;
+    background-color: #2fce98;
     color: white;
     
     &:hover {

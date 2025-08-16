@@ -346,7 +346,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   position: absolute;
   left: 20px;
@@ -360,7 +360,7 @@ const HeaderContent = styled.div`
 const HeaderTitle = styled.h1`
   font-size: 24px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
   text-align: center;
 `;
@@ -402,7 +402,7 @@ const ConnectContent = styled.div`
 const ConnectTitle = styled.h3`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 12px 0;
 `;
 
@@ -419,7 +419,7 @@ const FeatureList = styled.div`
 `;
 
 const FeatureItem = styled.div`
-  color: #2D5F4F;
+  color: #2fce98;
   font-size: 14px;
   margin: 8px 0;
   display: flex;
@@ -477,7 +477,7 @@ const ProfileInfo = styled.div`
 const ProfileName = styled.h4`
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 4px 0;
 `;
 
@@ -546,7 +546,7 @@ const SectionHeader = styled.div`
 const SectionTitle = styled.h3`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 8px 0;
 `;
 
@@ -601,7 +601,7 @@ const SessionHeader = styled.div`
 const SessionTitle = styled.h4`
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
   flex: 1;
 `;
@@ -743,7 +743,7 @@ const BuddyInfo = styled.div`
 const BuddyName = styled.h5`
   font-size: 16px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0 0 4px 0;
 `;
 

@@ -103,7 +103,7 @@ const ProgressBar = styled.div`
 const ProgressFill = styled.div<{ progress: number }>`
   width: ${({ progress }) => progress}%;
   height: 100%;
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   transition: width 0.3s ease;
 `;
 
@@ -163,7 +163,7 @@ const IncludedList = styled.ul`
 `;
 
 const PricingCard = styled.div`
-  border: 2px solid #2D5F4F;
+  border: 2px solid #2fce98;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 20px;
@@ -179,7 +179,7 @@ const PricingRow = styled.div`
   &:last-child {
     margin-bottom: 0;
     padding-top: 8px;
-    border-top: 1px solid #2D5F4F;
+    border-top: 1px solid #2fce98;
     font-weight: bold;
   }
 `;
@@ -223,7 +223,7 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -238,7 +238,7 @@ const TextArea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -260,7 +260,7 @@ const CheckboxLabel = styled.label`
 `;
 
 const PaymentMethod = styled.div<{ selected: boolean }>`
-  border: 2px solid ${({ selected }) => selected ? '#2D5F4F' : '#e0e0e0'};
+  border: 2px solid ${({ selected }) => selected ? '#2fce98' : '#e0e0e0'};
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 12px;
@@ -268,7 +268,7 @@ const PaymentMethod = styled.div<{ selected: boolean }>`
   transition: all 0.2s ease;
   
   &:hover {
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
 `;
 
@@ -302,7 +302,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   padding: 12px;
   border: ${({ variant }) => variant === 'primary' ? 'none' : '1px solid #e0e0e0'};
   border-radius: 8px;
-  background: ${({ variant }) => variant === 'primary' ? '#2D5F4F' : 'white'};
+  background: ${({ variant }) => variant === 'primary' ? '#2fce98' : 'white'};
   color: ${({ variant }) => variant === 'primary' ? 'white' : '#333'};
   font-size: 14px;
   font-weight: 600;
@@ -341,7 +341,7 @@ const QRCode = styled.div`
   width: 120px;
   height: 120px;
   background: #f0f0f0;
-  border: 2px solid #2D5F4F;
+  border: 2px solid #2fce98;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -559,14 +559,14 @@ export const EventRegistrationModal: React.FC<RegistrationModalProps> = ({
             <StepTitle>Registration Preview</StepTitle>
             <div style={{ 
               background: '#f0f8f5', 
-              border: '1px solid #2D5F4F', 
+              border: '1px solid #2fce98', 
               borderRadius: '8px', 
               padding: '16px', 
               marginBottom: '20px' 
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '20px' }}>✅</span>
-                <span style={{ fontWeight: 'bold', color: '#2D5F4F' }}>
+                <span style={{ fontWeight: 'bold', color: '#2fce98' }}>
                   Registration details auto-filled from your profile
                 </span>
               </div>
@@ -657,7 +657,7 @@ export const EventRegistrationModal: React.FC<RegistrationModalProps> = ({
               </PricingRow>
             </PricingCard>
             {hasBersePass && (
-              <div style={{ textAlign: 'center', color: '#2D5F4F', fontWeight: '500' }}>
+              <div style={{ textAlign: 'center', color: '#2fce98', fontWeight: '500' }}>
                 💰 You're saving RM {(originalPrice - discountedPrice).toFixed(2)} with BersePass!
               </div>
             )}
@@ -724,7 +724,7 @@ export const EventRegistrationModal: React.FC<RegistrationModalProps> = ({
                 <span 
                   onClick={() => setShowTermsModal(true)}
                   style={{ 
-                    color: '#2D5F4F', 
+                    color: '#2fce98', 
                     textDecoration: 'underline', 
                     cursor: 'pointer',
                     fontWeight: 'bold'
@@ -736,7 +736,7 @@ export const EventRegistrationModal: React.FC<RegistrationModalProps> = ({
                 <span 
                   onClick={() => setShowTermsModal(true)}
                   style={{ 
-                    color: '#2D5F4F', 
+                    color: '#2fce98', 
                     textDecoration: 'underline', 
                     cursor: 'pointer',
                     fontWeight: 'bold'
@@ -988,14 +988,14 @@ export const EventRegistrationModal: React.FC<RegistrationModalProps> = ({
 
             <div style={{ 
               background: '#f0f8f5', 
-              border: '1px solid #2D5F4F', 
+              border: '1px solid #2fce98', 
               borderRadius: '8px', 
               padding: '16px',
               marginBottom: '20px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <span>⚡</span>
-                <strong style={{ color: '#2D5F4F' }}>Quick & Secure</strong>
+                <strong style={{ color: '#2fce98' }}>Quick & Secure</strong>
               </div>
               <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
                 This information is used only for event safety and will be kept confidential. 

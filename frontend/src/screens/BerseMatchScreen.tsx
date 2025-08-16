@@ -972,7 +972,7 @@ const ProfileDetailContent = styled.div`
   border-radius: 16px;
   max-width: 450px;
   width: 100%;
-  max-height: 80vh;
+  max-height: 90vh;
   overflow-y: auto;
 `;
 
@@ -980,6 +980,58 @@ const ProfileDetailHeader = styled.div`
   padding: 20px;
   border-bottom: 1px solid #E0E0E0;
   position: relative;
+  text-align: center;
+`;
+
+const ProfileImageLarge = styled.div<{ $bgColor?: string }>`
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: ${({ $bgColor }) => $bgColor || 'linear-gradient(135deg, #667eea, #764ba2)'};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: bold;
+  margin: 0 auto 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 4px solid white;
+  position: relative;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+`;
+
+const SocialMediaLinks = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 12px;
+`;
+
+const SocialLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #333;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  
+  &:hover {
+    background: #2fce98;
+    color: white;
+    transform: translateY(-2px);
+  }
 `;
 
 const ProfileDetailSection = styled.div`
@@ -2270,6 +2322,30 @@ const NetworkWebLine = styled.svg`
   z-index: 1;
 `;
 
+// Helper function to generate gradient based on name
+const getGradient = (name: string): string => {
+  const gradients = [
+    'linear-gradient(135deg, #667eea, #764ba2)',
+    'linear-gradient(135deg, #f093fb, #f5576c)', 
+    'linear-gradient(135deg, #4facfe, #00f2fe)',
+    'linear-gradient(135deg, #43e97b, #38f9d7)',
+    'linear-gradient(135deg, #fa709a, #fee140)',
+    'linear-gradient(135deg, #30cfd0, #330867)',
+    'linear-gradient(135deg, #a8edea, #fed6e3)',
+    'linear-gradient(135deg, #ff9a9e, #fecfef)',
+    'linear-gradient(135deg, #fbc2eb, #a6c1ee)',
+    'linear-gradient(135deg, #fdcbf1, #e6dee9)'
+  ];
+  
+  // Generate index from name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return gradients[Math.abs(hash) % gradients.length];
+};
+
 export const BerseMatchScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -2544,9 +2620,13 @@ export const BerseMatchScreen: React.FC = () => {
       personalityType: user?.personalityType || 'ENFJ-A',
       languages: user?.languages || 'EN, MS, AR',
       interests: user?.topInterests || ['Cultural Networking', 'Cafe Hopping', 'Heritage Walks', 'Photo Walks'],
-      communities: user?.communities || ['NAMA Foundation', 'Malaysian Architects', 'KL Photography Club'],
+      communities: user?.communities || ["Ahl 'Umran Network", 'PeaceMeal MY'],
       eventsAttending: user?.eventsAttended?.map(event => event.eventName || event.eventId) || ['Heritage Walk KL', 'Photography Workshop', 'Architecture Conference'],
       offers: ['Architecture Tours', 'Photography Sessions', 'Heritage Walks', 'Cultural Guides'],
+      linkedin: user?.linkedin || 'zaydmahdaly',
+      instagram: user?.instagram || 'zayd.mahdaly',
+      twitter: user?.twitter || '',
+      website: user?.website || 'zaydmahdaly.com',
       travelHistory: [
         {
           country: 'Turkey',
@@ -2587,20 +2667,20 @@ export const BerseMatchScreen: React.FC = () => {
     const communityProfiles = [
       {
         id: 'comm-1',
-        name: 'BerseMuka Community',
+        name: "Ahl 'Umran Network",
         type: 'community',
         category: 'Social',
         profession: 'Community Organization',
-        description: 'The main BerseMuka community for connecting travelers and locals',
-        location: 'Global',
-        bio: 'Connect with travelers and locals worldwide through cultural exchanges and meaningful connections',
-        memberCount: 2450,
-        eventCount: 156,
+        description: 'A network for spiritual growth and community building',
+        location: 'Kuala Lumpur, Malaysia',
+        bio: "Building meaningful connections through spiritual growth, community service, and shared values. Ahl 'Umran brings together seekers of knowledge and community builders.",
+        memberCount: 1600,
+        eventCount: 100,
         isVerified: true,
         verificationBadge: 'gold',
-        tags: ['Travel', 'Culture', 'Networking', 'Events'],
-        upcomingEvents: ['Weekly Meetup', 'Cultural Night'],
-        match: 95,
+        tags: ['Spiritual', 'Community', 'Service', 'Education'],
+        upcomingEvents: ['Weekly Gathering', 'Community Service Day'],
+        match: 98,
         servicesOffered: {
           localGuide: false,
           homestay: false,
@@ -2610,66 +2690,20 @@ export const BerseMatchScreen: React.FC = () => {
       },
       {
         id: 'comm-2',
-        name: 'Digital Nomads Malaysia',
+        name: 'PeaceMeal MY',
         type: 'community',
-        category: 'Professional',
-        profession: 'Professional Network',
-        description: 'Connect with remote workers and digital nomads',
-        location: 'Kuala Lumpur, Malaysia',
-        bio: 'Building a thriving community of remote workers, digital nomads, and location-independent professionals across Malaysia',
-        memberCount: 890,
-        eventCount: 45,
-        isVerified: true,
-        verificationBadge: 'silver',
-        tags: ['Remote Work', 'Tech', 'Coworking', 'Networking'],
-        upcomingEvents: ['Coworking Day', 'Startup Pitch Night'],
-        match: 88,
-        servicesOffered: {
-          localGuide: false,
-          homestay: false,
-          marketplace: false,
-          openToConnect: true
-        }
-      },
-      {
-        id: 'comm-3',
-        name: 'KL Hiking Club',
-        type: 'community',
-        category: 'Sports',
-        profession: 'Sports & Adventure',
-        description: 'Weekly hiking adventures around KL',
-        location: 'Kuala Lumpur, Malaysia',
-        bio: 'Join us for weekly hiking adventures to explore the natural beauty around Kuala Lumpur and beyond',
-        memberCount: 567,
-        eventCount: 120,
-        isVerified: true,
-        verificationBadge: 'bronze',
-        tags: ['Hiking', 'Nature', 'Fitness', 'Adventure'],
-        upcomingEvents: ['Broga Hill Sunrise', 'Jungle Trek'],
-        match: 75,
-        servicesOffered: {
-          localGuide: false,
-          homestay: false,
-          marketplace: false,
-          openToConnect: true
-        }
-      },
-      {
-        id: 'comm-4',
-        name: 'Volunteer Malaysia',
-        type: 'community',
-        category: 'Volunteer',
-        profession: 'Social Impact',
-        description: 'Making a difference through community service',
+        category: 'Social',
+        profession: 'Community Initiative',
+        description: 'Bringing cultural, intellectual and spiritual understanding of Islam through interactive programs in Malaysia',
         location: 'Malaysia',
-        bio: 'Unite for social impact through volunteer work, community service, and environmental initiatives across Malaysia',
-        memberCount: 1234,
-        eventCount: 89,
+        bio: 'Bringing cultural, intellectual and spiritual understanding of Islam through interactive programs in Malaysia. PeaceMeal MY fosters unity and understanding through shared dining experiences.',
+        memberCount: 5000,
+        eventCount: 500,
         isVerified: true,
         verificationBadge: 'gold',
-        tags: ['Social Impact', 'Charity', 'Environment', 'Community Service'],
-        upcomingEvents: ['Beach Cleanup', 'Food Bank Drive'],
-        match: 82,
+        tags: ['Food', 'Unity', 'Cultural Exchange', 'Community'],
+        upcomingEvents: ['Community Iftar', 'Potluck Gathering'],
+        match: 95,
         servicesOffered: {
           localGuide: false,
           homestay: false,
@@ -2679,24 +2713,21 @@ export const BerseMatchScreen: React.FC = () => {
       }
     ];
 
+    // For production: Only show user's own profile
+    const profiles = [userProfile];
+
     const allConnections = {
-      all: [userProfile],
+      all: profiles,
       communities: communityProfiles,
-      guides: [userProfile],
-      homesurf: [],
+      guides: profiles.filter(p => p.servicesOffered?.localGuide),
+      homesurf: profiles.filter(p => p.servicesOffered?.homestay),
       mentor: [],
       buddy: []
     };
 
-    // For 'all' mode, combine all profiles except communities
+    // For 'all' mode, show user profile only
     if (connectionMode === 'all') {
-      const combined = [
-        ...allConnections.guides,
-        ...allConnections.homesurf,
-        ...allConnections.mentor,
-        ...allConnections.buddy
-      ];
-      return applyLocationFilter(combined);
+      return applyLocationFilter(profiles);
     }
     
     const connections = allConnections[connectionMode] || [];
@@ -2706,25 +2737,8 @@ export const BerseMatchScreen: React.FC = () => {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      // Mock users with proper servicesOffered for testing
-      const mockUsers: ProfileCardData[] = [
-        {
-          id: 1,
-          name: 'Sarah Lim',
-          location: 'KLCC, Kuala Lumpur',
-          match: 92,
-          tags: ['Local Friend', 'City Guide', 'Coffee Expert'],
-          mutuals: ['Ahmad', 'Fatima'],
-          bio: 'Know all the best cafes and hidden gems in KL! Happy to show you around',
-          offers: ['Weekend city tours', 'Best food spots', 'Local hangouts'],
-          servicesOffered: {
-            localGuide: true,
-            homestay: false,
-            marketplace: false,
-            openToConnect: true
-          }
-        }
-      ];
+      // Load users from API or localStorage
+      const mockUsers: ProfileCardData[] = [];
       setUsers(mockUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -2967,20 +2981,30 @@ export const BerseMatchScreen: React.FC = () => {
             All
           </ModeButton>
           <ModeButton 
-            $active={false}
-            onClick={(e) => { e.preventDefault(); alert('BerseGuide coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={connectionMode === 'guides'}
+            onClick={() => setConnectionMode('guides')}
+            style={{ 
+              background: connectionMode === 'guides' ? '' : '#757575',
+              opacity: connectionMode === 'guides' ? 1 : 0.8,
+              color: connectionMode === 'guides' ? '' : '#ccc',
+              border: connectionMode === 'guides' ? '' : '1px solid #555'
+            }}
           >
             BerseGuide
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
-            $active={false}
-            onClick={(e) => { e.preventDefault(); alert('HomeSurf coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={connectionMode === 'homesurf'}
+            onClick={() => setConnectionMode('homesurf')}
+            style={{ 
+              background: connectionMode === 'homesurf' ? '' : '#757575',
+              opacity: connectionMode === 'homesurf' ? 1 : 0.8,
+              color: connectionMode === 'homesurf' ? '' : '#ccc',
+              border: connectionMode === 'homesurf' ? '' : '1px solid #555'
+            }}
           >
             HomeSurf
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
             $active={connectionMode === 'communities'}
@@ -2989,20 +3013,30 @@ export const BerseMatchScreen: React.FC = () => {
             Communities
           </ModeButton>
           <ModeButton 
-            $active={false}
-            onClick={(e) => { e.preventDefault(); alert('BerseBuddy coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={connectionMode === 'buddy'}
+            onClick={() => setConnectionMode('buddy')}
+            style={{ 
+              background: connectionMode === 'buddy' ? '' : '#757575',
+              opacity: connectionMode === 'buddy' ? 1 : 0.8,
+              color: connectionMode === 'buddy' ? '' : '#ccc',
+              border: connectionMode === 'buddy' ? '' : '1px solid #555'
+            }}
           >
             BerseBuddy
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
           <ModeButton 
-            $active={false}
-            onClick={(e) => { e.preventDefault(); alert('BerseMentor coming soon!'); }}
-            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+            $active={connectionMode === 'mentor'}
+            onClick={() => setConnectionMode('mentor')}
+            style={{ 
+              background: connectionMode === 'mentor' ? '' : '#757575',
+              opacity: connectionMode === 'mentor' ? 1 : 0.8,
+              color: connectionMode === 'mentor' ? '' : '#ccc',
+              border: connectionMode === 'mentor' ? '' : '1px solid #555'
+            }}
           >
             BerseMentor
-            <CollabBadge>Soon</CollabBadge>
+            <CollabBadge style={{ background: '#666', color: '#aaa' }}>Soon</CollabBadge>
           </ModeButton>
         </ModeSelector>
         
@@ -4164,12 +4198,46 @@ export const BerseMatchScreen: React.FC = () => {
         <ProfileDetailContent onClick={(e) => e.stopPropagation()}>
           <ProfileDetailHeader>
             <CloseModalButton onClick={() => setShowProfileDetail(false)}>×</CloseModalButton>
-            <h2 style={{ margin: 0, fontSize: '20px', color: '#2fce98' }}>
+            
+            {/* Large Profile Image */}
+            <ProfileImageLarge $bgColor={selectedDetailProfile?.avatarColor || getGradient(selectedDetailProfile?.name || 'User')}>
+              {selectedDetailProfile?.profileImage ? (
+                <img src={selectedDetailProfile.profileImage} alt={selectedDetailProfile.name} />
+              ) : (
+                selectedDetailProfile?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'
+              )}
+            </ProfileImageLarge>
+            
+            <h2 style={{ margin: 0, fontSize: '22px', color: '#2fce98', fontWeight: '600' }}>
               {selectedDetailProfile?.name}
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#666' }}>
-              {selectedDetailProfile?.profession} • {selectedDetailProfile?.location}
+              {selectedDetailProfile?.profession} • {selectedDetailProfile?.age} • {selectedDetailProfile?.location}
             </p>
+            
+            {/* Social Media Links */}
+            <SocialMediaLinks>
+              {selectedDetailProfile?.linkedin && (
+                <SocialLink href={`https://linkedin.com/in/${selectedDetailProfile.linkedin}`} target="_blank" rel="noopener noreferrer">
+                  💼
+                </SocialLink>
+              )}
+              {selectedDetailProfile?.instagram && (
+                <SocialLink href={`https://instagram.com/${selectedDetailProfile.instagram}`} target="_blank" rel="noopener noreferrer">
+                  📷
+                </SocialLink>
+              )}
+              {selectedDetailProfile?.twitter && (
+                <SocialLink href={`https://twitter.com/${selectedDetailProfile.twitter}`} target="_blank" rel="noopener noreferrer">
+                  🐦
+                </SocialLink>
+              )}
+              {selectedDetailProfile?.website && (
+                <SocialLink href={selectedDetailProfile.website} target="_blank" rel="noopener noreferrer">
+                  🌐
+                </SocialLink>
+              )}
+            </SocialMediaLinks>
           </ProfileDetailHeader>
 
           {/* Personality & Languages */}
@@ -4218,19 +4286,57 @@ export const BerseMatchScreen: React.FC = () => {
           )}
 
           {/* Communities */}
-          {selectedDetailProfile?.communities && selectedDetailProfile.communities.length > 0 && (
+          {(selectedDetailProfile?.communities && selectedDetailProfile.communities.length > 0) || true && (
             <ProfileDetailSection>
               <DetailSectionTitle>Communities</DetailSectionTitle>
               <DetailList>
-                {selectedDetailProfile.communities.map((community: string, index: number) => (
+                {(selectedDetailProfile?.communities || ["Ahl 'Umran Network", 'PeaceMeal MY']).map((community: string, index: number) => (
                   <DetailItem key={index}>
                     <span>👥</span>
-                    <div>{community}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span>{community}</span>
+                      <span style={{ fontSize: '10px', color: '#2fce98', fontWeight: '600' }}>
+                        {community === "Ahl 'Umran Network" ? 'Moderator' : 
+                         community === 'PeaceMeal MY' ? 'Member' : 'Member'}
+                      </span>
+                    </div>
                   </DetailItem>
                 ))}
               </DetailList>
             </ProfileDetailSection>
           )}
+          
+          {/* BerseMukha Sessions */}
+          <ProfileDetailSection>
+            <DetailSectionTitle>BerseMukha Sessions Joined</DetailSectionTitle>
+            <DetailList>
+              <DetailItem>
+                <span>🕌</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span>BerseMukha August 2025</span>
+                  <span style={{ fontSize: '10px', color: '#999' }}>10 Aug</span>
+                </div>
+              </DetailItem>
+              <DetailItem>
+                <span>🕌</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span>BerseMukha July 2025</span>
+                  <span style={{ fontSize: '10px', color: '#999' }}>13 Jul</span>
+                </div>
+              </DetailItem>
+              <DetailItem>
+                <span>🕌</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span>BerseMukha June 2025</span>
+                  <span style={{ fontSize: '10px', color: '#999' }}>15 Jun</span>
+                </div>
+              </DetailItem>
+            </DetailList>
+            <div style={{ marginTop: '8px', padding: '8px', background: '#f0f9ff', borderRadius: '8px' }}>
+              <div style={{ fontSize: '11px', color: '#2fce98', fontWeight: '600' }}>📊 Attendance Stats</div>
+              <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>12 sessions • 87% attendance • 45 connections made</div>
+            </div>
+          </ProfileDetailSection>
 
           {/* Events Attending */}
           {selectedDetailProfile?.eventsAttending && selectedDetailProfile.eventsAttending.length > 0 && (
@@ -4247,20 +4353,51 @@ export const BerseMatchScreen: React.FC = () => {
             </ProfileDetailSection>
           )}
 
-          {/* Offers */}
-          {selectedDetailProfile?.offers && selectedDetailProfile.offers.length > 0 && (
-            <ProfileDetailSection>
-              <DetailSectionTitle>What They Offer</DetailSectionTitle>
-              <DetailList>
-                {selectedDetailProfile.offers.map((offer: string, index: number) => (
-                  <DetailItem key={index}>
-                    <span>✨</span>
-                    <div>{offer}</div>
-                  </DetailItem>
-                ))}
-              </DetailList>
-            </ProfileDetailSection>
-          )}
+          {/* Services & Offerings */}
+          <ProfileDetailSection>
+            <DetailSectionTitle>Services & Offerings</DetailSectionTitle>
+            <DetailList>
+              {selectedDetailProfile?.servicesOffered?.localGuide && (
+                <DetailItem>
+                  <span>🗺️</span>
+                  <div>
+                    <strong>BerseGuide</strong>
+                    <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                      Local tours in KL • RM50-80/day • Heritage & Architecture focus
+                    </div>
+                  </div>
+                </DetailItem>
+              )}
+              {selectedDetailProfile?.servicesOffered?.homestay && (
+                <DetailItem>
+                  <span>🏠</span>
+                  <div>
+                    <strong>HomeSurf</strong>
+                    <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                      Couch available • Max 3 days • WiFi & Kitchen access
+                    </div>
+                  </div>
+                </DetailItem>
+              )}
+              {selectedDetailProfile?.servicesOffered?.openToConnect && (
+                <DetailItem>
+                  <span>☕</span>
+                  <div>
+                    <strong>BerseBuddy</strong>
+                    <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                      Coffee meetups • Photography walks • Cultural exchanges
+                    </div>
+                  </div>
+                </DetailItem>
+              )}
+              {(selectedDetailProfile?.offers || []).map((offer: string, index: number) => (
+                <DetailItem key={`offer-${index}`}>
+                  <span>✨</span>
+                  <div>{offer}</div>
+                </DetailItem>
+              ))}
+            </DetailList>
+          </ProfileDetailSection>
 
           {/* Bio */}
           {selectedDetailProfile?.bio && (
@@ -4274,11 +4411,32 @@ export const BerseMatchScreen: React.FC = () => {
 
           {/* Action Buttons */}
           <ProfileDetailSection style={{ display: 'flex', gap: '12px' }}>
-            <GuideButton style={{ flex: 1 }} $primary>
-              💬 Send Message
+            <GuideButton 
+              style={{ flex: 1 }} 
+              $primary
+              onClick={() => {
+                const profileUrl = `${window.location.origin}/profile/${selectedDetailProfile?.id || 'user'}`;
+                if (navigator.share) {
+                  navigator.share({
+                    title: `Connect with ${selectedDetailProfile?.name}`,
+                    text: `Check out ${selectedDetailProfile?.name}'s profile on BerseMuka`,
+                    url: profileUrl
+                  }).catch(err => console.log('Share cancelled'));
+                } else {
+                  navigator.clipboard.writeText(profileUrl);
+                  alert('Profile link copied to clipboard!');
+                }
+              }}
+            >
+              📤 Share
             </GuideButton>
-            <GuideButton style={{ flex: 1 }}>
-              🤝 Connect
+            <GuideButton 
+              style={{ flex: 1 }}
+              onClick={() => {
+                alert(`Friend request sent to ${selectedDetailProfile?.name}!`);
+              }}
+            >
+              🤝 Friend Request
             </GuideButton>
           </ProfileDetailSection>
         </ProfileDetailContent>
@@ -4296,12 +4454,8 @@ export const BerseMatchScreen: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
             {selectedProfile?.communities?.map((community, idx) => {
               const roles = {
-                'NAMA Foundation': 'Active Member',
-                'KL Photography Club': 'Event Coordinator', 
-                'Malaysian Architects': 'President',
-                'MARA Students Germany': 'Admin',
-                'Berlin Tech Community': 'Member',
-                'Istanbul Tour Guides': 'Senior Guide'
+                "Ahl 'Umran Network": 'Moderator',
+                'PeaceMeal MY': 'Active Member'
               };
               
               return (

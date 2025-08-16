@@ -14,7 +14,7 @@ export const NotificationsScreen: React.FC = () => {
       <StatusBar onProfileClick={() => setShowProfileSidebar(true)} />
       
       <Header>
-        <BackButton onClick={() => setShowProfileSidebar(true)}>←</BackButton>
+        <BackButton onClick={() => navigate('/dashboard')}>←</BackButton>
         <HeaderTitle>🔔 Notifications</HeaderTitle>
       </Header>
 
@@ -24,7 +24,7 @@ export const NotificationsScreen: React.FC = () => {
             <NotificationIcon>🎉</NotificationIcon>
             <NotificationContent>
               <NotificationTitle>Welcome to BerseMuka!</NotificationTitle>
-              <NotificationText>Start connecting with amazing people in your community</NotificationText>
+              <NotificationText>Start connecting with amazing people in your community. Explore events, earn points, and unlock rewards!</NotificationText>
               <NotificationTime>2 hours ago</NotificationTime>
             </NotificationContent>
           </NotificationItem>
@@ -48,10 +48,10 @@ export const NotificationsScreen: React.FC = () => {
           </NotificationItem>
 
           <NotificationItem>
-            <NotificationIcon>🎫</NotificationIcon>
+            <NotificationIcon>☕</NotificationIcon>
             <NotificationContent>
-              <NotificationTitle>New Voucher Available</NotificationTitle>
-              <NotificationText>Mukha Cafe discount voucher is now available for 25 points</NotificationText>
+              <NotificationTitle>Featured Reward: Mukha Cafe</NotificationTitle>
+              <NotificationText>Get 30% off on all beverages and pastries for only 30 points!</NotificationText>
               <NotificationTime>2 days ago</NotificationTime>
             </NotificationContent>
           </NotificationItem>
@@ -108,7 +108,7 @@ const BackButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
-  color: #2D5F4F;
+  color: #2fce98;
   cursor: pointer;
   margin-right: 12px;
   
@@ -120,7 +120,7 @@ const BackButton = styled.button`
 const HeaderTitle = styled.h1`
   font-size: 20px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin: 0;
 `;
 

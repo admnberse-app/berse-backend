@@ -29,7 +29,7 @@ const MessagingModalContent = styled.div`
 `;
 
 const MessagingModalHeader = styled.div`
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   padding: 20px;
   color: white;
   display: flex;
@@ -98,7 +98,7 @@ const RecipientAvatar = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2D5F4F, #4A90A4);
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
   color: white;
   font-size: 18px;
   font-weight: bold;
@@ -150,9 +150,9 @@ const QuickActionButton = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   ${({ $variant = 'secondary' }) => 
     $variant === 'primary' 
       ? `
-        background: #2D5F4F;
+        background: #2fce98;
         color: white;
-        border: 1px solid #2D5F4F;
+        border: 1px solid #2fce98;
         
         &:hover {
           background: #1F4A3A;
@@ -184,8 +184,8 @@ const TemplatesTitle = styled.h4`
 
 const TemplateButton = styled.button`
   background: #e8f4f0;
-  color: #2D5F4F;
-  border: 1px solid #2D5F4F22;
+  color: #2fce98;
+  border: 1px solid #2fce9822;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
@@ -195,7 +195,7 @@ const TemplateButton = styled.button`
   
   &:hover {
     background: #d4f4e9;
-    border-color: #2D5F4F44;
+    border-color: #2fce9844;
   }
 `;
 
@@ -213,7 +213,7 @@ const MessageInput = styled.textarea`
   box-sizing: border-box;
   
   &:focus {
-    border-color: #2D5F4F;
+    border-color: #2fce98;
   }
   
   &::placeholder {
@@ -222,7 +222,7 @@ const MessageInput = styled.textarea`
 `;
 
 const SendMessageButton = styled.button<{ $disabled?: boolean }>`
-  background: ${({ $disabled }) => $disabled ? '#cccccc' : '#2D5F4F'};
+  background: ${({ $disabled }) => $disabled ? '#cccccc' : '#2fce98'};
   color: white;
   border: none;
   padding: 12px 24px;

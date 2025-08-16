@@ -93,7 +93,7 @@ export class SecretsManager {
     const key = this.deriveKey(salt);
     const iv = crypto.randomBytes(IV_LENGTH);
     
-    const cipher = crypto.createCipherGCM(ALGORITHM, key, iv);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
     
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -115,7 +115,7 @@ export class SecretsManager {
     const iv = Buffer.from(encryptedData.iv, 'hex');
     const tag = Buffer.from(encryptedData.tag, 'hex');
     
-    const decipher = crypto.createDecipherGCM(ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
     
     let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');

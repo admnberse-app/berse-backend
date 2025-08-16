@@ -3,7 +3,7 @@ import * as QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import { cacheService, CacheKeys, CacheTTL } from './cache.service';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -69,7 +69,7 @@ class MFAService {
     };
 
     if (emailConfig.host && emailConfig.auth.user) {
-      this.emailTransporter = nodemailer.createTransporter(emailConfig);
+      this.emailTransporter = nodemailer.createTransport(emailConfig);
       logger.info('Email transporter initialized');
     } else {
       logger.warn('SMTP credentials not provided - Email MFA disabled');

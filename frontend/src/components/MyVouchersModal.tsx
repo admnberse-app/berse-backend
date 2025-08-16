@@ -85,7 +85,7 @@ const StatCard = styled.div`
 const StatValue = styled.div`
   font-size: 18px;
   font-weight: bold;
-  color: #2D5F4F;
+  color: #2fce98;
   margin-bottom: 4px;
 `;
 
@@ -112,7 +112,7 @@ const TabButton = styled.button<{ $active: boolean }>`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: ${props => props.$active ? '#2D5F4F' : '#F5F5F5'};
+  background: ${props => props.$active ? '#2fce98' : '#F5F5F5'};
   color: ${props => props.$active ? 'white' : '#666'};
   
   &:hover {
@@ -217,7 +217,7 @@ const EmptySubtitle = styled.p`
 `;
 
 const EmptyButton = styled.button`
-  background: #2D5F4F;
+  background: #2fce98;
   color: white;
   border: none;
   padding: 12px 24px;

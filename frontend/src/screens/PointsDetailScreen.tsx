@@ -18,7 +18,7 @@ const Container = styled.div`
 
 const Content = styled.div`
   flex: 1;
-  padding-bottom: 80px;
+  padding-bottom: 90px;
   overflow-y: auto;
   max-width: 393px;
   width: 100%;
@@ -282,7 +282,7 @@ const AboutText = styled.p`
 
 // Points Balance Section
 const PointsBalanceCard = styled.div`
-  background: linear-gradient(135deg, #2D5F4F 0%, #3A7A68 100%);
+  background: linear-gradient(135deg, #2fce98 0%, #3A7A68 100%);
   color: white;
   padding: 20px;
   margin: 16px;
@@ -686,7 +686,7 @@ const OfferDescription = styled.p`
 
 const OfferPoints = styled.div`
   font-size: 14px;
-  color: #2D5F4F;
+  color: #2fce98;
   font-weight: 600;
 `;
 
@@ -998,7 +998,9 @@ export const PointsDetailScreen: React.FC = () => {
       description: 'Buy 1 Get 1 Free Coffee',
       points: 50,
       icon: '☕',
-      isNew: true,
+      isNew: false,
+      disabled: true,
+      comingSoon: true,
     },
     {
       id: 2,
@@ -1006,7 +1008,9 @@ export const PointsDetailScreen: React.FC = () => {
       description: '50% Student Discount',
       points: 200,
       icon: '🏊',
-      isNew: true,
+      isNew: false,
+      disabled: true,
+      comingSoon: true,
     },
     {
       id: 3,
@@ -1015,6 +1019,8 @@ export const PointsDetailScreen: React.FC = () => {
       points: 150,
       icon: '🎢',
       isNew: false,
+      disabled: true,
+      comingSoon: true,
     },
   ];
 
@@ -1034,8 +1040,8 @@ export const PointsDetailScreen: React.FC = () => {
   ];
 
   const educationDeals = [
-    { title: 'BRIGHT English', discount: '20% OFF', points: 100, color: '#70AD47' },
-    { title: 'University Fees', discount: '10% OFF', points: 400, color: '#70AD47' },
+    { title: 'BRIGHT English', discount: '20% OFF', points: 500, color: '#70AD47' },
+    { title: 'University Fees', discount: '10% OFF', points: 500, color: '#70AD47' },
     { title: 'Book Store', discount: '15% OFF', points: 50, color: '#70AD47' },
   ];
 
@@ -1265,25 +1271,37 @@ export const PointsDetailScreen: React.FC = () => {
 
         {/* Featured Deal */}
         <FeaturedDealCard>
-          <FeaturedBadge>LIMITED</FeaturedBadge>
-          <FeaturedTitle>University Studies</FeaturedTitle>
-          <FeaturedSubtitle>Get 20% off on all courses</FeaturedSubtitle>
-          <FeaturedButton>Redeem for 400 pts</FeaturedButton>
+          <FeaturedBadge>FEATURED</FeaturedBadge>
+          <FeaturedTitle>Mukha Cafe ☕</FeaturedTitle>
+          <FeaturedSubtitle>Get 30% off on all beverages and pastries</FeaturedSubtitle>
+          <FeaturedButton>Redeem for 30 pts</FeaturedButton>
         </FeaturedDealCard>
 
         {/* Trending Offers */}
         <TrendingSection>
           <SectionTitle>🔥 Trending Offers</SectionTitle>
           {trendingOffers.map((offer) => (
-            <OfferCard key={offer.id} onClick={() => handleDealClick(offer)}>
+            <OfferCard 
+              key={offer.id} 
+              onClick={offer.disabled ? undefined : () => handleDealClick(offer)}
+              style={{
+                opacity: offer.disabled ? 0.6 : 1,
+                cursor: offer.disabled ? 'not-allowed' : 'pointer'
+              }}
+            >
               <OfferImage>{offer.icon}</OfferImage>
               <OfferDetails>
                 <OfferTitle>
                   {offer.title}
                   {offer.isNew && <NewBadge>NEW</NewBadge>}
+                  {offer.comingSoon && <NewBadge style={{ background: '#999' }}>Soon</NewBadge>}
                 </OfferTitle>
-                <OfferDescription>{offer.description}</OfferDescription>
-                <OfferPoints>{offer.points} points</OfferPoints>
+                <OfferDescription>
+                  {offer.disabled ? 'Coming Soon' : offer.description}
+                </OfferDescription>
+                <OfferPoints>
+                  {offer.disabled ? '-- points' : `${offer.points} points`}
+                </OfferPoints>
               </OfferDetails>
             </OfferCard>
           ))}

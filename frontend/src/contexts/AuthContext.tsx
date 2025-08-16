@@ -9,7 +9,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, fullName: string, phoneNumber?: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string, username: string, phoneNumber?: string, additionalData?: any) => Promise<void>;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +48,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('bersemuka_user');
       }
 
+      // Check if remember me is disabled and clear session if needed
+      const rememberMe = localStorage.getItem('rememberMe');
+      if (!rememberMe) {
+        // If remember me is not set, clear any existing session
+        const wasLoggedIn = authService.isAuthenticated() || mockAuthService.isAuthenticated();
+        if (wasLoggedIn) {
+          // User didn't choose to be remembered last time
+          localStorage.removeItem('bersemuka_token');
+          localStorage.removeItem('bersemuka_user');
+        }
+      }
+
       // Check if user is already logged in (try both services)
       let userData = null;
       
@@ -61,17 +74,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!userData) {
           const defaultUser = {
             id: 'demo-user',
-            email: 'sasa@example.com',
-            fullName: 'Sasa',
-            firstName: 'Sasa',
-            lastName: '',
+            email: 'zayd@example.com',
+            fullName: 'Zayd Mahdaly',
+            username: 'Zayd Mahdaly',
+            firstName: 'Zayd',
+            lastName: 'Mahdaly',
             phone: '+60123456789',
             bio: 'Welcome to BerseMuka!',
-            profession: 'Explorer',
+            profession: 'Architect & Photographer',
             age: 25,
             location: 'Kuala Lumpur, Malaysia',
             interests: ['Community', 'Events', 'Coffee'],
-            points: 245,
+            points: 0,
+            membershipId: 'AUN100001',
+            qrCode: 'AUN100001',
             isVerified: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -96,28 +112,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Try real backend first
+      // Use real backend only - no fallback to mock
+      console.log('Attempting login with:', email);
       const response = await authService.login({ email, password });
+      console.log('Backend response:', response);
+      
       if (response.success && response.data) {
         console.log('Login successful with backend, setting user:', response.data.user);
         setUser(response.data.user);
-        return;
-      }
-    } catch (error) {
-      console.warn('Backend login failed, falling back to mock service:', error);
-    }
-
-    // Fallback to mock service if backend fails
-    try {
-      const mockResponse = await mockAuthService.login(email, password);
-      if (mockResponse.success && mockResponse.data) {
-        console.log('Login successful with mock service, setting user:', mockResponse.data.user);
-        setUser(mockResponse.data.user);
+        localStorage.setItem('auth_token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         return;
       } else {
-        throw new Error(mockResponse.error || 'Login failed');
+        throw new Error(response.error || 'Login failed');
       }
-    } catch (mockError) {
+    } catch (error) {
+      console.error('Backend login failed:', error);
       throw new Error('Login failed. Please check your credentials.');
     }
   };
@@ -141,10 +151,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
-  const register = async (email: string, password: string, fullName: string, phoneNumber?: string) => {
+  const register = async (email: string, password: string, fullName: string, username: string, phoneNumber?: string, additionalData?: any) => {
     try {
       // Try real backend first
-      const response = await authService.register({ email, password, fullName, phoneNumber });
+      const response = await authService.register({ email, password, fullName, username, phoneNumber, ...additionalData });
       if (response.success && response.data) {
         console.log('Registration successful with backend, setting user:', response.data.user);
         setUser(response.data.user);
@@ -156,7 +166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Fallback to mock service if backend fails
     try {
-      const mockResponse = await mockAuthService.register(email, password, fullName, phoneNumber);
+      const mockResponse = await mockAuthService.register(email, password, fullName, username, phoneNumber);
       if (mockResponse.success && mockResponse.data) {
         console.log('Registration successful with mock service, setting user:', mockResponse.data.user);
         setUser(mockResponse.data.user);
@@ -166,6 +176,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (mockError) {
       throw new Error('Registration failed. Please try again.');
+    }
+  };
+
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      // Update localStorage to persist changes
+      localStorage.setItem('bersemuka_user', JSON.stringify(updatedUser));
+      console.log('User updated:', updatedUser);
     }
   };
 
@@ -183,6 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     register,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
