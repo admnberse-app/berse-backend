@@ -34,6 +34,7 @@ COPY --from=dependencies --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=build --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --from=build --chown=nodejs:nodejs /app/package*.json ./
+COPY --from=build --chown=nodejs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/logs && \
@@ -42,12 +43,12 @@ RUN mkdir -p /app/uploads /app/logs && \
 # Switch to non-root user
 USER nodejs
 
-# Expose port
-EXPOSE 3001
+# Expose port (Railway sets PORT env var)
+EXPOSE ${PORT:-3001}
 
-# Health check
+# Health check using PORT env var
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3001) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"
 
 # Start application with dumb-init
 ENTRYPOINT ["dumb-init", "--"]
