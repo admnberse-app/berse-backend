@@ -70,8 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           userData = mockAuthService.getCurrentUser(); // This one is sync
         }
         
-        // If no user found, create a default demo user for the app to function
-        if (!userData) {
+        // If no user found, create a default demo user for the app to function (skip in test environment)
+        if (!userData && process.env.NODE_ENV !== 'test') {
           const defaultUser = {
             id: 'demo-user',
             email: 'zayd@example.com',
