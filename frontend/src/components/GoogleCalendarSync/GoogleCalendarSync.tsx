@@ -107,9 +107,28 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
       }
       
       await syncCalendarEvents();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to sign in to Google:', err);
-      setError('Failed to connect to Google Calendar');
+      
+      // Check if it's a popup blocker issue
+      if (err.message && err.message.includes('popup')) {
+        setError('Popups blocked! Enable popups for this site in your browser settings.');
+        // Show detailed instructions
+        alert(
+          '🚫 Popup Blocker Detected!\n\n' +
+          'To connect Google Calendar, you need to allow popups:\n\n' +
+          '🔓 Quick Fix:\n' +
+          '1. Look for a blocked popup icon in your address bar (right side)\n' +
+          '2. Click it and choose "Always allow popups from localhost:5173"\n' +
+          '3. Refresh the page and try again\n\n' +
+          '⚙️ Manual Fix:\n' +
+          'Chrome/Edge: Settings → Privacy → Site Settings → Popups\n' +
+          'Firefox: Settings → Privacy → Permissions → Block popups\n' +
+          'Safari: Preferences → Websites → Pop-up Windows'
+        );
+      } else {
+        setError('Failed to connect to Google Calendar');
+      }
     } finally {
       setIsSyncing(false);
     }

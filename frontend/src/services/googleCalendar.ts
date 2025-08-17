@@ -73,8 +73,20 @@ class GoogleCalendarService {
     }
     
     if (!this.isSignedIn) {
-      await gapi.auth2.getAuthInstance().signIn();
-      this.isSignedIn = true;
+      try {
+        // Try to sign in with popup
+        await gapi.auth2.getAuthInstance().signIn({
+          prompt: 'select_account',
+          ux_mode: 'popup'
+        });
+        this.isSignedIn = true;
+      } catch (error: any) {
+        // If popup is blocked, show instructions
+        if (error.error === 'popup_closed_by_user' || error.error === 'popup_blocked_by_browser') {
+          throw new Error('Please enable popups for this site to connect Google Calendar. Click the popup blocker icon in your browser address bar and allow popups from localhost:5173');
+        }
+        throw error;
+      }
     }
   }
 

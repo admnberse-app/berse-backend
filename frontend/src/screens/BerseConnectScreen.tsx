@@ -1331,8 +1331,22 @@ export const BerseConnectScreen: React.FC = () => {
           try {
             await googleCalendarService.initClient();
             await googleCalendarService.signIn();
-          } catch (error) {
+          } catch (error: any) {
             console.error('Failed to connect Google Calendar:', error);
+            
+            // Show specific popup blocker instructions
+            if (error.message && error.message.includes('popup')) {
+              alert(
+                '⚠️ Popup Blocked!\n\n' +
+                'Please enable popups to connect Google Calendar:\n\n' +
+                '1. Look for the popup blocked icon in your address bar (usually on the right)\n' +
+                '2. Click it and select "Always allow popups from localhost:5173"\n' +
+                '3. Then try joining the event again\n\n' +
+                'Or you can manually allow popups in your browser settings.'
+              );
+            } else {
+              alert('Failed to connect Google Calendar. You can still join the event without calendar sync.');
+            }
             // Continue without calendar - event is already joined
           }
         }
