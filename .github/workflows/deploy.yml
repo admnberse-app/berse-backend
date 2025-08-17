@@ -76,55 +76,16 @@ jobs:
           npm run build
           cd ..
   
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
-      
-      - name: Deploy to server
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
-          ssh $SSH_USER@$SSH_HOST << 'ENDSSH'
-            cd /var/www/bersemuka
-            git pull origin main
-            npm ci
-            cd frontend && npm ci && npm run build && cd ..
-            npx prisma migrate deploy
-            npm run build
-            pm2 restart bersemuka-backend
-          ENDSSH
-      
-      - name: Health check
-        env:
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-        run: |
-          sleep 30
-          curl -f $PRODUCTION_URL/health || exit 1
-      
-      - name: Notify deployment
-        if: success()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '✅ Deployment to production successful!'
-            })
+  # Deploy job removed - Using Railway and Netlify auto-deployment instead
+  # Railway backend: Automatically deploys from main branch to api.berse.app
+  # Netlify frontend: Automatically deploys from main branch to bersemuka.netlify.app
+  # 
+  # The SSH deployment steps are not needed since:
+  # 1. Railway handles backend deployment automatically
+  # 2. Netlify handles frontend deployment automatically
+  # 3. Both services trigger on GitHub push to main branch
+  # 
+  # If you need deployment notifications in the future, you can add:
+  # - Railway webhook notifications
+  # - Netlify deploy notifications
+  # - GitHub deployment status API
