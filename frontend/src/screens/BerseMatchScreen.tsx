@@ -2748,10 +2748,54 @@ export const BerseMatchScreen: React.FC = () => {
   };
 
   // Friendship matches data - will be populated from real users
-  const friendshipMatches: any[] = [];
+  const friendshipMatches: any[] = [
+    {
+      person1: {
+        emoji: '👨‍💻',
+        name: 'Ahmad',
+        relation: 'Your colleague'
+      },
+      person2: {
+        emoji: '👩‍🎨',
+        name: 'Sarah',
+        relation: 'Met at last event'
+      },
+      reasons: [
+        '✨ Both love tech & design',
+        '🎨 Share interest in UI/UX',
+        '☕ Coffee enthusiasts'
+      ]
+    },
+    {
+      person1: {
+        emoji: '👨‍🍳',
+        name: 'Hakim',
+        relation: 'From cooking class'
+      },
+      person2: {
+        emoji: '👩‍💼',
+        name: 'Aisha',
+        relation: 'Business owner'
+      },
+      reasons: [
+        '🍳 Both interested in culinary arts',
+        '💼 Entrepreneurial mindset',
+        '🌱 Sustainability advocates'
+      ]
+    }
+  ];
 
   // Connection chains data - will be populated from real connections
-  const connectionChains: any[] = [];
+  const connectionChains: any[] = [
+    {
+      people: ['You', 'Ahmad', 'Farah', 'Zayd'],
+      connection: '🎮 Gaming Community'
+    },
+    {
+      people: ['You', 'Sarah', 'Imran', 'Nadia'],
+      connection: '📚 Book Club Members'
+    }
+  ];
 
   useEffect(() => {
     loadUsers();
@@ -2825,7 +2869,9 @@ export const BerseMatchScreen: React.FC = () => {
   };
   
   const handleSkipMatch = () => {
-    setCurrentMatchIndex((prev) => (prev + 1) % friendshipMatches.length);
+    if (friendshipMatches.length > 0) {
+      setCurrentMatchIndex((prev) => (prev + 1) % friendshipMatches.length);
+    }
   };
 
   const handleAddPersonToIntro = () => {
@@ -3562,39 +3608,53 @@ export const BerseMatchScreen: React.FC = () => {
               <MatchmakerTitle>🤝 FRIEND CONNECTOR</MatchmakerTitle>
               <MatchmakerLevel>Level 3 Connector • 450 pts to Level 4</MatchmakerLevel>
               
-              <MatchPair>
-                <MatchProfile>
-                  <MatchAvatar>{friendshipMatches[currentMatchIndex].person1.emoji}</MatchAvatar>
-                  <MatchName>{friendshipMatches[currentMatchIndex].person1.name}</MatchName>
-                  <MatchRelation>{friendshipMatches[currentMatchIndex].person1.relation}</MatchRelation>
-                </MatchProfile>
-                
-                <MatchIcon>🤝</MatchIcon>
-                
-                <MatchProfile>
-                  <MatchAvatar>{friendshipMatches[currentMatchIndex].person2.emoji}</MatchAvatar>
-                  <MatchName>{friendshipMatches[currentMatchIndex].person2.name}</MatchName>
-                  <MatchRelation>{friendshipMatches[currentMatchIndex].person2.relation}</MatchRelation>
-                </MatchProfile>
-              </MatchPair>
-              
-              <MatchReasons>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>
-                  Why they'd be great friends:
+              {friendshipMatches.length > 0 && friendshipMatches[currentMatchIndex] ? (
+                <>
+                  <MatchPair>
+                    <MatchProfile>
+                      <MatchAvatar>{friendshipMatches[currentMatchIndex].person1.emoji}</MatchAvatar>
+                      <MatchName>{friendshipMatches[currentMatchIndex].person1.name}</MatchName>
+                      <MatchRelation>{friendshipMatches[currentMatchIndex].person1.relation}</MatchRelation>
+                    </MatchProfile>
+                    
+                    <MatchIcon>🤝</MatchIcon>
+                    
+                    <MatchProfile>
+                      <MatchAvatar>{friendshipMatches[currentMatchIndex].person2.emoji}</MatchAvatar>
+                      <MatchName>{friendshipMatches[currentMatchIndex].person2.name}</MatchName>
+                      <MatchRelation>{friendshipMatches[currentMatchIndex].person2.relation}</MatchRelation>
+                    </MatchProfile>
+                  </MatchPair>
+                  
+                  <MatchReasons>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>
+                      Why they'd be great friends:
+                    </div>
+                    {friendshipMatches[currentMatchIndex].reasons.map(reason => (
+                      <MatchReason key={reason}>{reason}</MatchReason>
+                    ))}
+                  </MatchReasons>
+                  
+                  <MatchActions>
+                    <MatchButton $type="skip" onClick={handleSkipMatch}>
+                      ⏭️ Skip
+                    </MatchButton>
+                    <MatchButton $type="match">
+                      🤝 Introduce Them!
+                    </MatchButton>
+                  </MatchActions>
+                </>
+              ) : (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔍</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '10px' }}>
+                    No matches available right now
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#999' }}>
+                    Check back later for new friend matching opportunities!
+                  </div>
                 </div>
-                {friendshipMatches[currentMatchIndex].reasons.map(reason => (
-                  <MatchReason key={reason}>{reason}</MatchReason>
-                ))}
-              </MatchReasons>
-              
-              <MatchActions>
-                <MatchButton $type="skip" onClick={handleSkipMatch}>
-                  ⏭️ Skip
-                </MatchButton>
-                <MatchButton $type="match">
-                  🤝 Introduce Them!
-                </MatchButton>
-              </MatchActions>
+              )}
               
               <ManualIntroButton onClick={() => setShowManualIntro(true)}>
                 ✏️ Manually Introduce Friends (2-4 people)
