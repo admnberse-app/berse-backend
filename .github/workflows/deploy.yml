@@ -56,6 +56,8 @@ jobs:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/bersemuka_test
           JWT_SECRET: test-jwt-secret-for-ci-testing-only
           COOKIE_SECRET: test-cookie-secret
+          NODE_ENV: test
+          CI: true
         run: npm test
       
       - name: Run linting
