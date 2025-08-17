@@ -457,7 +457,7 @@ export const RegisterScreen: React.FC = () => {
         )}
         
         <LogoContainer>
-          <Logo src="/Berse App Horizontal words Logo.png" alt="Berse App" />
+          <Logo src="/berse-horizontal-logo.png" alt="Berse App" />
         </LogoContainer>
         <Title>{eventContext ? 'Create Your Berse App Account' : 'Join Berse App'}</Title>
         <Subtitle>

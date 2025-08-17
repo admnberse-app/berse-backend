@@ -187,7 +187,7 @@ export const LoginScreen: React.FC = () => {
       </Header>
       <Content>
         <LogoContainer>
-          <Logo src="/Berse App Horizontal words Logo.png" alt="Berse App" />
+          <Logo src="/berse-horizontal-logo.png" alt="Berse App" />
         </LogoContainer>
         <Title>Welcome Back</Title>
         <Subtitle>Login to continue your Berse App experience</Subtitle>
