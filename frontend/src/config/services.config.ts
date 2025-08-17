@@ -40,7 +40,18 @@ export const SERVICES_CONFIG = {
   
   // Authentication Service
   AUTH_SERVICE: {
-    baseUrl: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth` : 'http://localhost:3003/api/v1/auth',
+    baseUrl: (() => {
+      // For production deployments
+      if (typeof window !== 'undefined' && (window.location.hostname === 'bersemuka.netlify.app' || window.location.hostname === 'bersemuka.app')) {
+        return 'https://api.berse.app/api/v1/auth';
+      }
+      // For local development
+      return import.meta.env.VITE_API_URL ? 
+        (import.meta.env.VITE_API_URL.endsWith('/api') ? 
+          `${import.meta.env.VITE_API_URL}/v1/auth` : 
+          `${import.meta.env.VITE_API_URL}/api/v1/auth`) : 
+        'http://localhost:3003/api/v1/auth';
+    })(),
     endpoints: {
       login: '/login',
       register: '/register',
@@ -164,6 +175,12 @@ export const generateQRCodeUrl = (path: string) => {
 // Environment-based configuration
 export const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
+  
+  // For production, use the correct API URL
+  if (window.location.hostname === 'bersemuka.netlify.app' || window.location.hostname === 'bersemuka.app') {
+    return 'https://api.berse.app';
+  }
+  
   if (envUrl) {
     // Use environment variable as-is for production
     return envUrl;
