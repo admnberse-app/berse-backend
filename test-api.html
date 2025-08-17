@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Berse API</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test Your Berse API</h1>
+    
+    <h2>1. Health Check</h2>
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <div id="health-result"></div>
+    
+    <h2>2. Register New User</h2>
+    <button onclick="testRegister()">Test Registration</button>
+    <div id="register-result"></div>
+    
+    <h2>3. Login</h2>
+    <button onclick="testLogin()">Test Login</button>
+    <div id="login-result"></div>
+    
+    <script>
+        const API_URL = 'https://api.berse.app';
+        const testEmail = `test${Date.now()}@example.com`;
+        const testPassword = 'Test123!@#';
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                document.getElementById('health-result').innerHTML = 
+                    `<pre class="success">✅ Health Check Passed!\n${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = 
+                    `<pre class="error">❌ Error: ${error.message}</pre>`;
+            }
+        }
+        
+        async function testRegister() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: testPassword,
+                        fullName: 'Test User',
+                        phone: '+60123456789'
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('register-result').innerHTML = 
+                        `<pre class="success">✅ Registration Successful!\nEmail: ${testEmail}\n${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    document.getElementById('register-result').innerHTML = 
+                        `<pre class="error">❌ Registration Failed:\n${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                document.getElementById('register-result').innerHTML = 
+                    `<pre class="error">❌ Error: ${error.message}</pre>`;
+            }
+        }
+        
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: testPassword
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('login-result').innerHTML = 
+                        `<pre class="success">✅ Login Successful!\n${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    document.getElementById('login-result').innerHTML = 
+                        `<pre class="error">❌ Login Failed:\n${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                document.getElementById('login-result').innerHTML = 
+                    `<pre class="error">❌ Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Which Site</title>
+    <style>
+        body {
+            font-family: Arial;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .local {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .deployed {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .check {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        img {
+            width: 100%;
+            max-width: 600px;
+            border: 2px solid #ddd;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>How to Check Which Berse Site You're On</h1>
+    
+    <div class="check">
+        <h2>🔍 Look at the Address Bar (Top of Your Browser)</h2>
+        <p>The address bar shows the URL of the website you're currently viewing.</p>
+    </div>
+
+    <div class="local">
+        <h2>❌ LOCAL Development Site (WRONG for Testing)</h2>
+        <p><strong>URL looks like:</strong></p>
+        <ul>
+            <li>http://localhost:5173</li>
+            <li>http://localhost:3000</li>
+            <li>http://127.0.0.1:5173</li>
+        </ul>
+        <p><strong>Console shows:</strong></p>
+        <ul>
+            <li>"DashboardScreen loaded on port 5173"</li>
+            <li>Errors with "localhost:3003"</li>
+        </ul>
+        <p><strong>This is your development environment - changes won't affect real users!</strong></p>
+    </div>
+
+    <div class="deployed">
+        <h2>✅ DEPLOYED Live Site (CORRECT for Testing)</h2>
+        <p><strong>URL looks like:</strong></p>
+        <ul>
+            <li>https://bersemuka.netlify.app</li>
+            <li>https://berse.app (when configured)</li>
+        </ul>
+        <p><strong>Console should show:</strong></p>
+        <ul>
+            <li>API calls to "https://api.berse.app"</li>
+            <li>No localhost errors</li>
+        </ul>
+        <p><strong>This is your LIVE production site that users will see!</strong></p>
+    </div>
+
+    <div class="check">
+        <h2>📋 Quick Check Steps:</h2>
+        <ol>
+            <li><strong>Look at your browser's address bar</strong> (at the very top)</li>
+            <li><strong>Check if it says:</strong>
+                <ul>
+                    <li>localhost = You're on LOCAL (wrong)</li>
+                    <li>bersemuka.netlify.app = You're on LIVE (correct)</li>
+                </ul>
+            </li>
+            <li><strong>Open browser console</strong> (Press F12)</li>
+            <li><strong>Type this command:</strong><br>
+                <code>console.log('Current site:', window.location.href)</code>
+            </li>
+        </ol>
+    </div>
+
+    <div class="deployed">
+        <h2>🚀 To Open the CORRECT Site:</h2>
+        <p><strong>Click this link:</strong></p>
+        <h2><a href="https://bersemuka.netlify.app" target="_blank">https://bersemuka.netlify.app</a></h2>
+        <p>This will open your DEPLOYED app in a new tab!</p>
+    </div>
+
+    <script>
+        // Auto-check current site
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.body.style.border = '5px solid red';
+            alert('⚠️ You are on LOCALHOST - This is your development site!\n\nTo test the deployed app, go to:\nhttps://bersemuka.netlify.app');
+        }
+    </script>
+</body>
+</html>

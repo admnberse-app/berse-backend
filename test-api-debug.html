@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Berse API</title>
+    <style>
+        body { font-family: Arial; max-width: 900px; margin: 50px auto; padding: 20px; }
+        button { padding: 12px 24px; margin: 10px; cursor: pointer; font-size: 16px; }
+        .success { background: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #ffebee; color: #c62828; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .info { background: #e3f2fd; color: #1976d2; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        input { padding: 10px; margin: 5px; width: 300px; font-size: 14px; }
+        h3 { color: #333; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Berse API Issues</h1>
+    
+    <div class="info">
+        <strong>API Status:</strong> Let's first check if the API is running properly
+    </div>
+
+    <h3>1. Test API Health</h3>
+    <button onclick="testHealth()">Check API Health</button>
+    <div id="health-result"></div>
+    
+    <h3>2. Test Registration (Detailed)</h3>
+    <div>
+        <input type="email" id="reg-email" placeholder="Email" value="test@example.com"><br>
+        <input type="password" id="reg-password" placeholder="Password" value="Test123!@#"><br>
+        <input type="text" id="reg-name" placeholder="Full Name" value="Test User"><br>
+        <input type="tel" id="reg-phone" placeholder="Phone" value="+60123456789"><br>
+        <button onclick="testRegistrationDetailed()">Test Registration (See Full Error)</button>
+    </div>
+    <div id="register-result"></div>
+    
+    <h3>3. Test Login (Detailed)</h3>
+    <div>
+        <input type="email" id="login-email" placeholder="Email" value="test@example.com"><br>
+        <input type="password" id="login-password" placeholder="Password" value="Test123!@#"><br>
+        <button onclick="testLoginDetailed()">Test Login (See Full Error)</button>
+    </div>
+    <div id="login-result"></div>
+
+    <h3>4. Check CORS Headers</h3>
+    <button onclick="checkCORS()">Check CORS Configuration</button>
+    <div id="cors-result"></div>
+
+    <script>
+        const API_URL = 'https://api.berse.app';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ API is running!<pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ API Health Check Failed:<pre>${error.message}</pre></div>`;
+            }
+        }
+        
+        async function testRegistrationDetailed() {
+            const resultDiv = document.getElementById('register-result');
+            resultDiv.innerHTML = '<div class="info">Testing registration...</div>';
+            
+            const userData = {
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-password').value,
+                fullName: document.getElementById('reg-name').value,
+                phone: document.getElementById('reg-phone').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                const responseText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch {
+                    data = responseText;
+                }
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Registration Successful!<pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Registration Failed (Status: ${response.status})
+                            <pre>Request: ${JSON.stringify(userData, null, 2)}</pre>
+                            <pre>Response: ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}</pre>
+                            <p><strong>Common issues:</strong></p>
+                            <ul>
+                                <li>Email already registered</li>
+                                <li>Password too weak (needs 8+ chars, uppercase, lowercase, number, special char)</li>
+                                <li>Invalid phone format</li>
+                                <li>Missing required fields</li>
+                            </ul>
+                        </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error:<pre>${error.message}</pre></div>`;
+            }
+        }
+        
+        async function testLoginDetailed() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = '<div class="info">Testing login...</div>';
+            
+            const loginData = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(loginData)
+                });
+                
+                const responseText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch {
+                    data = responseText;
+                }
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✅ Login Successful!<pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Login Failed (Status: ${response.status})
+                            <pre>Response: ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}</pre>
+                            <p><strong>Status ${response.status} means:</strong></p>
+                            ${response.status === 500 ? '<p>Server error - database or configuration issue</p>' : ''}
+                            ${response.status === 401 ? '<p>Invalid email or password</p>' : ''}
+                            ${response.status === 400 ? '<p>Missing email or password</p>' : ''}
+                        </div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Network Error:<pre>${error.message}</pre></div>`;
+            }
+        }
+        
+        async function checkCORS() {
+            const resultDiv = document.getElementById('cors-result');
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    if (key.toLowerCase().includes('access-control')) {
+                        headers[key] = value;
+                    }
+                });
+                
+                resultDiv.innerHTML = `
+                    <div class="info">
+                        <strong>CORS Headers from API:</strong>
+                        <pre>${JSON.stringify(headers, null, 2)}</pre>
+                        <p>Current Origin: ${window.location.origin}</p>
+                        <p>Allowed: ${headers['access-control-allow-origin'] || 'Not set'}</p>
+                    </div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ CORS Check Failed:<pre>${error.message}</pre></div>`;
+            }
+        }
+        
+        // Auto-run health check on load
+        window.onload = () => {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

@@ -38,9 +38,9 @@ export const SERVICES_CONFIG = {
     }
   },
   
-  // Authentication Service (using test server on port 3003)
+  // Authentication Service
   AUTH_SERVICE: {
-    baseUrl: 'http://localhost:3003/api/v1/auth',
+    baseUrl: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth` : 'http://localhost:3003/api/v1/auth',
     endpoints: {
       login: '/login',
       register: '/register',
@@ -165,10 +165,10 @@ export const generateQRCodeUrl = (path: string) => {
 export const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
-    // If environment variable is set, use it but ensure it points to 5173
-    return envUrl.replace(/localhost:\d+/, 'localhost:5173');
+    // Use environment variable as-is for production
+    return envUrl;
   }
-  // Default to port 5173
+  // Default to port 5173 for local development
   return SERVICES_CONFIG.MAIN_API.baseUrl;
 };
 
