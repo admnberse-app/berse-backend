@@ -346,7 +346,7 @@ export const EditProfileScreen: React.FC = () => {
     
     // Upload to server
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       if (token) {
         const response = await axios.post(
           `${API_BASE_URL}/api/v1/users/upload-avatar`,
@@ -408,7 +408,7 @@ export const EditProfileScreen: React.FC = () => {
   // Save profile
   const handleSave = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         alert('Please login to save your profile');
         return;
