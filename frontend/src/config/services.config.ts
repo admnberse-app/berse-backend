@@ -188,7 +188,9 @@ export const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
   
   // For production, use the correct API URL
-  if (window.location.hostname === 'bersemuka.netlify.app' || window.location.hostname === 'bersemuka.app') {
+  if (window.location.hostname === 'bersemuka.netlify.app' || 
+      window.location.hostname === 'bersemuka.app' || 
+      window.location.hostname === 'berse.app') {
     return 'https://api.berse.app';
   }
   

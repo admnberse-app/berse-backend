@@ -1190,7 +1190,7 @@ export const CreateEventScreen: React.FC = () => {
 
       // Get hosts list (including main organizer and co-hosts)
       const hostsList = [user?.fullName || 'Event Organizer'];
-      coHosts.forEach(host => {
+      formData.coHosts.forEach(host => {
         if (host.name && host.name.trim()) {
           hostsList.push(host.name.trim());
         }

@@ -141,7 +141,7 @@ const LogoContainer = styled.div`
 
 const Logo = styled.img`
   width: auto;
-  height: 90px;
+  height: 120px;
   object-fit: contain;
 `;
 
