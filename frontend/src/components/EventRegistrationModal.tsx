@@ -500,7 +500,7 @@ export const EventRegistrationModal: React.FC<RegistrationModalProps> = ({
       setCurrentStep(7); // Go to success step
       
       // Award points
-      const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
+      const currentPoints = parseInt(localStorage.getItem('user_points') || '0');
       const newPoints = currentPoints + 10;
       localStorage.setItem('user_points', newPoints.toString());
       

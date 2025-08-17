@@ -284,6 +284,18 @@ const Label = styled.label`
   margin-bottom: 4px;
 `;
 
+const LogoContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+`;
+
+const Logo = styled.img`
+  width: auto;
+  height: 60px;
+  object-fit: contain;
+`;
+
 export const RegisterScreen: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -444,6 +456,9 @@ export const RegisterScreen: React.FC = () => {
           </EventContextBanner>
         )}
         
+        <LogoContainer>
+          <Logo src="/Berse App Horizontal words Logo.png" alt="Berse App" />
+        </LogoContainer>
         <Title>{eventContext ? 'Create Your Berse App Account' : 'Join Berse App'}</Title>
         <Subtitle>
           {eventContext 

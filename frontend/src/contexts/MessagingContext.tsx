@@ -259,7 +259,7 @@ export const MessagingProvider: React.FC<{ children: ReactNode }> = ({ children 
     ));
 
     // Award points for engagement
-    const currentPoints = parseInt(localStorage.getItem('user_points') || '245');
+    const currentPoints = parseInt(localStorage.getItem('user_points') || '0');
     const newPoints = currentPoints + 2;
     localStorage.setItem('user_points', newPoints.toString());
 

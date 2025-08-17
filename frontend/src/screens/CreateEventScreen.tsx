@@ -1164,14 +1164,19 @@ export const CreateEventScreen: React.FC = () => {
   const handleCreateEvent = async () => {
     try {
       // Validate required fields
-      if (!formData.title || !formData.description || !formData.date || !formData.location || !formData.community) {
-        alert('Please fill in all required fields including community');
+      if (!formData.title || !formData.description || !formData.date || !formData.location) {
+        alert('Please fill in all required fields');
         return;
       }
 
+      // Set default community if not selected
+      if (!formData.community) {
+        formData.community = "Ahl 'Umran Network"; // Default community
+      }
+
       // Validate participant limits
-      const minPart = parseInt(formData.minParticipants) || 0;
-      const maxPart = parseInt(formData.maxParticipants) || 0;
+      const minPart = parseInt(formData.minParticipants) || 1;
+      const maxPart = parseInt(formData.maxParticipants) || 30;
       
       if (minPart && maxPart && minPart > maxPart) {
         alert('Minimum participants cannot be greater than maximum participants');
@@ -1184,7 +1189,7 @@ export const CreateEventScreen: React.FC = () => {
       }
 
       // Get hosts list (including main organizer and co-hosts)
-      const hostsList = [user?.fullName || 'Current User'];
+      const hostsList = [user?.fullName || 'Event Organizer'];
       coHosts.forEach(host => {
         if (host.name && host.name.trim()) {
           hostsList.push(host.name.trim());
@@ -1201,7 +1206,7 @@ export const CreateEventScreen: React.FC = () => {
         venue: formData.venue || formData.location,
         category: formData.category || 'social',
         description: formData.description,
-        organizer: user?.fullName || 'Current User',
+        organizer: user?.fullName || 'Event Organizer',
         organizerAvatar: '⭐',
         organization: formData.community,
         hosts: hostsList.slice(0, 5), // Maximum 5 hosts
@@ -1221,7 +1226,7 @@ export const CreateEventScreen: React.FC = () => {
         agenda: formData.agenda || [],
         requirements: requirements.filter(req => req.trim() !== ''),
         // Additional fields from the original form
-        hostName: user?.fullName || 'Current User',
+        hostName: user?.fullName || 'Event Organizer',
         hostInitials: user?.fullName?.split(' ').map(n => n[0]).join('') || 'CU',
         participantCount: 1,
         eventFee: parseFloat(formData.eventFee) || 0,
@@ -1256,6 +1261,11 @@ export const CreateEventScreen: React.FC = () => {
       existingEvents.push(newEvent);
       localStorage.setItem('userCreatedEvents', JSON.stringify(existingEvents));
       
+      // Also save to berseConnectEvents for immediate display
+      const berseEvents = JSON.parse(localStorage.getItem('berseConnectEvents') || '[]');
+      berseEvents.unshift(newEvent); // Add to beginning
+      localStorage.setItem('berseConnectEvents', JSON.stringify(berseEvents));
+      
       // Here you would make an API call to create the event
       // await eventService.createEvent(newEvent);
 
@@ -1280,7 +1290,23 @@ export const CreateEventScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to create event:', error);
-      alert('Failed to create event. Please try again.');
+      // Save locally on error
+      try {
+        const fallbackEvent = {
+          id: `event-${Date.now()}`,
+          ...formData,
+          hosts: [user?.fullName || 'Event Organizer'],
+          participants: [],
+          createdAt: new Date().toISOString()
+        };
+        const events = JSON.parse(localStorage.getItem('berseConnectEvents') || '[]');
+        events.unshift(fallbackEvent);
+        localStorage.setItem('berseConnectEvents', JSON.stringify(events));
+        navigate('/connect', { state: { newEvent: fallbackEvent } });
+        alert('Event saved successfully!');
+      } catch (saveError) {
+        alert('Failed to save event. Please check your connection.');
+      }
     }
   };
 
@@ -1661,12 +1687,13 @@ export const CreateEventScreen: React.FC = () => {
           )}
           
           <TagInput
-            placeholder="Type a tag and press Enter"
+            placeholder="Type a one-word tag and press Enter"
             onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
                 const input = e.target as HTMLInputElement;
-                const tag = input.value.trim();
+                // Only take the first word
+                const tag = input.value.trim().split(' ')[0].toLowerCase();
                 if (tag && !formData.tags.includes(tag) && formData.tags.length < 5) {
                   handleInputChange('tags', [...formData.tags, tag]);
                   input.value = '';
@@ -1677,8 +1704,9 @@ export const CreateEventScreen: React.FC = () => {
           
           <SuggestedTags>
             <span style={{ fontSize: '12px', color: '#999', marginRight: '8px' }}>Suggested:</span>
-            {['Networking', 'Casual', 'Professional', 'Beginner-Friendly', 'Advanced', 'Family-Friendly']
+            {['networking', 'coffee', 'hiking', 'travel', 'photography', 'food', 'culture', 'sports']
               .filter(tag => !formData.tags.includes(tag))
+              .slice(0, 6)
               .map(tag => (
                 <SuggestedTag
                   key={tag}

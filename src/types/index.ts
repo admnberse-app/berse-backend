@@ -24,10 +24,10 @@ export interface PointAction {
 }
 
 export const POINT_VALUES: PointAction = {
-  REGISTER: 5,
+  REGISTER: 30,    // Welcome bonus for new users
   ATTEND_EVENT: 10,
   HOST_EVENT: 15,
-  REFERRAL: 3,
+  REFERRAL: 10,    // Increased referral bonus
   JOIN_TRIP: 5,
   CAFE_MEETUP: 2,
   ILM_EVENT: 3,

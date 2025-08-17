@@ -353,14 +353,17 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
   const { user } = useAuth();
   const [hasNotifications, setHasNotifications] = useState(true);
   const [bersePassBalance, setBersePassBalance] = useState(user?.bersePassBalance || 250);
-  const [bersePointsBalance, setBersePointsBalance] = useState(user?.points || 245);
+  const [bersePointsBalance, setBersePointsBalance] = useState(user?.points || 0);
   const [showBersePassModal, setShowBersePassModal] = useState(false);
   const [showBersePointsModal, setShowBersePointsModal] = useState(false);
   
   // Dashboard card variables
   const [setelBalance, setSetelBalance] = useState(23.45);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [currentPoints, setCurrentPoints] = useState(user?.points || 245);
+  const [currentPoints, setCurrentPoints] = useState(() => {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    return userData.points || user?.points || 0;
+  });
   const [isSetelConnected, setIsSetelConnected] = useState(true);
   const [showSetelOnboarding, setShowSetelOnboarding] = useState(false);
   const [isDualQRModalOpen, setIsDualQRModalOpen] = useState(false);
@@ -371,10 +374,44 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
   useEffect(() => {
     if (user) {
       setBersePassBalance(user.bersePassBalance || 250);
-      setBersePointsBalance(user.points || 245);
-      setCurrentPoints(user.points || 245);
+      
+      // Get actual user points from localStorage or use default
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const userPoints = userData.points !== undefined ? userData.points : (user.points || 0);
+      
+      setBersePointsBalance(userPoints);
+      setCurrentPoints(userPoints);
+      
+      // Initialize user data if not exists
+      if (!userData.id) {
+        userData.id = user.id;
+        userData.points = userPoints;
+        userData.totalPoints = user.totalPoints || userPoints;
+        localStorage.setItem('userData', JSON.stringify(userData));
+      }
     }
   }, [user]);
+  
+  // Listen for points updates from QR scans
+  useEffect(() => {
+    const handlePointsUpdate = () => {
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const newPoints = userData.points || 0;
+      setCurrentPoints(newPoints);
+      setBersePointsBalance(newPoints);
+    };
+    
+    // Listen for storage changes (from other tabs)
+    window.addEventListener('storage', handlePointsUpdate);
+    
+    // Check for updates every 2 seconds (for same-tab updates)
+    const interval = setInterval(handlePointsUpdate, 2000);
+    
+    return () => {
+      window.removeEventListener('storage', handlePointsUpdate);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleNotificationClick = () => {
     setHasNotifications(false);
@@ -709,7 +746,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                 fontSize: '12px',
                 fontWeight: '500'
               }}>
-                Level 3
+                Level {currentPoints >= 2000 ? '4' : currentPoints >= 500 ? '3' : currentPoints >= 100 ? '2' : '1'}
               </div>
             </div>
             
@@ -755,7 +792,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                     fontSize: '12px', 
                     color: '#000', 
                     fontWeight: '600' 
-                  }}>RM 347</div>
+                  }}>RM 0</div>
                   <div style={{ 
                     fontSize: '11px', 
                     color: '#666' 
@@ -772,7 +809,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                     fontSize: '12px', 
                     color: '#000', 
                     fontWeight: '600' 
-                  }}>+15</div>
+                  }}>+{Math.min(currentPoints, 99)}</div>
                   <div style={{ 
                     fontSize: '11px', 
                     color: '#666' 
@@ -793,7 +830,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                 marginBottom: '8px'
               }}>
                 <div style={{
-                  width: '82%',
+                  width: `${Math.min((currentPoints / 100) * 100, 100)}%`,
                   height: '100%',
                   background: '#FFA500',
                   borderRadius: '4px'
@@ -807,7 +844,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
                 fontStyle: 'italic',
                 marginBottom: '12px'
               }}>
-                {currentPoints}/300 to Level 4
+                {currentPoints}/100 to Level 2
               </div>
               
               {/* Bottom Row */}

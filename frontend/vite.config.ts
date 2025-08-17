@@ -15,9 +15,9 @@ export default defineConfig({
         'safari-pinned-tab.svg'
       ],
       manifest: {
-        name: 'BerseMuka - Malaysian Community App',
-        short_name: 'BerseMuka',
-        description: 'Connect, meet, and build meaningful relationships in Malaysia',
+        name: 'Berse App - Social Community App',
+        short_name: 'Berse',
+        description: '𝐅𝐢𝐧𝐝 𝐅𝐫𝐢𝐞𝐧𝐝𝐬 𝐄𝐯𝐞𝐫𝐲𝐰𝐡𝐞𝐫𝐞',
         theme_color: '#2fce98',
         background_color: '#F5F3EF',
         display: 'standalone',
@@ -26,7 +26,7 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/icons/icon-72x72.png',
+            src: '/pwa-icon-v1.2.png',
             sizes: '72x72',
             type: 'image/png',
             purpose: 'any'
@@ -44,7 +44,7 @@ export default defineConfig({
             purpose: 'any'
           },
           {
-            src: '/icons/icon-192x192.png',
+            src: '/pwa-icon-v1.2.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
@@ -62,7 +62,7 @@ export default defineConfig({
             purpose: 'any'
           },
           {
-            src: '/icons/icon-512x512.png',
+            src: '/pwa-icon-v1.2.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'

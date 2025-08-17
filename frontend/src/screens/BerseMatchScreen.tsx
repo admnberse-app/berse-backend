@@ -2531,7 +2531,7 @@ export const BerseMatchScreen: React.FC = () => {
     homesurf: "Find friends offering affordable rooms or homestays",
     mentor: "Connect with industry professionals for career guidance and growth",
     buddy: "Link international students with local students for support",
-    communities: "Find specialized BerseMentor spots and learning hubs across Malaysia"
+    communities: "Find communities in the ecosystem"
   };
 
   // Filter connections based on mode
@@ -2747,50 +2747,11 @@ export const BerseMatchScreen: React.FC = () => {
     }
   };
 
-  // Friendship matches data
-  const friendshipMatches = [
-    {
-      person1: { name: 'Ahmad', emoji: '👨‍💼', relation: 'Your gym buddy' },
-      person2: { name: 'Khalid', emoji: '👨‍🎓', relation: 'Your colleague' },
-      reasons: [
-        '🏸 Both play badminton weekly',
-        '☕ Coffee enthusiasts who work remotely',
-        '📍 Live in the same neighborhood',
-        '🎯 Both looking for workout partners',
-        '📚 Share interest in tech podcasts'
-      ]
-    },
-    {
-      person1: { name: 'Sarah', emoji: '👩‍💻', relation: 'Your sister' },
-      person2: { name: 'Fatima', emoji: '👩‍🎨', relation: 'Your classmate' },
-      reasons: [
-        '🎨 Both into digital art',
-        '🌱 Vegetarian foodies',
-        '🏃‍♀️ Morning runners',
-        '📷 Photography hobbyists',
-        '🎭 Theatre enthusiasts'
-      ]
-    },
-    {
-      person1: { name: 'Omar', emoji: '👨‍🔬', relation: 'Lab partner' },
-      person2: { name: 'Lisa', emoji: '👩‍⚕️', relation: 'Neighbor' },
-      reasons: [
-        '🔬 Both in medical field',
-        '📚 Love reading sci-fi',
-        '🎮 Board game enthusiasts',
-        '🍳 Weekend cooking experiments',
-        '🏊 Swimming at same pool'
-      ]
-    }
-  ];
+  // Friendship matches data - will be populated from real users
+  const friendshipMatches: any[] = [];
 
-  // Connection chains data
-  const connectionChains = [
-    { target: 'Tech CEO', path: ['You', 'Ahmad', 'Dr. Wan', 'CEO'], steps: 3 },
-    { target: 'Minister', path: ['You', 'Uncle Rahman', 'Minister'], steps: 2 },
-    { target: 'Hollywood Actor', path: ['You', 'Sarah', 'Film Director', 'Actor'], steps: 3 },
-    { target: 'Nobel Laureate', path: ['You', 'Professor', 'Researcher', 'Laureate'], steps: 3 }
-  ];
+  // Connection chains data - will be populated from real connections
+  const connectionChains: any[] = [];
 
   useEffect(() => {
     loadUsers();
@@ -3644,24 +3605,24 @@ export const BerseMatchScreen: React.FC = () => {
               <StatsTitle>📊 YOUR MATCHMAKER STATS</StatsTitle>
               <StatsGrid>
                 <StatItem>
-                  <StatValue>12</StatValue>
+                  <StatValue>0</StatValue>
                   <StatLabel>Introductions</StatLabel>
                 </StatItem>
                 <StatItem>
-                  <StatValue>8</StatValue>
+                  <StatValue>0</StatValue>
                   <StatLabel>Successful</StatLabel>
                 </StatItem>
                 <StatItem>
-                  <StatValue>3</StatValue>
+                  <StatValue>0</StatValue>
                   <StatLabel>Close Friends</StatLabel>
                 </StatItem>
                 <StatItem>
-                  <StatValue>850</StatValue>
+                  <StatValue>0</StatValue>
                   <StatLabel>Points Earned</StatLabel>
                 </StatItem>
               </StatsGrid>
               <LeaderboardPosition>
-                🏆 #2 on Weekly Leaderboard
+                🏆 Start matching to climb the leaderboard
               </LeaderboardPosition>
             </StatsCard>
           </>

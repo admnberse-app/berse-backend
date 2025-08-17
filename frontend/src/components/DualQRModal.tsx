@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { QRCodeGenerator } from './QRCode';
+import { UserQRCode } from './QRCode/UserQRCode';
+import { generateUserProfileQR, getUserPoints, calculateUserTier } from '../utils/qrGenerator';
 
 interface DualQRModalProps {
   isOpen: boolean;
@@ -366,23 +368,10 @@ export const DualQRModal: React.FC<DualQRModalProps> = ({ isOpen, onClose }) => 
 
   // Generate unique QR code data for the user
   const generateQRData = () => {
-    const qrData = {
-      type: 'berseuser',
-      userId: user?.id || 'user_123',
-      membershipId: user?.membershipId || 'AUN100001',
-      userName: user?.fullName || 'Zayd Aisha',
-      bersePassStatus: 'ACTIVE',
-      bersePoints: user?.points || 245,
-      profileLink: `https://bersemuka.com/profile/${user?.id || 'user_123'}`,
-      phone: user?.phone || '',
-      joinedDate: user?.joinedDate || '2024-01-01',
-      timestamp: new Date().toISOString(),
-      validUntil: '2025-09-30',
-      // For event attendance tracking
-      eventCheckIn: true,
-      uniqueId: `${user?.membershipId || 'AUN100001'}_${Date.now()}`
-    };
-    return JSON.stringify(qrData);
+    if (user?.id) {
+      return generateUserProfileQR(user.id);
+    }
+    return '';
   };
 
   // Start camera for scanning
@@ -562,38 +551,9 @@ export const DualQRModal: React.FC<DualQRModalProps> = ({ isOpen, onClose }) => 
   }, [isOpen]);
 
   const renderShowQRTab = () => (
-    <QRDisplayContainer>
-      <UserInfo>
-        <UserName>{user?.fullName || 'Zayd'}'s BersePass</UserName>
-        <ValidityInfo>Valid until: 30 September 2025</ValidityInfo>
-        <StatusBadge $status="active">
-          ✅ Active
-        </StatusBadge>
-      </UserInfo>
-
-      <QRCodeContainer>
-        <QRCodeGenerator 
-          data={generateQRData()}
-          size={200}
-          style={{
-            width: '200px',
-            height: '200px'
-          }}
-        />
-      </QRCodeContainer>
-
-      <ActionButtons>
-        <ActionButton onClick={shareQR}>
-          📤 Share QR
-        </ActionButton>
-        <ActionButton onClick={saveToPhotos}>
-          💾 Save to Photos
-        </ActionButton>
-        <ActionButton onClick={copyQRLink}>
-          🔗 Copy Link
-        </ActionButton>
-      </ActionButtons>
-    </QRDisplayContainer>
+    <div style={{ padding: '20px' }}>
+      <UserQRCode showInstructions={true} size={200} />
+    </div>
   );
 
   const renderScanQRTab = () => (

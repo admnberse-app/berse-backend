@@ -1,6 +1,6 @@
 // Initialize user points if not set
 export const initializeUserPoints = () => {
-  const INITIAL_POINTS = '245';
+  const INITIAL_POINTS = '0';  // New users start with 0 points
   
   // Check if user_points exists in localStorage
   if (!localStorage.getItem('user_points')) {
@@ -13,7 +13,7 @@ export const initializeUserPoints = () => {
 
 // Export for use in components
 export const getUserPoints = () => {
-  return parseInt(localStorage.getItem('user_points') || '245');
+  return parseInt(localStorage.getItem('user_points') || '0');
 };
 
 // Update points
@@ -26,6 +26,9 @@ export const updateUserPoints = (newPoints: number) => {
   }));
 };
 
-// Initialize on import and force reset to 245 for data consistency
-localStorage.setItem('user_points', '245');
+// Initialize on import - new users start with 0 points
+// Don't force reset for existing users
+if (!localStorage.getItem('user_points')) {
+  localStorage.setItem('user_points', '0');
+}
 initializeUserPoints();

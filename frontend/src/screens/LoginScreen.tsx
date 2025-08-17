@@ -133,6 +133,18 @@ const CheckboxLabel = styled.label`
   user-select: none;
 `;
 
+const LogoContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-bottom: ${({ theme }) => theme.spacing.xl};
+`;
+
+const Logo = styled.img`
+  width: auto;
+  height: 60px;
+  object-fit: contain;
+`;
+
 export const LoginScreen: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -174,6 +186,9 @@ export const LoginScreen: React.FC = () => {
         </BackButton>
       </Header>
       <Content>
+        <LogoContainer>
+          <Logo src="/Berse App Horizontal words Logo.png" alt="Berse App" />
+        </LogoContainer>
         <Title>Welcome Back</Title>
         <Subtitle>Login to continue your Berse App experience</Subtitle>
         
