@@ -287,12 +287,12 @@ const Label = styled.label`
 const LogoContainer = styled.div`
   display: flex;
   justify-content: center;
-  margin-bottom: ${({ theme }) => theme.spacing.xl};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
 `;
 
 const Logo = styled.img`
   width: auto;
-  height: 60px;
+  height: 90px;
   object-fit: contain;
 `;
 
