@@ -40,18 +40,29 @@ export const SERVICES_CONFIG = {
   
   // Authentication Service
   AUTH_SERVICE: {
-    baseUrl: (() => {
-      // For production deployments
-      if (typeof window !== 'undefined' && (window.location.hostname === 'bersemuka.netlify.app' || window.location.hostname === 'bersemuka.app')) {
+    get baseUrl() {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      
+      // If no API URL is set, use localhost for development
+      if (!apiUrl) {
+        return 'http://localhost:3003/api/v1/auth';
+      }
+      
+      // For production API (api.berse.app)
+      if (apiUrl.includes('api.berse.app')) {
+        // Always use the correct production path
         return 'https://api.berse.app/api/v1/auth';
       }
-      // For local development
-      return import.meta.env.VITE_API_URL ? 
-        (import.meta.env.VITE_API_URL.endsWith('/api') ? 
-          `${import.meta.env.VITE_API_URL}/v1/auth` : 
-          `${import.meta.env.VITE_API_URL}/api/v1/auth`) : 
-        'http://localhost:3003/api/v1/auth';
-    })(),
+      
+      // For local development with different URL formats
+      if (apiUrl.endsWith('/api')) {
+        // If URL already has /api, just add /v1/auth
+        return `${apiUrl}/v1/auth`;
+      } else {
+        // If URL doesn't have /api, add full path
+        return `${apiUrl}/api/v1/auth`;
+      }
+    },
     endpoints: {
       login: '/login',
       register: '/register',
