@@ -4436,17 +4436,9 @@ export const BerseMatchScreen: React.FC = () => {
               style={{ flex: 1 }} 
               $primary
               onClick={() => {
-                const profileUrl = `${window.location.origin}/profile/${selectedDetailProfile?.id || 'user'}`;
-                if (navigator.share) {
-                  navigator.share({
-                    title: `Connect with ${selectedDetailProfile?.name}`,
-                    text: `Check out ${selectedDetailProfile?.name}'s profile on BerseMuka`,
-                    url: profileUrl
-                  }).catch(err => console.log('Share cancelled'));
-                } else {
-                  navigator.clipboard.writeText(profileUrl);
-                  alert('Profile link copied to clipboard!');
-                }
+                // Use the same ShareModal as the main cards
+                handleShareProfile(selectedDetailProfile);
+                setShowProfileDetail(false); // Close the detail modal
               }}
             >
               📤 Share
@@ -4454,7 +4446,10 @@ export const BerseMatchScreen: React.FC = () => {
             <GuideButton 
               style={{ flex: 1 }}
               onClick={() => {
-                alert(`Friend request sent to ${selectedDetailProfile?.name}!`);
+                // Use the same FriendRequestModal as the main cards
+                setSelectedConnection(selectedDetailProfile);
+                setShowFriendRequestModal(true);
+                setShowProfileDetail(false); // Close the detail modal
               }}
             >
               🤝 Friend Request

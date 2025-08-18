@@ -8,51 +8,119 @@ datasource db {
 }
 
 model User {
-  id                 String            @id @default(uuid())
-  email              String            @unique
-  phone              String?           @unique
-  password           String
-  fullName           String
-  profilePicture     String?
-  bio                String?
-  city               String?
-  interests          String[]
-  instagramHandle    String?
-  linkedinHandle     String?
-  referralCode       String            @unique @default(uuid())
-  role               UserRole          @default(GENERAL_USER)
-  isHostCertified    Boolean           @default(false)
-  totalPoints        Int               @default(0)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  referredById       String?
-  mfaBackupCodes     String[]          @default([])
-  mfaEnabled         Boolean           @default(false)
-  mfaSecret          String?
-  username           String?           @unique
-  countryOfResidence String?
-  gender             String?
-  nationality        String?
-  dateOfBirth        DateTime?
-  hostedEvents       Event[]           @relation("EventHost")
-  attendedEvents     EventAttendance[]
-  rsvpEvents         EventRSVP[]
-  sentFollows        Follow[]          @relation("FollowSender")
-  receivedFollows    Follow[]          @relation("FollowReceiver")
-  receivedMatches    Match[]           @relation("MatchReceiver")
-  sentMatches        Match[]           @relation("MatchSender")
-  receivedMessages   Message[]         @relation("MessageReceiver")
-  sentMessages       Message[]         @relation("MessageSender")
-  notifications      Notification[]
-  pointsHistory      PointHistory[]
-  redemptions        Redemption[]
-  refreshTokens      RefreshToken[]
-  referredBy         User?             @relation("Referrals", fields: [referredById], references: [id])
-  referrals          User[]            @relation("Referrals")
-  badges             UserBadge[]
-  communityMembers   CommunityMember[]
-  createdCommunities Community[]       @relation("CommunityCreator")
-  pushSubscription   PushSubscription?
+  id                         String            @id @default(uuid())
+  email                      String            @unique
+  phone                      String?           @unique
+  password                   String
+  fullName                   String
+  profilePicture             String?
+  bio                        String?
+  city                       String?
+  interests                  String[]
+  instagramHandle            String?
+  linkedinHandle             String?
+  referralCode               String            @unique @default(uuid())
+  role                       UserRole          @default(GENERAL_USER)
+  isHostCertified            Boolean           @default(false)
+  totalPoints                Int               @default(0)
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  referredById               String?
+  countryOfResidence         String?
+  dateOfBirth                DateTime?
+  gender                     String?
+  mfaBackupCodes             String[]          @default([])
+  mfaEnabled                 Boolean           @default(false)
+  mfaSecret                  String?
+  nationality                String?
+  username                   String?           @unique
+  mfaRecoveryEmail           String?
+  lastMfaAuthAt              DateTime?
+  pushToken                  String?
+  lastSeenAt                 DateTime?
+  googleCalendarConnected    Boolean?          @default(false)
+  googleCalendarRefreshToken String?
+  profileVisibility          String?           @default("public")
+  searchableByPhone          Boolean?          @default(true)
+  searchableByEmail          Boolean?          @default(true)
+  allowDirectMessages        Boolean?          @default(true)
+  emailVerificationToken     String?
+  emailVerificationExpires   DateTime?
+  passwordResetToken         String?
+  passwordResetExpires       DateTime?
+  loginAttempts              Int?              @default(0)
+  lockoutUntil               DateTime?
+  sessionTokens              String[]          @default([])
+  deviceIds                  String[]          @default([])
+  trustedDevices             Json?             @default("[]")
+  securityQuestions          Json?             @default("[]")
+  accountLockedReason        String?
+  suspendedUntil             DateTime?
+  suspensionReason           String?
+  deletionRequestedAt        DateTime?
+  deletionScheduledFor       DateTime?
+  dataExportRequestedAt      DateTime?
+  lastPasswordChangeAt       DateTime?
+  passwordHistory            String[]          @default([])
+  requirePasswordChange      Boolean?          @default(false)
+  consentToDataProcessing    Boolean?          @default(true)
+  consentToMarketing         Boolean?          @default(false)
+  consentDate                DateTime?
+  ipAddress                  String?
+  userAgent                  String?
+  lastLoginLocation          String?
+  timezone                   String?           @default("Asia/Kuala_Lumpur")
+  preferredLanguage          String?           @default("en")
+  currency                   String?           @default("MYR")
+  darkMode                   Boolean?          @default(false)
+  notificationPreferences    Json?             @default("{\"sms\": false, \"push\": true, \"email\": true}")
+  apiKeys                    String[]          @default([])
+  webhookUrl                 String?
+  integrations               Json?             @default("{}")
+  customFields               Json?             @default("{}")
+  tags                       String[]          @default([])
+  notes                      String?
+  internalNotes              String?
+  referralSource             String?
+  utmSource                  String?
+  utmMedium                  String?
+  utmCampaign                String?
+  affiliateId                String?
+  lifetimeValue              Float?            @default(0)
+  
+  // Additional profile fields for EditProfile
+  shortBio                   String?           // Profession/Studies
+  currentLocation            String?           // Current city, country
+  originallyFrom             String?           // Origin city, country
+  personalityType            String?           // MBTI type
+  languages                  String[]          @default([])
+  age                        Int?
+  profession                 String?
+  website                    String?
+  travelHistory              Json?             // Store travel entries as JSON
+  servicesOffered            Json?             // BerseGuide, HomeSurf, etc.
+  communityRole              String?           @default("member")
+  eventsAttended             String[]          @default([])
+  
+  createdCommunities         Community[]       @relation("CommunityCreator")
+  communityMembers           CommunityMember[]
+  hostedEvents               Event[]           @relation("EventHost")
+  attendedEvents             EventAttendance[]
+  rsvpEvents                 EventRSVP[]
+  sentFollows                Follow[]          @relation("FollowSender")
+  receivedFollows            Follow[]          @relation("FollowReceiver")
+  receivedMatches            Match[]           @relation("MatchReceiver")
+  sentMatches                Match[]           @relation("MatchSender")
+  receivedMessages           Message[]         @relation("MessageReceiver")
+  sentMessages               Message[]         @relation("MessageSender")
+  notifications              Notification[]
+  pointsHistory              PointHistory[]
+  pushSubscription           PushSubscription?
+  redemptions                Redemption[]
+  refreshTokens              RefreshToken[]
+  referredBy                 User?             @relation("Referrals", fields: [referredById], references: [id])
+  referrals                  User[]            @relation("Referrals")
+  badges                     UserBadge[]
 
   @@index([email])
   @@index([totalPoints])
@@ -250,14 +318,14 @@ model Community {
 }
 
 model CommunityMember {
-  id           String         @id @default(uuid())
-  role         CommunityRole  @default(MEMBER)
-  joinedAt     DateTime       @default(now())
-  isApproved   Boolean        @default(false)
-  userId       String
-  communityId  String
-  user         User           @relation(fields: [userId], references: [id])
-  community    Community      @relation(fields: [communityId], references: [id])
+  id          String        @id @default(uuid())
+  role        CommunityRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+  isApproved  Boolean       @default(false)
+  userId      String
+  communityId String
+  community   Community     @relation(fields: [communityId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
 
   @@unique([userId, communityId])
   @@index([userId])

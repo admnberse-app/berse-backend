@@ -27,6 +27,22 @@ export class UserController {
           isHostCertified: true,
           totalPoints: true,
           createdAt: true,
+          // Additional profile fields
+          username: true,
+          shortBio: true,
+          currentLocation: true,
+          originallyFrom: true,
+          personalityType: true,
+          languages: true,
+          age: true,
+          profession: true,
+          gender: true,
+          nationality: true,
+          website: true,
+          travelHistory: true,
+          servicesOffered: true,
+          communityRole: true,
+          eventsAttended: true,
           _count: {
             select: {
               hostedEvents: true,
@@ -51,27 +67,112 @@ export class UserController {
   static async updateProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user?.id;
-      const { fullName, bio, city, interests, instagramHandle, linkedinHandle } = req.body;
+      const { 
+        fullName, 
+        bio, 
+        city, 
+        interests, 
+        instagramHandle, 
+        linkedinHandle,
+        username,
+        shortBio,
+        currentLocation,
+        originallyFrom,
+        personalityType,
+        languages,
+        age,
+        profession,
+        gender,
+        nationality,
+        website,
+        travelHistory,
+        servicesOffered,
+        communityRole,
+        communities,
+        eventsAttended,
+        email,
+        phone,
+        instagram,
+        linkedin,
+        topInterests,
+        fullBio
+      } = req.body;
+
+      // Build update data object with only provided fields
+      const updateData: any = {};
+      
+      if (fullName !== undefined) updateData.fullName = fullName;
+      if (username !== undefined) updateData.username = username;
+      if (shortBio !== undefined) updateData.shortBio = shortBio;
+      if (currentLocation !== undefined) updateData.currentLocation = currentLocation;
+      if (originallyFrom !== undefined) updateData.originallyFrom = originallyFrom;
+      if (personalityType !== undefined) updateData.personalityType = personalityType;
+      if (languages !== undefined) updateData.languages = languages;
+      if (age !== undefined) updateData.age = parseInt(age);
+      if (profession !== undefined) updateData.profession = profession;
+      if (gender !== undefined) updateData.gender = gender;
+      if (nationality !== undefined) updateData.nationality = nationality;
+      if (website !== undefined) updateData.website = website;
+      if (travelHistory !== undefined) updateData.travelHistory = travelHistory;
+      if (servicesOffered !== undefined) updateData.servicesOffered = servicesOffered;
+      if (communityRole !== undefined) updateData.communityRole = communityRole;
+      if (eventsAttended !== undefined) updateData.eventsAttended = eventsAttended;
+      if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
+      
+      // Handle interests (can come as interests or topInterests)
+      if (topInterests !== undefined) {
+        updateData.interests = topInterests;
+      } else if (interests !== undefined) {
+        updateData.interests = interests;
+      }
+      
+      // Handle bio (can come as bio or fullBio)
+      if (fullBio !== undefined) {
+        updateData.bio = fullBio;
+      } else if (bio !== undefined) {
+        updateData.bio = bio;
+      }
+      
+      // Handle social media handles
+      if (instagram !== undefined) updateData.instagramHandle = instagram;
+      if (instagramHandle !== undefined) updateData.instagramHandle = instagramHandle;
+      if (linkedin !== undefined) updateData.linkedinHandle = linkedin;
+      if (linkedinHandle !== undefined) updateData.linkedinHandle = linkedinHandle;
+      
+      // Update city if currentLocation is provided
+      if (currentLocation !== undefined) updateData.city = currentLocation;
+      if (city !== undefined) updateData.city = city;
 
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: {
-          fullName,
-          bio,
-          city,
-          interests,
-          instagramHandle,
-          linkedinHandle,
-        },
+        data: updateData,
         select: {
           id: true,
           email: true,
+          phone: true,
           fullName: true,
+          profilePicture: true,
           bio: true,
           city: true,
           interests: true,
           instagramHandle: true,
           linkedinHandle: true,
+          username: true,
+          shortBio: true,
+          currentLocation: true,
+          originallyFrom: true,
+          personalityType: true,
+          languages: true,
+          age: true,
+          profession: true,
+          gender: true,
+          nationality: true,
+          website: true,
+          travelHistory: true,
+          servicesOffered: true,
+          communityRole: true,
+          eventsAttended: true,
         },
       });
 

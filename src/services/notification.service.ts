@@ -103,6 +103,26 @@ class NotificationService {
     });
   }
 
+  async notifyMatchCreated(userId: string, senderName: string, matchType: string) {
+    return this.createNotification({
+      userId,
+      type: 'MATCH',
+      title: 'New Match Request!',
+      message: `${senderName} wants to connect with you for ${matchType}`,
+      actionUrl: '/match',
+    });
+  }
+
+  async notifyFriendRequest(userId: string, senderName: string) {
+    return this.createNotification({
+      userId,
+      type: 'MATCH',
+      title: 'New Friend Request!',
+      message: `${senderName} sent you a friend request`,
+      actionUrl: '/match',
+    });
+  }
+
   // Notification creation helpers
   async notifyEventCreated(eventId: string, hostName: string, eventTitle: string) {
     const followers = await prisma.follow.findMany({

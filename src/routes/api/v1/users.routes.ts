@@ -16,25 +16,35 @@ router.get('/profile', authenticateToken, asyncHandler(UserController.getProfile
 // Update user profile
 router.put('/profile', authenticateToken, asyncHandler(UserController.updateProfile));
 
-// Upload profile picture
+// Upload profile picture (supports both file upload and base64)
 router.post('/upload-avatar', 
   authenticateToken,
   uploadLimiter,
-  upload.single('avatar'),
   asyncHandler(async (req, res, next) => {
     try {
       const userId = req.user?.id;
-      const file = req.file;
+      const { image } = req.body; // For base64 image
+      const file = req.file; // For file upload
 
-      if (!file) {
-        throw new AppError('No file uploaded', 400);
+      let profilePictureUrl;
+
+      if (image) {
+        // Handle base64 image
+        // For now, we'll store the base64 directly in the database
+        // In production, you'd want to upload to a cloud storage service
+        profilePictureUrl = image;
+      } else if (file) {
+        // Handle file upload
+        profilePictureUrl = `/uploads/${file.filename}`;
+      } else {
+        throw new AppError('No image provided', 400);
       }
 
       // Update user's profile picture
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
-          profilePicture: `/uploads/${file.filename}`,
+          profilePicture: profilePictureUrl,
         },
         select: {
           id: true,
@@ -42,7 +52,10 @@ router.post('/upload-avatar',
         },
       });
 
-      sendSuccess(res, updatedUser, 'Profile picture uploaded successfully');
+      sendSuccess(res, { 
+        ...updatedUser, 
+        data: { profilePicture: profilePictureUrl } 
+      }, 'Profile picture uploaded successfully');
     } catch (error) {
       next(error);
     }

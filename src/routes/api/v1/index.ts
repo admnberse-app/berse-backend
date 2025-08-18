@@ -3,6 +3,7 @@ import authRouter from './auth.routes';
 import usersRouter from './users.routes';
 import eventsRouter from './events.routes';
 import communitiesRouter from './communities.routes';
+import matchingRouter from './matching.routes';
 import pushRouter from '../../push.routes';
 // import paymentsRouter from './payments.routes';
 // import notificationsRouter from './notifications.routes';
@@ -16,6 +17,8 @@ router.use('/auth', authRouter);
 router.use('/users', usersRouter);
 router.use('/events', eventsRouter);
 router.use('/communities', communitiesRouter);
+router.use('/matching', matchingRouter);
+router.use('/matches', matchingRouter); // Alias for matching
 router.use('/push', pushRouter);
 // router.use('/payments', paymentsRouter);
 // router.use('/notifications', notificationsRouter);
@@ -68,6 +71,15 @@ router.get('/docs', (req, res) => {
         'GET /communities/my': 'Get user communities',
         'POST /communities': 'Create new community',
         'POST /communities/:id/join': 'Join community',
+      },
+      matching: {
+        'GET /matching': 'Get user matches',
+        'POST /matching': 'Create match request',
+        'GET /matching/:matchId': 'Get match details',
+        'PUT /matching/:matchId/respond': 'Respond to match request',
+        'POST /matching/find': 'Find matches',
+        'GET /matching/recommendations': 'Get match recommendations',
+        'POST /matching/friend-request': 'Send friend request',
       },
       payments: {
         'POST /payments/process': 'Process payment',

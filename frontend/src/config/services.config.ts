@@ -3,8 +3,8 @@
 // use the same port (5173) with internal routing through Vite proxy
 
 export const SERVICES_CONFIG = {
-  // Base configuration - everything goes through port 5173
-  BASE_URL: 'http://localhost:3000',
+  // Base configuration - use backend port 3000 for local development
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
   WS_BASE_URL: 'ws://localhost:3000',
   
   // Main API Service (consolidated from multiple ports)
