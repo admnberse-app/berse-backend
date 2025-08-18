@@ -58,6 +58,7 @@ import { VolunteerScreen } from './screens/VolunteerScreen';
 import { CommunityManagementScreen } from './screens/CommunityManagementScreen';
 import { EditCommunityScreen } from './screens/EditCommunityScreen';
 import { MyEventsScreen } from './screens/MyEventsScreen';
+import { EventManagementScreen } from './screens/EventManagementScreen';
 import { deepLinkHandler } from './utils/deepLinkHandler';
 import { useAuth } from './contexts/AuthContext';
 
@@ -195,7 +196,7 @@ function App() {
               />
               <Route
                 path="/manage-events"
-                element={<CommunityManagementScreen />}
+                element={<EventManagementScreen />}
               />
               <Route
                 path="/communities/edit/:communityId"

@@ -4122,7 +4122,8 @@ export const ProfileScreen: React.FC = () => {
     name: user?.fullName || 'Amina Hadzic',
     age: 28,
     profession: 'Architect & Photographer',
-    isAdmin: true, // For demo purposes - would come from user context
+    isAdmin: user?.role === 'ADMIN' || user?.role === 'MODERATOR', // Check from actual user role
+    isHost: user?.isHostCertified || user?.role === 'GUIDE' || user?.role === 'ADMIN', // Check if user can host events
     rating: 7.1,
     level: 7,
     personalityType: 'ENFJ-A',
@@ -5716,14 +5717,18 @@ export const ProfileScreen: React.FC = () => {
           </ProfileMenuItem>
 
 
-          {/* 6. Manage Events (Admin) */}
-          {mockProfile.isAdmin && (
+          {/* 6. Manage Events (Admin/Host) */}
+          {(mockProfile.isAdmin || mockProfile.isHost) && (
             <ProfileMenuItem onClick={() => navigate('/manage-events')}>
               <MenuIcon>⚡</MenuIcon>
               <MenuContent>
-                <MenuTitle>Manage Events (Admin)</MenuTitle>
+                <MenuTitle>Manage Events</MenuTitle>
               </MenuContent>
-              <MenuBadge $color="#E74C3C">Admin</MenuBadge>
+              {mockProfile.isAdmin ? (
+                <MenuBadge $color="#E74C3C">Admin</MenuBadge>
+              ) : (
+                <MenuBadge $color="#4A90A4">Host</MenuBadge>
+              )}
               <MenuArrow>→</MenuArrow>
             </ProfileMenuItem>
           )}

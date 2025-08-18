@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar';
 import { MainNav } from '../components/MainNav';
 import { ProfileSidebar } from '../components/ProfileSidebar/ProfileSidebar';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import { API_BASE_URL } from '../config/services.config';
 
 export const MyEventsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
+  const [events, setEvents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const addToGoogleCalendar = (event: any) => {
     const startDate = new Date(event.date).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -20,7 +27,54 @@ export const MyEventsScreen: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
 
-  const mockEvents: any[] = [];
+  // Fetch user's events
+  useEffect(() => {
+    fetchUserEvents();
+  }, []);
+
+  const fetchUserEvents = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/api/v1/events`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Filter events where user has RSVP'd or attended
+      const userEvents = response.data.data?.filter((event: any) => {
+        // Check if user has RSVP'd to this event
+        return event.rsvps?.some((rsvp: any) => rsvp.userId === user?.id) ||
+               event.attendance?.some((att: any) => att.userId === user?.id);
+      }) || [];
+
+      // Transform and categorize events
+      const transformedEvents = userEvents.map((event: any) => ({
+        id: event.id,
+        title: event.title,
+        date: event.date,
+        location: event.location,
+        description: event.description || '',
+        host: event.host?.fullName || 'Unknown Host',
+        status: new Date(event.date) > new Date() ? 'upcoming' : 'completed',
+        type: event.type,
+        rsvpStatus: event.rsvps?.find((r: any) => r.userId === user?.id) ? 'confirmed' : 'pending',
+        attendees: event._count?.rsvps || 0
+      }));
+
+      setEvents(transformedEvents);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+      setError('Failed to load events');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Container>
@@ -37,18 +91,29 @@ export const MyEventsScreen: React.FC = () => {
             $active={activeTab === 'upcoming'}
             onClick={() => setActiveTab('upcoming')}
           >
-            Upcoming ({mockEvents.filter(e => e.status === 'upcoming').length})
+            Upcoming ({events.filter(e => e.status === 'upcoming').length})
           </TabButton>
           <TabButton
             $active={activeTab === 'completed'}
             onClick={() => setActiveTab('completed')}
           >
-            Completed ({mockEvents.filter(e => e.status === 'completed').length})
+            Completed ({events.filter(e => e.status === 'completed').length})
           </TabButton>
         </TabContainer>
 
         <EventsList>
-          {mockEvents.filter(event => event.status === activeTab).length === 0 ? (
+          {isLoading ? (
+            <EmptyState>
+              <EmptyIcon>⏳</EmptyIcon>
+              <EmptyTitle>Loading events...</EmptyTitle>
+            </EmptyState>
+          ) : error ? (
+            <EmptyState>
+              <EmptyIcon>⚠️</EmptyIcon>
+              <EmptyTitle>Error loading events</EmptyTitle>
+              <EmptyMessage>{error}</EmptyMessage>
+            </EmptyState>
+          ) : events.filter(event => event.status === activeTab).length === 0 ? (
             <EmptyState>
               <EmptyIcon>📅</EmptyIcon>
               <EmptyTitle>No {activeTab} events</EmptyTitle>
@@ -79,7 +144,7 @@ export const MyEventsScreen: React.FC = () => {
               </EmptyActions>
             </EmptyState>
           ) : (
-            mockEvents
+            events
               .filter(event => event.status === activeTab)
               .map((event) => (
               <EventCard key={event.id}>

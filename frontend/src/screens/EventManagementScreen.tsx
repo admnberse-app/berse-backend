@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { MainNav } from '../components/MainNav/MainNav';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import { API_BASE_URL } from '../config/services.config';
 
 interface Event {
   id: string;
@@ -28,8 +31,60 @@ interface BerseMukhGroup {
 
 export const EventManagementScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'groups'>('dashboard');
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch user's events
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/api/v1/events`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      // Filter to show only events where user is the host
+      const userEvents = response.data.data?.filter((event: any) => 
+        event.host?.id === user?.id || user?.role === 'ADMIN'
+      ) || [];
+
+      // Transform the data to match our Event interface
+      const transformedEvents = userEvents.map((event: any) => ({
+        id: event.id,
+        title: event.title,
+        status: event.status || 'active',
+        registered: event._count?.rsvps || 0,
+        paid: event._count?.rsvps || 0, // Assuming all registered have paid
+        checkedIn: event._count?.attendance || 0,
+        revenue: (event._count?.rsvps || 0) * (event.price || 0),
+        date: new Date(event.date).toLocaleDateString(),
+        location: event.location,
+        type: event.type,
+        maxParticipants: event.maxAttendees || 50
+      }));
+
+      setEvents(transformedEvents);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+      setError('Failed to load events');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const mockEvents: Event[] = [
     {
@@ -129,21 +184,33 @@ export const EventManagementScreen: React.FC = () => {
           <DashboardSection>
             <OverviewStats>
               <OverviewCard>
-                <StatNumber>{mockEvents.filter(e => e.status === 'active').length}</StatNumber>
+                <StatNumber>{events.filter(e => e.status === 'active').length}</StatNumber>
                 <StatLabel>Active Events</StatLabel>
               </OverviewCard>
               <OverviewCard>
-                <StatNumber>{mockEvents.reduce((sum, e) => sum + e.registered, 0)}</StatNumber>
+                <StatNumber>{events.reduce((sum, e) => sum + e.registered, 0)}</StatNumber>
                 <StatLabel>Total Registered</StatLabel>
               </OverviewCard>
               <OverviewCard>
-                <StatNumber>RM {mockEvents.reduce((sum, e) => sum + e.revenue, 0).toFixed(2)}</StatNumber>
+                <StatNumber>RM {events.reduce((sum, e) => sum + e.revenue, 0).toFixed(2)}</StatNumber>
                 <StatLabel>Total Revenue</StatLabel>
               </OverviewCard>
             </OverviewStats>
 
             <EventsList>
-              {mockEvents.map((event) => (
+              {isLoading ? (
+                <LoadingMessage>Loading events...</LoadingMessage>
+              ) : error ? (
+                <ErrorMessage>{error}</ErrorMessage>
+              ) : events.length === 0 ? (
+                <EmptyState>
+                  <EmptyIcon>📅</EmptyIcon>
+                  <EmptyTitle>No Events Yet</EmptyTitle>
+                  <EmptyText>Create your first event to start managing it here</EmptyText>
+                  <CreateButton onClick={() => navigate('/create-event')}>Create Event</CreateButton>
+                </EmptyState>
+              ) : (
+                events.map((event) => (
                 <EventDashboardCard key={event.id}>
                   <EventCardHeader>
                     <EventTitleSection>
@@ -212,7 +279,8 @@ export const EventManagementScreen: React.FC = () => {
                     </QuickButton>
                   </QuickActions>
                 </EventDashboardCard>
-              ))}
+              ))
+            )}
             </EventsList>
           </DashboardSection>
         )}
@@ -339,6 +407,43 @@ export const EventManagementScreen: React.FC = () => {
 };
 
 // Styled Components
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 14px;
+`;
+
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: #E74C3C;
+  font-size: 14px;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px 20px;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 16px;
+`;
+
+const EmptyTitle = styled.h3`
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const EmptyText = styled.p`
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 24px;
+`;
+
 const Container = styled.div`
   display: flex;
   flex-direction: column;
