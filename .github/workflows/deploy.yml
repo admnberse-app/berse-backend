@@ -82,7 +82,7 @@ jobs:
   
   # Deploy job removed - Using Railway and Netlify auto-deployment instead
   # Railway backend: Automatically deploys from main branch to api.berse.app
-  # Netlify frontend: Automatically deploys from main branch to bersemuka.netlify.app
+  # Netlify frontend: Automatically deploys from main branch to berse.app (primary domain)
   # 
   # The SSH deployment steps are not needed since:
   # 1. Railway handles backend deployment automatically

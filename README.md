@@ -2,6 +2,14 @@
 
 Community engagement platform backend for BerseMuka MVP - connecting people through events, points, and rewards.
 
+## 🚀 Production Deployments
+
+- **Frontend (Netlify)**: https://berse.app
+- **Backend API (Railway)**: https://api.berse.app
+- **Health Check**: https://api.berse.app/health
+
+> Note: Main branch automatically deploys to production on both platforms
+
 ## Features
 
 - User authentication and profile management
