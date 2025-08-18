@@ -47,7 +47,7 @@ router.post('/friend-request',
   asyncHandler(async (req, res, next) => {
     // Set type to FRIENDSHIP for friend requests
     req.body.type = 'FRIENDSHIP';
-    return matchingController.createMatch(req, res, next);
+    return matchingController.createMatch(req, res);
   })
 );
 

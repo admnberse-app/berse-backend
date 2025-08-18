@@ -103,7 +103,7 @@ class NotificationService {
     });
   }
 
-  async notifyMatchCreated(userId: string, senderName: string, matchType: string) {
+  async notifyMatchRequest(userId: string, senderName: string, matchType: string) {
     return this.createNotification({
       userId,
       type: 'MATCH',

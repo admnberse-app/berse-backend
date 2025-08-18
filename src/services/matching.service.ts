@@ -206,7 +206,7 @@ class MatchingService {
     });
 
     // Notify receiver
-    await notificationService.notifyMatchCreated(
+    await notificationService.notifyMatchRequest(
       receiverId,
       sender.fullName,
       type.toLowerCase()
