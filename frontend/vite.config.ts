@@ -26,8 +26,8 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/pwa-icon-v1.2.png',
-            sizes: '72x72',
+            src: '/pwa-64x64.png',
+            sizes: '64x64',
             type: 'image/png',
             purpose: 'any'
           },
@@ -44,7 +44,7 @@ export default defineConfig({
             purpose: 'any'
           },
           {
-            src: '/pwa-icon-v1.2.png',
+            src: '/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
@@ -62,7 +62,7 @@ export default defineConfig({
             purpose: 'any'
           },
           {
-            src: '/pwa-icon-v1.2.png',
+            src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'

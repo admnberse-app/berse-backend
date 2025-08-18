@@ -7,7 +7,7 @@ class AuthService {
   private token: string | null = null;
 
   constructor() {
-    this.token = localStorage.getItem('auth_token');
+    this.token = localStorage.getItem('bersemuka_token');
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
@@ -28,8 +28,8 @@ class AuthService {
       
       if (data.success) {
         this.token = data.data.token;
-        localStorage.setItem('auth_token', this.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
+        localStorage.setItem('bersemuka_token', this.token);
+        localStorage.setItem('bersemuka_user', JSON.stringify(data.data.user));
         return data;
       } else {
         throw new Error(data.error || 'Login failed');
@@ -58,8 +58,8 @@ class AuthService {
       
       if (data.success) {
         this.token = data.data.token;
-        localStorage.setItem('auth_token', this.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
+        localStorage.setItem('bersemuka_token', this.token);
+        localStorage.setItem('bersemuka_user', JSON.stringify(data.data.user));
         return data;
       } else {
         throw new Error(data.error || 'Registration failed');
@@ -96,8 +96,8 @@ class AuthService {
 
   logout(): void {
     this.token = null;
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('bersemuka_token');
+    localStorage.removeItem('bersemuka_user');
   }
 
   isAuthenticated(): boolean {

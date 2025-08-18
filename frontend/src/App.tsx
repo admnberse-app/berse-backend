@@ -196,7 +196,11 @@ function App() {
               />
               <Route
                 path="/manage-events"
-                element={<EventManagementScreen />}
+                element={
+                  <ProtectedRoute>
+                    <EventManagementScreen />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="/communities/edit/:communityId"

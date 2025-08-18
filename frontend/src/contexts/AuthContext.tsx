@@ -70,30 +70,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           userData = mockAuthService.getCurrentUser(); // This one is sync
         }
         
-        // If no user found, create a default demo user for the app to function (skip in test environment)
+        // If no user found, don't create a demo user - just remain logged out
         if (!userData && process.env.NODE_ENV !== 'test') {
-          const defaultUser = {
-            id: 'demo-user',
-            email: 'zayd@example.com',
-            fullName: 'Zayd Mahdaly',
-            username: 'Zayd Mahdaly',
-            firstName: 'Zayd',
-            lastName: 'Mahdaly',
-            phone: '+60123456789',
-            bio: 'Welcome to BerseMuka!',
-            profession: 'Architect & Photographer',
-            age: 25,
-            location: 'Kuala Lumpur, Malaysia',
-            interests: ['Community', 'Events', 'Coffee'],
-            points: 0,
-            membershipId: 'AUN100001',
-            qrCode: 'AUN100001',
-            isVerified: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          userData = defaultUser;
-          console.log('No user session found, using demo user');
+          console.log('No user session found');
         }
         
         if (userData) {
@@ -120,8 +99,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && response.data) {
         console.log('Login successful with backend, setting user:', response.data.user);
         setUser(response.data.user);
-        localStorage.setItem('auth_token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('bersemuka_token', response.data.token);
+        localStorage.setItem('bersemuka_user', JSON.stringify(response.data.user));
         return;
       } else {
         throw new Error(response.error || 'Login failed');
