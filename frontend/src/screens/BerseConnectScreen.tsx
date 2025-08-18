@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { BerseMintonPayment } from '../components/BerseMintonPayment';
 import { UnifiedParticipants } from '../components/UnifiedParticipants';
 import { EditEventModal } from '../components/EditEventModal';
+import { ShareModal } from '../components/CommunityModals';
 
 // Event Interface
 interface Event {
@@ -988,6 +989,8 @@ export const BerseConnectScreen: React.FC = () => {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [showEditEventModal, setShowEditEventModal] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState<{ title: string; text: string; url?: string } | null>(null);
 
   // Tab navigation
   const navigateTab = (direction: 'prev' | 'next') => {
@@ -1556,58 +1559,14 @@ export const BerseConnectScreen: React.FC = () => {
     const eventToShare = event || selectedEvent;
     if (!eventToShare) return;
 
-    const shareText = `🎉 Join me at ${eventToShare.title}!\n\n📅 ${eventToShare.date} at ${eventToShare.time}\n📍 ${eventToShare.location}${eventToShare.venue ? ` • ${eventToShare.venue}` : ''}\n\n${eventToShare.description}\n\nDownload BerseMuka app to join events and meet amazing people!`;
-    const shareUrl = window.location.href;
-
-    // Create sharing options
-    const showShareOptions = () => {
-      const options = [
-        {
-          name: 'WhatsApp',
-          action: () => {
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`;
-            window.open(whatsappUrl, '_blank');
-          }
-        },
-        {
-          name: 'Instagram Story',
-          action: () => {
-            // For Instagram, we'll copy to clipboard and guide user
-            navigator.clipboard.writeText(shareText + '\n\n' + shareUrl).then(() => {
-              alert('📋 Event details copied!\n\nNow you can:\n1. Open Instagram\n2. Create a story\n3. Paste the event details\n4. Share with your followers!');
-            });
-          }
-        },
-        {
-          name: 'Other Apps',
-          action: () => {
-            if (navigator.share) {
-              navigator.share({
-                title: eventToShare.title,
-                text: shareText,
-                url: shareUrl
-              }).catch(console.error);
-            } else {
-              navigator.clipboard.writeText(shareText + '\n\n' + shareUrl).then(() => {
-                alert('📋 Event details copied to clipboard!');
-              }).catch(() => {
-                prompt('Copy this text to share:', shareText + '\n\n' + shareUrl);
-              });
-            }
-          }
-        }
-      ];
-
-      const choice = prompt(
-        'Share this event via:\n\n1. WhatsApp\n2. Instagram Story\n3. Other Apps\n\nEnter 1, 2, or 3:'
-      );
-
-      if (choice === '1') options[0].action();
-      else if (choice === '2') options[1].action();
-      else if (choice === '3') options[2].action();
-    };
-
-    showShareOptions();
+    const shareText = `🎉 Join me at ${eventToShare.title}!\n\n📅 ${eventToShare.date} at ${eventToShare.time}\n📍 ${eventToShare.location}${eventToShare.venue ? ` • ${eventToShare.venue}` : ''}\n\n${eventToShare.description}\n\n👥 ${eventToShare.attendees}/${eventToShare.maxAttendees} people attending\n${eventToShare.price === 0 ? '🎟️ FREE EVENT' : `🎟️ ${eventToShare.currency} ${eventToShare.price}`}\n\nDownload BerseMuka app to join events and meet amazing people!`;
+    
+    setShareData({
+      title: eventToShare.title,
+      text: shareText,
+      url: window.location.href
+    });
+    setShowShareModal(true);
   };
 
   const formatDate = (dateStr: string) => {
@@ -2269,6 +2228,13 @@ export const BerseConnectScreen: React.FC = () => {
           setEventToEdit(null);
         }}
         onSave={handleSaveEvent}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        shareData={shareData}
       />
     </Container>
   );
