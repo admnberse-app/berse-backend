@@ -2,14 +2,28 @@
 // This configuration ensures all API calls, WebSocket connections, and services
 // use the same port (5173) with internal routing through Vite proxy
 
+// Determine if we're in production based on the hostname
+const isProduction = window.location.hostname === 'berse.app' || 
+                     window.location.hostname === 'www.berse.app' ||
+                     window.location.hostname.includes('netlify.app');
+
+// Use production API if deployed, otherwise use environment variable or localhost
+const API_URL = isProduction 
+  ? 'https://api.berse.app' 
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+
+const WS_URL = isProduction
+  ? 'wss://api.berse.app'
+  : 'ws://localhost:3000';
+
 export const SERVICES_CONFIG = {
-  // Base configuration - use backend port 3000 for local development
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  WS_BASE_URL: 'ws://localhost:3000',
+  // Base configuration - automatically switch between production and development
+  BASE_URL: API_URL,
+  WS_BASE_URL: WS_URL,
   
   // Main API Service (consolidated from multiple ports)
   MAIN_API: {
-    baseUrl: 'http://localhost:3000/api',
+    baseUrl: `${API_URL}/api`,
     endpoints: {
       // User management
       auth: '/auth',
@@ -41,27 +55,7 @@ export const SERVICES_CONFIG = {
   // Authentication Service
   AUTH_SERVICE: {
     get baseUrl() {
-      const apiUrl = import.meta.env.VITE_API_URL;
-      
-      // If no API URL is set, use localhost for development
-      if (!apiUrl) {
-        return 'http://localhost:3003/api/v1/auth';
-      }
-      
-      // For production API (api.berse.app)
-      if (apiUrl.includes('api.berse.app')) {
-        // Always use the correct production path
-        return 'https://api.berse.app/api/v1/auth';
-      }
-      
-      // For local development with different URL formats
-      if (apiUrl.endsWith('/api')) {
-        // If URL already has /api, just add /v1/auth
-        return `${apiUrl}/v1/auth`;
-      } else {
-        // If URL doesn't have /api, add full path
-        return `${apiUrl}/api/v1/auth`;
-      }
+      return `${API_URL}/api/v1/auth`;
     },
     endpoints: {
       login: '/login',
@@ -77,7 +71,7 @@ export const SERVICES_CONFIG = {
   
   // Admin Service (formerly on port 8080)
   ADMIN_SERVICE: {
-    baseUrl: 'http://localhost:5173/api/admin',
+    baseUrl: `${API_URL}/api/admin`,
     endpoints: {
       dashboard: '/dashboard',
       events: '/events',
@@ -94,8 +88,8 @@ export const SERVICES_CONFIG = {
   
   // Real-time Service (formerly on port 4000)
   REALTIME_SERVICE: {
-    baseUrl: 'http://localhost:5173/api/realtime',
-    websocket: 'ws://localhost:5173/ws',
+    baseUrl: `${API_URL}/api/realtime`,
+    websocket: WS_URL,
     endpoints: {
       'websocket-auth': '/ws-auth',
       'live-events': '/live-events',
@@ -107,7 +101,7 @@ export const SERVICES_CONFIG = {
   
   // Event Management Service
   EVENT_SERVICE: {
-    baseUrl: 'http://localhost:5173/api/events',
+    baseUrl: `${API_URL}/api/events`,
     endpoints: {
       list: '/',
       create: '/create',
@@ -124,7 +118,7 @@ export const SERVICES_CONFIG = {
   
   // User Service
   USER_SERVICE: {
-    baseUrl: 'http://localhost:5173/api/users',
+    baseUrl: `${API_URL}/api/users`,
     endpoints: {
       profile: '/profile',
       'update-profile': '/profile/update',
@@ -138,7 +132,7 @@ export const SERVICES_CONFIG = {
   
   // Upload & Media Service
   MEDIA_SERVICE: {
-    baseUrl: 'http://localhost:5173/api/media',
+    baseUrl: `${API_URL}/api/media`,
     endpoints: {
       upload: '/upload',
       'upload-avatar': '/upload/avatar',
@@ -149,14 +143,14 @@ export const SERVICES_CONFIG = {
   
   // Deep Link Configuration
   DEEP_LINKS: {
-    baseUrl: 'http://localhost:5173',
-    event: 'http://localhost:5173/event/',
-    'bersemukha-event': 'http://localhost:5173/bersemukha-event',
-    auth: 'http://localhost:5173/auth/',
-    register: 'http://localhost:5173/register',
-    login: 'http://localhost:5173/login',
-    profile: 'http://localhost:5173/profile',
-    admin: 'http://localhost:5173/admin/'
+    baseUrl: isProduction ? 'https://berse.app' : 'http://localhost:5173',
+    event: isProduction ? 'https://berse.app/event/' : 'http://localhost:5173/event/',
+    'bersemukha-event': isProduction ? 'https://berse.app/bersemukha-event' : 'http://localhost:5173/bersemukha-event',
+    auth: isProduction ? 'https://berse.app/auth/' : 'http://localhost:5173/auth/',
+    register: isProduction ? 'https://berse.app/register' : 'http://localhost:5173/register',
+    login: isProduction ? 'https://berse.app/login' : 'http://localhost:5173/login',
+    profile: isProduction ? 'https://berse.app/profile' : 'http://localhost:5173/profile',
+    admin: isProduction ? 'https://berse.app/admin/' : 'http://localhost:5173/admin/'
   }
 };
 
