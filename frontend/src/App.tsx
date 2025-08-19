@@ -186,14 +186,17 @@ function App() {
                   </OptionalProtectedRoute>
                 }
               />
-              <Route
-                path="/market"
-                element={
-                  <OptionalProtectedRoute requireAuth={true} featureName="BerseMarket">
-                    <BerseMarketScreen />
-                  </OptionalProtectedRoute>
-                }
-              />
+              {/* BerseMarket - Only available on localhost for development */}
+              {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+                <Route
+                  path="/market"
+                  element={
+                    <OptionalProtectedRoute requireAuth={true} featureName="BerseMarket">
+                      <BerseMarketScreen />
+                    </OptionalProtectedRoute>
+                  }
+                />
+              )}
               <Route
                 path="/manage-events"
                 element={

@@ -2090,33 +2090,50 @@ export const DashboardScreen: React.FC = () => {
                 $variant="market" 
                 onClick={(e) => { 
                   e.preventDefault(); 
-                  // Track interest in feature
-                  const interests = JSON.parse(localStorage.getItem('featureInterests') || '{}');
-                  const userId = user?.id || 'demo_user';
-                  if (!interests.berseMarket) {
-                    interests.berseMarket = [];
-                  }
-                  if (!interests.berseMarket.includes(userId)) {
-                    interests.berseMarket.push(userId);
-                    localStorage.setItem('featureInterests', JSON.stringify(interests));
-                    alert('✅ Thank you for your interest in BerseMarket! We\'ll notify you when it launches.');
+                  // Check if on localhost
+                  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                  
+                  if (isLocalhost) {
+                    // On localhost - navigate to BerseMarket
+                    navigate('/market');
                   } else {
-                    alert('You\'ve already expressed interest in BerseMarket. We\'ll notify you when it launches!');
+                    // On production - show coming soon message
+                    const interests = JSON.parse(localStorage.getItem('featureInterests') || '{}');
+                    const userId = user?.id || 'demo_user';
+                    if (!interests.berseMarket) {
+                      interests.berseMarket = [];
+                    }
+                    if (!interests.berseMarket.includes(userId)) {
+                      interests.berseMarket.push(userId);
+                      localStorage.setItem('featureInterests', JSON.stringify(interests));
+                      alert('✅ Thank you for your interest in BerseMarket! We\'ll notify you when it launches.');
+                    } else {
+                      alert('You\'ve already expressed interest in BerseMarket. We\'ll notify you when it launches!');
+                    }
                   }
                 }} 
                 style={{ 
-                  background: 'linear-gradient(135deg, #757575, #616161)',
-                  opacity: 0.7,
+                  background: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+                    ? 'linear-gradient(135deg, #FF6B35, #F7931E)' // Active color on localhost
+                    : 'linear-gradient(135deg, #757575, #616161)', // Gray on production
+                  opacity: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 1 : 0.7,
                   position: 'relative',
                   border: '1px solid #555'
                 }}
               >
-                <ActionIcon style={{ opacity: 0.6 }}>🛍️</ActionIcon>
-                <ActionText style={{ color: '#ccc' }}>
+                <ActionIcon style={{ opacity: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 1 : 0.6 }}>
+                  🛍️
+                </ActionIcon>
+                <ActionText style={{ color: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '#fff' : '#ccc' }}>
                   <strong>BerseMarket</strong>
                   Buy, sell, trade
                 </ActionText>
-                <ActionBadge style={{ background: '#666', color: '#aaa' }}>Coming Soon</ActionBadge>
+                <ActionBadge style={{ 
+                  background: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '#4CAF50' : '#666', 
+                  color: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '#fff' : '#aaa' 
+                }}>
+                  {(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'Open' : 'Coming Soon'}
+                </ActionBadge>
               </QuickActionButton>
             </QuickActionsGrid>
           </QuickActionsContainer>
