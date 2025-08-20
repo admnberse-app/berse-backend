@@ -7,10 +7,10 @@ const isProduction = window.location.hostname === 'berse.app' ||
                      window.location.hostname === 'www.berse.app' ||
                      window.location.hostname.includes('netlify.app');
 
-// Use production API if deployed, otherwise use environment variable or localhost
+// Use production API if deployed, otherwise use environment variable or empty for proxy
 const API_URL = isProduction 
   ? 'https://api.berse.app' 
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+  : (import.meta.env.VITE_API_URL || '');
 
 const WS_URL = isProduction
   ? 'wss://api.berse.app'
@@ -23,7 +23,7 @@ export const SERVICES_CONFIG = {
   
   // Main API Service (consolidated from multiple ports)
   MAIN_API: {
-    baseUrl: `${API_URL}/api`,
+    baseUrl: API_URL ? `${API_URL}/api` : '/api',
     endpoints: {
       // User management
       auth: '/auth',
@@ -55,6 +55,10 @@ export const SERVICES_CONFIG = {
   // Authentication Service
   AUTH_SERVICE: {
     get baseUrl() {
+      // For localhost, use relative URL that Vite proxy will handle
+      if (!API_URL || API_URL === '') {
+        return '/api/v1/auth';  // Vite proxy will handle this
+      }
       return `${API_URL}/api/v1/auth`;
     },
     endpoints: {
@@ -71,7 +75,7 @@ export const SERVICES_CONFIG = {
   
   // Admin Service (formerly on port 8080)
   ADMIN_SERVICE: {
-    baseUrl: `${API_URL}/api/admin`,
+    baseUrl: API_URL ? `${API_URL}/api/admin` : '/api/admin',
     endpoints: {
       dashboard: '/dashboard',
       events: '/events',
@@ -88,7 +92,7 @@ export const SERVICES_CONFIG = {
   
   // Real-time Service (formerly on port 4000)
   REALTIME_SERVICE: {
-    baseUrl: `${API_URL}/api/realtime`,
+    baseUrl: API_URL ? `${API_URL}/api/realtime` : '/api/realtime',
     websocket: WS_URL,
     endpoints: {
       'websocket-auth': '/ws-auth',
@@ -101,7 +105,7 @@ export const SERVICES_CONFIG = {
   
   // Event Management Service
   EVENT_SERVICE: {
-    baseUrl: `${API_URL}/api/events`,
+    baseUrl: API_URL ? `${API_URL}/api/events` : '/api/events',
     endpoints: {
       list: '/',
       create: '/create',
@@ -118,7 +122,7 @@ export const SERVICES_CONFIG = {
   
   // User Service
   USER_SERVICE: {
-    baseUrl: `${API_URL}/api/users`,
+    baseUrl: API_URL ? `${API_URL}/api/users` : '/api/users',
     endpoints: {
       profile: '/profile',
       'update-profile': '/profile/update',
@@ -132,7 +136,7 @@ export const SERVICES_CONFIG = {
   
   // Upload & Media Service
   MEDIA_SERVICE: {
-    baseUrl: `${API_URL}/api/media`,
+    baseUrl: API_URL ? `${API_URL}/api/media` : '/api/media',
     endpoints: {
       upload: '/upload',
       'upload-avatar': '/upload/avatar',
@@ -179,8 +183,6 @@ export const generateQRCodeUrl = (path: string) => {
 
 // Environment-based configuration
 export const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  
   // For production, use the correct API URL
   if (window.location.hostname === 'bersemuka.netlify.app' || 
       window.location.hostname === 'bersemuka.app' || 
@@ -188,12 +190,13 @@ export const getApiBaseUrl = () => {
     return 'https://api.berse.app';
   }
   
+  const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) {
-    // Use environment variable as-is for production
+    // Use environment variable as-is
     return envUrl;
   }
-  // Default to port 5173 for local development
-  return SERVICES_CONFIG.MAIN_API.baseUrl;
+  // For localhost, return empty string to use relative URLs with Vite proxy
+  return '';
 };
 
 export const getWebSocketUrl = () => {

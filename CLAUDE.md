@@ -1,5 +1,21 @@
 # Claude Code Configuration
 
+## ⚠️ CRITICAL: Frontend API Configuration Issues
+**ALWAYS CHECK THIS FIRST when dealing with login/API issues:**
+
+### Double `/api` Issue (e.g., `/api/api/v1/auth/login`)
+- **Root Cause**: `VITE_API_URL` is set in frontend/.env when it should be commented out
+- **Fix**: Comment out `VITE_API_URL` in frontend/.env file
+- **Verify**: Run `npm run dev:check` in frontend folder
+- **Test**: Open browser console and run `testApiConfig()` to verify URLs
+
+### CORS Issues on Production
+- **Root Cause**: Missing CORS_ORIGIN environment variable on Railway
+- **Fix**: Add to Railway environment variables:
+  ```
+  CORS_ORIGIN=https://berse.app,https://www.berse.app,http://localhost:3000,http://localhost:5173
+  ```
+
 ## Build Commands
 - `npm run build`: Build the project
 - `npm run test`: Run the full test suite

@@ -45,7 +45,7 @@ export const EventManagementScreen: React.FC = () => {
 
   const fetchEvents = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
       if (!token) {
         navigate('/login');
         return;

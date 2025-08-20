@@ -15,6 +15,7 @@ import './utils/clearAuth'; // Import to make clearAuth available globally
 import './utils/testAuth'; // Import to make testLogin available globally
 import './utils/testVoucher'; // Import to make voucher test functions available globally
 import './utils/initializePoints'; // Initialize points system
+import './utils/testApiConfig'; // Import to test API configuration
 
 // Import screens
 import { SplashScreen } from './screens/SplashScreen';

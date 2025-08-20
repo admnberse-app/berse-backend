@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_ENV=development vite --port 5173 --host",
+    "dev:check": "node -e \"const fs=require('fs'); const env=fs.readFileSync('.env','utf8'); const hasApiUrl=env.match(/^[^#]*VITE_API_URL=http/m); if(hasApiUrl) {console.error('❌ ERROR: VITE_API_URL should be commented out for local dev!'); process.exit(1);} else console.log('✅ Config OK');\" && npm run dev",
     "build": "cross-env NODE_ENV=production vite build",
     "build:check": "cross-env NODE_ENV=production tsc && vite build",
     "preview": "cross-env NODE_ENV=production vite preview --port 5173",

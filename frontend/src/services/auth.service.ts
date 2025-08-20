@@ -1,7 +1,4 @@
 import { User, AuthResponse, LoginRequest, RegisterRequest, ApiResponse } from '../types';
-import { SERVICES_CONFIG, getApiBaseUrl, buildApiUrl } from '../config/services.config';
-
-const API_BASE_URL = getApiBaseUrl();
 
 class AuthService {
   private token: string | null = null;
@@ -12,7 +9,12 @@ class AuthService {
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     try {
-      const response = await fetch(buildApiUrl('AUTH_SERVICE', '/login'), {
+      // Direct URL to avoid buildApiUrl issues
+      const loginUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api/v1/auth/login'
+        : 'https://api.berse.app/api/v1/auth/login';
+      
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +44,12 @@ class AuthService {
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
-      const response = await fetch(buildApiUrl('AUTH_SERVICE', '/register'), {
+      // Direct URL to avoid buildApiUrl issues
+      const registerUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api/v1/auth/register'
+        : 'https://api.berse.app/api/v1/auth/register';
+      
+      const response = await fetch(registerUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +83,12 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(buildApiUrl('MAIN_API', '/auth/me'), {
+      // Direct URL to avoid buildApiUrl issues
+      const meUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api/auth/me'
+        : 'https://api.berse.app/api/auth/me';
+      
+      const response = await fetch(meUrl, {
         headers: {
           'Authorization': `Bearer ${this.token}`,
         },

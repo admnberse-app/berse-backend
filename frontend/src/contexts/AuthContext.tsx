@@ -64,10 +64,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let userData = null;
       
       try {
-        if (authService.isAuthenticated()) {
-          userData = await authService.getCurrentUser();
-        } else if (mockAuthService.isAuthenticated()) {
-          userData = mockAuthService.getCurrentUser(); // This one is sync
+        // Validate stored token by making a test API call
+        const token = localStorage.getItem('bersemuka_token');
+        if (token) {
+          try {
+            // Test if the token is still valid
+            const response = await fetch(`${window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app' ? 'https://api.berse.app' : ''}/api/v1/users/profile`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (!response.ok) {
+              // Token is invalid or expired, clear localStorage
+              console.log('Token validation failed, clearing session');
+              localStorage.removeItem('bersemuka_token');
+              localStorage.removeItem('bersemuka_user');
+              localStorage.removeItem('user');
+              localStorage.removeItem('rememberMe');
+            } else {
+              // Token is valid, proceed with stored user data
+              if (authService.isAuthenticated()) {
+                userData = await authService.getCurrentUser();
+              } else if (mockAuthService.isAuthenticated()) {
+                userData = mockAuthService.getCurrentUser(); // This one is sync
+              }
+            }
+          } catch (error) {
+            console.log('Token validation error, clearing session:', error);
+            localStorage.removeItem('bersemuka_token');
+            localStorage.removeItem('bersemuka_user');
+            localStorage.removeItem('user');
+            localStorage.removeItem('rememberMe');
+          }
         }
         
         // If no user found, don't create a demo user - just remain logged out
