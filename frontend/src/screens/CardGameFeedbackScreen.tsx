@@ -296,7 +296,7 @@ export const CardGameFeedbackScreen: React.FC = () => {
       <StatusBar />
       <Header>
         <BackButton onClick={() => navigate('/bersecardgame')}>←</BackButton>
-        <HeaderTitle>CardGame Feedback</HeaderTitle>
+        <HeaderTitle>CardGame Feedback 📊</HeaderTitle>
       </Header>
 
       <Content>
