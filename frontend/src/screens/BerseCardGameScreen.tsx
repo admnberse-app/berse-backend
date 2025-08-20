@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { MainNav } from '../components/MainNav/MainNav';
 import { useAuth } from '../contexts/AuthContext';
+import { cardGameService } from '../services/cardgame.service';
 
 // ================================
 // STYLED COMPONENTS
@@ -624,6 +625,41 @@ interface Feedback {
 // Question Data Structure
 const topics: Topic[] = [
   {
+    id: 'slowdown',
+    title: 'Slow Down, You\'re Doing Fine',
+    gradient: 'linear-gradient(135deg, #2ECE98, #4fc3a1, #6ed4b0)',
+    description: 'In a world that glorifies hustle and speed, this invites us to question what it means to live meaningfully at our own pace. Explore the balance between ambition and acceptance, while rediscovering that slowing down is not about losing time, but about finding it.',
+    sessions: [
+      { number: 1, title: 'The Chase', description: 'Examining our relationship with ambition, goals, and the cost of constant striving' },
+      { number: 2, title: 'The Pause', description: 'Finding balance between contentment and growth, learning when to rest and when to rise' }
+    ],
+    questions: [
+      // Session 1: The Chase (10 questions)
+      { id: 'slowdown_1', text: 'Were there dreams you once wanted to achieve but no longer now? What changed?', session: 1 },
+      { id: 'slowdown_2', text: 'How do you differentiate between dreams that are truly yours, and those imposed by society or family?', session: 1 },
+      { id: 'slowdown_3', text: 'Is hustling always the best way forward, or do we sometimes confuse busyness with progress?', session: 1 },
+      { id: 'slowdown_4', text: 'What beliefs about success did you have to unlearn in order to find peace with yourself?', session: 1 },
+      { id: 'slowdown_5', text: 'How do you create moments of pause amidst the noise of everyday life?', session: 1 },
+      { id: 'slowdown_6', text: 'Have you ever achieved something only to realize it wasn\'t what you needed? What did stepping back teach you?', session: 1 },
+      { id: 'slowdown_7', text: 'How do you balance between hustling towards your goals and allowing life to unfold naturally?', session: 1 },
+      { id: 'slowdown_8', text: 'In Islam (and many philosophies), we\'re told "everything happens when it is meant to happen." How do you reconcile this with hustle culture?', session: 1 },
+      { id: 'slowdown_9', text: 'What have you sacrificed in the pursuit of your goals, and was it worth it?', session: 1 },
+      { id: 'slowdown_10', text: 'If you slowed down today, what would you discover about yourself that rushing has hidden?', session: 1 },
+      
+      // Session 2: The Pause (10 questions)
+      { id: 'slowdown_11', text: 'How do you balance being content with what you have and not becoming complacent?', session: 2 },
+      { id: 'slowdown_12', text: 'How do you decide which pursuits are worth your energy, and which ones drain you unnecessarily?', session: 2 },
+      { id: 'slowdown_13', text: 'When was the last time you felt like you truly had "enough," and how did it change your perspective?', session: 2 },
+      { id: 'slowdown_14', text: 'How does comparing yourself to others affect your ability to slow down and be present?', session: 2 },
+      { id: 'slowdown_15', text: 'Do you believe there are seasons in life where hustling is necessary, and others where slowing down is wiser?', session: 2 },
+      { id: 'slowdown_16', text: 'How have your goals evolved as you\'ve grown older or gained new experiences?', session: 2 },
+      { id: 'slowdown_17', text: 'What is one ambition or chase you had to let go of in order to truly move forward?', session: 2 },
+      { id: 'slowdown_18', text: 'When you slow down, what values or guiding principles rise to the surface for you?', session: 2 },
+      { id: 'slowdown_19', text: 'Are you more focused on leaving a legacy for others, or living a lifestyle that nourishes you today?', session: 2 },
+      { id: 'slowdown_20', text: 'If life isn\'t about rushing to an endpoint, but about becoming along the way — what are you becoming right now?', session: 2 },
+    ]
+  },
+  {
     id: 'love',
     title: 'Love in Translation',
     gradient: 'linear-gradient(135deg, #FF6B9D, #FF8E9B, #FFA8A8)',
@@ -983,24 +1019,51 @@ export const BerseCardGameScreen: React.FC = () => {
     setFeedbackComment('');
   };
 
-  const handleSubmitFeedback = () => {
+  const handleSubmitFeedback = async () => {
     if (selectedTopic && selectedSession !== null) {
       const sessionQuestions = getSessionQuestions();
       const currentQuestion = sessionQuestions[currentQuestionIndex];
       
-      const newFeedback: Feedback = {
-        questionId: currentQuestion.id,
-        rating: feedbackRating,
-        comment: feedbackComment
-      };
-      
-      setFeedbackData([...feedbackData, newFeedback]);
-      setShowFeedback(false);
-      setFeedbackRating(0);
-      setFeedbackComment('');
-      
-      // Show confirmation (could be a toast in a real app)
-      alert('Thank you for your feedback!');
+      try {
+        // Save to database if user is logged in
+        if (user) {
+          await cardGameService.submitFeedback({
+            topicId: selectedTopic.id,
+            sessionNumber: selectedSession,
+            questionId: currentQuestion.id,
+            rating: feedbackRating,
+            comment: feedbackComment || undefined
+          });
+        }
+        
+        // Also save locally for immediate display
+        const newFeedback: Feedback = {
+          questionId: currentQuestion.id,
+          rating: feedbackRating,
+          comment: feedbackComment
+        };
+        
+        setFeedbackData([...feedbackData, newFeedback]);
+        setShowFeedback(false);
+        setFeedbackRating(0);
+        setFeedbackComment('');
+        
+        // Show confirmation
+        alert('Thank you for your feedback! 🎉');
+      } catch (error) {
+        console.error('Error submitting feedback:', error);
+        // Still save locally even if database save fails
+        const newFeedback: Feedback = {
+          questionId: currentQuestion.id,
+          rating: feedbackRating,
+          comment: feedbackComment
+        };
+        setFeedbackData([...feedbackData, newFeedback]);
+        setShowFeedback(false);
+        setFeedbackRating(0);
+        setFeedbackComment('');
+        alert('Feedback saved locally!');
+      }
     }
   };
 

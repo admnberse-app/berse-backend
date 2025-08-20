@@ -121,6 +121,7 @@ model User {
   referredBy                 User?             @relation("Referrals", fields: [referredById], references: [id])
   referrals                  User[]            @relation("Referrals")
   badges                     UserBadge[]
+  cardGameFeedback           CardGameFeedback[]
 
   @@index([email])
   @@index([totalPoints])
@@ -460,4 +461,35 @@ enum CommunityRole {
   MODERATOR
   ADMIN
   OWNER
+}
+
+// BerseCardGame Models
+model CardGameFeedback {
+  id            String   @id @default(cuid())
+  userId        String
+  topicId       String
+  sessionNumber Int
+  questionId    String
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([topicId])
+  @@index([questionId])
+}
+
+model CardGameStats {
+  id            String   @id @default(cuid())
+  topicId       String   @unique
+  totalSessions Int      @default(0)
+  averageRating Float    @default(0)
+  totalFeedback Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([topicId])
 }
