@@ -36,8 +36,10 @@ export class CardGameController {
         },
       });
 
-      // Update topic statistics
-      await updateTopicStats(topicId);
+      // Update topic statistics asynchronously (don't wait for it)
+      updateTopicStats(topicId).catch(err => {
+        console.error('Error updating topic stats:', err);
+      });
 
       sendSuccess(res, feedback, 'Feedback submitted successfully');
     } catch (error) {
@@ -128,8 +130,10 @@ export class CardGameController {
         where: { id: feedbackId },
       });
 
-      // Update topic statistics
-      await updateTopicStats(feedback.topicId);
+      // Update topic statistics asynchronously (don't wait for it)
+      updateTopicStats(feedback.topicId).catch(err => {
+        console.error('Error updating topic stats after deletion:', err);
+      });
 
       sendSuccess(res, null, 'Feedback deleted successfully');
     } catch (error) {

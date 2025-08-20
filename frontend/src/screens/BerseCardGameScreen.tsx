@@ -71,6 +71,25 @@ const HeaderSubtitle = styled.div`
   font-weight: normal;
 `;
 
+const FeedbackButton = styled.button`
+  background: #2fce98;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #27b584;
+  }
+`;
+
 const Content = styled.div`
   flex: 1;
   padding: 20px;
@@ -969,6 +988,8 @@ export const BerseCardGameScreen: React.FC = () => {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
   const [showModeratorModal, setShowModeratorModal] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
 
   const handleTopicSelect = (topic: Topic) => {
     setSelectedTopic(topic);
@@ -1025,6 +1046,9 @@ export const BerseCardGameScreen: React.FC = () => {
       const currentQuestion = sessionQuestions[currentQuestionIndex];
       
       try {
+        setIsSubmittingFeedback(true);
+        setFeedbackMessage('Submitting feedback...');
+        
         // Save to database if user is logged in
         if (user) {
           await cardGameService.submitFeedback({
@@ -1044,12 +1068,15 @@ export const BerseCardGameScreen: React.FC = () => {
         };
         
         setFeedbackData([...feedbackData, newFeedback]);
-        setShowFeedback(false);
-        setFeedbackRating(0);
-        setFeedbackComment('');
+        setFeedbackMessage('Thank you for your feedback! 🎉');
         
-        // Show confirmation
-        alert('Thank you for your feedback! 🎉');
+        // Wait a moment to show success message
+        setTimeout(() => {
+          setShowFeedback(false);
+          setFeedbackRating(0);
+          setFeedbackComment('');
+          setFeedbackMessage('');
+        }, 1500);
       } catch (error) {
         console.error('Error submitting feedback:', error);
         // Still save locally even if database save fails
@@ -1059,10 +1086,15 @@ export const BerseCardGameScreen: React.FC = () => {
           comment: feedbackComment
         };
         setFeedbackData([...feedbackData, newFeedback]);
-        setShowFeedback(false);
-        setFeedbackRating(0);
-        setFeedbackComment('');
-        alert('Feedback saved locally!');
+        setFeedbackMessage('Feedback saved locally!');
+        setTimeout(() => {
+          setShowFeedback(false);
+          setFeedbackRating(0);
+          setFeedbackComment('');
+          setFeedbackMessage('');
+        }, 1500);
+      } finally {
+        setIsSubmittingFeedback(false);
       }
     }
   };
@@ -1090,6 +1122,9 @@ export const BerseCardGameScreen: React.FC = () => {
           <HeaderTitle>BerseCardGame</HeaderTitle>
           <HeaderSubtitle>Interactive conversation starter</HeaderSubtitle>
         </HeaderText>
+        <FeedbackButton onClick={() => navigate('/cardgame-feedback')}>
+          📊 View Feedback
+        </FeedbackButton>
       </Header>
 
       <Content>
@@ -1233,15 +1268,42 @@ export const BerseCardGameScreen: React.FC = () => {
                   onChange={(e) => setFeedbackComment(e.target.value)}
                 />
                 
-                <FeedbackButtons>
-                  <FeedbackSubmitButton onClick={handleSubmitFeedback}>
-                    Submit Feedback
-                  </FeedbackSubmitButton>
-                  <FeedbackCancelButton onClick={() => {
-                    setShowFeedback(false);
-                    setFeedbackRating(0);
-                    setFeedbackComment('');
+                {feedbackMessage && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '8px', 
+                    color: feedbackMessage.includes('Thank you') ? '#2ece98' : '#666',
+                    fontSize: '14px',
+                    fontWeight: '500'
                   }}>
+                    {feedbackMessage}
+                  </div>
+                )}
+                
+                <FeedbackButtons>
+                  <FeedbackSubmitButton 
+                    onClick={handleSubmitFeedback}
+                    disabled={isSubmittingFeedback || feedbackRating === 0}
+                    style={{ 
+                      opacity: isSubmittingFeedback || feedbackRating === 0 ? 0.6 : 1,
+                      cursor: isSubmittingFeedback || feedbackRating === 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                  </FeedbackSubmitButton>
+                  <FeedbackCancelButton 
+                    onClick={() => {
+                      setShowFeedback(false);
+                      setFeedbackRating(0);
+                      setFeedbackComment('');
+                      setFeedbackMessage('');
+                    }}
+                    disabled={isSubmittingFeedback}
+                    style={{ 
+                      opacity: isSubmittingFeedback ? 0.6 : 1,
+                      cursor: isSubmittingFeedback ? 'not-allowed' : 'pointer'
+                    }}
+                  >
                     Cancel
                   </FeedbackCancelButton>
                 </FeedbackButtons>

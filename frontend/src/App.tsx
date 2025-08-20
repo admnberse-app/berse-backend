@@ -43,6 +43,7 @@ import { MessagesScreen } from './screens/MessagesScreen';
 import { ChatScreen } from './screens/ChatScreen';
 import { NotificationsScreen } from './screens/NotificationsScreen';
 import { BerseCardGameScreen } from './screens/BerseCardGameScreen';
+import { CardGameFeedbackScreen } from './screens/CardGameFeedbackScreen';
 import { BerseMukhaEventScreen } from './screens/BerseMukhaEventScreen';
 import { RewardsScreen } from './screens/RewardsScreen';
 import { ActivitiesScreen } from './screens/ActivitiesScreen';
@@ -347,6 +348,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <BerseCardGameScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cardgame-feedback"
+                element={
+                  <ProtectedRoute>
+                    <CardGameFeedbackScreen />
                   </ProtectedRoute>
                 }
               />
