@@ -71,7 +71,7 @@ const HeaderSubtitle = styled.div`
   font-weight: normal;
 `;
 
-const FeedbackButton = styled.button`
+const ViewFeedbackButton = styled.button`
   background: #2fce98;
   color: white;
   border: none;
@@ -1122,9 +1122,9 @@ export const BerseCardGameScreen: React.FC = () => {
           <HeaderTitle>BerseCardGame</HeaderTitle>
           <HeaderSubtitle>Interactive conversation starter</HeaderSubtitle>
         </HeaderText>
-        <FeedbackButton onClick={() => navigate('/cardgame-feedback')}>
+        <ViewFeedbackButton onClick={() => navigate('/cardgame-feedback')}>
           📊 View Feedback
-        </FeedbackButton>
+        </ViewFeedbackButton>
       </Header>
 
       <Content>
