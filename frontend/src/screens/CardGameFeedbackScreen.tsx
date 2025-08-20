@@ -288,7 +288,7 @@ export const CardGameFeedbackScreen: React.FC = () => {
     a.click();
   };
 
-  const stats = getTotalStats();
+  const calculatedStats = getTotalStats();
   const filteredFeedback = getFilteredFeedback();
 
   return (
@@ -307,19 +307,19 @@ export const CardGameFeedbackScreen: React.FC = () => {
           </h3>
           <StatGrid>
             <StatItem>
-              <StatValue>{stats.total}</StatValue>
+              <StatValue>{calculatedStats.total}</StatValue>
               <StatLabel>Total Feedback</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>⭐ {stats.avgRating}</StatValue>
+              <StatValue>⭐ {calculatedStats.avgRating}</StatValue>
               <StatLabel>Avg Rating</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{stats.withComments}</StatValue>
+              <StatValue>{calculatedStats.withComments}</StatValue>
               <StatLabel>With Comments</StatLabel>
             </StatItem>
             <StatItem>
-              <StatValue>{stats.uniqueQuestions}</StatValue>
+              <StatValue>{calculatedStats.uniqueQuestions}</StatValue>
               <StatLabel>Questions Rated</StatLabel>
             </StatItem>
           </StatGrid>
