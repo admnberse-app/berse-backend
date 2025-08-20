@@ -1,5 +1,10 @@
 # Claude Code Configuration
 
+## Git Configuration
+- **Auto-push to both repos**: `git push` automatically pushes to both:
+  - raihaan123/BerseMuka (Netlify deployment)
+  - zaydmahdaly00/BerseMuka (Railway deployment)
+
 ## ⚠️ CRITICAL: Frontend API Configuration Issues
 **ALWAYS CHECK THIS FIRST when dealing with login/API issues:**
 
