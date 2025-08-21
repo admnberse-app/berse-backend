@@ -95,7 +95,7 @@ export class EventController {
 
   static async getEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { type, city, upcoming } = req.query;
+      const { type, city, upcoming, page = '1', limit = '20' } = req.query;
 
       const where: any = {};
 
@@ -111,6 +111,10 @@ export class EventController {
         where.date = { gte: new Date() };
       }
 
+      // Add pagination for better performance
+      const pageNum = parseInt(page as string);
+      const limitNum = Math.min(parseInt(limit as string), 50); // Max 50 items
+      
       const events = await prisma.event.findMany({
         where,
         include: {
@@ -129,6 +133,8 @@ export class EventController {
           },
         },
         orderBy: { date: 'asc' },
+        take: limitNum,
+        skip: (pageNum - 1) * limitNum,
       });
 
       // Parse notes field to include additional event data
