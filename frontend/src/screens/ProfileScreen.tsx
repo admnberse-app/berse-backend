@@ -4117,31 +4117,37 @@ export const ProfileScreen: React.FC = () => {
     }
   ];
 
-  // Mock user data - in real app, this would come from user context/API
+  // Use actual user data from registration/database
   const mockProfile = {
-    name: user?.fullName || 'Amina Hadzic',
-    age: 28,
-    profession: 'Architect & Photographer',
-    isAdmin: user?.role === 'ADMIN' || user?.role === 'MODERATOR', // Check from actual user role
-    isHost: user?.isHostCertified || user?.role === 'GUIDE' || user?.role === 'ADMIN', // Check if user can host events
-    rating: 7.1,
-    level: 7,
-    personalityType: 'ENFJ-A',
-    bio: 'Architect and photographer exploring traditions and architecture worldwide. Love discovering hidden gems and meeting new people over coffee.',
-    interests: ['Architecture', 'Photography', 'Coffee Culture', 'Travel'],
-    communities: [
-      { name: '🏛️ NAMA Foundation', type: 'foundation' as const, verified: true },
-      { name: '🎓 Malaysian Architects', type: 'professional' as const, verified: true },
-      { name: '📷 KL Photography Club', type: 'alumni' as const, verified: false }
+    name: user?.fullName || user?.username || 'User',
+    age: user?.age || 25,
+    profession: user?.profession || 'Professional',
+    isAdmin: user?.role === 'ADMIN' || user?.role === 'MODERATOR',
+    isHost: user?.isHostCertified || user?.role === 'GUIDE' || user?.role === 'ADMIN',
+    rating: user?.rating || 7.1,
+    level: user?.level || 7,
+    personalityType: user?.personalityType || 'ENFJ-A',
+    bio: user?.bio || user?.shortBio || 'Welcome to my profile!',
+    interests: user?.interests?.length > 0 ? user.interests : (user?.topInterests?.length > 0 ? user.topInterests : ['Community', 'Events', 'Social']),
+    communities: user?.communities?.length > 0 ? user.communities : [
+      { name: '🏛️ Berse Community', type: 'foundation' as const, verified: true }
     ],
     socialMedia: {
-      instagram: '@amina_arch',
-      linkedin: 'amina-hadzic',
-      twitter: '@aminaphoto',
-      whatsapp: '+60123456789'
+      instagram: user?.instagramHandle || user?.instagram || '@user',
+      linkedin: user?.linkedinHandle || user?.linkedin || 'user',
+      twitter: user?.twitter || '@user',
+      whatsapp: user?.phone || user?.whatsapp || ''
     },
-    services: ['Local Guides', 'Photography', 'Architecture Tours'],
-    avatarColor: 'linear-gradient(135deg, #2fce98, #4A90A4)'
+    services: user?.servicesOffered?.length > 0 ? user.servicesOffered : ['Meet & Greet'],
+    avatarColor: user?.profileColor || 'linear-gradient(135deg, #2fce98, #4A90A4)',
+    // Additional user data from registration
+    city: user?.city || user?.currentLocation || 'Not specified',
+    nationality: user?.nationality || 'Not specified',
+    gender: user?.gender || 'Not specified',
+    membershipId: user?.membershipId || 'Not set',
+    email: user?.email || 'Not set',
+    phone: user?.phone || 'Not set',
+    username: user?.username || 'Not set'
   };
   
   // Mock notifications
@@ -5577,6 +5583,14 @@ export const ProfileScreen: React.FC = () => {
                   >
                     {mockProfile.age} • {mockProfile.profession}
                   </ProfileMeta>
+                  <ProfileMeta style={{ fontSize: '11px', marginTop: '2px' }}>
+                    📍 {mockProfile.city} • 🌍 {mockProfile.nationality} • {mockProfile.gender}
+                  </ProfileMeta>
+                  {mockProfile.membershipId !== 'Not set' && (
+                    <ProfileMeta style={{ fontSize: '10px', marginTop: '2px', color: '#2fce98' }}>
+                      ID: {mockProfile.membershipId}
+                    </ProfileMeta>
+                  )}
                 </UserNameEdit>
                 
                 <TopRightStack>
