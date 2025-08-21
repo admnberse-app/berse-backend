@@ -122,6 +122,8 @@ model User {
   referrals                  User[]            @relation("Referrals")
   badges                     UserBadge[]
   cardGameFeedback           CardGameFeedback[]
+  cardGameUpvotes            CardGameUpvote[]
+  cardGameReplies            CardGameReply[]
 
   @@index([email])
   @@index([totalPoints])
@@ -476,10 +478,41 @@ model CardGameFeedback {
   updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upvotes CardGameUpvote[]
+  replies CardGameReply[]
 
   @@index([userId])
   @@index([topicId])
   @@index([questionId])
+}
+
+model CardGameUpvote {
+  id         String   @id @default(cuid())
+  userId     String
+  feedbackId String
+  createdAt  DateTime @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedback CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feedbackId])
+  @@index([userId])
+  @@index([feedbackId])
+}
+
+model CardGameReply {
+  id         String   @id @default(cuid())
+  userId     String
+  feedbackId String
+  text       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedback CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([feedbackId])
 }
 
 model CardGameStats {

@@ -36,6 +36,7 @@ export interface User {
   personalityType?: string; // MBTI type
   languages?: string; // Languages spoken
   qrCode?: string; // Unique QR code for profile
+  isAdmin?: boolean; // Admin status
   createdAt: string;
   updatedAt: string;
 }

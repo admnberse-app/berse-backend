@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { MainNav } from '../components/MainNav/MainNav';
 import { useAuth } from '../contexts/AuthContext';
 import { cardGameService } from '../services/cardgame.service';
+import { checkAdminAccess } from '../utils/adminUtils';
+import html2canvas from 'html2canvas';
 
 // ================================
 // STYLED COMPONENTS
@@ -189,26 +191,23 @@ const TopicCard = styled.div<{ $gradient: string }>`
   background: ${({ $gradient }) => $gradient};
   border-radius: 16px;
   padding: 20px;
-  cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-height: 140px;
+  min-height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  gap: 12px;
   
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
   }
   
-  &:active {
-    transform: translateY(-2px);
-  }
-  
   @media (max-width: 480px) {
-    min-height: 120px;
+    min-height: 140px;
     padding: 16px;
   }
 `;
@@ -221,6 +220,11 @@ const TopicTitle = styled.h4`
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   line-height: 1.3;
+  cursor: pointer;
+  
+  &:hover {
+    text-decoration: underline;
+  }
   
   @media (max-width: 480px) {
     font-size: 13px;
@@ -229,6 +233,33 @@ const TopicTitle = styled.h4`
   
   @media (min-width: 768px) {
     font-size: 16px;
+  }
+`;
+
+const FeedbackThreadButton = styled.button`
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.02);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 11px;
+    padding: 5px 12px;
   }
 `;
 
@@ -424,7 +455,8 @@ const BackToSessionsButton = styled.button`
   }
 `;
 
-const FeedbackButton = styled.button`
+// Feedback Form Components
+const ShowFeedbackButton = styled.button`
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -440,7 +472,6 @@ const FeedbackButton = styled.button`
   }
 `;
 
-// Feedback Form Components
 const FeedbackSection = styled.div<{ $isOpen: boolean }>`
   max-height: ${({ $isOpen }) => $isOpen ? '300px' : '0'};
   overflow: hidden;
@@ -465,12 +496,13 @@ const Star = styled.button<{ $filled: boolean }>`
   background: none;
   border: none;
   font-size: 24px;
-  color: ${({ $filled }) => $filled ? '#FFD700' : 'rgba(255, 255, 255, 0.5)'};
+  color: ${({ $filled }) => $filled ? '#FFD700' : '#ddd'};
   cursor: pointer;
   transition: all 0.2s ease;
   
   &:hover {
     transform: scale(1.1);
+    color: #FFD700;
   }
 `;
 
@@ -610,6 +642,342 @@ const ModeratorButton = styled.button`
   }
 `;
 
+// Feedback Modal Components
+const FeedbackModal = styled.div<{ $gradient?: string }>`
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  margin: 0 auto;
+  max-width: 380px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: ${props => props.$gradient || 'linear-gradient(135deg, #2fce98, #4fc3a1)'};
+    border-radius: 20px 20px 0 0;
+  }
+`;
+
+const FeedbackModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+`;
+
+const FeedbackModalTitle = styled.h2`
+  font-size: 18px;
+  color: #333;
+  margin: 0;
+  font-weight: 600;
+`;
+
+const AddFeedbackSection = styled.div`
+  background: rgba(46, 206, 152, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(46, 206, 152, 0.2);
+`;
+
+const AddFeedbackTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+`;
+
+const FeedbackInput = styled.textarea`
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 12px;
+  resize: vertical;
+  min-height: 45px;
+  font-family: inherit;
+  margin-bottom: 8px;
+  
+  &:focus {
+    outline: none;
+    border-color: #2fce98;
+  }
+`;
+
+const FeedbackList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const FeedbackItem = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 14px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+`;
+
+const FeedbackHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+`;
+
+const UserAvatar = styled.div`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2fce98, #4fc3a1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+`;
+
+const UserInfo = styled.div`
+  flex: 1;
+`;
+
+const FeedbackUser = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const FeedbackTime = styled.div`
+  font-size: 11px;
+  color: #999;
+`;
+
+const FeedbackRatingDisplay = styled.div`
+  color: #FFD700;
+  font-size: 14px;
+`;
+
+const FeedbackQuestion = styled.button`
+  font-size: 12px;
+  color: #2fce98;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: rgba(46, 206, 152, 0.1);
+  border: 1px solid rgba(46, 206, 152, 0.3);
+  border-radius: 6px;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(46, 206, 152, 0.2);
+    transform: scale(1.02);
+  }
+`;
+
+const FeedbackCommentText = styled.div`
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 10px;
+`;
+
+const FeedbackActions = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  &.active {
+    color: #2fce98;
+    background: rgba(46, 206, 152, 0.1);
+  }
+`;
+
+const ReplySection = styled.div`
+  margin-top: 12px;
+`;
+
+const Reply = styled.div`
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid #e0e0e0;
+`;
+
+const ReplyUser = styled.span`
+  font-weight: 600;
+  color: #2fce98;
+  margin-right: 8px;
+`;
+
+const ReplyInput = styled.input`
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-top: 8px;
+  
+  &:focus {
+    outline: none;
+    border-color: #2fce98;
+  }
+`;
+
+const SubmitButton = styled.button`
+  background: #2fce98;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: #27b584;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const EmptyFeedback = styled.div`
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 14px;
+`;
+
+// Share Modal Components
+const ShareModal = styled.div`
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 0 auto;
+  max-width: 280px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+`;
+
+const ShareTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+  text-align: center;
+`;
+
+const ShareOptions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+`;
+
+const ShareOption = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: #f8f8f8;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: #e8e8e8;
+    transform: translateY(-2px);
+  }
+`;
+
+const ShareIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  
+  &.whatsapp { background: #25D366; color: white; }
+  &.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; }
+  &.facebook { background: #1877F2; color: white; }
+  &.twitter { background: #1DA1F2; color: white; }
+  &.link { background: #2fce98; color: white; }
+  &.more { background: #666; color: white; }
+`;
+
+const ShareLabel = styled.div`
+  font-size: 11px;
+  color: #666;
+`;
+
+// Question Popup Modal
+const QuestionModal = styled.div`
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 0 auto;
+  max-width: 320px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+`;
+
+const QuestionModalTitle = styled.h3`
+  font-size: 14px;
+  font-weight: 600;
+  color: #2fce98;
+  margin: 0 0 12px 0;
+`;
+
+const QuestionModalText = styled.p`
+  font-size: 14px;
+  color: #333;
+  line-height: 1.5;
+  margin: 0;
+`;
+
 // ================================
 // INTERFACES AND DATA
 // ================================
@@ -653,29 +1021,29 @@ const topics: Topic[] = [
       { number: 2, title: 'The Pause', description: 'Finding balance between contentment and growth, learning when to rest and when to rise' }
     ],
     questions: [
-      // Session 1: The Chase (10 questions)
-      { id: 'slowdown_1', text: 'Were there dreams you once wanted to achieve but no longer now? What changed?', session: 1 },
-      { id: 'slowdown_2', text: 'How do you differentiate between dreams that are truly yours, and those imposed by society or family?', session: 1 },
-      { id: 'slowdown_3', text: 'Is hustling always the best way forward, or do we sometimes confuse busyness with progress?', session: 1 },
-      { id: 'slowdown_4', text: 'What beliefs about success did you have to unlearn in order to find peace with yourself?', session: 1 },
-      { id: 'slowdown_5', text: 'How do you create moments of pause amidst the noise of everyday life?', session: 1 },
-      { id: 'slowdown_6', text: 'Have you ever achieved something only to realize it wasn\'t what you needed? What did stepping back teach you?', session: 1 },
-      { id: 'slowdown_7', text: 'How do you balance between hustling towards your goals and allowing life to unfold naturally?', session: 1 },
-      { id: 'slowdown_8', text: 'In Islam (and many philosophies), we\'re told "everything happens when it is meant to happen." How do you reconcile this with hustle culture?', session: 1 },
-      { id: 'slowdown_9', text: 'What have you sacrificed in the pursuit of your goals, and was it worth it?', session: 1 },
-      { id: 'slowdown_10', text: 'If you slowed down today, what would you discover about yourself that rushing has hidden?', session: 1 },
+      // Session 1: The Chase
+      { id: 'slowdown_1', text: 'Dreams Revisited (Reflective): Were there dreams you once wanted to achieve but no longer now? What changed?', session: 1 },
+      { id: 'slowdown_2', text: 'Borrowed Goals (Reflective): How do you differentiate between dreams that are truly yours, and those imposed by society or family?', session: 1 },
+      { id: 'slowdown_3', text: 'The Hustle Illusion (Critical): Is hustling always the best way forward, or do we sometimes confuse busyness with progress?', session: 1 },
+      { id: 'slowdown_4', text: 'Learning & Unlearning (Explorative): What beliefs about success did you have to unlearn in order to find peace with yourself?', session: 1 },
+      { id: 'slowdown_5', text: 'The Space to Breathe (Practical): How do you create moments of pause amidst the noise of everyday life?', session: 1 },
+      { id: 'slowdown_6', text: 'When to Step Back (Critical): Have you ever achieved something only to realize it wasn\'t what you needed? What did stepping back teach you?', session: 1 },
+      { id: 'slowdown_7', text: 'Riding the Waves (Explorative): How do you balance between hustling towards your goals and allowing life to unfold naturally?', session: 1 },
+      { id: 'slowdown_8', text: 'Timing & Trust (Reflective): In Islam (and many philosophies), we\'re told "everything happens when it is meant to happen." How do you reconcile this with hustle culture?', session: 1 },
+      { id: 'slowdown_9', text: 'The Cost of the Chase (Critical): What have you sacrificed in the pursuit of your goals, and was it worth it?', session: 1 },
+      { id: 'slowdown_10', text: 'Redefining the Race (Reflective): If you slowed down today, what would you discover about yourself that rushing has hidden?', session: 1 },
       
-      // Session 2: The Pause (10 questions)
-      { id: 'slowdown_11', text: 'How do you balance being content with what you have and not becoming complacent?', session: 2 },
-      { id: 'slowdown_12', text: 'How do you decide which pursuits are worth your energy, and which ones drain you unnecessarily?', session: 2 },
-      { id: 'slowdown_13', text: 'When was the last time you felt like you truly had "enough," and how did it change your perspective?', session: 2 },
-      { id: 'slowdown_14', text: 'How does comparing yourself to others affect your ability to slow down and be present?', session: 2 },
-      { id: 'slowdown_15', text: 'Do you believe there are seasons in life where hustling is necessary, and others where slowing down is wiser?', session: 2 },
-      { id: 'slowdown_16', text: 'How have your goals evolved as you\'ve grown older or gained new experiences?', session: 2 },
-      { id: 'slowdown_17', text: 'What is one ambition or chase you had to let go of in order to truly move forward?', session: 2 },
-      { id: 'slowdown_18', text: 'When you slow down, what values or guiding principles rise to the surface for you?', session: 2 },
-      { id: 'slowdown_19', text: 'Are you more focused on leaving a legacy for others, or living a lifestyle that nourishes you today?', session: 2 },
-      { id: 'slowdown_20', text: 'If life isn\'t about rushing to an endpoint, but about becoming along the way — what are you becoming right now?', session: 2 },
+      // Session 2: The Pause
+      { id: 'slowdown_11', text: 'Content vs Complacency: How do you balance being content with what you have and not becoming complacent?', session: 2 },
+      { id: 'slowdown_12', text: 'Preserving Energy: How do you decide which pursuits are worth your energy, and which ones drain you unnecessarily?', session: 2 },
+      { id: 'slowdown_13', text: 'The Beauty of Enough: When was the last time you felt like you truly had "enough," and how did it change your perspective?', session: 2 },
+      { id: 'slowdown_14', text: 'The Weight of Comparison: How does comparing yourself to others affect your ability to slow down and be present?', session: 2 },
+      { id: 'slowdown_15', text: 'Seasons of Growth: Do you believe there are seasons in life where hustling is necessary, and others where slowing down is wiser?', session: 2 },
+      { id: 'slowdown_16', text: 'Evolving Dreams: How have your goals evolved as you\'ve grown older or gained new experiences?', session: 2 },
+      { id: 'slowdown_17', text: 'Letting Go: What is one ambition or chase you had to let go of in order to truly move forward?', session: 2 },
+      { id: 'slowdown_18', text: 'Inner Compass: When you slow down, what values or guiding principles rise to the surface for you?', session: 2 },
+      { id: 'slowdown_19', text: 'Legacy vs Lifestyle: Are you more focused on leaving a legacy for others, or living a lifestyle that nourishes you today?', session: 2 },
+      { id: 'slowdown_20', text: 'Becoming, Not Arriving: If life isn\'t about rushing to an endpoint, but about becoming along the way — what are you becoming right now?', session: 2 },
     ]
   },
   {
@@ -990,6 +1358,36 @@ export const BerseCardGameScreen: React.FC = () => {
   const [showModeratorModal, setShowModeratorModal] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedTopicForFeedback, setSelectedTopicForFeedback] = useState<Topic | null>(null);
+  const [forumFeedback, setForumFeedback] = useState<any[]>([]);
+  const [newFeedbackText, setNewFeedbackText] = useState('');
+  const [newFeedbackRating, setNewFeedbackRating] = useState(0);
+  const [newFeedbackQuestionId, setNewFeedbackQuestionId] = useState('');
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareContent, setShareContent] = useState<any>(null);
+  const [showForumQuestionModal, setShowForumQuestionModal] = useState(false);
+  const [selectedQuestionText, setSelectedQuestionText] = useState('');
+  const [expandedReplies, setExpandedReplies] = useState<string[]>([]);
+  const [isLoadingForum, setIsLoadingForum] = useState(false);
+
+  // Auto-refresh forum feedback every 5 seconds when modal is open
+  useEffect(() => {
+    if (showFeedbackModal && selectedTopicForFeedback) {
+      const interval = setInterval(async () => {
+        try {
+          const feedbackData = await cardGameService.getAllTopicFeedback(selectedTopicForFeedback.id);
+          setForumFeedback(feedbackData);
+        } catch (error) {
+          console.error('Error refreshing feedback:', error);
+        }
+      }, 5000); // Refresh every 5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [showFeedbackModal, selectedTopicForFeedback]);
 
   const handleTopicSelect = (topic: Topic) => {
     setSelectedTopic(topic);
@@ -1122,9 +1520,6 @@ export const BerseCardGameScreen: React.FC = () => {
           <HeaderTitle>BerseCardGame</HeaderTitle>
           <HeaderSubtitle>Interactive conversation starter</HeaderSubtitle>
         </HeaderText>
-        <ViewFeedbackButton onClick={() => navigate('/cardgame-feedback')}>
-          📊 View Feedback
-        </ViewFeedbackButton>
       </Header>
 
       <Content>
@@ -1145,9 +1540,35 @@ export const BerseCardGameScreen: React.FC = () => {
               <TopicCard
                 key={topic.id}
                 $gradient={topic.gradient}
-                onClick={() => handleTopicSelect(topic)}
               >
-                <TopicTitle>{topic.title}</TopicTitle>
+                <TopicTitle onClick={() => handleTopicSelect(topic)}>
+                  {topic.title}
+                </TopicTitle>
+                <FeedbackThreadButton
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setSelectedTopicForFeedback(topic);
+                    setShowFeedbackModal(true);
+                    // Reset states when opening modal
+                    setNewFeedbackText('');
+                    setNewFeedbackRating(0);
+                    setNewFeedbackQuestionId('');
+                    setReplyingToId(null);
+                    setReplyText('');
+                    // Load feedback from database
+                    setIsLoadingForum(true);
+                    try {
+                      const feedbackData = await cardGameService.getAllTopicFeedback(topic.id);
+                      setForumFeedback(feedbackData);
+                    } catch (error) {
+                      console.error('Error loading feedback:', error);
+                    } finally {
+                      setIsLoadingForum(false);
+                    }
+                  }}
+                >
+                  Feedback
+                </FeedbackThreadButton>
               </TopicCard>
             ))}
           </TopicsGrid>
@@ -1203,6 +1624,7 @@ export const BerseCardGameScreen: React.FC = () => {
       <ModalOverlay $isOpen={showQuestionModal} onClick={handleCloseModal}>
         {selectedTopic && currentQuestion && selectedSession !== null && (
           <QuestionCard 
+            className="question-card-modal"
             $gradient={selectedTopic.gradient}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1243,9 +1665,50 @@ export const BerseCardGameScreen: React.FC = () => {
               <BackToSessionsButton onClick={handleBackToSessions}>
                 Back to Sessions
               </BackToSessionsButton>
-              <FeedbackButton onClick={() => setShowFeedback(!showFeedback)}>
+              <ShowFeedbackButton onClick={() => setShowFeedback(!showFeedback)}>
                 {showFeedback ? 'Hide Feedback' : 'Add Feedback'}
-              </FeedbackButton>
+              </ShowFeedbackButton>
+              <BackToSessionsButton onClick={async () => {
+                try {
+                  // Take screenshot of the question card
+                  const element = document.querySelector('.question-card-modal');
+                  if (element) {
+                    const canvas = await html2canvas(element as HTMLElement, {
+                      backgroundColor: null,
+                      scale: 2,
+                      logging: false,
+                      useCORS: true
+                    });
+                    
+                    canvas.toBlob((blob) => {
+                      if (blob) {
+                        const file = new File([blob], 'bersecardgame-question.png', { type: 'image/png' });
+                        
+                        // If browser supports sharing files
+                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                          navigator.share({
+                            title: `BerseCardGame - ${selectedTopic?.title}`,
+                            text: currentQuestion?.text,
+                            files: [file]
+                          });
+                        } else {
+                          // Fallback to download
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'bersecardgame-question.png';
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }
+                      }
+                    });
+                  }
+                } catch (error) {
+                  console.error('Error sharing question:', error);
+                }
+              }}>
+                📤 Share Question
+              </BackToSessionsButton>
             </ActionButtons>
             
             <FeedbackSection $isOpen={showFeedback}>
@@ -1325,14 +1788,10 @@ export const BerseCardGameScreen: React.FC = () => {
             <h3>What is BerseMukha?</h3>
             <p>BerseMukha is a social gathering that creates a safe space for people to talk, connect, and reflect around meaningful topics—building community through discussion.</p>
             
-            <h3>Who organizes BerseMukha?</h3>
-            <p>Organized by Ahl Umran in collaboration with Mukha Café under the Peacemeal initiative, which aims to give back to the community. Peacemeal also hosts other events like women-only sessions, reverts' circles, arts meetups, book clubs, and philosophy talks.</p>
-            
             <h3>Moderator Guidelines</h3>
             <ul>
               <li><strong>a.</strong> Start by introducing yourself and what BerseMukha is about—connecting people, building community, and sharing ideas. Share your hopes for the session.</li>
               <li><strong>b.</strong> Invite participants to introduce themselves: name, where they're from, what they do, and where they currently live. Avoid sensitive questions.</li>
-              <li><strong>c.</strong> Ensure everyone has the discussion questions beforehand so they can prepare.</li>
               <li><strong>d.</strong> Set the tone: remind participants it's a safe, discussion-based space. Sharing is encouraged but not required—listening matters too.</li>
               <li><strong>e.</strong> Be neutral and guide the flow. Ask questions, comment on answers, and simplify if needed to help understanding.</li>
               <li><strong>f.</strong> If the group is shy, take the lead—share your own thoughts first to ease them in.</li>
@@ -1358,6 +1817,287 @@ export const BerseCardGameScreen: React.FC = () => {
             </ul>
           </ModeratorContent>
         </ModeratorModal>
+      </ModalOverlay>
+
+      {/* Feedback Modal */}
+      <ModalOverlay $isOpen={showFeedbackModal} onClick={() => setShowFeedbackModal(false)}>
+        <FeedbackModal 
+          onClick={(e) => e.stopPropagation()}
+          $gradient={selectedTopicForFeedback?.gradient}
+        >
+          <FeedbackModalHeader>
+            <FeedbackModalTitle>
+              {selectedTopicForFeedback?.title} Forum
+            </FeedbackModalTitle>
+            <CloseButton onClick={() => setShowFeedbackModal(false)}>×</CloseButton>
+          </FeedbackModalHeader>
+          
+          {/* Add New Feedback Section */}
+          <AddFeedbackSection>
+            <AddFeedbackTitle>Share Your Experience</AddFeedbackTitle>
+            <StarRating>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  $filled={star <= newFeedbackRating}
+                  onClick={() => setNewFeedbackRating(star)}
+                >
+                  ★
+                </Star>
+              ))}
+            </StarRating>
+            <FeedbackInput
+              placeholder="What did you learn or experience from this topic?"
+              value={newFeedbackText}
+              onChange={(e) => setNewFeedbackText(e.target.value)}
+            />
+            <SubmitButton
+              onClick={async () => {
+                if (newFeedbackText && newFeedbackRating && selectedTopicForFeedback) {
+                  try {
+                    // Submit to database
+                    const feedbackData = {
+                      topicId: selectedTopicForFeedback.id,
+                      sessionNumber: 1, // Default to session 1 for general feedback
+                      questionId: 'general_feedback',
+                      rating: newFeedbackRating,
+                      comment: newFeedbackText
+                    };
+                    const newFeedback = await cardGameService.submitFeedback(feedbackData);
+                    
+                    // Reload all feedback to get the latest data
+                    const allFeedback = await cardGameService.getAllTopicFeedback(selectedTopicForFeedback.id);
+                    setForumFeedback(allFeedback);
+                    
+                    // Reset form
+                    setNewFeedbackText('');
+                    setNewFeedbackRating(0);
+                  } catch (error) {
+                    console.error('Error submitting feedback:', error);
+                  }
+                }
+              }}
+              disabled={!newFeedbackText || !newFeedbackRating}
+            >
+              Post Feedback
+            </SubmitButton>
+          </AddFeedbackSection>
+          
+          <FeedbackList>
+            {isLoadingForum ? (
+              <EmptyFeedback>Loading feedback...</EmptyFeedback>
+            ) : forumFeedback.length === 0 ? (
+              <EmptyFeedback>
+                No feedback yet for this topic. Be the first to share your thoughts!
+              </EmptyFeedback>
+            ) : (
+              forumFeedback
+                .sort((a, b) => (b.upvoteCount || 0) - (a.upvoteCount || 0))
+                .map(feedback => (
+              <FeedbackItem key={feedback.id}>
+                <FeedbackHeader>
+                  <UserAvatar>{feedback.user?.fullName?.charAt(0) || 'A'}</UserAvatar>
+                  <UserInfo>
+                    <FeedbackUser>{feedback.user?.fullName || 'Anonymous'}</FeedbackUser>
+                    <FeedbackTime>{new Date(feedback.createdAt).toLocaleString()}</FeedbackTime>
+                  </UserInfo>
+                  <FeedbackRatingDisplay>
+                    {'⭐'.repeat(feedback.rating)}
+                  </FeedbackRatingDisplay>
+                </FeedbackHeader>
+                
+                <FeedbackQuestion onClick={() => {
+                  const questionText = selectedTopicForFeedback?.questions.find(q => 
+                    q.id === feedback.questionId
+                  )?.text || feedback.questionId;
+                  setSelectedQuestionText(questionText);
+                  setShowForumQuestionModal(true);
+                }}>
+                  {selectedTopicForFeedback?.questions.find(q => q.id === feedback.questionId)?.text.substring(0, 50) || feedback.questionId}...
+                </FeedbackQuestion>
+                <FeedbackCommentText>{feedback.comment || 'No comment provided'}</FeedbackCommentText>
+                
+                <FeedbackActions>
+                  <ActionButton 
+                    className={feedback.hasUpvoted ? 'active' : ''}
+                    onClick={async () => {
+                      try {
+                        const result = await cardGameService.toggleUpvote(feedback.id);
+                        // Update local state
+                        const updated = forumFeedback.map(f => 
+                          f.id === feedback.id 
+                            ? { ...f, hasUpvoted: result.hasUpvoted, upvoteCount: f.upvoteCount + (result.hasUpvoted ? 1 : -1) }
+                            : f
+                        );
+                        setForumFeedback(updated);
+                      } catch (error) {
+                        console.error('Error toggling upvote:', error);
+                      }
+                    }}
+                  >
+                    ⬆️ Push Up ({feedback.upvoteCount || 0})
+                  </ActionButton>
+                  <ActionButton onClick={() => {
+                    if (expandedReplies.includes(feedback.id)) {
+                      setExpandedReplies(expandedReplies.filter(id => id !== feedback.id));
+                    } else {
+                      setExpandedReplies([...expandedReplies, feedback.id]);
+                    }
+                  }}>
+                    💬 {feedback.replies?.length || 0} {feedback.replies?.length === 1 ? 'Reply' : 'Replies'}
+                  </ActionButton>
+                  <ActionButton onClick={() => {
+                    setShareContent({
+                      title: selectedTopicForFeedback?.title,
+                      text: feedback.comment,
+                      user: feedback.user
+                    });
+                    setShowShareModal(true);
+                  }}>
+                    📤 Share
+                  </ActionButton>
+                  {checkAdminAccess(user) && (
+                    <ActionButton 
+                      style={{ color: '#e74c3c' }}
+                      onClick={async () => {
+                        if (window.confirm('Are you sure you want to delete this feedback?')) {
+                          try {
+                            await cardGameService.deleteFeedback(feedback.id);
+                            // Remove from local state
+                            const updated = forumFeedback.filter(f => f.id !== feedback.id);
+                            setForumFeedback(updated);
+                          } catch (error) {
+                            console.error('Error deleting feedback:', error);
+                          }
+                        }
+                      }}
+                    >
+                      🗑️ Delete
+                    </ActionButton>
+                  )}
+                </FeedbackActions>
+                
+                {/* Replies - Only show if expanded */}
+                {expandedReplies.includes(feedback.id) && feedback.replies && feedback.replies.length > 0 && (
+                  <ReplySection>
+                    {feedback.replies.map((reply: any) => (
+                      <Reply key={reply.id}>
+                        <ReplyUser>{reply.user?.fullName || 'Anonymous'}:</ReplyUser>
+                        {reply.text}
+                      </Reply>
+                    ))}
+                  </ReplySection>
+                )}
+                
+                {/* Reply Input - Show when replies are expanded */}
+                {expandedReplies.includes(feedback.id) && (
+                  <ReplySection>
+                    <ReplyInput
+                      type="text"
+                      placeholder="Write a reply..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyPress={async (e) => {
+                        if (e.key === 'Enter' && replyText) {
+                          try {
+                            const newReply = await cardGameService.addReply(feedback.id, replyText);
+                            // Update local state
+                            const updated = forumFeedback.map(f => 
+                              f.id === feedback.id 
+                                ? { ...f, replies: [...(f.replies || []), newReply] }
+                                : f
+                            );
+                            setForumFeedback(updated);
+                            setReplyText('');
+                            setReplyingToId(null);
+                          } catch (error) {
+                            console.error('Error adding reply:', error);
+                          }
+                        }
+                      }}
+                    />
+                  </ReplySection>
+                )}
+              </FeedbackItem>
+            ))
+            )}
+          </FeedbackList>
+        </FeedbackModal>
+      </ModalOverlay>
+
+      {/* Share Modal */}
+      <ModalOverlay $isOpen={showShareModal} onClick={() => setShowShareModal(false)}>
+        <ShareModal onClick={(e) => e.stopPropagation()}>
+          <ShareTitle>Share Feedback</ShareTitle>
+          <ShareOptions>
+            <ShareOption onClick={() => {
+              const text = `${shareContent?.user}'s feedback on ${shareContent?.title}: "${shareContent?.text}"`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+              setShowShareModal(false);
+            }}>
+              <ShareIcon className="whatsapp">📱</ShareIcon>
+              <ShareLabel>WhatsApp</ShareLabel>
+            </ShareOption>
+            <ShareOption onClick={() => {
+              const text = `Check out this amazing feedback on ${shareContent?.title}! 🌟`;
+              window.open(`https://www.instagram.com/`, '_blank');
+              setShowShareModal(false);
+            }}>
+              <ShareIcon className="instagram">📷</ShareIcon>
+              <ShareLabel>Instagram</ShareLabel>
+            </ShareOption>
+            <ShareOption onClick={() => {
+              const text = `${shareContent?.user}'s feedback on ${shareContent?.title}: "${shareContent?.text}"`;
+              window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}&quote=${encodeURIComponent(text)}`, '_blank');
+              setShowShareModal(false);
+            }}>
+              <ShareIcon className="facebook">f</ShareIcon>
+              <ShareLabel>Facebook</ShareLabel>
+            </ShareOption>
+            <ShareOption onClick={() => {
+              const text = `${shareContent?.user}'s feedback on ${shareContent?.title}: "${shareContent?.text}"`;
+              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+              setShowShareModal(false);
+            }}>
+              <ShareIcon className="twitter">🐦</ShareIcon>
+              <ShareLabel>Twitter</ShareLabel>
+            </ShareOption>
+            <ShareOption onClick={() => {
+              const text = `${shareContent?.user}'s feedback on ${shareContent?.title}: "${shareContent?.text}"`;
+              navigator.clipboard.writeText(text);
+              alert('Copied to clipboard!');
+              setShowShareModal(false);
+            }}>
+              <ShareIcon className="link">🔗</ShareIcon>
+              <ShareLabel>Copy Link</ShareLabel>
+            </ShareOption>
+            <ShareOption onClick={() => {
+              const text = `${shareContent?.user}'s feedback on ${shareContent?.title}: "${shareContent?.text}"`;
+              if (navigator.share) {
+                navigator.share({
+                  title: 'BerseCardGame Feedback',
+                  text: text,
+                  url: window.location.href
+                });
+              }
+              setShowShareModal(false);
+            }}>
+              <ShareIcon className="more">•••</ShareIcon>
+              <ShareLabel>More</ShareLabel>
+            </ShareOption>
+          </ShareOptions>
+        </ShareModal>
+      </ModalOverlay>
+
+      {/* Question Modal */}
+      <ModalOverlay $isOpen={showForumQuestionModal} onClick={() => setShowForumQuestionModal(false)}>
+        <QuestionModal onClick={(e) => e.stopPropagation()}>
+          <FeedbackModalHeader>
+            <QuestionModalTitle>Question Details</QuestionModalTitle>
+            <CloseButton onClick={() => setShowForumQuestionModal(false)}>×</CloseButton>
+          </FeedbackModalHeader>
+          <QuestionModalText>{selectedQuestionText}</QuestionModalText>
+        </QuestionModal>
       </ModalOverlay>
     </Container>
   );

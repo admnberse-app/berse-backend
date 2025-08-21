@@ -19,6 +19,29 @@ interface FeedbackResponse {
   comment: string | null;
   createdAt: string;
   updatedAt: string;
+  user?: {
+    id: string;
+    fullName: string;
+    profilePicture: string | null;
+  };
+  upvotes?: { userId: string }[];
+  upvoteCount?: number;
+  hasUpvoted?: boolean;
+  replies?: ReplyResponse[];
+}
+
+interface ReplyResponse {
+  id: string;
+  userId: string;
+  feedbackId: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    fullName: string;
+    profilePicture: string | null;
+  };
 }
 
 class CardGameService {
@@ -63,6 +86,47 @@ class CardGameService {
       return response.data.data;
     } catch (error) {
       console.error('Error fetching topic feedback:', error);
+      throw error;
+    }
+  }
+
+  async getAllTopicFeedback(topicId: string): Promise<FeedbackResponse[]> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/cardgame/feedback/all/${topicId}`,
+        { headers: this.getAuthHeader() }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching all topic feedback:', error);
+      return [];
+    }
+  }
+
+  async toggleUpvote(feedbackId: string): Promise<{ hasUpvoted: boolean }> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/v1/cardgame/feedback/${feedbackId}/upvote`,
+        {},
+        { headers: this.getAuthHeader() }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Error toggling upvote:', error);
+      throw error;
+    }
+  }
+
+  async addReply(feedbackId: string, text: string): Promise<ReplyResponse> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/v1/cardgame/feedback/${feedbackId}/reply`,
+        { text },
+        { headers: this.getAuthHeader() }
+      );
+      return response.data.data;
+    } catch (error) {
+      console.error('Error adding reply:', error);
       throw error;
     }
   }

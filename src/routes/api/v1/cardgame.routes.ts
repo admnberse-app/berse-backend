@@ -17,6 +17,15 @@ router.get('/feedback', asyncHandler(CardGameController.getUserFeedback));
 // Get feedback for a specific topic for current user
 router.get('/feedback/topic/:topicId', asyncHandler(CardGameController.getTopicFeedback));
 
+// Get ALL feedback for a topic (public/community view)
+router.get('/feedback/all/:topicId', asyncHandler(CardGameController.getAllTopicFeedback));
+
+// Toggle upvote on feedback
+router.post('/feedback/:feedbackId/upvote', asyncHandler(CardGameController.toggleUpvote));
+
+// Add reply to feedback
+router.post('/feedback/:feedbackId/reply', asyncHandler(CardGameController.addReply));
+
 // Get statistics for all topics (public)
 router.get('/stats', asyncHandler(CardGameController.getTopicStats));
 
