@@ -846,18 +846,145 @@ const ReplyUser = styled.span`
   margin-right: 8px;
 `;
 
-const ReplyInput = styled.input`
+const ReplyInput = styled.textarea`
   width: 100%;
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 12px;
   margin-top: 8px;
+  min-height: 40px;
+  resize: vertical;
+  font-family: inherit;
   
   &:focus {
     outline: none;
     border-color: #2fce98;
   }
+`;
+
+const ShareableCard = styled.div`
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 1080px;
+  height: 1920px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ShareCardContent = styled.div`
+  background: white;
+  border-radius: 40px;
+  padding: 60px;
+  max-width: 900px;
+  width: 100%;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+`;
+
+const ShareCardHeader = styled.div`
+  text-align: center;
+  margin-bottom: 40px;
+`;
+
+const ShareCardLogo = styled.div`
+  font-size: 80px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 20px;
+`;
+
+const ShareCardTitle = styled.h2`
+  font-size: 36px;
+  color: #333;
+  margin: 0 0 10px 0;
+`;
+
+const ShareCardSubtitle = styled.p`
+  font-size: 24px;
+  color: #666;
+  margin: 0;
+`;
+
+const ShareCardQuestion = styled.div`
+  background: #f8f8f8;
+  border-radius: 20px;
+  padding: 40px;
+  margin: 40px 0;
+  font-size: 28px;
+  line-height: 1.6;
+  color: #333;
+  text-align: center;
+  font-style: italic;
+`;
+
+const ShareCardFeedback = styled.div`
+  font-size: 24px;
+  line-height: 1.8;
+  color: #555;
+  margin: 40px 0;
+  text-align: center;
+`;
+
+const ShareCardUser = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 40px;
+`;
+
+const ShareCardAvatar = styled.div`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: white;
+`;
+
+const ShareCardUserInfo = styled.div`
+  text-align: left;
+`;
+
+const ShareCardUserName = styled.div`
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+`;
+
+const ShareCardRating = styled.div`
+  font-size: 32px;
+  color: #FFD700;
+  margin-top: 5px;
+`;
+
+const ShareCardFooter = styled.div`
+  text-align: center;
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 2px solid #f0f0f0;
+`;
+
+const ShareCardWebsite = styled.div`
+  font-size: 32px;
+  color: #667eea;
+  font-weight: 600;
+`;
+
+const ShareCardTagline = styled.div`
+  font-size: 20px;
+  color: #999;
+  margin-top: 10px;
 `;
 
 const SubmitButton = styled.button`
@@ -1726,10 +1853,25 @@ export const BerseCardGameScreen: React.FC = () => {
                 </StarRating>
                 
                 <FeedbackTextArea
-                  placeholder="Share your thoughts about this question..."
+                  placeholder="Share your thoughts about this question... (150 words max)"
                   value={feedbackComment}
-                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  onChange={(e) => {
+                    const words = e.target.value.trim().split(/\s+/).filter(word => word.length > 0);
+                    if (words.length <= 150 || e.target.value.length < feedbackComment.length) {
+                      setFeedbackComment(e.target.value);
+                    }
+                  }}
+                  maxLength={800}
                 />
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  textAlign: 'right', 
+                  marginTop: '-8px',
+                  marginBottom: '8px'
+                }}>
+                  {feedbackComment.trim().split(/\s+/).filter(word => word.length > 0).length}/150 words
+                </div>
                 
                 {feedbackMessage && (
                   <div style={{ 
@@ -1946,13 +2088,89 @@ export const BerseCardGameScreen: React.FC = () => {
                   }}>
                     💬 {feedback.replies?.length || 0} {feedback.replies?.length === 1 ? 'Reply' : 'Replies'}
                   </ActionButton>
-                  <ActionButton onClick={() => {
-                    setShareContent({
-                      title: selectedTopicForFeedback?.title,
-                      text: feedback.comment,
-                      user: feedback.user
-                    });
-                    setShowShareModal(true);
+                  <ActionButton onClick={async () => {
+                    // Create shareable card element
+                    const shareCard = document.createElement('div');
+                    shareCard.id = 'share-feedback-card';
+                    shareCard.style.cssText = 'position: fixed; top: 0; left: -9999px; width: 1080px; height: 1920px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+                    
+                    shareCard.innerHTML = `
+                      <div style="background: white; border-radius: 40px; padding: 80px; max-width: 900px; width: 100%; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);">
+                        <div style="text-align: center; margin-bottom: 60px;">
+                          <div style="font-size: 100px; margin-bottom: 20px;">🎮</div>
+                          <h1 style="font-size: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">BerseCardGame</h1>
+                          <p style="font-size: 28px; color: #666; margin: 20px 0 0 0;">${selectedTopicForFeedback?.title || 'Community Feedback'}</p>
+                        </div>
+                        
+                        <div style="background: #f8f8f8; border-radius: 30px; padding: 50px; margin: 40px 0; text-align: center;">
+                          <p style="font-size: 32px; line-height: 1.8; color: #333; margin: 0; font-style: italic;">\"${feedback.comment}\"</p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 30px; margin-top: 50px;">
+                          <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; color: white;">👤</div>
+                          <div>
+                            <div style="font-size: 36px; font-weight: 600; color: #333;">${feedback.user?.fullName || 'Anonymous'}</div>
+                            <div style="font-size: 36px; color: #FFD700; margin-top: 10px;">${'⭐'.repeat(feedback.rating || 5)}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 80px; padding-top: 50px; border-top: 3px solid #f0f0f0;">
+                          <div style="font-size: 40px; color: #667eea; font-weight: bold;">berse.app</div>
+                          <div style="font-size: 24px; color: #999; margin-top: 15px;">Connect • Grow • Thrive</div>
+                        </div>
+                      </div>
+                    `;
+                    
+                    document.body.appendChild(shareCard);
+                    
+                    try {
+                      const canvas = await html2canvas(shareCard, {
+                        width: 1080,
+                        height: 1920,
+                        scale: 1,
+                        useCORS: true,
+                        backgroundColor: null
+                      });
+                      
+                      canvas.toBlob(async (blob) => {
+                        if (blob) {
+                          const file = new File([blob], 'berse-feedback.png', { type: 'image/png' });
+                          
+                          if (navigator.share) {
+                            try {
+                              await navigator.share({
+                                files: [file],
+                                title: 'BerseCardGame Feedback',
+                                text: `Check out this feedback from ${feedback.user?.fullName || 'a community member'}!`
+                              });
+                            } catch (err) {
+                              console.log('Share cancelled or failed', err);
+                            }
+                          } else {
+                            // Fallback: Create download link
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'berse-feedback.png';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                            alert('Image downloaded! You can now share it on Instagram Stories or WhatsApp.');
+                          }
+                        }
+                      });
+                    } catch (error) {
+                      console.error('Error creating share image:', error);
+                      // Fallback to text share
+                      const text = `${feedback.user?.fullName}'s feedback on ${selectedTopicForFeedback?.title}: "${feedback.comment}" - Check it out at berse.app!`;
+                      if (navigator.share) {
+                        navigator.share({ text });
+                      } else {
+                        navigator.clipboard.writeText(text);
+                        alert('Feedback copied to clipboard!');
+                      }
+                    } finally {
+                      document.body.removeChild(shareCard);
+                    }
                   }}>
                     📤 Share
                   </ActionButton>
@@ -1993,12 +2211,18 @@ export const BerseCardGameScreen: React.FC = () => {
                 {expandedReplies.includes(feedback.id) && (
                   <ReplySection>
                     <ReplyInput
-                      type="text"
-                      placeholder="Write a reply..."
+                      placeholder="Write a reply... (75 words max)"
                       value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
+                      onChange={(e) => {
+                        const words = e.target.value.trim().split(/\s+/).filter(word => word.length > 0);
+                        if (words.length <= 75 || e.target.value.length < replyText.length) {
+                          setReplyText(e.target.value);
+                        }
+                      }}
+                      maxLength={400}
                       onKeyPress={async (e) => {
-                        if (e.key === 'Enter' && replyText) {
+                        if (e.key === 'Enter' && !e.shiftKey && replyText) {
+                          e.preventDefault();
                           try {
                             const newReply = await cardGameService.addReply(feedback.id, replyText);
                             // Update local state
@@ -2016,6 +2240,14 @@ export const BerseCardGameScreen: React.FC = () => {
                         }
                       }}
                     />
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: '#666', 
+                      textAlign: 'right', 
+                      marginTop: '4px' 
+                    }}>
+                      {replyText.trim().split(/\s+/).filter(word => word.length > 0).length}/75 words
+                    </div>
                   </ReplySection>
                 )}
               </FeedbackItem>
