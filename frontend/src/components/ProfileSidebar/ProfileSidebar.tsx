@@ -43,9 +43,15 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
 
   const handleLogout = async () => {
     try {
-      await logout();
-      localStorage.removeItem('rememberMe');
-      navigate('/login');
+      if (user) {
+        // User is logged in, perform logout
+        await logout();
+        localStorage.removeItem('rememberMe');
+        navigate('/login');
+      } else {
+        // User is not logged in, navigate to login
+        navigate('/login');
+      }
       onClose();
     } catch (error) {
       console.error('Logout failed:', error);
@@ -225,11 +231,28 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
           {/* REMOVED: My Communities */}
         </MenuSection>
 
-        {/* Logout Button */}
+        {/* Login/Logout Button */}
         <LogoutSection>
-          <LogoutButton onClick={handleLogout}>
-            <LogoutIcon>🚪</LogoutIcon>
-            <LogoutText>Logout</LogoutText>
+          <LogoutButton 
+            onClick={handleLogout} 
+            style={{ 
+              background: user ? '#dc3545' : '#2fce98' 
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = user ? '#c82333' : '#26b580';
+              e.currentTarget.style.boxShadow = user 
+                ? '0 4px 12px rgba(220, 53, 69, 0.4)' 
+                : '0 4px 12px rgba(47, 206, 152, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = user ? '#dc3545' : '#2fce98';
+              e.currentTarget.style.boxShadow = user
+                ? '0 2px 8px rgba(220, 53, 69, 0.3)'
+                : '0 2px 8px rgba(47, 206, 152, 0.3)';
+            }}
+          >
+            <LogoutIcon>{user ? '🚪' : '🔑'}</LogoutIcon>
+            <LogoutText>{user ? 'Logout' : 'Login'}</LogoutText>
           </LogoutButton>
         </LogoutSection>
       </SidebarContainer>

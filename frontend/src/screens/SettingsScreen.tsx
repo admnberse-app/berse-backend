@@ -205,11 +205,15 @@ export const SettingsScreen: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // Disconnect from Google Calendar first
-      if (googleCalendarConnected) {
-        await googleCalendarService.signOut();
+      if (user) {
+        // User is logged in, perform logout
+        // Disconnect from Google Calendar first
+        if (googleCalendarConnected) {
+          await googleCalendarService.signOut();
+        }
+        await logout();
       }
-      await logout();
+      // Navigate to login either way
       navigate('/login');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -528,8 +532,13 @@ export const SettingsScreen: React.FC = () => {
           </SettingsSection>
         ))}
 
-        <LogoutButton onClick={handleLogout}>
-          🚪 Sign Out
+        <LogoutButton 
+          onClick={handleLogout}
+          style={{ 
+            backgroundColor: user ? '#FF4444' : '#2fce98' 
+          }}
+        >
+          {user ? '🚪 Sign Out' : '🔑 Sign In'}
         </LogoutButton>
 
         <VersionInfo>

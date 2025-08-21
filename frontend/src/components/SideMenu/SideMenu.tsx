@@ -223,7 +223,9 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
   ];
 
   const handleLogout = () => {
-    logout();
+    if (user) {
+      logout();
+    }
     navigate('/login');
     onClose();
   };
@@ -260,9 +262,11 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
         </MenuItems>
 
         <Footer>
-          <LogoutButton onClick={handleLogout}>
-            <MenuIcon>🚪</MenuIcon>
-            <MenuLabel>Logout</MenuLabel>
+          <LogoutButton onClick={handleLogout} style={{ 
+            color: user ? '#dc3545' : '#2fce98' 
+          }}>
+            <MenuIcon>{user ? '🚪' : '🔑'}</MenuIcon>
+            <MenuLabel>{user ? 'Logout' : 'Login'}</MenuLabel>
           </LogoutButton>
         </Footer>
       </MenuContainer>
