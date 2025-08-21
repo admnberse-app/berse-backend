@@ -1789,53 +1789,94 @@ export const BerseCardGameScreen: React.FC = () => {
             </NavigationButtons>
             
             <ActionButtons>
-              <BackToSessionsButton onClick={handleBackToSessions}>
-                Back to Sessions
-              </BackToSessionsButton>
+              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                <BackToSessionsButton onClick={handleBackToSessions} style={{ flex: 1 }}>
+                  ← Sessions
+                </BackToSessionsButton>
+                <BackToSessionsButton onClick={async () => {
+                try {
+                  // Create beautiful shareable card for the question
+                  const shareCard = document.createElement('div');
+                  shareCard.id = 'share-question-card';
+                  shareCard.style.cssText = 'position: fixed; top: 0; left: -9999px; width: 1080px; height: 1920px; background: linear-gradient(135deg, ' + (selectedTopic?.gradient || '#667eea 0%, #764ba2 100%') + '); padding: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+                  
+                  shareCard.innerHTML = `
+                    <div style="background: white; border-radius: 40px; padding: 80px; max-width: 900px; width: 100%; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);">
+                      <div style="text-align: center; margin-bottom: 60px;">
+                        <div style="font-size: 100px; margin-bottom: 20px;">🎮</div>
+                        <h1 style="font-size: 48px; background: linear-gradient(135deg, ${selectedTopic?.gradient || '#667eea 0%, #764ba2 100%'}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">BerseCardGame</h1>
+                        <p style="font-size: 32px; color: #666; margin: 20px 0 0 0;">${selectedTopic?.title || ''}</p>
+                      </div>
+                      
+                      <div style="background: #f8f8f8; border-radius: 30px; padding: 50px; margin: 40px 0;">
+                        <div style="font-size: 24px; color: #999; margin-bottom: 20px; text-align: center;">Session ${selectedSession}: ${selectedTopic?.sessions.find(s => s.number === selectedSession)?.title || ''}</div>
+                        <p style="font-size: 36px; line-height: 1.8; color: #333; margin: 0; text-align: center; font-weight: 500;">${currentQuestion?.text}</p>
+                      </div>
+                      
+                      <div style="text-align: center; margin-top: 60px;">
+                        <div style="font-size: 28px; color: #666; margin-bottom: 20px;">Question ${currentQuestionIndex + 1} of ${sessionQuestions.length}</div>
+                      </div>
+                      
+                      <div style="text-align: center; margin-top: 80px; padding-top: 50px; border-top: 3px solid #f0f0f0;">
+                        <div style="font-size: 40px; color: #667eea; font-weight: bold;">berse.app/bersecardgame</div>
+                        <div style="font-size: 24px; color: #999; margin-top: 15px;">Explore • Discuss • Connect</div>
+                      </div>
+                    </div>
+                  `;
+                  
+                  document.body.appendChild(shareCard);
+                  
+                  const canvas = await html2canvas(shareCard, {
+                    width: 1080,
+                    height: 1920,
+                    scale: 1,
+                    useCORS: true,
+                    backgroundColor: null
+                  });
+                  
+                  canvas.toBlob((blob) => {
+                    if (blob) {
+                      const file = new File([blob], 'bersecardgame-question.png', { type: 'image/png' });
+                      
+                      // If browser supports sharing files
+                      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({
+                          title: `BerseCardGame - ${selectedTopic?.title}`,
+                          text: `Check out this thought-provoking question from BerseCardGame!`,
+                          files: [file]
+                        });
+                      } else {
+                        // Fallback to download
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'bersecardgame-question.png';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        alert('Image downloaded! Share it on Instagram Stories or WhatsApp.');
+                      }
+                    }
+                  });
+                  
+                  document.body.removeChild(shareCard);
+                } catch (error) {
+                  console.error('Error creating share image:', error);
+                  // Fallback to text share
+                  const text = `${currentQuestion?.text}\n\nFrom ${selectedTopic?.title} - Session ${selectedSession}\n\nExplore more at berse.app/bersecardgame`;
+                  if (navigator.share) {
+                    navigator.share({ text });
+                  } else {
+                    navigator.clipboard.writeText(text);
+                    alert('Question copied to clipboard!');
+                  }
+                }
+              }} style={{ flex: 1 }}>
+                  📤 Share
+                </BackToSessionsButton>
+              </div>
               <ShowFeedbackButton onClick={() => setShowFeedback(!showFeedback)}>
                 {showFeedback ? 'Hide Feedback' : 'Add Feedback'}
               </ShowFeedbackButton>
-              <BackToSessionsButton onClick={async () => {
-                try {
-                  // Take screenshot of the question card
-                  const element = document.querySelector('.question-card-modal');
-                  if (element) {
-                    const canvas = await html2canvas(element as HTMLElement, {
-                      backgroundColor: null,
-                      scale: 2,
-                      logging: false,
-                      useCORS: true
-                    });
-                    
-                    canvas.toBlob((blob) => {
-                      if (blob) {
-                        const file = new File([blob], 'bersecardgame-question.png', { type: 'image/png' });
-                        
-                        // If browser supports sharing files
-                        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                          navigator.share({
-                            title: `BerseCardGame - ${selectedTopic?.title}`,
-                            text: currentQuestion?.text,
-                            files: [file]
-                          });
-                        } else {
-                          // Fallback to download
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = 'bersecardgame-question.png';
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }
-                      }
-                    });
-                  }
-                } catch (error) {
-                  console.error('Error sharing question:', error);
-                }
-              }}>
-                📤 Share Question
-              </BackToSessionsButton>
             </ActionButtons>
             
             <FeedbackSection $isOpen={showFeedback}>
