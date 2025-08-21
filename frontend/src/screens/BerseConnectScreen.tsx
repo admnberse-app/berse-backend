@@ -1176,10 +1176,23 @@ export const BerseConnectScreen: React.FC = () => {
   };
 
   const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
 
   // Load events on component mount and when navigating to the page
   useEffect(() => {
     const loadEvents = async () => {
+      // Show cached events immediately if available
+      const cachedEvents = localStorage.getItem('cached_events');
+      if (cachedEvents) {
+        try {
+          const parsed = JSON.parse(cachedEvents);
+          setAllEvents(parsed);
+          setIsLoadingEvents(false);
+        } catch (e) {
+          console.error('Failed to parse cached events');
+        }
+      }
+      
       const baseEvents = [];
       
       // Load events from database
@@ -1231,18 +1244,17 @@ export const BerseConnectScreen: React.FC = () => {
     });
     
       setAllEvents(eventsWithProfiles);
+      setIsLoadingEvents(false);
+      
+      // Cache events for faster next load
+      localStorage.setItem('cached_events', JSON.stringify(eventsWithProfiles));
     };
     
     // Load events initially
     loadEvents();
     
-    // Set up periodic refresh to load new events every 10 seconds
-    const refreshInterval = setInterval(() => {
-      loadEvents();
-    }, 10000);
-    
-    // Clean up interval on unmount
-    return () => clearInterval(refreshInterval);
+    // Remove auto-refresh to prevent delays
+    // Users can manually refresh if needed
   }, []);
 
   const getFilteredEvents = () => {
@@ -1789,7 +1801,21 @@ export const BerseConnectScreen: React.FC = () => {
 
 
       <Content>
-        {getFilteredEvents().length === 0 ? (
+        {isLoadingEvents ? (
+          <div style={{
+            padding: '40px 20px',
+            textAlign: 'center',
+            color: '#666'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+              Loading events...
+            </div>
+            <div style={{ fontSize: '12px', color: '#999' }}>
+              Connecting to server, please wait
+            </div>
+          </div>
+        ) : getFilteredEvents().length === 0 ? (
           <div style={{
             padding: '40px 20px',
             textAlign: 'center',

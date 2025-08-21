@@ -2757,6 +2757,18 @@ export const BerseMatchScreen: React.FC = () => {
   };
 
   const loadUsers = async () => {
+    // Show cached users immediately if available
+    const cachedUsers = localStorage.getItem('cached_users');
+    if (cachedUsers) {
+      try {
+        const parsed = JSON.parse(cachedUsers);
+        setUsers(parsed);
+        setIsLoading(false);
+      } catch (e) {
+        console.error('Failed to parse cached users');
+      }
+    }
+    
     setIsLoading(true);
     try {
       const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
@@ -2770,18 +2782,25 @@ export const BerseMatchScreen: React.FC = () => {
           {
             headers: {
               'Authorization': `Bearer ${token}`
-            }
+            },
+            timeout: 10000 // 10 second timeout
           }
         );
         
         if (response.data.success) {
           const fetchedUsers = response.data.data || [];
           setUsers(fetchedUsers);
+          // Cache users for faster next load
+          localStorage.setItem('cached_users', JSON.stringify(fetchedUsers));
           console.log('Loaded users from database:', fetchedUsers.length);
         }
       }
     } catch (error) {
       console.error('Failed to load users:', error);
+      // Keep cached data if API fails
+      if (!cachedUsers) {
+        setUsers([]);
+      }
     } finally {
       setIsLoading(false);
     }
