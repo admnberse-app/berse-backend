@@ -49,8 +49,10 @@ const startServer = async () => {
       } catch (dbError) {
         retries--;
         if (retries === 0) {
-          logger.warn('⚠️  Database connection failed - running without database');
-          logger.warn('Please ensure PostgreSQL is running on port 5433');
+          logger.error('❌ CRITICAL: Cannot start server without database connection');
+          logger.error('Database error:', dbError);
+          logger.error('Please check DATABASE_URL and ensure database is accessible');
+          process.exit(1); // Exit with error - don't run without database
         } else {
           logger.info(`Database connection failed. Retrying... (${retries} attempts left)`);
           await new Promise(resolve => setTimeout(resolve, 5000));

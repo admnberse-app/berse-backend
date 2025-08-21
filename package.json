@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "rimraf dist && tsc && npm run copy-files",
+    "build:backend": "rimraf dist && tsc && npm run copy-files",
     "build:check": "tsc --noEmit",
     "start": "node dist/server.js",
     "start:prod": "cross-env NODE_ENV=production node dist/server.js",
