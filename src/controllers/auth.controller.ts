@@ -113,7 +113,7 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days
       });
 
       // Log successful registration
@@ -125,7 +125,8 @@ export class AuthController {
 
       sendSuccess(res, { 
         user, 
-        token: tokenPair.accessToken 
+        token: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken 
       }, 'User registered successfully', 201);
     } catch (error) {
       logger.error('Registration failed', { 
@@ -166,7 +167,7 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days
       });
 
       const { password: _, ...userWithoutPassword } = user;
@@ -179,7 +180,8 @@ export class AuthController {
 
       sendSuccess(res, { 
         user: userWithoutPassword, 
-        token: tokenPair.accessToken 
+        token: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken 
       }, 'Login successful');
     } catch (error) {
       logger.error('Login failed', { 
@@ -192,7 +194,8 @@ export class AuthController {
 
   static async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const refreshToken = req.cookies.refreshToken;
+      // Try to get refresh token from cookie first, then from body
+      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
       if (!refreshToken) {
         throw new AppError('Refresh token not found', 401);
@@ -206,11 +209,12 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days to match JWT expiry
       });
 
       sendSuccess(res, { 
-        token: tokenPair.accessToken 
+        token: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken // Include in response body too
       }, 'Token refreshed successfully');
     } catch (error) {
       // Clear invalid refresh token
@@ -357,4 +361,5 @@ export class AuthController {
       next(error);
     }
   }
+
 }

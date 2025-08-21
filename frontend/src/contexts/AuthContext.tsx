@@ -78,14 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 'Authorization': `Bearer ${token}`
               }
             }).then(response => {
-              // Only clear if we get explicit unauthorized response
+              // Never automatically logout - keep user logged in
+              // Only logout when user explicitly presses logout button
               if (response.status === 401) {
-                console.log('Token is expired/invalid (401), clearing session');
-                localStorage.removeItem('bersemuka_token');
-                localStorage.removeItem('bersemuka_user');
-                localStorage.removeItem('user');
-                localStorage.removeItem('rememberMe');
-                setUser(null);
+                console.log('Token may be expired but keeping user logged in with cached data');
+                // Don't clear session - user stays logged in with cached data
               } else if (response.ok) {
                 // Update user data if we got fresh data from server
                 response.json().then(data => {
@@ -148,6 +145,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('bersemuka_token', response.data.token);
         localStorage.setItem('bersemuka_user', JSON.stringify(response.data.user));
         localStorage.setItem('rememberMe', 'true'); // Always remember login
+        // Store refresh token if provided
+        if (response.data.refreshToken) {
+          localStorage.setItem('bersemuka_refresh_token', response.data.refreshToken);
+        }
         return;
       } else {
         throw new Error(response.error || 'Login failed');
@@ -195,6 +196,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.setItem('bersemuka_token', response.data.token);
           localStorage.setItem('bersemuka_user', JSON.stringify(response.data.user));
           localStorage.setItem('rememberMe', 'true'); // Remember new registrations
+          // Store refresh token if provided
+          if (response.data.refreshToken) {
+            localStorage.setItem('bersemuka_refresh_token', response.data.refreshToken);
+          }
         }
         return;
       }

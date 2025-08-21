@@ -18,8 +18,8 @@ interface TokenPair {
 }
 
 export class JwtManager {
-  private static readonly ACCESS_TOKEN_EXPIRY = '15m';
-  private static readonly REFRESH_TOKEN_EXPIRY = '7d';
+  private static readonly ACCESS_TOKEN_EXPIRY = '30d';  // 30 days instead of 15 minutes
+  private static readonly REFRESH_TOKEN_EXPIRY = '365d'; // 1 year instead of 7 days
   private static readonly REFRESH_TOKEN_FAMILY_SIZE = 10;
 
   // Generate access token
@@ -103,7 +103,7 @@ export class JwtManager {
           userId,
           tokenHash: hashedToken,
           tokenFamily,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
         },
       });
     } catch (error) {
