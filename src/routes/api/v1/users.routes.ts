@@ -13,6 +13,9 @@ const router = Router();
 // Get user profile
 router.get('/profile', authenticateToken, asyncHandler(UserController.getProfile));
 
+// Get all users (for match screen)
+router.get('/all', authenticateToken, asyncHandler(UserController.getAllUsers));
+
 // Update user profile
 router.put('/profile', authenticateToken, asyncHandler(UserController.updateProfile));
 
@@ -73,5 +76,8 @@ router.post('/follow/:id', authenticateToken, asyncHandler(UserController.follow
 
 // Unfollow user
 router.delete('/follow/:id', authenticateToken, asyncHandler(UserController.unfollowUser));
+
+// Delete user (admin only)
+router.delete('/:id', authenticateToken, asyncHandler(UserController.deleteUser));
 
 export default router;

@@ -186,6 +186,51 @@ export class UserController {
     }
   }
 
+  static async getAllUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const currentUserId = req.user?.id;
+      
+      // Get all users except the current user
+      const users = await prisma.user.findMany({
+        where: {
+          id: {
+            not: currentUserId
+          }
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          profilePicture: true,
+          bio: true,
+          city: true,
+          currentLocation: true,
+          originallyFrom: true,
+          interests: true,
+          personalityType: true,
+          languages: true,
+          age: true,
+          profession: true,
+          shortBio: true,
+          servicesOffered: true,
+          role: true,
+          isHostCertified: true,
+          totalPoints: true,
+          membershipId: true,
+          eventsAttended: true,
+          communityRole: true,
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      sendSuccess(res, users);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async searchUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { city, interest, query } = req.query;
@@ -307,6 +352,30 @@ export class UserController {
       if (error.code === 'P2025') {
         throw new AppError('Not following this user', 400);
       }
+      next(error);
+    }
+  }
+
+  static async deleteUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const requestingUser = req.user;
+      const { id: userIdToDelete } = req.params;
+
+      // Check if requesting user is admin
+      const isAdmin = requestingUser?.email === 'zaydmahdaly@ahlumran.org' || 
+                     requestingUser?.role === 'ADMIN';
+
+      if (!isAdmin) {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      // Delete the user
+      await prisma.user.delete({
+        where: { id: userIdToDelete }
+      });
+
+      sendSuccess(res, null, 'User deleted successfully');
+    } catch (error) {
       next(error);
     }
   }

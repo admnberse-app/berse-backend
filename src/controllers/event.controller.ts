@@ -13,18 +13,67 @@ export class EventController {
   static async createEvent(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const hostId = req.user?.id!;
-      const { title, description, type, date, location, mapLink, maxAttendees, notes } = req.body;
+      const { 
+        title, 
+        description, 
+        type, 
+        date, 
+        time,
+        location, 
+        venue,
+        category,
+        price,
+        mapLink, 
+        maxAttendees, 
+        notes,
+        isOnline,
+        meetingLink,
+        whatsappGroup,
+        tags,
+        requirements,
+        highlights,
+        agenda,
+        coverImage,
+        hosts,
+        coHosts,
+        sponsors,
+        earlyBirdPrice,
+        accessibility,
+        recurringSchedule,
+        checkInSettings
+      } = req.body;
 
+      // Create the event
       const event = await prisma.event.create({
         data: {
           title,
           description,
-          type,
+          type: type || category || 'social',
           date: new Date(date),
           location,
           mapLink,
-          maxAttendees,
-          notes,
+          maxAttendees: maxAttendees || 50,
+          notes: notes || JSON.stringify({
+            time,
+            venue,
+            category,
+            price,
+            isOnline,
+            meetingLink,
+            whatsappGroup,
+            tags,
+            requirements,
+            highlights,
+            agenda,
+            coverImage,
+            hosts,
+            coHosts,
+            sponsors,
+            earlyBirdPrice,
+            accessibility,
+            recurringSchedule,
+            checkInSettings
+          }),
           hostId,
         },
         include: {
@@ -82,7 +131,28 @@ export class EventController {
         orderBy: { date: 'asc' },
       });
 
-      sendSuccess(res, events);
+      // Parse notes field to include additional event data
+      const formattedEvents = events.map(event => {
+        let additionalData = {};
+        try {
+          if (event.notes) {
+            additionalData = JSON.parse(event.notes);
+          }
+        } catch (e) {
+          // If notes is not valid JSON, keep it as is
+        }
+        
+        return {
+          ...event,
+          ...additionalData,
+          organizer: event.host.fullName,
+          attendees: event._count.rsvps,
+          committedProfiles: [],
+          friends: []
+        };
+      });
+
+      sendSuccess(res, formattedEvents);
     } catch (error) {
       next(error);
     }

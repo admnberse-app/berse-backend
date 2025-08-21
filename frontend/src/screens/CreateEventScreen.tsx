@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { MainNav } from '../components/MainNav';
@@ -1256,7 +1257,62 @@ export const CreateEventScreen: React.FC = () => {
 
       console.log('Creating event:', newEvent);
       
-      // Save event to localStorage for BerseConnect screen
+      // Save event to database
+      try {
+        const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+        const API_BASE_URL = window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app'
+          ? 'https://api.berse.app'
+          : '';
+        
+        if (token) {
+          const response = await axios.post(
+            `${API_BASE_URL}/api/v1/events`,
+            {
+              title: newEvent.title,
+              description: newEvent.description,
+              date: newEvent.date,
+              time: newEvent.time,
+              location: newEvent.location,
+              venue: newEvent.venue,
+              category: newEvent.category,
+              price: newEvent.price,
+              maxAttendees: newEvent.maxAttendees,
+              isOnline: newEvent.isOnline,
+              meetingLink: newEvent.meetingLink,
+              whatsappGroup: newEvent.whatsappGroup,
+              mapLink: newEvent.mapLink,
+              tags: newEvent.tags,
+              requirements: newEvent.requirements,
+              highlights: newEvent.highlights,
+              agenda: newEvent.agenda,
+              coverImage: newEvent.coverImage,
+              hosts: newEvent.hosts,
+              coHosts: newEvent.coHosts,
+              sponsors: newEvent.sponsors,
+              earlyBirdPrice: newEvent.earlyBirdPrice,
+              accessibility: newEvent.accessibility,
+              recurringSchedule: newEvent.recurringSchedule,
+              checkInSettings: newEvent.checkInSettings
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+          
+          if (response.data.success) {
+            console.log('Event saved to database:', response.data.data);
+            // Update the event ID with the one from the database
+            newEvent.id = response.data.data.id;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save event to database:', error);
+        // Continue with local storage save as fallback
+      }
+      
+      // Save event to localStorage for offline/fallback support
       const existingEvents = JSON.parse(localStorage.getItem('userCreatedEvents') || '[]');
       existingEvents.push(newEvent);
       localStorage.setItem('userCreatedEvents', JSON.stringify(existingEvents));
@@ -1265,9 +1321,6 @@ export const CreateEventScreen: React.FC = () => {
       const berseEvents = JSON.parse(localStorage.getItem('berseConnectEvents') || '[]');
       berseEvents.unshift(newEvent); // Add to beginning
       localStorage.setItem('berseConnectEvents', JSON.stringify(berseEvents));
-      
-      // Here you would make an API call to create the event
-      // await eventService.createEvent(newEvent);
 
       // Check if user has Google Calendar connected
       const isGoogleCalendarConnected = localStorage.getItem('googleCalendarConnected') === 'true';

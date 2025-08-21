@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { CompactHeader } from '../components/CompactHeader/CompactHeader';
 import { ProfileSidebar } from '../components/ProfileSidebar/ProfileSidebar';
@@ -1112,7 +1113,63 @@ export const BerseConnectScreen: React.FC = () => {
     }
   ];
 
-  // Mock events data - Get user created events from localStorage
+  // Load all events from database
+  const loadEventsFromDatabase = async () => {
+    try {
+      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+      const API_BASE_URL = window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app'
+        ? 'https://api.berse.app'
+        : '';
+      
+      const response = await axios.get(
+        `${API_BASE_URL}/api/v1/events`,
+        token ? {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        } : {}
+      );
+      
+      if (response.data.success && response.data.data) {
+        // Format the events to match our Event interface
+        return response.data.data.map((event: any) => ({
+          id: event.id,
+          title: event.title || '',
+          date: event.date ? event.date.split('T')[0] : new Date().toISOString().split('T')[0],
+          time: event.time || '09:00',
+          location: event.location || '',
+          venue: event.venue || event.location || '',
+          category: event.category || event.type || 'social',
+          description: event.description || '',
+          organizer: event.organizer || event.host?.fullName || 'Event Organizer',
+          organizerAvatar: event.organizerAvatar || '⭐',
+          organization: event.organization || '',
+          hosts: event.hosts || [],
+          coverImage: event.coverImage || '',
+          price: event.price || 0,
+          currency: event.currency || 'RM',
+          attendees: event.attendees || 0,
+          maxAttendees: event.maxAttendees || 50,
+          tags: event.tags || [],
+          isOnline: event.isOnline || false,
+          meetingLink: event.meetingLink || undefined,
+          whatsappGroup: event.whatsappGroup || undefined,
+          mapLink: event.mapLink || undefined,
+          friends: event.friends || [],
+          committedProfiles: event.committedProfiles || [],
+          trending: event.trending || false,
+          highlights: event.highlights || [],
+          agenda: event.agenda || [],
+          requirements: event.requirements || []
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load events from database:', error);
+    }
+    return [];
+  };
+
+  // Get user created events from localStorage (fallback for offline)
   const getUserEvents = () => {
     const storedEvents = localStorage.getItem('userCreatedEvents');
     return storedEvents ? JSON.parse(storedEvents) : [];
@@ -1122,12 +1179,25 @@ export const BerseConnectScreen: React.FC = () => {
 
   // Load events on component mount and when navigating to the page
   useEffect(() => {
-    const baseEvents = [];
-    
-    const userEvents = getUserEvents();
-    
-    // Load committed profiles for all events
-    const eventsWithProfiles = [...baseEvents, ...userEvents].map(event => {
+    const loadEvents = async () => {
+      const baseEvents = [];
+      
+      // Load events from database
+      const dbEvents = await loadEventsFromDatabase();
+      
+      // Also get local events as fallback
+      const localEvents = getUserEvents();
+      
+      // Merge database events with local events (avoiding duplicates)
+      const allFetchedEvents = [...dbEvents];
+      localEvents.forEach((localEvent: Event) => {
+        if (!allFetchedEvents.find(e => e.id === localEvent.id)) {
+          allFetchedEvents.push(localEvent);
+        }
+      });
+      
+      // Load committed profiles for all events
+      const eventsWithProfiles = [...baseEvents, ...allFetchedEvents].map(event => {
       const eventJoinsKey = `event_joins_${event.id}`;
       const joins = JSON.parse(localStorage.getItem(eventJoinsKey) || '[]');
       
@@ -1160,7 +1230,19 @@ export const BerseConnectScreen: React.FC = () => {
       };
     });
     
-    setAllEvents(eventsWithProfiles);
+      setAllEvents(eventsWithProfiles);
+    };
+    
+    // Load events initially
+    loadEvents();
+    
+    // Set up periodic refresh to load new events every 10 seconds
+    const refreshInterval = setInterval(() => {
+      loadEvents();
+    }, 10000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const getFilteredEvents = () => {

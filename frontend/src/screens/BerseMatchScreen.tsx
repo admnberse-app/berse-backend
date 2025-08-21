@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { CompactHeader } from '../components/CompactHeader/CompactHeader';
 import { ProfileSidebar } from '../components/ProfileSidebar/ProfileSidebar';
 import { MainNav } from '../components/MainNav/index';
 import { useAuth } from '../contexts/AuthContext';
+import { checkAdminAccess } from '../utils/adminUtils';
 import { generateBerseMukhaEvents, generatePersonAttendance } from '../data/bersemukhaEvents';
 import { JoinCommunityModal, FriendRequestModal, ShareModal } from '../components/CommunityModals';
 
@@ -2713,19 +2715,39 @@ export const BerseMatchScreen: React.FC = () => {
       }
     ];
 
-    // For production: Only show user's own profile
-    const profiles = [userProfile];
+    // Combine user's profile with fetched users from database
+    const profiles = [
+      userProfile,
+      ...users.map(u => ({
+        id: u.id,
+        name: u.fullName || 'User',
+        age: u.age || 25,
+        profession: u.profession || u.shortBio || 'Professional',
+        location: u.currentLocation || u.city || 'Location not set',
+        origin: u.originallyFrom || 'Origin not set',
+        match: Math.floor(Math.random() * 30) + 70, // Random match percentage
+        tags: u.interests || [],
+        mutuals: [],
+        bio: u.bio || 'No bio available',
+        servicesOffered: u.servicesOffered || {},
+        personalityType: u.personalityType,
+        languages: u.languages || [],
+        email: u.email,
+        membershipId: u.membershipId,
+        isAdmin: u.email === 'zaydmahdaly@ahlumran.org'
+      }))
+    ];
 
     const allConnections = {
       all: profiles,
       communities: communityProfiles,
       guides: profiles.filter(p => p.servicesOffered?.localGuide),
       homesurf: profiles.filter(p => p.servicesOffered?.homestay),
-      mentor: [],
-      buddy: []
+      mentor: profiles.filter(p => p.servicesOffered?.mentor),
+      buddy: profiles.filter(p => p.servicesOffered?.buddy)
     };
 
-    // For 'all' mode, show user profile only
+    // For 'all' mode, show all profiles
     if (connectionMode === 'all') {
       return applyLocationFilter(profiles);
     }
@@ -2737,9 +2759,27 @@ export const BerseMatchScreen: React.FC = () => {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      // Load users from API or localStorage
-      const mockUsers: ProfileCardData[] = [];
-      setUsers(mockUsers);
+      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+      if (token) {
+        const API_BASE_URL = window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app'
+          ? 'https://api.berse.app'
+          : '';
+        
+        const response = await axios.get(
+          `${API_BASE_URL}/api/v1/users/all`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (response.data.success) {
+          const fetchedUsers = response.data.data || [];
+          setUsers(fetchedUsers);
+          console.log('Loaded users from database:', fetchedUsers.length);
+        }
+      }
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
@@ -3593,6 +3633,39 @@ export const BerseMatchScreen: React.FC = () => {
                     {connectionMode === 'homesurf' ? '🏠 Book Stay' : 
                      connectionMode === 'communities' ? '👥 Join Community' : '🤝 Friend Request'}
                   </ActionButton>
+                  {checkAdminAccess(user) && connection.id !== user?.id && (
+                    <ActionButton 
+                      style={{ background: '#dc3545' }}
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to delete ${connection.name}'s account?`)) {
+                          try {
+                            const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+                            const API_BASE_URL = window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app'
+                              ? 'https://api.berse.app'
+                              : '';
+                            
+                            await axios.delete(
+                              `${API_BASE_URL}/api/v1/users/${connection.id}`,
+                              {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              }
+                            );
+                            
+                            // Reload users after deletion
+                            loadUsers();
+                            alert(`${connection.name}'s account has been deleted.`);
+                          } catch (error) {
+                            console.error('Failed to delete user:', error);
+                            alert('Failed to delete user. Please try again.');
+                          }
+                        }
+                      }}
+                    >
+                      🗑️ Delete
+                    </ActionButton>
+                  )}
                 </ConnectionActions>
                   </>
                 )}
