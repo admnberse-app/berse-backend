@@ -48,16 +48,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('bersemuka_user');
       }
 
-      // Check if remember me is disabled and clear session if needed
+      // Keep users logged in by default (persistent login)
+      // Only logout if explicitly requested by user
       const rememberMe = localStorage.getItem('rememberMe');
-      if (!rememberMe) {
-        // If remember me is not set, clear any existing session
-        const wasLoggedIn = authService.isAuthenticated() || mockAuthService.isAuthenticated();
-        if (wasLoggedIn) {
-          // User didn't choose to be remembered last time
-          localStorage.removeItem('bersemuka_token');
-          localStorage.removeItem('bersemuka_user');
-        }
+      // Default to true if not set (keep users logged in)
+      if (rememberMe === null) {
+        localStorage.setItem('rememberMe', 'true');
       }
 
       // Check if user is already logged in (try both services)

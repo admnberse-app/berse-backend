@@ -153,7 +153,7 @@ export const LoginScreen: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true); // Default to true for persistent login
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
