@@ -320,7 +320,7 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
             <ModalBody>
               {(() => {
                 const allEvents = generateBerseMukhaEvents();
-                const myAttendance = generatePersonAttendance('Zayd Mahdaly');
+                const myAttendance = generatePersonAttendance(user?.fullName || 'User');
                 const attendedEvents = myAttendance.filter(a => a.attended);
                 
                 return (

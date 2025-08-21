@@ -2602,15 +2602,15 @@ export const BerseMatchScreen: React.FC = () => {
     // User's profile data - using AuthContext user data
     const userProfile = {
       id: 1,
-      name: user?.fullName || 'Zayd Mahdaly',
-      age: parseInt(user?.age as string) || 28,
-      profession: user?.profession || 'Architect & Photographer',
-      location: user?.currentLocation || 'Kuala Lumpur, Malaysia',
-      origin: user?.originLocation || 'Penang, Malaysia',
+      name: user?.fullName || 'User',
+      age: parseInt(user?.age as string) || 25,
+      profession: user?.profession || 'Professional',
+      location: user?.currentLocation || 'Location not set',
+      origin: user?.originLocation || 'Origin not set',
       match: 100,
-      tags: user?.topInterests || ['Cultural Networking', 'Cafe Hopping', 'Heritage Walks', 'Photo Walks'],
+      tags: user?.topInterests || ['Networking', 'Social', 'Events', 'Community'],
       mutuals: [],
-      bio: user?.bio || 'Architect and photographer passionate about cultural heritage. Love discovering hidden gems, connecting with creative minds over coffee, and documenting stories through my lens.',
+      bio: user?.bio || 'Welcome to Berse! Update your profile to share more about yourself.',
       servicesOffered: {
         localGuide: user?.offerings?.berseGuide || true,
         homestay: user?.offerings?.homeSurf || false,
