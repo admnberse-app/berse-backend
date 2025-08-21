@@ -19,6 +19,7 @@ model User {
   interests                  String[]
   instagramHandle            String?
   linkedinHandle             String?
+  membershipId               String?           @unique
   referralCode               String            @unique @default(uuid())
   role                       UserRole          @default(GENERAL_USER)
   isHostCertified            Boolean           @default(false)

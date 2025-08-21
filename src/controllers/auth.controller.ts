@@ -7,6 +7,30 @@ import { AppError } from '../middleware/error';
 import JwtManager from '../utils/jwt';
 import logger from '../utils/logger';
 
+// Helper function to generate unique membership ID
+async function generateUniqueMembershipId(): Promise<string> {
+  const prefix = 'BSE';
+  let isUnique = false;
+  let membershipId = '';
+  
+  while (!isUnique) {
+    // Generate random 6-digit number
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    membershipId = `${prefix}${randomNum}`;
+    
+    // Check if this ID already exists
+    const existing = await prisma.user.findUnique({
+      where: { membershipId }
+    });
+    
+    if (!existing) {
+      isUnique = true;
+    }
+  }
+  
+  return membershipId;
+}
+
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -39,6 +63,9 @@ export class AuthController {
         }
       }
 
+      // Generate unique membership ID
+      const membershipId = await generateUniqueMembershipId();
+      
       // Create user
       const hashedPassword = await hashPassword(password);
       const user = await prisma.user.create({
@@ -54,6 +81,7 @@ export class AuthController {
           gender,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           referredById: referredBy?.id,
+          membershipId,
         },
         select: {
           id: true,
@@ -67,6 +95,8 @@ export class AuthController {
           dateOfBirth: true,
           role: true,
           referralCode: true,
+          membershipId: true,
+          totalPoints: true,
         },
       });
 
@@ -263,6 +293,8 @@ export class AuthController {
           role: true,
           isHostCertified: true,
           totalPoints: true,
+          membershipId: true,
+          referralCode: true,
           createdAt: true,
           updatedAt: true,
         },

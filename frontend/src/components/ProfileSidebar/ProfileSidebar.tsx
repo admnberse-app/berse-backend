@@ -119,30 +119,32 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
             "{user?.bio || 'No bio available. Update your profile to share more about yourself!'}"
           </ConnectionBio>
 
-          {/* Info Badges - Exact same as BerseMatch */}
-          <ProfileInfoRow>
-            <InfoBadge 
-              $color="#FFF3E0" 
-              $textColor="#E65100"
-              onClick={() => setShowCommunitiesModal(true)}
-            >
-              👥 5 communities
-            </InfoBadge>
-            <InfoBadge 
-              $color="#F3E5F5" 
-              $textColor="#7B1FA2"
-              onClick={() => setShowEventsModal(true)}
-            >
-              🤝 12 BerseMukha
-            </InfoBadge>
-            <InfoBadge 
-              $color="#E8F5E9" 
-              $textColor="#2E7D32"
-              onClick={() => setShowOfferingsModal(true)}
-            >
-              🎯 Offerings
-            </InfoBadge>
-          </ProfileInfoRow>
+          {/* Info Badges - Only show if logged in */}
+          {user && (
+            <ProfileInfoRow>
+              <InfoBadge 
+                $color="#FFF3E0" 
+                $textColor="#E65100"
+                onClick={() => setShowCommunitiesModal(true)}
+              >
+                👥 {user.communities?.length || 0} communities
+              </InfoBadge>
+              <InfoBadge 
+                $color="#F3E5F5" 
+                $textColor="#7B1FA2"
+                onClick={() => setShowEventsModal(true)}
+              >
+                🤝 {user.eventsAttended || 0} BerseMukha
+              </InfoBadge>
+              <InfoBadge 
+                $color="#E8F5E9" 
+                $textColor="#2E7D32"
+                onClick={() => setShowOfferingsModal(true)}
+              >
+                🎯 Offerings
+              </InfoBadge>
+            </ProfileInfoRow>
+          )}
 
 
           {/* Action Buttons */}
@@ -154,29 +156,29 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
           
         </ProfileCard>
 
-        {/* Membership ID & Referral Code Section */}
-        <ReferralCard>
-          <ReferralTitle>🆔 Membership ID & Referral Code</ReferralTitle>
-          <ReferralCode>{user?.membershipId || 'AUN100001'}</ReferralCode>
-          <ReferralActions>
-            <CopyButton onClick={() => {
-              const membershipId = user?.membershipId || 'AUN100001';
-              navigator.clipboard.writeText(membershipId);
-              alert('Membership ID copied to clipboard!');
-            }}>
-              📋 Copy Code
-            </CopyButton>
-            <ShareButton onClick={() => {
-              const membershipId = user?.membershipId || 'AUN100001';
-              const message = `Join Berse App with my referral code: ${membershipId}\nBoth of us will get bonus points! 🎉`;
-              navigator.clipboard.writeText(message);
-              alert('Referral message copied! Share it with your friends.');
-            }}>
-              📤 Share
-            </ShareButton>
-          </ReferralActions>
-          <ReferralInfo>Your unique membership ID • Share to earn bonus points!</ReferralInfo>
-        </ReferralCard>
+        {/* Membership ID & Referral Code Section - Only show when logged in */}
+        {user && user.membershipId && (
+          <ReferralCard>
+            <ReferralTitle>🆔 Membership ID & Referral Code</ReferralTitle>
+            <ReferralCode>{user.membershipId}</ReferralCode>
+            <ReferralActions>
+              <CopyButton onClick={() => {
+                navigator.clipboard.writeText(user.membershipId);
+                alert('Membership ID copied to clipboard!');
+              }}>
+                📋 Copy Code
+              </CopyButton>
+              <ShareButton onClick={() => {
+                const message = `Join Berse App with my referral code: ${user.membershipId}\nBoth of us will get bonus points! 🎉`;
+                navigator.clipboard.writeText(message);
+                alert('Referral message copied! Share it with your friends.');
+              }}>
+                📤 Share
+              </ShareButton>
+            </ReferralActions>
+            <ReferralInfo>Your unique membership ID • Share to earn bonus points!</ReferralInfo>
+          </ReferralCard>
+        )}
 
 
         <MenuSection>

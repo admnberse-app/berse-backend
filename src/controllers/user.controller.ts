@@ -23,6 +23,7 @@ export class UserController {
           instagramHandle: true,
           linkedinHandle: true,
           referralCode: true,
+          membershipId: true,
           role: true,
           isHostCertified: true,
           totalPoints: true,
@@ -173,6 +174,9 @@ export class UserController {
           servicesOffered: true,
           communityRole: true,
           eventsAttended: true,
+          membershipId: true,
+          totalPoints: true,
+          referralCode: true,
         },
       });
 
