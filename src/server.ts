@@ -5,6 +5,7 @@ import logger from './utils/logger';
 import cluster from 'cluster';
 import os from 'os';
 import { initializeProfileReminderJob } from './jobs/profileCompletionReminders';
+import { MembershipService } from './services/membership.service';
 
 // Enable cluster mode for production
 const setupCluster = () => {
@@ -35,6 +36,15 @@ const startServer = async () => {
       try {
         await prisma.$connect();
         logger.info('✅ Database connected successfully');
+        
+        // Fix any missing membership IDs on startup
+        try {
+          await MembershipService.fixMissingMembershipIds();
+          logger.info('✅ Checked and fixed missing membership IDs');
+        } catch (error) {
+          logger.error('Failed to fix missing membership IDs:', error);
+        }
+        
         break;
       } catch (dbError) {
         retries--;

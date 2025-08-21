@@ -3,33 +3,10 @@ import { prisma } from '../config/database';
 import { hashPassword, comparePassword } from '../utils/auth';
 import { sendSuccess } from '../utils/response';
 import { PointsService } from '../services/points.service';
+import { MembershipService } from '../services/membership.service';
 import { AppError } from '../middleware/error';
 import JwtManager from '../utils/jwt';
 import logger from '../utils/logger';
-
-// Helper function to generate unique membership ID
-async function generateUniqueMembershipId(): Promise<string> {
-  const prefix = 'BSE';
-  let isUnique = false;
-  let membershipId = '';
-  
-  while (!isUnique) {
-    // Generate random 6-digit number
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    membershipId = `${prefix}${randomNum}`;
-    
-    // Check if this ID already exists
-    const existing = await prisma.user.findUnique({
-      where: { membershipId }
-    });
-    
-    if (!existing) {
-      isUnique = true;
-    }
-  }
-  
-  return membershipId;
-}
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -63,8 +40,15 @@ export class AuthController {
         }
       }
 
-      // Generate unique membership ID
-      const membershipId = await generateUniqueMembershipId();
+      // Generate unique membership ID with better error handling
+      let membershipId: string | null = null;
+      try {
+        membershipId = await MembershipService.generateUniqueMembershipId();
+        logger.info('Generated membership ID', { membershipId });
+      } catch (error) {
+        logger.error('Failed to generate membership ID', { error });
+        // Continue without membership ID but log the issue
+      }
       
       // Create user
       const hashedPassword = await hashPassword(password);
@@ -81,7 +65,7 @@ export class AuthController {
           gender,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           referredById: referredBy?.id,
-          membershipId,
+          membershipId: membershipId || undefined, // Only set if successfully generated
         },
         select: {
           id: true,
@@ -99,6 +83,19 @@ export class AuthController {
           totalPoints: true,
         },
       });
+      
+      // If membership ID generation failed, try to generate and update it after user creation
+      if (!membershipId && user.id) {
+        try {
+          membershipId = await MembershipService.ensureMembershipId(user.id);
+          if (membershipId) {
+            user.membershipId = membershipId;
+            logger.info('Generated membership ID after user creation', { userId: user.id, membershipId });
+          }
+        } catch (error) {
+          logger.error('Failed to generate membership ID after user creation', { userId: user.id, error });
+        }
+      }
 
       // Award registration points
       await PointsService.awardPoints(user.id, 'REGISTER');
