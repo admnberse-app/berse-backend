@@ -60,38 +60,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let userData = null;
       
       try {
-        // Validate stored token by making a test API call
+        // Check if we have stored authentication data
         const token = localStorage.getItem('bersemuka_token');
-        if (token) {
+        const storedUserStr = localStorage.getItem('bersemuka_user');
+        
+        if (token && storedUserStr) {
+          // Parse stored user data
           try {
-            // Test if the token is still valid
-            const response = await fetch(`${window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app' ? 'https://api.berse.app' : ''}/api/v1/users/profile`, {
+            const storedUser = JSON.parse(storedUserStr);
+            userData = storedUser;
+            console.log('Restored user session from localStorage');
+            
+            // Try to validate token in the background (non-blocking)
+            // Only clear session if we get explicit 401 unauthorized
+            fetch(`${window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app' ? 'https://api.berse.app' : ''}/api/v1/users/profile`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
-            });
-            
-            if (!response.ok) {
-              // Token is invalid or expired, clear localStorage
-              console.log('Token validation failed, clearing session');
-              localStorage.removeItem('bersemuka_token');
-              localStorage.removeItem('bersemuka_user');
-              localStorage.removeItem('user');
-              localStorage.removeItem('rememberMe');
-            } else {
-              // Token is valid, proceed with stored user data
-              if (authService.isAuthenticated()) {
-                userData = await authService.getCurrentUser();
-              } else if (mockAuthService.isAuthenticated()) {
-                userData = mockAuthService.getCurrentUser(); // This one is sync
+            }).then(response => {
+              // Only clear if we get explicit unauthorized response
+              if (response.status === 401) {
+                console.log('Token is expired/invalid (401), clearing session');
+                localStorage.removeItem('bersemuka_token');
+                localStorage.removeItem('bersemuka_user');
+                localStorage.removeItem('user');
+                localStorage.removeItem('rememberMe');
+                setUser(null);
+              } else if (response.ok) {
+                // Update user data if we got fresh data from server
+                response.json().then(data => {
+                  if (data.success && data.data) {
+                    const freshUserData = data.data;
+                    setUser(freshUserData);
+                    localStorage.setItem('bersemuka_user', JSON.stringify(freshUserData));
+                    console.log('Updated user data from server');
+                  }
+                }).catch(err => {
+                  // JSON parse error, keep existing session
+                  console.log('Could not parse user data, keeping existing session');
+                });
               }
+              // For any other status (500, 503, network error, etc), keep the session
+            }).catch(error => {
+              // Network error or server unavailable - keep user logged in
+              console.log('Server unavailable, keeping user logged in with cached data');
+            });
+          } catch (parseError) {
+            console.log('Could not parse stored user data:', parseError);
+            // If we can't parse the stored user, try to get from auth service
+            if (authService.isAuthenticated()) {
+              userData = await authService.getCurrentUser();
+            } else if (mockAuthService.isAuthenticated()) {
+              userData = mockAuthService.getCurrentUser();
             }
-          } catch (error) {
-            console.log('Token validation error, clearing session:', error);
-            localStorage.removeItem('bersemuka_token');
-            localStorage.removeItem('bersemuka_user');
-            localStorage.removeItem('user');
-            localStorage.removeItem('rememberMe');
           }
         }
         
@@ -126,6 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data.user);
         localStorage.setItem('bersemuka_token', response.data.token);
         localStorage.setItem('bersemuka_user', JSON.stringify(response.data.user));
+        localStorage.setItem('rememberMe', 'true'); // Always remember login
         return;
       } else {
         throw new Error(response.error || 'Login failed');
@@ -151,6 +173,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Mock service logout error:', error);
     }
 
+    // Clear all authentication data from localStorage
+    localStorage.removeItem('bersemuka_token');
+    localStorage.removeItem('bersemuka_user');
+    localStorage.removeItem('user');
+    localStorage.removeItem('rememberMe');
+    
     // Always clear local state
     setUser(null);
   };
@@ -162,6 +190,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && response.data) {
         console.log('Registration successful with backend, setting user:', response.data.user);
         setUser(response.data.user);
+        // Store authentication data for persistence
+        if (response.data.token) {
+          localStorage.setItem('bersemuka_token', response.data.token);
+          localStorage.setItem('bersemuka_user', JSON.stringify(response.data.user));
+          localStorage.setItem('rememberMe', 'true'); // Remember new registrations
+        }
         return;
       }
     } catch (error) {
@@ -174,6 +208,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (mockResponse.success && mockResponse.data) {
         console.log('Registration successful with mock service, setting user:', mockResponse.data.user);
         setUser(mockResponse.data.user);
+        // Store mock user data
+        if (mockResponse.data.token) {
+          localStorage.setItem('bersemuka_token', mockResponse.data.token);
+          localStorage.setItem('bersemuka_user', JSON.stringify(mockResponse.data.user));
+          localStorage.setItem('rememberMe', 'true');
+        }
         return;
       } else {
         throw new Error(mockResponse.error || 'Registration failed');
