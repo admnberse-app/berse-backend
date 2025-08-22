@@ -96,6 +96,7 @@ export class EventController {
   static async getEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { type, city, upcoming, page = '1', limit = '20' } = req.query;
+      const userId = req.user?.id;
 
       const where: any = {};
 
@@ -125,6 +126,21 @@ export class EventController {
               profilePicture: true,
             },
           },
+          rsvps: {
+            select: {
+              userId: true,
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  profilePicture: true,
+                  profession: true,
+                  city: true,
+                },
+              },
+            },
+            take: 10, // Get first 10 attendees for preview
+          },
           _count: {
             select: {
               rsvps: true,
@@ -148,13 +164,27 @@ export class EventController {
           // If notes is not valid JSON, keep it as is
         }
         
+        // Check if current user has RSVPed
+        const hasUserJoined = userId ? event.rsvps.some(rsvp => rsvp.userId === userId) : false;
+        
+        // Format committed profiles from RSVPs
+        const committedProfiles = event.rsvps.map(rsvp => ({
+          id: rsvp.user.id,
+          name: rsvp.user.fullName || 'Anonymous',
+          profession: rsvp.user.profession || 'Professional',
+          location: rsvp.user.city || 'Unknown',
+          avatar: rsvp.user.profilePicture,
+        }));
+        
         return {
           ...event,
           ...additionalData,
           organizer: event.host.fullName,
           attendees: event._count.rsvps,
-          committedProfiles: [],
-          friends: []
+          committedProfiles,
+          friends: [],
+          hasUserJoined,
+          rsvps: undefined, // Remove raw rsvps data from response
         };
       });
 
@@ -393,6 +423,51 @@ export class EventController {
       });
 
       sendSuccess(res, updatedEvent, 'Event updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getEventAttendees(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id: eventId } = req.params;
+
+      // Get all RSVPs for the event
+      const rsvps = await prisma.eventRSVP.findMany({
+        where: { eventId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              profilePicture: true,
+              bio: true,
+              profession: true,
+              city: true,
+              interests: true,
+              personalityType: true,
+              languages: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Format attendees data
+      const attendees = rsvps.map(rsvp => ({
+        id: rsvp.user.id,
+        name: rsvp.user.fullName || 'Anonymous',
+        profilePicture: rsvp.user.profilePicture,
+        bio: rsvp.user.bio,
+        profession: rsvp.user.profession || 'Professional',
+        location: rsvp.user.city || 'Unknown',
+        interests: rsvp.user.interests || [],
+        personalityType: rsvp.user.personalityType,
+        languages: rsvp.user.languages,
+        joinedAt: rsvp.createdAt,
+      }));
+
+      sendSuccess(res, attendees);
     } catch (error) {
       next(error);
     }

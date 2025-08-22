@@ -1351,6 +1351,53 @@ export const BerseConnectScreen: React.FC = () => {
     }
     
     try {
+      // First, try to join via API if user is authenticated
+      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+      if (token && selectedEvent.id) {
+        try {
+          const API_BASE_URL = window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app'
+            ? 'https://api.berse.app'
+            : '';
+          
+          const response = await axios.post(
+            `${API_BASE_URL}/api/v1/events/${selectedEvent.id}/join`,
+            {},
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          if (response.data.success) {
+            console.log('Successfully joined event via API:', response.data);
+            // Update local state with the RSVP data
+            const rsvpData = response.data.data;
+            
+            // Update event attendees count
+            const updatedEvent = { ...selectedEvent };
+            updatedEvent.attendees = (updatedEvent.attendees || 0) + 1;
+            
+            // Update the event in allEvents
+            setAllEvents(prevEvents => 
+              prevEvents.map(evt => evt.id === selectedEvent.id ? updatedEvent : evt)
+            );
+            
+            // Update selected event
+            setSelectedEvent(updatedEvent);
+          }
+        } catch (apiError: any) {
+          console.error('API join failed:', apiError);
+          // Check if already joined
+          if (apiError.response?.data?.message?.includes('Already RSVP')) {
+            alert('You have already joined this event!');
+            return;
+          }
+          // Continue with localStorage fallback for other errors
+          console.log('Falling back to localStorage join');
+        }
+      }
       // Create committed profile data
       const committedProfile: CommittedProfile = {
         id: Date.now(),

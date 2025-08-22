@@ -14,6 +14,9 @@ router.get('/', optionalAuth, asyncHandler(EventController.getEvents));
 // Get event by ID
 router.get('/:id', optionalAuth, asyncHandler(EventController.getEventById));
 
+// Get event attendees
+router.get('/:id/attendees', optionalAuth, asyncHandler(EventController.getEventAttendees));
+
 // Create event (protected)
 router.post('/', authenticateToken, asyncHandler(EventController.createEvent));
 
@@ -52,6 +55,7 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req, res, next) => 
 
 // RSVP to event (join)
 router.post('/:id/rsvp', authenticateToken, asyncHandler(EventController.rsvpEvent));
+router.post('/:id/join', authenticateToken, asyncHandler(EventController.rsvpEvent)); // Alias for better UX
 
 // Cancel RSVP (leave event)
 router.delete('/:id/rsvp', authenticateToken, asyncHandler(async (req, res, next) => {
