@@ -362,55 +362,5 @@ export class AuthController {
     }
   }
 
-  static async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      // Get the current user from the authenticated request
-      const userId = (req as any).user?.id;
-      
-      if (!userId) {
-        throw new AppError('Invalid token', 401);
-      }
-
-      // Get fresh user data
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          phone: true,
-          role: true,
-          profilePicture: true,
-          bio: true,
-          city: true,
-          interests: true,
-          membershipId: true,
-          totalPoints: true,
-          referralCode: true,
-          isVerified: true,
-        },
-      });
-
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-
-      // Generate new token
-      const token = JwtManager.generateToken({ 
-        id: user.id, 
-        email: user.email 
-      });
-
-      logger.info('Token refreshed successfully', { userId: user.id });
-
-      sendSuccess(res, { token, user }, 'Token refreshed successfully');
-    } catch (error) {
-      logger.error('Token refresh failed', { 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        userId: (req as any).user?.id 
-      });
-      next(error);
-    }
-  }
 
 }
