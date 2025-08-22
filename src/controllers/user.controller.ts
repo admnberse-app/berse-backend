@@ -96,7 +96,9 @@ export class UserController {
         instagram,
         linkedin,
         topInterests,
-        fullBio
+        fullBio,
+        dateOfBirth,
+        profilePicture
       } = req.body;
 
       // Build update data object with only provided fields
@@ -120,6 +122,8 @@ export class UserController {
       if (eventsAttended !== undefined) updateData.eventsAttended = eventsAttended;
       if (email !== undefined) updateData.email = email;
       if (phone !== undefined) updateData.phone = phone;
+      if (dateOfBirth !== undefined) updateData.dateOfBirth = new Date(dateOfBirth);
+      if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
       
       // Handle interests (can come as interests or topInterests)
       if (topInterests !== undefined) {
@@ -177,6 +181,7 @@ export class UserController {
           membershipId: true,
           totalPoints: true,
           referralCode: true,
+          dateOfBirth: true,
         },
       });
 

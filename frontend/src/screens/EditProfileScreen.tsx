@@ -418,10 +418,17 @@ export const EditProfileScreen: React.FC = () => {
       const profileData = {
         ...formData,
         topInterests: formData.interests.filter(i => i !== ''),
+        dateOfBirth: formData.dateOfBirth || user?.dateOfBirth,
       };
 
+      console.log('Saving profile data:', profileData);
+      
+      const apiUrl = window.location.hostname === 'localhost' 
+        ? '/api/v1/users/profile'
+        : 'https://api.berse.app/api/v1/users/profile';
+
       const response = await axios.put(
-        `${API_BASE_URL}/api/v1/users/profile`,
+        apiUrl,
         profileData,
         {
           headers: {
@@ -431,21 +438,31 @@ export const EditProfileScreen: React.FC = () => {
         }
       );
 
+      console.log('Profile update response:', response.data);
+      
       if (response.data.success) {
-        // Update auth context
-        if (user) {
-          updateUser({ ...user, ...profileData });
+        // Update auth context with the returned data
+        if (user && response.data.data) {
+          updateUser({ ...user, ...response.data.data });
         }
         
         // Store in localStorage for persistence
-        localStorage.setItem('userProfile', JSON.stringify(profileData));
+        localStorage.setItem('userProfile', JSON.stringify(response.data.data || profileData));
         
         alert('Profile updated successfully!');
         navigate('/profile');
+      } else {
+        console.error('Profile update failed:', response.data);
+        alert(response.data.message || 'Failed to update profile');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save profile:', error);
-      alert('Failed to save profile. Please try again.');
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(error.response.data?.message || 'Failed to save profile. Please try again.');
+      } else {
+        alert('Failed to save profile. Please check your connection and try again.');
+      }
     }
   };
 
