@@ -2886,24 +2886,44 @@ export const BerseMatchScreen: React.FC = () => {
     setShowShareModal(true);
   };
   
-  const handleSendFriendRequest = (eventId: string, note: string) => {
+  const handleSendFriendRequest = async (eventId: string, note: string) => {
     if (selectedConnection) {
-      // Create friend request with event information
-      const request = {
-        toUserId: selectedConnection.id,
-        fromUserId: user?.id,
-        note: note,
-        eventId: eventId,
-        timestamp: new Date().toISOString()
-      };
-      
-      // Store in local storage for demo purposes
-      const requests = JSON.parse(localStorage.getItem('friendRequests') || '[]');
-      requests.push(request);
-      localStorage.setItem('friendRequests', JSON.stringify(requests));
-      
-      alert(`Friend request sent to ${selectedConnection.name}!`);
-      setShowFriendRequestModal(false);
+      try {
+        const token = localStorage.getItem('bersemuka_token');
+        if (!token) {
+          alert('Please login to send friend requests');
+          return;
+        }
+
+        // Call the actual API to send friend request
+        const response = await fetch(
+          `${window.location.hostname === 'localhost' ? '' : 'https://api.berse.app'}/api/v1/users/follow/${selectedConnection.id}`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (response.ok) {
+          alert(`Friend request sent to ${selectedConnection.name}! They will receive a message notification.`);
+          setShowFriendRequestModal(false);
+        } else if (response.status === 400) {
+          const error = await response.json();
+          if (error.message?.includes('Already following')) {
+            alert('You have already sent a friend request to this user.');
+          } else {
+            alert('Failed to send friend request. Please try again.');
+          }
+        } else {
+          alert('Failed to send friend request. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error sending friend request:', error);
+        alert('Failed to send friend request. Please try again.');
+      }
     }
   };
   

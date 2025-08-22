@@ -2238,9 +2238,44 @@ export const BerseConnectScreen: React.FC = () => {
               </ActionButton>
               <ActionButton 
                 $primary
-                onClick={() => {
-                  alert(`Friend request sent to ${selectedProfile?.name}!`);
-                  setShowProfileDetail(false);
+                onClick={async () => {
+                  if (!selectedProfile) return;
+                  
+                  try {
+                    const token = localStorage.getItem('bersemuka_token');
+                    if (!token) {
+                      alert('Please login to send friend requests');
+                      return;
+                    }
+
+                    const response = await fetch(
+                      `${window.location.hostname === 'localhost' ? '' : 'https://api.berse.app'}/api/v1/users/follow/${selectedProfile.id}`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${token}`,
+                          'Content-Type': 'application/json',
+                        },
+                      }
+                    );
+
+                    if (response.ok) {
+                      alert(`Friend request sent to ${selectedProfile.name}! They will receive a message notification.`);
+                      setShowProfileDetail(false);
+                    } else if (response.status === 400) {
+                      const error = await response.json();
+                      if (error.message?.includes('Already following')) {
+                        alert('You have already sent a friend request to this user.');
+                      } else {
+                        alert('Failed to send friend request. Please try again.');
+                      }
+                    } else {
+                      alert('Failed to send friend request. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Error sending friend request:', error);
+                    alert('Failed to send friend request. Please try again.');
+                  }
                 }}
               >
                 🤝 Add Friend
