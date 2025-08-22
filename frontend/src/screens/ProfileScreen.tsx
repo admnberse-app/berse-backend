@@ -8,6 +8,8 @@ import { MainNav } from '../components/MainNav/MainNav';
 import { GoogleFormsIntegration } from '../components/GoogleFormsIntegration';
 import { RegistrationTracker } from '../components/RegistrationTracker';
 import { ChatGroupManager } from '../components/ChatGroupManager';
+import { calculateAge, formatDate } from '../utils/dateUtils';
+import { ShareableProfileCard } from '../components/ShareableProfileCard';
 
 // Connected Accounts Modal Styles
 const ConnectedAccountsModal = styled.div`
@@ -528,8 +530,14 @@ const SocialIcon = styled.div<{ $platform: 'instagram' | 'linkedin' | 'twitter' 
 `;
 
 // Action Buttons
+const ProfileActionsContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
 const EditProfileButton = styled.button`
-  width: 100%;
+  flex: 1;
   background: #007BFF;
   color: white;
   border: none;
@@ -540,12 +548,35 @@ const EditProfileButton = styled.button`
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-bottom: 8px;
   
   &:hover {
     background: #0056b3;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const ShareProfileButton = styled.button`
+  flex: 1;
+  background: #2fce98;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #26b584;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(47, 206, 152, 0.3);
   }
   
   &:active {
@@ -4057,10 +4088,14 @@ export const ProfileScreen: React.FC = () => {
     profession: 40
   });
   
+  // Share profile state
+  const [showShareProfile, setShowShareProfile] = useState(false);
+  
   // Form state for profile editing
   const [formData, setFormData] = useState({
     name: '',
     age: 28,
+    dateOfBirth: '',
     profession: '',
     bio: '',
     personalityType: 'ENFJ-A',
@@ -4120,7 +4155,8 @@ export const ProfileScreen: React.FC = () => {
   // Use actual user data from registration/database
   const mockProfile = {
     name: user?.fullName || user?.username || 'User',
-    age: user?.age || 25,
+    age: calculateAge(user?.dateOfBirth || user?.date_of_birth),
+    dateOfBirth: user?.dateOfBirth || user?.date_of_birth || '',
     profession: user?.profession || 'Professional',
     isAdmin: user?.role === 'ADMIN' || user?.role === 'MODERATOR',
     isHost: user?.isHostCertified || user?.role === 'GUIDE' || user?.role === 'ADMIN',
@@ -4128,17 +4164,15 @@ export const ProfileScreen: React.FC = () => {
     level: user?.level || 7,
     personalityType: user?.personalityType || 'ENFJ-A',
     bio: user?.bio || user?.shortBio || 'Welcome to my profile!',
-    interests: user?.interests?.length > 0 ? user.interests : (user?.topInterests?.length > 0 ? user.topInterests : ['Community', 'Events', 'Social']),
-    communities: user?.communities?.length > 0 ? user.communities : [
-      { name: '🏛️ Berse Community', type: 'foundation' as const, verified: true }
-    ],
+    interests: user?.interests?.length > 0 ? user.interests : (user?.topInterests?.length > 0 ? user.topInterests : []),
+    communities: user?.communities?.length > 0 ? user.communities : [],
     socialMedia: {
       instagram: user?.instagramHandle || user?.instagram || '@user',
       linkedin: user?.linkedinHandle || user?.linkedin || 'user',
       twitter: user?.twitter || '@user',
       whatsapp: user?.phone || user?.whatsapp || ''
     },
-    services: user?.servicesOffered?.length > 0 ? user.servicesOffered : ['Meet & Greet'],
+    services: user?.servicesOffered?.length > 0 ? user.servicesOffered : [],
     avatarColor: user?.profileColor || 'linear-gradient(135deg, #2fce98, #4A90A4)',
     // Additional user data from registration
     city: user?.city || user?.currentLocation || 'Not specified',
@@ -4606,6 +4640,7 @@ export const ProfileScreen: React.FC = () => {
     setFormData({
       name: mockProfile.name,
       age: mockProfile.age,
+      dateOfBirth: mockProfile.dateOfBirth,
       profession: mockProfile.profession,
       bio: mockProfile.bio,
       personalityType: mockProfile.personalityType,
@@ -4786,6 +4821,7 @@ export const ProfileScreen: React.FC = () => {
     setFormData({
       name: mockProfile.name,
       age: mockProfile.age,
+      dateOfBirth: mockProfile.dateOfBirth,
       profession: mockProfile.profession,
       bio: mockProfile.bio,
       personalityType: mockProfile.personalityType,
@@ -5682,10 +5718,15 @@ export const ProfileScreen: React.FC = () => {
           </SocialIconsContainer>
         </SocialMediaSection>
 
-        {/* Edit Profile Button */}
-        <EditProfileButton onClick={() => setShowProfileEditor(true)}>
-          ✏️ Edit Profile
-        </EditProfileButton>
+        {/* Profile Action Buttons */}
+        <ProfileActionsContainer>
+          <EditProfileButton onClick={() => setShowProfileEditor(true)}>
+            ✏️ Edit Profile
+          </EditProfileButton>
+          <ShareProfileButton onClick={() => setShowShareProfile(true)}>
+            📤 Share Profile
+          </ShareProfileButton>
+        </ProfileActionsContainer>
 
         <ProfileMenuSection>
           {/* 1. Private Messages */}
@@ -6282,15 +6323,19 @@ export const ProfileScreen: React.FC = () => {
               </EditorField>
 
               <EditorField>
-                <EditorLabel>Age: {formData.age} years old</EditorLabel>
-                <EditorSlider
-                  type="range"
-                  min="18"
-                  max="65"
-                  value={formData.age}
-                  onChange={(e) => handleFormChange('age', parseInt(e.target.value))}
+                <EditorLabel>Date of Birth</EditorLabel>
+                <EditorInput
+                  type="date"
+                  value={formData.dateOfBirth || ''}
+                  onChange={(e) => {
+                    handleFormChange('dateOfBirth', e.target.value);
+                    // Update calculated age
+                    const age = calculateAge(e.target.value);
+                    handleFormChange('age', age);
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
                 />
-                <SliderValue>{formData.age} years old</SliderValue>
+                <SliderValue>Age: {calculateAge(formData.dateOfBirth)} years old</SliderValue>
               </EditorField>
 
               <EditorField>
@@ -6590,15 +6635,19 @@ export const ProfileScreen: React.FC = () => {
               <InlineEditorTitle>Edit Age & Profession</InlineEditorTitle>
               
               <EditorField style={{ marginBottom: '16px' }}>
-                <EditorLabel>Age: {formData.age} years old</EditorLabel>
-                <EditorSlider
-                  type="range"
-                  min="18"
-                  max="65"
-                  value={formData.age}
-                  onChange={(e) => handleFormChange('age', parseInt(e.target.value))}
+                <EditorLabel>Date of Birth</EditorLabel>
+                <EditorInput
+                  type="date"
+                  value={formData.dateOfBirth || ''}
+                  onChange={(e) => {
+                    handleFormChange('dateOfBirth', e.target.value);
+                    // Update calculated age
+                    const age = calculateAge(e.target.value);
+                    handleFormChange('age', age);
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
                 />
-                <SliderValue>{formData.age} years old</SliderValue>
+                <SliderValue>Age: {calculateAge(formData.dateOfBirth)} years old</SliderValue>
               </EditorField>
 
               <EditorField>
@@ -7933,6 +7982,28 @@ export const ProfileScreen: React.FC = () => {
           }
         }}
       />
+      
+      {/* Shareable Profile Card Modal */}
+      {showShareProfile && user && (
+        <ShareableProfileCard
+          user={{
+            id: user.id || '',
+            fullName: user.fullName || '',
+            username: user.username,
+            profilePicture: user.profilePicture,
+            bio: user.bio,
+            shortBio: user.shortBio,
+            currentLocation: user.currentLocation || user.city,
+            profession: user.profession,
+            interests: user.interests,
+            age: user.age || (user.dateOfBirth ? calculateAge(user.dateOfBirth) : undefined),
+            personalityType: user.personalityType,
+            instagramHandle: user.instagramHandle,
+            linkedinHandle: user.linkedinHandle
+          }}
+          onClose={() => setShowShareProfile(false)}
+        />
+      )}
     </Container>
   );
 };

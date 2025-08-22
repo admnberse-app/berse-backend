@@ -7,6 +7,8 @@ import { TextField } from '../components/TextField';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { deepLinkHandler, EventContext } from '../utils/deepLinkHandler';
 import { countries, nationalities, getDefaultCountry } from '../data/countries';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 const Container = styled.div`
   display: flex;
@@ -228,9 +230,46 @@ const EyeIcon = styled.div`
 `;
 
 const PhoneInputContainer = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
+  .PhoneInput {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .PhoneInputInput {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #D8A07A;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 0.2s;
+    background: white;
+    
+    &:focus {
+      outline: none;
+      border-color: ${({ theme }) => theme.colors.primary.main};
+      box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primary.main}20;
+    }
+  }
+  
+  .PhoneInputCountry {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border: 1px solid #D8A07A;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    
+    &:hover {
+      background: #F5F5F5;
+    }
+  }
+  
+  .PhoneInputCountryIcon {
+    font-size: 20px;
+    margin-right: 4px;
+  }
 `;
 
 const CountryCodeSelect = styled.select`
@@ -305,8 +344,7 @@ export const RegisterScreen: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(getDefaultCountry());
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [password, setPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
@@ -373,9 +411,9 @@ export const RegisterScreen: React.FC = () => {
       return;
     }
     
-    // Validate phone number (must be digits only)
-    if (!phoneNumber.match(/^\d+$/)) {
-      setError('Phone number must contain only digits');
+    // Phone number validation is handled by the library
+    if (!phoneNumber || phoneNumber.length < 10) {
+      setError('Please enter a valid phone number');
       return;
     }
 
@@ -394,11 +432,10 @@ export const RegisterScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Combine country code with phone number
-      const fullPhoneNumber = `${selectedCountry.dialCode}${phoneNumber}`;
+      // Phone number already includes country code from PhoneInput
       
       // Register with enhanced profile data
-      await register(email, password, fullName, username, fullPhoneNumber, {
+      await register(email, password, fullName, username, phoneNumber, {
         nationality,
         countryOfResidence,
         city,
@@ -499,28 +536,15 @@ export const RegisterScreen: React.FC = () => {
           <div>
             <Label>Phone Number *</Label>
             <PhoneInputContainer>
-              <CountryCodeSelect
-                value={selectedCountry.code}
-                onChange={(e) => {
-                  const country = countries.find(c => c.code === e.target.value);
-                  if (country) setSelectedCountry(country);
-                }}
-              >
-                {countries.map(country => (
-                  <option key={country.code} value={country.code}>
-                    {country.flag} {country.dialCode}
-                  </option>
-                ))}
-              </CountryCodeSelect>
-              <PhoneNumberInput>
-                <TextField
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter phone number"
-                  required
-                />
-              </PhoneNumberInput>
+              <PhoneInput
+                international
+                defaultCountry="MY"
+                value={phoneNumber}
+                onChange={setPhoneNumber}
+                placeholder="Enter phone number"
+                countries={['MY', 'SG', 'ID', 'BN', 'TH', 'GB', 'US', 'AU', 'IN', 'PK']}
+                countryCallingCodeEditable={false}
+              />
             </PhoneInputContainer>
           </div>
           

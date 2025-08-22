@@ -1016,8 +1016,8 @@ const EmptyFeedback = styled.div`
   font-size: 14px;
 `;
 
-// Share Modal Components
-const ShareModal = styled.div`
+// Share Modal Components  
+const ShareModalContainer = styled.div`
   background: white;
   border-radius: 16px;
   padding: 20px;
@@ -2234,7 +2234,7 @@ export const BerseCardGameScreen: React.FC = () => {
 
       {/* Share Modal */}
       <ModalOverlay $isOpen={showShareModal} onClick={() => setShowShareModal(false)}>
-        <ShareModal onClick={(e) => e.stopPropagation()}>
+        <ShareModalContainer onClick={(e) => e.stopPropagation()}>
           <ShareTitle>Share Feedback</ShareTitle>
           <ShareOptions>
             <ShareOption onClick={() => {
@@ -2293,7 +2293,7 @@ export const BerseCardGameScreen: React.FC = () => {
               <ShareLabel>More</ShareLabel>
             </ShareOption>
           </ShareOptions>
-        </ShareModal>
+        </ShareModalContainer>
       </ModalOverlay>
 
       {/* Question Modal */}

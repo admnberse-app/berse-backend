@@ -48,6 +48,7 @@ import { BerseMukhaEventScreen } from './screens/BerseMukhaEventScreen';
 import { RewardsScreen } from './screens/RewardsScreen';
 import { ActivitiesScreen } from './screens/ActivitiesScreen';
 import { BerseMentorScreen } from './screens/BerseMentorScreen';
+import { PublicProfileScreen } from './screens/PublicProfileScreen';
 import { BerseBuddyScreen } from './screens/BerseBuddyScreen';
 import { SocialEventsScreen } from './screens/SocialEventsScreen';
 import { CafeMeetupsScreen } from './screens/CafeMeetupsScreen';
@@ -158,6 +159,7 @@ function App() {
               <Route path="/" element={<SplashScreen />} />
               <Route path="/login" element={<LoginScreen />} />
               <Route path="/register" element={<RegisterScreen />} />
+              <Route path="/profile/:userId" element={<PublicProfileScreen />} />
               
               {/* Protected routes */}
               <Route

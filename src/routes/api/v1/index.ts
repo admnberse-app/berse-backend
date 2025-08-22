@@ -6,9 +6,9 @@ import communitiesRouter from './communities.routes';
 import matchingRouter from './matching.routes';
 import pushRouter from '../../push.routes';
 import cardgameRouter from './cardgame.routes';
+import messagesRouter from '../../message.routes';
 // import paymentsRouter from './payments.routes';
 // import notificationsRouter from './notifications.routes';
-// import messagesRouter from './messages.routes';
 // import analyticsRouter from './analytics.routes';
 
 const router = Router();
@@ -22,9 +22,9 @@ router.use('/matching', matchingRouter);
 router.use('/matches', matchingRouter); // Alias for matching
 router.use('/push', pushRouter);
 router.use('/cardgame', cardgameRouter);
+router.use('/messages', messagesRouter);
 // router.use('/payments', paymentsRouter);
 // router.use('/notifications', notificationsRouter);
-// router.use('/messages', messagesRouter);
 // router.use('/analytics', analyticsRouter);
 
 // API v1 health check

@@ -317,14 +317,52 @@ export class UserController {
         throw new AppError('Cannot follow yourself', 400);
       }
 
-      const follow = await prisma.follow.create({
-        data: {
-          followerId,
-          followingId,
-        },
+      // Get follower details for notification
+      const follower = await prisma.user.findUnique({
+        where: { id: followerId },
+        select: { fullName: true, username: true }
       });
 
-      sendSuccess(res, follow, 'User followed successfully', 201);
+      // Create follow relationship, message, and notification in a transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Create the follow relationship
+        const follow = await tx.follow.create({
+          data: {
+            followerId,
+            followingId,
+          },
+        });
+
+        // Create a private message notification
+        await tx.message.create({
+          data: {
+            senderId: followerId,
+            receiverId: followingId,
+            content: `${follower?.fullName || follower?.username || 'Someone'} sent you a friend request! You can accept or decline this request.`,
+            isRead: false,
+          },
+        });
+
+        // Create a notification
+        await tx.notification.create({
+          data: {
+            userId: followingId,
+            type: 'MESSAGE',
+            title: 'New Friend Request',
+            message: `${follower?.fullName || follower?.username || 'Someone'} wants to connect with you`,
+            actionUrl: `/profile/${followerId}`,
+            metadata: {
+              followerId,
+              followerName: follower?.fullName || follower?.username,
+              type: 'friend_request'
+            },
+          },
+        });
+
+        return follow;
+      });
+
+      sendSuccess(res, result, 'User followed successfully', 201);
     } catch (error: any) {
       if (error.code === 'P2002') {
         throw new AppError('Already following this user', 400);
