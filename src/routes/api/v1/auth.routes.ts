@@ -169,4 +169,10 @@ router.post('/2fa/verify',
   })
 );
 
+// Refresh token route
+router.post('/refresh',
+  authenticateToken,
+  asyncHandler(AuthController.refreshToken)
+);
+
 export default router;

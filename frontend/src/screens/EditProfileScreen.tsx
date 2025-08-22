@@ -7,6 +7,7 @@ import { MainNav } from '../components/MainNav';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/services.config';
 import { ImageCropper } from '../components/ImageCropper';
+import { makeAuthenticatedRequest, getAuthToken, clearAuthTokens } from '../utils/authUtils';
 
 const Container = styled.div`
   display: flex;
@@ -408,9 +409,11 @@ export const EditProfileScreen: React.FC = () => {
   // Save profile
   const handleSave = async () => {
     try {
-      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+      // Check if user is authenticated
+      const token = getAuthToken();
       if (!token) {
-        alert('Please login to save your profile');
+        alert('Your session has expired. Please login again.');
+        navigate('/login');
         return;
       }
 
@@ -423,19 +426,11 @@ export const EditProfileScreen: React.FC = () => {
 
       console.log('Saving profile data:', profileData);
       
-      const apiUrl = window.location.hostname === 'localhost' 
-        ? '/api/v1/users/profile'
-        : 'https://api.berse.app/api/v1/users/profile';
-
-      const response = await axios.put(
-        apiUrl,
-        profileData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+      // Use the authenticated request helper that handles token refresh
+      const response = await makeAuthenticatedRequest(
+        'PUT',
+        '/api/v1/users/profile',
+        profileData
       );
 
       console.log('Profile update response:', response.data);
@@ -457,7 +452,17 @@ export const EditProfileScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Failed to save profile:', error);
-      if (error.response) {
+      
+      // Handle specific error cases
+      if (error.message?.includes('Session expired') || error.message?.includes('Please login')) {
+        clearAuthTokens();
+        alert(error.message);
+        navigate('/login');
+      } else if (error.response?.status === 401) {
+        clearAuthTokens();
+        alert('Your session has expired. Please login again.');
+        navigate('/login');
+      } else if (error.response) {
         console.error('Error response:', error.response.data);
         alert(error.response.data?.message || 'Failed to save profile. Please try again.');
       } else {
