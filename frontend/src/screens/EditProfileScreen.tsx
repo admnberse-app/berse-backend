@@ -8,6 +8,9 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config/services.config';
 import { ImageCropper } from '../components/ImageCropper';
 import { makeAuthenticatedRequest, getAuthToken, clearAuthTokens } from '../utils/authUtils';
+import { TravelLogbookModal } from '../components/TravelLogbookModal';
+import { SearchableCommunities } from '../components/SearchableCommunities';
+import { EventsAttended } from '../components/EventsAttended';
 
 const Container = styled.div`
   display: flex;
@@ -277,6 +280,9 @@ export const EditProfileScreen: React.FC = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(user?.profilePicture || null);
 
+  // Modal states
+  const [showTravelModal, setShowTravelModal] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     // Basic Info
@@ -297,11 +303,11 @@ export const EditProfileScreen: React.FC = () => {
     personalityType: '',
     
     // Communities
-    communities: [],
+    communities: [] as any[],
     role: 'member',
     
     // Events
-    eventsAttended: [],
+    eventsAttended: [] as any[],
     
     // Contact Information
     email: user?.email || '',
@@ -320,7 +326,7 @@ export const EditProfileScreen: React.FC = () => {
     website: '',
     
     // Travel Logbook
-    travelHistory: []
+    travelHistory: [] as any[]
   });
 
   const [eventsSearch, setEventsSearch] = useState('');
@@ -388,21 +394,13 @@ export const EditProfileScreen: React.FC = () => {
     setFormData(prev => ({ ...prev, interests: newInterests }));
   };
 
-  // Handle community selection
-  const handleCommunityToggle = (community: string) => {
-    setFormData(prev => ({
-      ...prev,
-      communities: prev.communities.includes(community)
-        ? prev.communities.filter(c => c !== community)
-        : [...prev.communities, community]
-    }));
-  };
+  // Handle community selection - removed as now handled by SearchableCommunities component
 
   // Add travel entry
-  const addTravelEntry = (country: string, cities: string, date: string, friends: string[]) => {
+  const addTravelEntry = (entry: any) => {
     setFormData(prev => ({
       ...prev,
-      travelHistory: [...prev.travelHistory, { country, cities, date, friends }]
+      travelHistory: [...prev.travelHistory, entry]
     }));
   };
 
@@ -608,24 +606,12 @@ export const EditProfileScreen: React.FC = () => {
         <FormSection>
           <SectionTitle>👥 Communities</SectionTitle>
           <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
-            Request to join communities (Admin approval required)
+            Search and request to join communities (Admin approval required)
           </p>
-          <CommunityOption>
-            <input
-              type="checkbox"
-              checked={formData.communities.includes("Ahl 'Umran Network")}
-              onChange={() => handleCommunityToggle("Ahl 'Umran Network")}
-            />
-            <span>Ahl 'Umran Network</span>
-          </CommunityOption>
-          <CommunityOption>
-            <input
-              type="checkbox"
-              checked={formData.communities.includes('PeaceMeal MY')}
-              onChange={() => handleCommunityToggle('PeaceMeal MY')}
-            />
-            <span>PeaceMeal MY</span>
-          </CommunityOption>
+          <SearchableCommunities
+            selectedCommunities={formData.communities}
+            onChange={(communities) => handleInputChange('communities', communities)}
+          />
           
           <FormField style={{ marginTop: '16px' }}>
             <FieldLabel>Your Role</FieldLabel>
@@ -641,24 +627,16 @@ export const EditProfileScreen: React.FC = () => {
           </FormField>
         </FormSection>
 
-        {/* BerseMukha Events */}
+        {/* Events Attended */}
         <FormSection>
-          <SectionTitle>🎉 BerseMukha Events Attended</SectionTitle>
+          <SectionTitle>🎉 Events Attended</SectionTitle>
           <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
-            Search for profiles you met at events
+            Search events from all categories (sports, socials, volunteers, etc.) and add people you met
           </p>
-          <FormField>
-            <FieldInput
-              value={eventsSearch}
-              onChange={(e) => setEventsSearch(e.target.value)}
-              placeholder="Search profiles by name..."
-            />
-          </FormField>
-          {formData.eventsAttended.length === 0 && (
-            <p style={{ fontSize: '13px', color: '#999', textAlign: 'center', padding: '20px' }}>
-              No events added yet
-            </p>
-          )}
+          <EventsAttended
+            selectedEvents={formData.eventsAttended}
+            onChange={(events) => handleInputChange('eventsAttended', events)}
+          />
         </FormSection>
 
         {/* Contact Information */}
@@ -768,15 +746,56 @@ export const EditProfileScreen: React.FC = () => {
           <p style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
             Track your travels and connections around the world
           </p>
-          {formData.travelHistory.length === 0 && (
+          
+          {formData.travelHistory.length > 0 ? (
+            <div style={{ marginBottom: '12px' }}>
+              {formData.travelHistory.map((entry, index) => (
+                <TravelEntry key={index}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                      {entry.country}
+                    </div>
+                    {entry.cities && (
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {entry.cities}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '12px', color: '#999' }}>
+                      {entry.date}
+                    </div>
+                    {entry.peopleMet?.length > 0 && (
+                      <div style={{ fontSize: '12px', color: '#2fce98', marginTop: '4px' }}>
+                        Met {entry.peopleMet.length} {entry.peopleMet.length === 1 ? 'person' : 'people'}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#DC143C',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        travelHistory: prev.travelHistory.filter((_, i) => i !== index)
+                      }));
+                    }}
+                  >
+                    Remove
+                  </button>
+                </TravelEntry>
+              ))}
+            </div>
+          ) : (
             <p style={{ fontSize: '13px', color: '#999', textAlign: 'center', padding: '20px' }}>
               No travel history added yet
             </p>
           )}
-          <AddButton onClick={() => {
-            // This would open a modal to add travel entry
-            console.log('Add travel entry');
-          }}>
+          
+          <AddButton onClick={() => setShowTravelModal(true)}>
             + Add Travel Entry
           </AddButton>
         </FormSection>
@@ -791,6 +810,13 @@ export const EditProfileScreen: React.FC = () => {
         aspectRatio={1}
         shape="round"
         title="Crop your profile photo"
+      />
+      
+      {/* Travel Logbook Modal */}
+      <TravelLogbookModal
+        isOpen={showTravelModal}
+        onClose={() => setShowTravelModal(false)}
+        onAdd={addTravelEntry}
       />
 
       <MainNav 
