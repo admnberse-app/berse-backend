@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useAuth } from '../contexts/AuthContext';
 
 const Modal = styled.div<{ $show: boolean }>`
   position: fixed;
@@ -156,6 +157,15 @@ const SecondaryButton = styled(Button)`
   }
 `;
 
+const DangerButton = styled(Button)`
+  background: #ff4444;
+  color: white;
+  
+  &:hover {
+    background: #cc0000;
+  }
+`;
+
 const Note = styled.p`
   font-size: 12px;
   color: #666;
@@ -186,14 +196,18 @@ interface EditEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedEvent: Event) => void;
+  onDelete?: (eventId: string) => void;
 }
 
 export const EditEventModal: React.FC<EditEventModalProps> = ({ 
   event, 
   isOpen, 
   onClose, 
-  onSave 
+  onSave,
+  onDelete 
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.email === 'zaydmahdaly@ahlumran.org';
   const [formData, setFormData] = useState<Event>({
     id: '',
     title: '',
@@ -233,6 +247,19 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
     
     onSave(formData);
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      const userEvents = JSON.parse(localStorage.getItem('userCreatedEvents') || '[]');
+      const updatedEvents = userEvents.filter((e: Event) => e.id !== formData.id);
+      localStorage.setItem('userCreatedEvents', JSON.stringify(updatedEvents));
+      
+      if (onDelete) {
+        onDelete(formData.id);
+      }
+      onClose();
+    }
   };
 
   return (
@@ -372,6 +399,9 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
           </FormGroup>
 
           <ButtonGroup>
+            {isAdmin && onDelete && (
+              <DangerButton onClick={handleDelete}>🗑️ Delete Event</DangerButton>
+            )}
             <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
             <PrimaryButton onClick={handleSubmit}>Save Changes</PrimaryButton>
           </ButtonGroup>

@@ -1690,6 +1690,19 @@ export const BerseConnectScreen: React.FC = () => {
     );
   };
 
+  const handleDeleteEvent = (eventId: string) => {
+    // Remove the event from allEvents
+    setAllEvents(prevEvents => 
+      prevEvents.filter(evt => evt.id !== eventId)
+    );
+    
+    // Clear selected event if it was deleted
+    if (selectedEvent && selectedEvent.id === eventId) {
+      setSelectedEvent(null);
+      setShowEventDetail(false);
+    }
+  };
+
   // Check if an event is user-created
   const isUserCreatedEvent = (eventId: string) => {
     const userEvents = getUserEvents();
@@ -2418,6 +2431,7 @@ export const BerseConnectScreen: React.FC = () => {
           setEventToEdit(null);
         }}
         onSave={handleSaveEvent}
+        onDelete={handleDeleteEvent}
       />
 
       {/* Share Modal */}

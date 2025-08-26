@@ -1197,6 +1197,26 @@ export const CreateEventScreen: React.FC = () => {
         }
       });
 
+      // Calculate registration deadline based on selected option
+      let registrationDeadline = null;
+      if (formData.registrationDeadline && formData.date) {
+        const eventDate = new Date(`${formData.date}T${formData.time || '09:00'}`);
+        
+        switch(formData.registrationDeadline) {
+          case '1-day':
+            registrationDeadline = new Date(eventDate.getTime() - 24 * 60 * 60 * 1000).toISOString();
+            break;
+          case '12-hours':
+            registrationDeadline = new Date(eventDate.getTime() - 12 * 60 * 60 * 1000).toISOString();
+            break;
+          case '1-hour':
+            registrationDeadline = new Date(eventDate.getTime() - 1 * 60 * 60 * 1000).toISOString();
+            break;
+          default:
+            registrationDeadline = null;
+        }
+      }
+
       // Create event object in the format expected by BerseConnect
       const newEvent = {
         id: Date.now().toString(),
@@ -1252,6 +1272,7 @@ export const CreateEventScreen: React.FC = () => {
           generateQRCode: formData.generateQRCode,
           attendanceTracking: formData.attendanceTracking
         },
+        registrationDeadline: registrationDeadline,
         createdAt: new Date().toISOString()
       };
 
@@ -1292,7 +1313,8 @@ export const CreateEventScreen: React.FC = () => {
               earlyBirdPrice: newEvent.earlyBirdPrice,
               accessibility: newEvent.accessibility,
               recurringSchedule: newEvent.recurringSchedule,
-              checkInSettings: newEvent.checkInSettings
+              checkInSettings: newEvent.checkInSettings,
+              registrationDeadline: newEvent.registrationDeadline
             },
             {
               headers: {
@@ -2107,12 +2129,15 @@ export const CreateEventScreen: React.FC = () => {
 
           <FormGroup>
             <Label>Registration Deadline</Label>
-            <Input
-              type="datetime-local"
+            <Select
               value={formData.registrationDeadline}
               onChange={(e) => handleInputChange('registrationDeadline', e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
-            />
+            >
+              <option value="">None</option>
+              <option value="1-day">1 day before</option>
+              <option value="12-hours">12 hours before</option>
+              <option value="1-hour">1 hour before</option>
+            </Select>
           </FormGroup>
 
           <FormGroup>
