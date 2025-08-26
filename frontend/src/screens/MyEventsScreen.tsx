@@ -34,45 +34,106 @@ export const MyEventsScreen: React.FC = () => {
 
   const fetchUserEvents = async () => {
     try {
-      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/api/v1/events`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      // Filter events where user has RSVP'd or attended
-      const userEvents = response.data.data?.filter((event: any) => {
-        // Check if user has RSVP'd to this event
-        return event.rsvps?.some((rsvp: any) => rsvp.userId === user?.id) ||
-               event.attendance?.some((att: any) => att.userId === user?.id);
-      }) || [];
-
-      // Transform and categorize events
-      const transformedEvents = userEvents.map((event: any) => ({
+      // Get registered events from localStorage
+      const registeredEvents = JSON.parse(localStorage.getItem('userRegisteredEvents') || '[]');
+      
+      // Transform registered events
+      const localEvents = registeredEvents.map((event: any) => ({
         id: event.id,
         title: event.title,
         date: event.date,
-        location: event.location,
+        location: `${event.venue}, ${event.location}`,
         description: event.description || '',
-        host: event.host?.fullName || 'Unknown Host',
+        host: event.organizer || 'Event Organizer',
         status: new Date(event.date) > new Date() ? 'upcoming' : 'completed',
-        type: event.type,
-        rsvpStatus: event.rsvps?.find((r: any) => r.userId === user?.id) ? 'confirmed' : 'pending',
-        attendees: event._count?.rsvps || 0
+        type: event.category,
+        rsvpStatus: 'confirmed',
+        attendees: event.attendees || 0,
+        price: event.price || 0,
+        time: event.time,
+        endTime: event.endTime,
+        paymentStatus: event.paymentStatus || 'free',
+        registrationDate: event.registrationDate,
+        canCancel: new Date(event.date) > new Date() // Can only cancel future events
       }));
 
-      setEvents(transformedEvents);
+      // Try to fetch from API as well
+      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+      
+      if (token) {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/api/v1/events`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+
+          // Filter events where user has RSVP'd or attended
+          const userEvents = response.data.data?.filter((event: any) => {
+            // Check if user has RSVP'd to this event
+            return event.rsvps?.some((rsvp: any) => rsvp.userId === user?.id) ||
+                   event.attendance?.some((att: any) => att.userId === user?.id);
+          }) || [];
+
+          // Transform and merge API events
+          const apiEvents = userEvents.map((event: any) => ({
+            id: event.id,
+            title: event.title,
+            date: event.date,
+            location: event.location,
+            description: event.description || '',
+            host: event.host?.fullName || 'Unknown Host',
+            status: new Date(event.date) > new Date() ? 'upcoming' : 'completed',
+            type: event.type,
+            rsvpStatus: event.rsvps?.find((r: any) => r.userId === user?.id) ? 'confirmed' : 'pending',
+            attendees: event._count?.rsvps || 0,
+            canCancel: new Date(event.date) > new Date()
+          }));
+
+          // Merge local and API events, removing duplicates
+          const allEvents = [...localEvents];
+          apiEvents.forEach((apiEvent: any) => {
+            if (!allEvents.some(e => e.id === apiEvent.id)) {
+              allEvents.push(apiEvent);
+            }
+          });
+
+          setEvents(allEvents);
+        } catch (apiError) {
+          console.error('Failed to fetch API events:', apiError);
+          // Still show local events even if API fails
+          setEvents(localEvents);
+        }
+      } else {
+        // No token, just show local events
+        setEvents(localEvents);
+      }
     } catch (error) {
       console.error('Failed to fetch events:', error);
       setError('Failed to load events');
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleCancelEvent = (eventId: string) => {
+    if (confirm('Are you sure you want to cancel your registration for this event?')) {
+      // Remove from localStorage
+      const registeredEvents = JSON.parse(localStorage.getItem('userRegisteredEvents') || '[]');
+      const updatedEvents = registeredEvents.filter((e: any) => e.id !== eventId);
+      localStorage.setItem('userRegisteredEvents', JSON.stringify(updatedEvents));
+      
+      // Remove from participants list
+      const storageKey = `event_${eventId}_participants`;
+      const participants = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const updatedParticipants = participants.filter((p: any) => 
+        p.email !== user?.email && p.name !== user?.fullName
+      );
+      localStorage.setItem(storageKey, JSON.stringify(updatedParticipants));
+      
+      // Refresh the events list
+      fetchUserEvents();
+      alert('Registration cancelled successfully');
     }
   };
 
@@ -195,9 +256,14 @@ export const MyEventsScreen: React.FC = () => {
                   <EventActionButton onClick={() => console.log('Set reminder for:', event.title)}>
                     🔔 {event.reminder ? 'Reminder Set' : 'Set Reminder'}
                   </EventActionButton>
-                  <EventActionButton onClick={() => console.log('View details for:', event.title)}>
-                    ℹ️ Details
-                  </EventActionButton>
+                  {event.canCancel && (
+                    <EventActionButton 
+                      onClick={() => handleCancelEvent(event.id)}
+                      style={{ background: '#ff4444', color: 'white' }}
+                    >
+                      ❌ Cancel
+                    </EventActionButton>
+                  )}
                 </EventActions>
               </EventCard>
             ))

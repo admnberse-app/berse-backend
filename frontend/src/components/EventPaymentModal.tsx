@@ -352,6 +352,7 @@ interface EventPaymentModalProps {
   onSuccess: () => void;
   userEmail?: string;
   userName?: string;
+  userPhone?: string;
 }
 
 export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
@@ -360,7 +361,8 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
   onClose,
   onSuccess,
   userEmail,
-  userName
+  userName,
+  userPhone
 }) => {
   const [selectedPayment, setSelectedPayment] = useState<'qr' | 'stripe' | ''>('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
@@ -502,8 +504,13 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
                 <QRSection>
                   <QRCode>[QR Code Placeholder]</QRCode>
                   <QRInstructions>
-                    Scan this QR code with your banking app to complete payment.
-                    Payment will be verified automatically.
+                    <strong>Reference: EVT-{event.id.slice(-6).toUpperCase()}</strong><br/>
+                    1. Scan this QR code with your banking app<br/>
+                    2. Include the reference number in payment description<br/>
+                    3. Send payment confirmation screenshot to organizer<br/>
+                    <span style={{ fontSize: '11px', color: '#999', marginTop: '8px', display: 'block' }}>
+                      Note: Organizer will verify payment within 24 hours
+                    </span>
                   </QRInstructions>
                 </QRSection>
               )}
@@ -589,6 +596,10 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
                 <DetailRow>
                   <DetailLabel>Email</DetailLabel>
                   <DetailValue>{userEmail || 'Not provided'}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Phone</DetailLabel>
+                  <DetailValue>{userPhone || 'Not provided'}</DetailValue>
                 </DetailRow>
               </Section>
 

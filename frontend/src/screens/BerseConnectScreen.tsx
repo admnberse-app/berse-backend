@@ -1299,9 +1299,12 @@ export const BerseConnectScreen: React.FC = () => {
   const getFilteredEvents = () => {
     let filtered = [...allEvents];
     
-    // Filter by category
+    // Filter by category (case-insensitive)
     if (eventMode !== 'all') {
-      filtered = filtered.filter(event => event.category === eventMode);
+      filtered = filtered.filter(event => {
+        const eventCategory = (event.category || '').toLowerCase();
+        return eventCategory === eventMode.toLowerCase();
+      });
     }
     
     // Filter by time period
@@ -2451,6 +2454,7 @@ export const BerseConnectScreen: React.FC = () => {
           }}
           userEmail={user?.email}
           userName={user?.fullName}
+          userPhone={user?.phone || user?.phoneNumber}
           onSuccess={() => {
             // Handle successful payment/registration
             setShowPaymentModal(false);
@@ -2485,6 +2489,21 @@ export const BerseConnectScreen: React.FC = () => {
                     : evt
                 )
               );
+            }
+            
+            // Save registered event to localStorage for My Events
+            const registeredEvents = JSON.parse(localStorage.getItem('userRegisteredEvents') || '[]');
+            const eventToSave = {
+              ...selectedEvent,
+              registrationDate: new Date().toISOString(),
+              registrationStatus: 'confirmed',
+              paymentStatus: selectedEvent.price > 0 ? 'paid' : 'free'
+            };
+            
+            // Check if not already registered
+            if (!registeredEvents.some((e: any) => e.id === selectedEvent.id)) {
+              registeredEvents.push(eventToSave);
+              localStorage.setItem('userRegisteredEvents', JSON.stringify(registeredEvents));
             }
             
             // Show success message
