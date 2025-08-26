@@ -170,5 +170,8 @@ export default defineConfig({
         }
       }
     }
+  },
+  optimizeDeps: {
+    include: ['html2canvas', 'qrcode']
   }
 })
