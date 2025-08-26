@@ -152,8 +152,16 @@ export const GoogleCalendarSync: React.FC<GoogleCalendarSyncProps> = ({
       setIsSyncing(true);
       setError(null);
       
-      // Return empty array - no calendar events to show for deployment
-      onEventsLoaded?.([]);
+      // Get events from Google Calendar
+      const events = await googleCalendarService.getUpcomingEvents(20);
+      
+      // Format events for the app
+      const formattedEvents = events.map(event => 
+        googleCalendarService.formatEventFromGoogle(event)
+      );
+      
+      // Pass events to parent component
+      onEventsLoaded?.(formattedEvents);
       setLastSyncTime(new Date());
     } catch (err) {
       console.error('Failed to sync calendar events:', err);

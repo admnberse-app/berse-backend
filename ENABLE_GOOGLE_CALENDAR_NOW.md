@@ -100,8 +100,60 @@ npm run dev
 - Make sure you added your email as a test user in OAuth consent screen
 - Check that localhost:5173 is in authorized origins
 
+## Step 10: Deploy to Production (Netlify)
+
+### Add Production URLs to Google
+1. Go back to: 👉 **https://console.cloud.google.com/apis/credentials**
+2. Click on your OAuth client ID
+3. Under "Authorized JavaScript origins", add:
+   - `https://berse.app`
+   - `https://www.berse.app`
+4. Under "Authorized redirect URIs", add:
+   - `https://berse.app`
+   - `https://www.berse.app`
+5. Click **"SAVE"**
+
+### Add to Netlify Environment
+1. Go to: 👉 **https://app.netlify.com/**
+2. Select your site (berse)
+3. Go to **Site configuration** → **Environment variables**
+4. Click **"Add a variable"** and add:
+   ```
+   Key: VITE_GOOGLE_CLIENT_ID
+   Value: [your-client-id].apps.googleusercontent.com
+   
+   Key: VITE_GOOGLE_API_KEY
+   Value: [your-api-key]
+   ```
+5. Select **"Production"** for deploy contexts
+6. Click **"Save"**
+
+### Deploy the Changes
+```bash
+git add .
+git commit -m "Enable Google Calendar sync in production"
+git push
+```
+
+Netlify will automatically redeploy with the new environment variables.
+
+### Verify Production
+1. Wait 2-3 minutes for deployment
+2. Visit https://berse.app
+3. Test Google Calendar connection
+4. Verify events sync properly
+
+## Production Checklist
+- [ ] Added production URLs to Google OAuth
+- [ ] Added environment variables to Netlify
+- [ ] Deployed code changes
+- [ ] Tested on production site
+- [ ] Events appear in Google Calendar
+
 ## Need Help?
 Check the browser console (F12) for detailed error messages.
 
 ---
 ✅ **Once you've added the credentials and restarted, the Google Calendar integration will be fully active!**
+
+⚡ **Production Ready:** Your Google Calendar sync is now enabled for both development and production!
