@@ -182,6 +182,7 @@ interface Event {
   description: string;
   date: string;
   time: string;
+  endTime?: string;
   location: string;
   venue: string;
   category: string;
@@ -214,6 +215,7 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
     description: '',
     date: '',
     time: '',
+    endTime: '',
     location: '',
     venue: '',
     category: 'social',
@@ -307,11 +309,21 @@ export const EditEventModal: React.FC<EditEventModalProps> = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>Time</Label>
+            <Label>Start Time</Label>
             <Input
               type="time"
               name="time"
               value={formData.time}
+              onChange={handleChange}
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>End Time (Optional)</Label>
+            <Input
+              type="time"
+              name="endTime"
+              value={formData.endTime || ''}
               onChange={handleChange}
             />
           </FormGroup>

@@ -8,10 +8,10 @@ import { ProfileSidebar } from '../components/ProfileSidebar/ProfileSidebar';
 import { MainNav } from '../components/MainNav/index';
 import { googleCalendarService } from '../services/googleCalendar';
 import { useAuth } from '../contexts/AuthContext';
-import { BerseMintonPayment } from '../components/BerseMintonPayment';
 import { UnifiedParticipants } from '../components/UnifiedParticipants';
 import { EditEventModal } from '../components/EditEventModal';
 import { ShareModal } from '../components/CommunityModals';
+import { EventPaymentModal } from '../components/EventPaymentModal';
 
 // Event Interface
 interface Event {
@@ -973,12 +973,50 @@ const CreateEventFAB = styled.button`
   }
 `;
 
+// Helper function to format time in 12-hour format with AM/PM
+const formatTime12Hour = (time: string): string => {
+  if (!time) return '';
+  
+  // Handle both HH:MM and HH:MM:SS formats
+  const [hours, minutes] = time.split(':');
+  const hour = parseInt(hours, 10);
+  const min = minutes || '00';
+  
+  if (hour === 0) {
+    return `12:${min} AM`;
+  } else if (hour < 12) {
+    return `${hour}:${min} AM`;
+  } else if (hour === 12) {
+    return `12:${min} PM`;
+  } else {
+    return `${hour - 12}:${min} PM`;
+  }
+};
+
+// Helper function to format time range
+const formatTimeRange = (startTime: string, endTime?: string): string => {
+  const start = formatTime12Hour(startTime);
+  if (!endTime || endTime === startTime) {
+    return start;
+  }
+  const end = formatTime12Hour(endTime);
+  
+  // If both times have same AM/PM, show it only once
+  const startPeriod = start.slice(-2);
+  const endPeriod = end.slice(-2);
+  
+  if (startPeriod === endPeriod) {
+    return `${start.slice(0, -3)} - ${end}`;
+  }
+  return `${start} - ${end}`;
+};
+
 export const BerseConnectScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [eventMode, setEventMode] = useState<'all' | 'social' | 'sports' | 'volunteer' | 'donate' | 'trips'>('all');
-  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'month' | 'friends' | 'trending'>('month');
+  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'month' | 'all' | 'friends' | 'trending'>('all');
   const [selectedCountry, setSelectedCountry] = useState('All');
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [searchQuery, setSearchQuery] = useState('');
@@ -995,7 +1033,7 @@ export const BerseConnectScreen: React.FC = () => {
 
   // Tab navigation
   const navigateTab = (direction: 'prev' | 'next') => {
-    const tabs: typeof activeTab[] = ['today', 'week', 'month', 'friends', 'trending'];
+    const tabs: typeof activeTab[] = ['today', 'week', 'month', 'all', 'friends', 'trending'];
     const currentIndex = tabs.indexOf(activeTab);
     let newIndex;
     
@@ -1013,6 +1051,7 @@ export const BerseConnectScreen: React.FC = () => {
       today: "TODAY'S EVENTS",
       week: 'THIS WEEK',
       month: 'THIS MONTH',
+      all: 'ALL EVENTS',
       friends: 'FRIENDS GOING',
       trending: 'TRENDING'
     };
@@ -1287,6 +1326,14 @@ export const BerseConnectScreen: React.FC = () => {
           return eventDate >= today && eventDate <= monthEnd;
         });
         break;
+      case 'all':
+        // Show all events, no date filtering
+        // Only filter out past events
+        filtered = filtered.filter(event => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today || event.date === todayStr;
+        });
+        break;
       case 'friends':
         filtered = filtered.filter(event => event.friends.length > 0);
         break;
@@ -1327,6 +1374,13 @@ export const BerseConnectScreen: React.FC = () => {
       );
     }
     
+    // Sort events by date (nearest to furthest)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.date + 'T' + (a.time || '00:00'));
+      const dateB = new Date(b.date + 'T' + (b.time || '00:00'));
+      return dateA.getTime() - dateB.getTime();
+    });
+    
     return filtered;
   };
 
@@ -1343,12 +1397,10 @@ export const BerseConnectScreen: React.FC = () => {
   const handleJoinEvent = async () => {
     if (!selectedEvent) return;
     
-    // Check if this is a BerseMinton event that requires payment
-    if (selectedEvent.id.includes('berseminton') && selectedEvent.price > 0) {
-      setShowPaymentModal(true);
-      setShowEventDetail(false);
-      return;
-    }
+    // Show payment modal for all events (including free events for confirmation)
+    setShowPaymentModal(true);
+    setShowEventDetail(false);
+    return;
     
     try {
       // First, try to join via API if user is authenticated
@@ -1913,7 +1965,7 @@ export const BerseConnectScreen: React.FC = () => {
                   <EventHeader>
                     <EventTitle>{event.title}</EventTitle>
                     <EventTime>
-                      🕐 {event.time} {event.isOnline && '• 🌐 Online'}
+                      🕐 {formatTimeRange(event.time, event.endTime)} {event.isOnline && '• 🌐 Online'}
                     </EventTime>
                     <EventLocation>
                       📍 {event.location} {event.venue && `• ${event.venue}`}
@@ -2002,7 +2054,7 @@ export const BerseConnectScreen: React.FC = () => {
             <EventDetailMeta>
               <EventDetailMetaItem>
                 <span>📅</span>
-                <span>{selectedEvent?.date} at {selectedEvent?.time}</span>
+                <span>{selectedEvent?.date} at {formatTimeRange(selectedEvent?.time || '', selectedEvent?.endTime)}</span>
               </EventDetailMetaItem>
               <EventDetailMetaItem>
                 <span>📍</span>
@@ -2388,20 +2440,55 @@ export const BerseConnectScreen: React.FC = () => {
         }}
       />
 
-      {/* Payment Modal for BerseMinton */}
-      {selectedEvent && selectedEvent.id.includes('berseminton') && (
-        <BerseMintonPayment
-          event={{
-            id: selectedEvent.id,
-            title: selectedEvent.title,
-            location: selectedEvent.location,
-            date: selectedEvent.date,
-            fee: selectedEvent.price.toString()
-          }}
+      {/* Payment Modal for all events */}
+      {selectedEvent && (
+        <EventPaymentModal
+          event={selectedEvent}
           isOpen={showPaymentModal}
           onClose={() => {
             setShowPaymentModal(false);
-            setSelectedEvent(null);
+            setShowEventDetail(true); // Return to event detail
+          }}
+          userEmail={user?.email}
+          userName={user?.fullName}
+          onSuccess={() => {
+            // Handle successful payment/registration
+            setShowPaymentModal(false);
+            
+            // Add user to event participants
+            const participant = {
+              id: Date.now(),
+              name: user?.fullName || 'Anonymous User',
+              email: user?.email || '',
+              joinedAt: new Date().toISOString(),
+              eventId: selectedEvent.id,
+              status: 'registered' as 'registered' | 'attended' | 'cancelled'
+            };
+            
+            const storageKey = `event_${selectedEvent.id}_participants`;
+            const existingParticipants = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            
+            // Check if user already joined
+            const alreadyJoined = existingParticipants.some((p: any) => 
+              p.email === participant.email || p.name === participant.name
+            );
+            
+            if (!alreadyJoined) {
+              existingParticipants.push(participant);
+              localStorage.setItem(storageKey, JSON.stringify(existingParticipants));
+              
+              // Update event attendee count
+              setAllEvents(prevEvents => 
+                prevEvents.map(evt => 
+                  evt.id === selectedEvent.id 
+                    ? { ...evt, attendees: (evt.attendees || 0) + 1 }
+                    : evt
+                )
+              );
+            }
+            
+            // Show success message
+            alert(`Successfully ${selectedEvent.price > 0 ? 'paid and ' : ''}registered for ${selectedEvent.title}!`);
           }}
         />
       )}
