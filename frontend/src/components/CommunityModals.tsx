@@ -334,17 +334,46 @@ export const FriendRequestModal: React.FC<FriendRequestModalProps> = ({
 
       // Store friend request locally
       const friendRequests = JSON.parse(localStorage.getItem('friend_requests') || '[]');
-      friendRequests.push({
+      const newRequest = {
         to: profile.id,
         toName: profile.name,
-        from: user?.id,
-        fromName: user?.fullName || user?.username,
+        from: user?.id || 'current-user',
+        fromName: user?.fullName || user?.username || 'User',
         message: fullMessage,
         eventId: selectedEvent,
         timestamp: new Date().toISOString(),
-        status: 'pending'
-      });
+        status: 'pending',
+        read: false
+      };
+      friendRequests.push(newRequest);
       localStorage.setItem('friend_requests', JSON.stringify(friendRequests));
+      
+      // Also store as a message for Messages screen
+      const userMessages = JSON.parse(localStorage.getItem('user_messages') || '[]');
+      userMessages.push({
+        id: `msg-${Date.now()}`,
+        sender: {
+          id: user?.id || 'current-user',
+          fullName: user?.fullName || user?.username || 'User',
+          profilePicture: user?.profilePicture || null
+        },
+        recipient: {
+          id: profile.id,
+          fullName: profile.name
+        },
+        content: fullMessage,
+        type: 'friend_request',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        status: 'sent',
+        eventId: selectedEvent
+      });
+      localStorage.setItem('user_messages', JSON.stringify(userMessages));
+      
+      // Store current user ID for reference
+      if (user?.id) {
+        localStorage.setItem('current_user_id', user.id);
+      }
 
       // Send push notification if available
       if ('Notification' in window && Notification.permission === 'granted') {

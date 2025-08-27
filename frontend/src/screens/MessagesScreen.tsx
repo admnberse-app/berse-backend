@@ -22,26 +22,92 @@ export const MessagesScreen: React.FC = () => {
 
   const fetchMessages = async () => {
     try {
-      const token = localStorage.getItem('bersemuka_token');
-      if (!token) return;
-
-      const response = await fetch(
-        `${window.location.hostname === 'localhost' ? '' : 'https://api.berse.app'}/api/v1/messages/inbox`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+      // Get messages from localStorage first (includes friend requests)
+      const localMessages = [];
+      
+      // Get friend request messages
+      const friendRequests = JSON.parse(localStorage.getItem('friend_requests') || '[]');
+      const currentUserId = localStorage.getItem('current_user_id') || 'user';
+      
+      // Convert friend requests to message format
+      friendRequests.forEach((req: any) => {
+        localMessages.push({
+          id: `fr-${req.timestamp}`,
+          senderId: req.from,  // Add senderId field for accept/decline buttons
+          sender: {
+            id: req.from,
+            fullName: req.fromName,
+            profilePicture: null
           },
-        }
-      );
+          recipient: {
+            id: req.to,
+            fullName: req.toName
+          },
+          content: req.message,
+          type: 'friend_request',
+          timestamp: req.timestamp,
+          isRead: req.read || false,
+          status: req.status || 'pending',
+          eventId: req.eventId
+        });
+      });
+      
+      // Get stored messages from localStorage
+      const storedMessages = JSON.parse(localStorage.getItem('user_messages') || '[]');
+      localMessages.push(...storedMessages);
+      
+      // Try to fetch from backend as well
+      const token = localStorage.getItem('bersemuka_token');
+      if (token) {
+        try {
+          const response = await fetch(
+            `${window.location.hostname === 'localhost' ? '' : 'https://api.berse.app'}/api/v1/messages/inbox`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setMessages(data.data.messages || []);
-          setUnreadCount(data.data.unreadCount || 0);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data.messages) {
+              // Merge backend messages with local messages
+              const backendMessages = data.data.messages || [];
+              const allMessages = [...localMessages, ...backendMessages];
+              
+              // Remove duplicates based on ID
+              const uniqueMessages = allMessages.filter((msg, index, self) =>
+                index === self.findIndex((m) => m.id === msg.id)
+              );
+              
+              // Sort by timestamp (most recent first)
+              uniqueMessages.sort((a, b) => 
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+              );
+              
+              setMessages(uniqueMessages);
+              
+              // Calculate unread count
+              const unread = uniqueMessages.filter(m => !m.isRead).length;
+              setUnreadCount(unread);
+              
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Backend fetch failed, using local messages:', error);
         }
       }
+      
+      // If backend fails or no token, just use local messages
+      localMessages.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      setMessages(localMessages);
+      setUnreadCount(localMessages.filter(m => !m.isRead).length);
+      
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
@@ -158,12 +224,19 @@ export const MessagesScreen: React.FC = () => {
                         {message.sender?.fullName || message.sender?.username || 'Unknown'}
                       </SenderName>
                       <MessageTimestamp>
-                        {new Date(message.createdAt).toLocaleDateString()}
+                        {new Date(message.timestamp || message.createdAt).toLocaleDateString()}
                       </MessageTimestamp>
                     </SenderDetails>
                   </SenderInfo>
                   {!message.isRead && <UnreadDot />}
                 </MessageHeader>
+                
+                {message.type === 'friend_request' && (
+                  <FriendRequestBadge>
+                    🤝 Friend Request
+                    {message.eventId && ' • Met at an event'}
+                  </FriendRequestBadge>
+                )}
                 
                 <MessageContent 
                   onClick={() => !message.isRead && markAsRead(message.id)}
@@ -171,7 +244,7 @@ export const MessagesScreen: React.FC = () => {
                   {message.content}
                 </MessageContent>
                 
-                {message.content.includes('friend request') && (
+                {message.type === 'friend_request' && message.status === 'pending' && (
                   <MessageActions>
                     <AcceptButton 
                       onClick={() => handleAcceptFriendRequest(message.senderId)}
@@ -493,4 +566,17 @@ const DeclineButton = styled.button`
   &:hover {
     background: #e0e0e0;
   }
+`;
+
+const FriendRequestBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: linear-gradient(135deg, #2fce98, #4A90A4);
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
 `;
