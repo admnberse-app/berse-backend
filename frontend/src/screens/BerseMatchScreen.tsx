@@ -9,7 +9,8 @@ import { MainNav } from '../components/MainNav/index';
 import { useAuth } from '../contexts/AuthContext';
 import { checkAdminAccess } from '../utils/adminUtils';
 import { generateBerseMukhaEvents, generatePersonAttendance } from '../data/bersemukhaEvents';
-import { JoinCommunityModal, FriendRequestModal, ShareModal } from '../components/CommunityModals';
+import { JoinCommunityModal, FriendRequestModal } from '../components/CommunityModals';
+import { shareProfileWithImage } from '../utils/shareUtils';
 
 // Interface for travel history
 interface TravelEntry {
@@ -2369,9 +2370,7 @@ export const BerseMatchScreen: React.FC = () => {
   // State for modals
   const [showFriendRequestModal, setShowFriendRequestModal] = useState(false);
   const [showJoinCommunityModal, setShowJoinCommunityModal] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState<ProfileCardData | null>(null);
-  const [shareData, setShareData] = useState<{ title: string; text: string; url?: string } | null>(null);
 
   // Tab navigation function
   const navigateTab = (direction: 'prev' | 'next') => {
@@ -2873,17 +2872,14 @@ export const BerseMatchScreen: React.FC = () => {
     }
   };
 
-  const handleShareProfile = (connection: ProfileCardData) => {
-    const shareText = connection.type === 'community' 
-      ? `🏘️ Join ${connection.name} on BerseMuka!\n\n${connection.description || connection.bio}\n\n👥 ${connection.memberCount} members\n📅 ${connection.eventCount} events\n📍 ${connection.location}\n\nDiscover amazing communities on BerseMuka!`
-      : `🤝 Check out ${connection.name} on BerseMuka!\n\n👤 ${connection.age} years old • ${connection.profession}\n📍 ${connection.location}\n\n"${connection.bio}"\n\n💼 Interests: ${connection.tags.slice(0, 3).join(', ')}\n${(connection as any).personalityType ? `🧠 ${(connection as any).personalityType}` : ''}\n${(connection as any).languages ? `🗣️ ${(connection as any).languages}` : ''}\n\nConnect with amazing people on BerseMuka app!`;
-    
-    setShareData({
-      title: connection.name,
-      text: shareText,
-      url: window.location.href
+  const handleShareProfile = async (connection: ProfileCardData) => {
+    // Use the new image sharing feature
+    await shareProfileWithImage({
+      ...connection,
+      fullName: connection.name,
+      interests: connection.tags,
+      avatarColor: connection.avatarColor
     });
-    setShowShareModal(true);
   };
   
   const handleSendFriendRequest = async (eventId: string, note: string) => {
@@ -3227,20 +3223,6 @@ export const BerseMatchScreen: React.FC = () => {
         {activeTab === 'discover' && (
           <>
             {/* Results counter */}
-            {isSearchActive && (
-              <div style={{ 
-                padding: '8px 16px', 
-                fontSize: '11px', 
-                color: '#666',
-                textAlign: 'center',
-                fontStyle: 'italic'
-              }}>
-                {getFilteredConnections().length} {connectionMode === 'all' ? 'profiles' : connectionMode} found
-                {activeFilters.country && activeFilters.country !== 'All' && activeFilters.country !== '' && 
-                  ` in ${activeFilters.city && activeFilters.city !== 'All Cities' ? `${activeFilters.city}, ` : ''}${activeFilters.country}`
-                }
-              </div>
-            )}
 
             {getFilteredConnections().length === 0 ? (
               <div style={{
@@ -5010,11 +4992,6 @@ export const BerseMatchScreen: React.FC = () => {
         onSubmit={handleSendFriendRequest}
       />
 
-      <ShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        shareData={shareData}
-      />
 
       <MainNav 
         activeTab="match"

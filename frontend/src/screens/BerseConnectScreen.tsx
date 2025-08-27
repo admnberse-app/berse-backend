@@ -10,8 +10,8 @@ import { googleCalendarService } from '../services/googleCalendar';
 import { useAuth } from '../contexts/AuthContext';
 import { UnifiedParticipants } from '../components/UnifiedParticipants';
 import { EditEventModal } from '../components/EditEventModal';
-import { ShareModal } from '../components/CommunityModals';
 import { EventPaymentModal } from '../components/EventPaymentModal';
+import { shareEventWithImage } from '../utils/shareUtils';
 
 // Event Interface
 interface Event {
@@ -1028,8 +1028,6 @@ export const BerseConnectScreen: React.FC = () => {
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [showEditEventModal, setShowEditEventModal] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareData, setShareData] = useState<{ title: string; text: string; url?: string } | null>(null);
 
   // Tab navigation
   const navigateTab = (direction: 'prev' | 'next') => {
@@ -1764,18 +1762,12 @@ export const BerseConnectScreen: React.FC = () => {
     return userEvents.some((e: Event) => e.id === eventId);
   };
 
-  const handleShareEvent = (event?: Event) => {
+  const handleShareEvent = async (event?: Event) => {
     const eventToShare = event || selectedEvent;
     if (!eventToShare) return;
 
-    const shareText = `🎉 Join me at ${eventToShare.title}!\n\n📅 ${eventToShare.date} at ${eventToShare.time}\n📍 ${eventToShare.location}${eventToShare.venue ? ` • ${eventToShare.venue}` : ''}\n\n${eventToShare.description}\n\n👥 ${eventToShare.attendees}/${eventToShare.maxAttendees} people attending\n${eventToShare.price === 0 ? '🎟️ FREE EVENT' : `🎟️ ${eventToShare.currency} ${eventToShare.price}`}\n\nDownload BerseMuka app to join events and meet amazing people!`;
-    
-    setShareData({
-      title: eventToShare.title,
-      text: shareText,
-      url: window.location.href
-    });
-    setShowShareModal(true);
+    // Use the new image sharing feature
+    await shareEventWithImage(eventToShare);
   };
 
   const formatDate = (dateStr: string) => {
@@ -2540,12 +2532,6 @@ export const BerseConnectScreen: React.FC = () => {
         onDelete={handleDeleteEvent}
       />
 
-      {/* Share Modal */}
-      <ShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        shareData={shareData}
-      />
     </Container>
   );
 };
