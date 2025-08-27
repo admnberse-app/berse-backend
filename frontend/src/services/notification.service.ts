@@ -1,119 +1,236 @@
-import { Notification, ApiResponse } from '../types';
-import { authService } from './auth.service';
-import { getApiBaseUrl } from '../config/services.config';
-
-const API_BASE_URL = getApiBaseUrl();
-
 class NotificationService {
-  async getNotifications(): Promise<Notification[]> {
-    try {
-      const token = authService.getToken();
-      if (!token) {
-        throw new Error('No authentication token');
+  private permission: NotificationPermission = 'default';
+  
+  constructor() {
+    this.init();
+  }
+
+  /**
+   * Initialize notification service and request permission
+   */
+  async init() {
+    if (!('Notification' in window)) {
+      console.log('This browser does not support notifications');
+      return;
+    }
+
+    // Check current permission status
+    this.permission = Notification.permission;
+
+    // Request permission if not already granted or denied
+    if (this.permission === 'default') {
+      try {
+        this.permission = await Notification.requestPermission();
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
       }
-
-      const response = await fetch(`${API_BASE_URL}/notifications`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
-      }
-
-      const data: ApiResponse<Notification[]> = await response.json();
-      return data.success ? data.data : [];
-    } catch (error) {
-      console.error('Get notifications error:', error);
-      return this.getMockNotifications();
     }
   }
 
-  async markAsRead(notificationId: string): Promise<boolean> {
+  /**
+   * Request notification permission explicitly
+   */
+  async requestPermission(): Promise<boolean> {
+    if (!('Notification' in window)) {
+      return false;
+    }
+
     try {
-      const token = authService.getToken();
-      if (!token) {
-        throw new Error('No authentication token');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to mark notification as read');
-      }
-
-      const data: ApiResponse<boolean> = await response.json();
-      return data.success;
+      this.permission = await Notification.requestPermission();
+      return this.permission === 'granted';
     } catch (error) {
-      console.error('Mark notification as read error:', error);
+      console.error('Error requesting notification permission:', error);
       return false;
     }
   }
 
-  async markAllAsRead(): Promise<boolean> {
-    try {
-      const token = authService.getToken();
-      if (!token) {
-        throw new Error('No authentication token');
-      }
+  /**
+   * Check if notifications are enabled
+   */
+  isEnabled(): boolean {
+    return 'Notification' in window && this.permission === 'granted';
+  }
 
-      const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+  /**
+   * Show a notification
+   */
+  async showNotification(title: string, options?: NotificationOptions): Promise<void> {
+    if (!this.isEnabled()) {
+      console.log('Notifications not enabled');
+      return;
+    }
+
+    try {
+      const notification = new Notification(title, {
+        icon: '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+        ...options
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to mark all notifications as read');
-      }
+      // Auto close after 5 seconds
+      setTimeout(() => notification.close(), 5000);
 
-      const data: ApiResponse<boolean> = await response.json();
-      return data.success;
+      // Handle notification click
+      notification.onclick = (event) => {
+        event.preventDefault();
+        window.focus();
+        notification.close();
+        
+        // Handle specific actions based on notification data
+        if (options?.data?.action === 'open-messages') {
+          window.location.href = '/messages';
+        } else if (options?.data?.action === 'open-notifications') {
+          window.location.href = '/notifications';
+        } else if (options?.data?.action === 'open-event') {
+          window.location.href = `/event/${options.data.eventId}`;
+        }
+      };
     } catch (error) {
-      console.error('Mark all notifications as read error:', error);
-      return false;
+      console.error('Error showing notification:', error);
     }
   }
 
-  private getMockNotifications(): Notification[] {
-    return [
-      {
-        id: '1',
-        userId: '1',
-        title: 'New Match Found!',
-        message: 'You have a new potential connection waiting for you.',
-        type: 'success',
-        isRead: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-      },
-      {
-        id: '2',
-        userId: '1',
-        title: 'Event Reminder',
-        message: 'Your cafe meetup starts in 1 hour at Mesra Cafe KLCC.',
-        type: 'info',
-        isRead: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-      },
-      {
-        id: '3',
-        userId: '1',
-        title: 'Points Earned!',
-        message: 'You earned 5 points for attending the coffee meetup.',
-        type: 'success',
-        isRead: true,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-      },
-    ];
+  /**
+   * Show friend request notification
+   */
+  showFriendRequest(fromName: string, message?: string) {
+    this.showNotification('New Friend Request! 🤝', {
+      body: `${fromName} wants to connect with you${message ? ': ' + message : ''}`,
+      tag: 'friend-request',
+      requireInteraction: true,
+      data: { action: 'open-notifications' }
+    });
+  }
+
+  /**
+   * Show message notification
+   */
+  showMessage(fromName: string, message: string) {
+    this.showNotification(`Message from ${fromName} 💬`, {
+      body: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+      tag: 'message',
+      data: { action: 'open-messages' }
+    });
+  }
+
+  /**
+   * Show event reminder notification
+   */
+  showEventReminder(eventTitle: string, timeUntil: string) {
+    this.showNotification('Event Reminder! ⏰', {
+      body: `${eventTitle} starts ${timeUntil}`,
+      tag: 'event-reminder',
+      requireInteraction: true
+    });
+  }
+
+  /**
+   * Show community notification
+   */
+  showCommunityUpdate(communityName: string, update: string) {
+    this.showNotification(`${communityName} 👥`, {
+      body: update,
+      tag: 'community-update'
+    });
+  }
+
+  /**
+   * Store notification in local storage
+   */
+  storeNotification(notification: any) {
+    const notifications = this.getStoredNotifications();
+    notifications.unshift({
+      ...notification,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      read: false
+    });
+    
+    // Keep only last 100 notifications
+    if (notifications.length > 100) {
+      notifications.splice(100);
+    }
+    
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    
+    // Update unread count
+    this.updateUnreadCount();
+  }
+
+  /**
+   * Get stored notifications
+   */
+  getStoredNotifications(): any[] {
+    try {
+      return JSON.parse(localStorage.getItem('notifications') || '[]');
+    } catch (error) {
+      console.error('Error reading notifications:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mark notification as read
+   */
+  markAsRead(notificationId: string) {
+    const notifications = this.getStoredNotifications();
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification) {
+      notification.read = true;
+      localStorage.setItem('notifications', JSON.stringify(notifications));
+      this.updateUnreadCount();
+    }
+  }
+
+  /**
+   * Mark all notifications as read
+   */
+  markAllAsRead() {
+    const notifications = this.getStoredNotifications();
+    notifications.forEach(n => n.read = true);
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    this.updateUnreadCount();
+  }
+
+  /**
+   * Get unread count
+   */
+  getUnreadCount(): number {
+    const notifications = this.getStoredNotifications();
+    return notifications.filter(n => !n.read).length;
+  }
+
+  /**
+   * Update unread count in UI
+   */
+  private updateUnreadCount() {
+    const count = this.getUnreadCount();
+    // Dispatch custom event for UI updates
+    window.dispatchEvent(new CustomEvent('notification-count-update', { 
+      detail: { count } 
+    }));
+  }
+
+  /**
+   * Clear all notifications
+   */
+  clearAll() {
+    localStorage.removeItem('notifications');
+    this.updateUnreadCount();
+  }
+
+  /**
+   * Schedule a notification for later
+   */
+  scheduleNotification(title: string, options: NotificationOptions & { delay: number }) {
+    const { delay, ...notificationOptions } = options;
+    
+    setTimeout(() => {
+      this.showNotification(title, notificationOptions);
+    }, delay);
   }
 }
 
+// Export singleton instance
 export const notificationService = new NotificationService();
 export default notificationService;

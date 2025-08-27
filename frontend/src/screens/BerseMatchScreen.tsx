@@ -4978,7 +4978,7 @@ export const BerseMatchScreen: React.FC = () => {
           description: selectedConnection.description || selectedConnection.bio,
           category: selectedConnection.category
         } : null}
-        onSubmit={handleJoinCommunity}
+        onJoin={handleJoinCommunity}
       />
 
       <FriendRequestModal
@@ -4989,7 +4989,7 @@ export const BerseMatchScreen: React.FC = () => {
           name: selectedConnection.name,
           bio: selectedConnection.bio
         } : null}
-        onSubmit={handleSendFriendRequest}
+        onSend={handleSendFriendRequest}
       />
 
 
