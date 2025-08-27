@@ -160,6 +160,7 @@ function App() {
               <Route path="/login" element={<LoginScreen />} />
               <Route path="/register" element={<RegisterScreen />} />
               <Route path="/profile/:userId" element={<PublicProfileScreen />} />
+              <Route path="/event/:eventId" element={<BerseConnectScreen />} />
               
               {/* Protected routes */}
               <Route

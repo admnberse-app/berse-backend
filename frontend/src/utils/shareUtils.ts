@@ -148,7 +148,7 @@ export const createEventCardImage = async (event: any): Promise<Blob | null> => 
             ">${event.price === 0 ? 'FREE' : `${event.currency || 'RM'} ${event.price}`}</div>
           </div>
           
-          <!-- App branding -->
+          <!-- App branding and link -->
           <div style="
             margin-top: 20px;
             padding-top: 16px;
@@ -162,9 +162,29 @@ export const createEventCardImage = async (event: any): Promise<Blob | null> => 
               margin-bottom: 4px;
             ">BerseMuka</div>
             <div style="
-              font-size: 11px;
+              background: #f0f9f6;
+              padding: 8px 12px;
+              border-radius: 8px;
+              margin: 8px 0;
+            ">
+              <div style="
+                font-size: 12px;
+                color: #2fce98;
+                font-weight: 600;
+                margin-bottom: 4px;
+              ">🔗 Join this event:</div>
+              <div style="
+                font-size: 11px;
+                color: #4A90A4;
+                word-break: break-all;
+                font-family: monospace;
+              ">berse.app/event/${event.id}</div>
+            </div>
+            <div style="
+              font-size: 10px;
               color: #999;
-            ">Join this event on Berse App</div>
+              margin-top: 4px;
+            ">Scan or visit link to register</div>
           </div>
         </div>
       </div>
@@ -174,7 +194,7 @@ export const createEventCardImage = async (event: any): Promise<Blob | null> => 
 
     // Generate the image
     const canvas = await html2canvas(container, {
-      backgroundColor: '#ffffff',
+      background: '#ffffff',
       scale: 2, // Higher quality
       logging: false,
       useCORS: true, // Allow cross-origin images
@@ -331,9 +351,24 @@ export const createProfileCardImage = async (profile: any): Promise<Blob | null>
               margin-bottom: 4px;
             ">BerseMuka</div>
             <div style="
-              font-size: 11px;
-              color: #999;
-            ">Connect with ${profile.firstName || 'me'} on Berse App</div>
+              background: #f0f9f6;
+              padding: 8px 12px;
+              border-radius: 8px;
+              margin: 8px 0;
+            ">
+              <div style="
+                font-size: 12px;
+                color: #2fce98;
+                font-weight: 600;
+                margin-bottom: 4px;
+              ">🔗 Connect with me:</div>
+              <div style="
+                font-size: 11px;
+                color: #4A90A4;
+                word-break: break-all;
+                font-family: monospace;
+              ">berse.app/profile/${profile.id}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -342,7 +377,7 @@ export const createProfileCardImage = async (profile: any): Promise<Blob | null>
     document.body.appendChild(container);
 
     const canvas = await html2canvas(container, {
-      backgroundColor: '#ffffff',
+      background: '#ffffff',
       scale: 2,
       logging: false,
       useCORS: true,
@@ -375,11 +410,15 @@ export const shareEventWithImage = async (event: any) => {
 
     const imageFile = new File([imageBlob], `event-${event.id}.png`, { type: 'image/png' });
     
-    // Prepare share data
+    // Generate event URL
+    const eventUrl = `https://berse.app/event/${event.id}`;
+    
+    // Prepare share data with link
     const shareData: any = {
       title: event.title,
-      text: `🎉 ${event.title}\n📅 ${event.date} at ${formatTime12Hour(event.time)}\n📍 ${event.location}\n\nJoin this event on BerseMuka!`,
-      files: [imageFile]
+      text: `🎉 ${event.title}\n📅 ${event.date} at ${formatTime12Hour(event.time)}\n📍 ${event.location}\n\n🔗 Join here: ${eventUrl}\n\nRegister now on BerseMuka!`,
+      files: [imageFile],
+      url: eventUrl
     };
 
     // Check if Web Share API is available and supports file sharing
@@ -416,10 +455,13 @@ export const shareProfileWithImage = async (profile: any) => {
 
     const imageFile = new File([imageBlob], `profile-${profile.id}.png`, { type: 'image/png' });
     
+    const profileUrl = `https://berse.app/profile/${profile.id}`;
+    
     const shareData: any = {
       title: `Connect with ${profile.fullName || profile.name}`,
-      text: `👋 Meet ${profile.fullName || profile.name} on BerseMuka!\n${profile.bio || ''}\n\nConnect now on the Berse App!`,
-      files: [imageFile]
+      text: `👋 Meet ${profile.fullName || profile.name} on BerseMuka!\n${profile.bio || ''}\n\n🔗 Connect here: ${profileUrl}\n\nJoin the Berse community!`,
+      files: [imageFile],
+      url: profileUrl
     };
 
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
@@ -445,12 +487,14 @@ export const shareProfileWithImage = async (profile: any) => {
 
 // Fallback text-only sharing
 const shareEventText = (event: any) => {
-  const shareText = `🎉 ${event.title}\n📅 ${event.date} at ${formatTime12Hour(event.time)}\n📍 ${event.location}\n💰 ${event.price === 0 ? 'FREE' : `${event.currency || 'RM'} ${event.price}`}\n\nJoin this event on BerseMuka!\nhttps://berse.app`;
+  const eventUrl = `https://berse.app/event/${event.id}`;
+  const shareText = `🎉 ${event.title}\n📅 ${event.date} at ${formatTime12Hour(event.time)}\n📍 ${event.location}\n💰 ${event.price === 0 ? 'FREE' : `${event.currency || 'RM'} ${event.price}`}\n\n🔗 Join here: ${eventUrl}\n\nRegister on BerseMuka!`;
   
   if (navigator.share) {
     navigator.share({
       title: event.title,
-      text: shareText
+      text: shareText,
+      url: eventUrl
     }).catch(() => {
       copyToClipboard(shareText);
     });
@@ -460,12 +504,14 @@ const shareEventText = (event: any) => {
 };
 
 const shareProfileText = (profile: any) => {
-  const shareText = `👋 Meet ${profile.fullName || profile.name} on BerseMuka!\n${profile.bio || ''}\n\nConnect now: https://berse.app`;
+  const profileUrl = `https://berse.app/profile/${profile.id}`;
+  const shareText = `👋 Meet ${profile.fullName || profile.name} on BerseMuka!\n${profile.bio || ''}\n\n🔗 Connect here: ${profileUrl}`;
   
   if (navigator.share) {
     navigator.share({
       title: `Connect with ${profile.fullName || profile.name}`,
-      text: shareText
+      text: shareText,
+      url: profileUrl
     }).catch(() => {
       copyToClipboard(shareText);
     });

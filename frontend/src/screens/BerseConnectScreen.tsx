@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { StatusBar } from '../components/StatusBar/StatusBar';
 import { CompactHeader } from '../components/CompactHeader/CompactHeader';
@@ -1014,6 +1014,7 @@ const formatTimeRange = (startTime: string, endTime?: string): string => {
 
 export const BerseConnectScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { eventId } = useParams<{ eventId: string }>();
   const { user, updateUser } = useAuth();
   const [showProfileSidebar, setShowProfileSidebar] = useState(false);
   const [eventMode, setEventMode] = useState<'all' | 'social' | 'sports' | 'volunteer' | 'donate' | 'trips'>('all');
@@ -1309,6 +1310,22 @@ export const BerseConnectScreen: React.FC = () => {
     // Remove auto-refresh to prevent delays
     // Users can manually refresh if needed
   }, [user]); // Re-run when user changes to sync their events
+
+  // Handle direct event URL access (e.g., /event/:eventId)
+  useEffect(() => {
+    if (eventId && allEvents.length > 0) {
+      // Find the event with the matching ID
+      const event = allEvents.find(e => e.id === eventId);
+      if (event) {
+        // Auto-open the event detail modal
+        setSelectedEvent(event);
+        setShowEventDetail(true);
+        console.log(`📎 Opening event from direct link: ${event.title}`);
+      } else {
+        console.log(`⚠️ Event with ID ${eventId} not found`);
+      }
+    }
+  }, [eventId, allEvents]);
 
   const getFilteredEvents = () => {
     let filtered = [...allEvents];
