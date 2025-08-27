@@ -13,6 +13,7 @@ import { EditEventModal } from '../components/EditEventModal';
 import { EventPaymentModal } from '../components/EventPaymentModal';
 import { shareEventWithImage } from '../utils/shareUtils';
 import { syncLocalEventsToBackend, cleanupOldEvents } from '../utils/eventSync';
+import { eventsService } from '../services/events.service';
 
 // Event Interface
 interface Event {
@@ -1222,41 +1223,18 @@ export const BerseConnectScreen: React.FC = () => {
     const loadEvents = async () => {
       setIsLoadingEvents(true);
       
-      // First, try to sync any local-only events to backend
-      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
-      if (token && user?.email) {
-        await syncLocalEventsToBackend(user.email, token);
-      }
-      
-      // Clean up old cached events
-      cleanupOldEvents();
-      
-      const baseEvents = [];
-      
-      // Load events from database (this should include ALL events, including user's created ones)
-      const dbEvents = await loadEventsFromDatabase();
-      
-      // Get local events - show ALL events to ALL users
-      const localEvents = getUserEvents();
-      
-      // Include ALL local events that aren't already in database
-      // This ensures events created on any device are visible to everyone
-      const relevantLocalEvents = localEvents.filter((event: any) => {
-        // Check if this event is already in the database
-        const alreadyInDb = dbEvents.find(e => e.id === event.id);
-        return !alreadyInDb; // Include if not in database
-      });
-      
-      // Merge database events with relevant local events (avoiding duplicates)
-      const allFetchedEvents = [...dbEvents];
-      relevantLocalEvents.forEach((localEvent: Event) => {
-        if (!allFetchedEvents.find(e => e.id === localEvent.id)) {
-          allFetchedEvents.push(localEvent);
-        }
-      });
+      try {
+        // Sync any pending events first
+        await eventsService.syncEvents();
+        
+        // Clean up old cached events
+        cleanupOldEvents();
+        
+        // Load all events from backend and local storage (merged)
+        const allFetchedEvents = await eventsService.getAllEvents();
       
       // Load committed profiles for all events
-      const eventsWithProfiles = [...baseEvents, ...allFetchedEvents].map(event => {
+      const eventsWithProfiles = allFetchedEvents.map(event => {
       const eventJoinsKey = `event_joins_${event.id}`;
       const joins = JSON.parse(localStorage.getItem(eventJoinsKey) || '[]');
       
@@ -1290,10 +1268,19 @@ export const BerseConnectScreen: React.FC = () => {
     });
     
       setAllEvents(eventsWithProfiles);
-      setIsLoadingEvents(false);
       
       // Cache events for faster next load
       localStorage.setItem('cached_events', JSON.stringify(eventsWithProfiles));
+      } catch (error) {
+        console.error('Error loading events:', error);
+        // Load from cache if available
+        const cachedEvents = localStorage.getItem('cached_events');
+        if (cachedEvents) {
+          setAllEvents(JSON.parse(cachedEvents));
+        }
+      } finally {
+        setIsLoadingEvents(false);
+      }
     };
     
     // Load events initially

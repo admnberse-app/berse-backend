@@ -207,7 +207,15 @@ export const MessagesScreen: React.FC = () => {
             <LoadingState>Loading messages...</LoadingState>
           ) : messages.length > 0 ? (
             messages.map((message) => (
-              <MessageCard key={message.id} $unread={!message.isRead}>
+              <MessageCard 
+                key={message.id} 
+                $unread={!message.isRead}
+                onClick={() => {
+                  // Navigate to chat screen with sender ID
+                  if (!message.isRead) markAsRead(message.id);
+                  navigate(`/chat/${message.senderId || message.sender?.id}`);
+                }}
+              >
                 <MessageHeader>
                   <SenderInfo>
                     <SenderAvatar>

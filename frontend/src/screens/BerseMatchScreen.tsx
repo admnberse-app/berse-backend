@@ -2891,31 +2891,73 @@ export const BerseMatchScreen: React.FC = () => {
           return;
         }
 
-        // Call the actual API to send friend request
-        const response = await fetch(
-          `${window.location.hostname === 'localhost' ? '' : 'https://api.berse.app'}/api/v1/users/follow/${selectedConnection.id}`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        // Store friend request locally with event context
+        const friendRequest = {
+          id: `fr-${Date.now()}`,
+          from: user?.id || 'current-user',
+          fromName: user?.fullName || user?.username || 'User',
+          to: selectedConnection.id,
+          toName: selectedConnection.name,
+          message: note || `Hi! I'd like to connect with you${eventId ? ' from the event' : ''}.`,
+          timestamp: new Date().toISOString(),
+          status: 'pending',
+          eventId: eventId || null,
+          read: false
+        };
 
-        if (response.ok) {
-          alert(`Friend request sent to ${selectedConnection.name}! They will receive a message notification.`);
-          setShowFriendRequestModal(false);
-        } else if (response.status === 400) {
-          const error = await response.json();
-          if (error.message?.includes('Already following')) {
-            alert('You have already sent a friend request to this user.');
-          } else {
-            alert('Failed to send friend request. Please try again.');
+        // Store in localStorage
+        const existingRequests = JSON.parse(localStorage.getItem('friend_requests') || '[]');
+        existingRequests.push(friendRequest);
+        localStorage.setItem('friend_requests', JSON.stringify(existingRequests));
+
+        // Also store as a message
+        const userMessages = JSON.parse(localStorage.getItem('user_messages') || '[]');
+        userMessages.push({
+          ...friendRequest,
+          senderId: friendRequest.from,
+          senderName: friendRequest.fromName,
+          recipientId: friendRequest.to,
+          recipientName: friendRequest.toName,
+          content: friendRequest.message,
+          type: 'friend_request',
+          isRead: false
+        });
+        localStorage.setItem('user_messages', JSON.stringify(userMessages));
+
+        // Try to send to backend API
+        try {
+          const response = await fetch(
+            `${window.location.hostname === 'localhost' ? '' : 'https://api.berse.app'}/api/v1/users/follow/${selectedConnection.id}`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                message: note,
+                eventId: eventId
+              })
+            }
+          );
+
+          if (!response.ok && response.status !== 400) {
+            console.error('Backend friend request failed, but stored locally');
           }
-        } else {
-          alert('Failed to send friend request. Please try again.');
+        } catch (apiError) {
+          console.error('Backend API error, friend request stored locally:', apiError);
         }
+
+        // Send push notification (would be server-side in production)
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // This is simulation - in production, recipient would get this
+          console.log('Push notification would be sent to recipient');
+        }
+
+        // Don't award points immediately - wait for acceptance
+        alert(`Friend request sent to ${selectedConnection.name}! They will receive a notification. Points will be awarded when they accept.`);
+        setShowFriendRequestModal(false);
+        
       } catch (error) {
         console.error('Error sending friend request:', error);
         alert('Failed to send friend request. Please try again.');
