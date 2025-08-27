@@ -62,6 +62,7 @@ import { CommunityManagementScreen } from './screens/CommunityManagementScreen';
 import { EditCommunityScreen } from './screens/EditCommunityScreen';
 import { MyEventsScreen } from './screens/MyEventsScreen';
 import { EventManagementScreen } from './screens/EventManagementScreen';
+import { AdminRegistrationsScreen } from './screens/AdminRegistrationsScreen';
 import { deepLinkHandler } from './utils/deepLinkHandler';
 import { useAuth } from './contexts/AuthContext';
 
@@ -205,6 +206,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EventManagementScreen />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/registrations"
+                element={
+                  <ProtectedRoute>
+                    <AdminRegistrationsScreen />
                   </ProtectedRoute>
                 }
               />
