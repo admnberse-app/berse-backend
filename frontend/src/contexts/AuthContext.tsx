@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import authService from '../services/auth.service';
 import mockAuthService from '../services/mockAuth.service';
+import { profileService } from '../services/profile.service';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -206,6 +207,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (response.data.refreshToken) {
             localStorage.setItem('bersemuka_refresh_token', response.data.refreshToken);
           }
+          
+          // Sync profile to backend after successful registration
+          setTimeout(async () => {
+            try {
+              await profileService.saveProfile(fullUserData);
+              console.log('Profile synced to backend after registration');
+            } catch (error) {
+              console.warn('Could not sync profile to backend:', error);
+            }
+          }, 1000);
         }
         return;
       }

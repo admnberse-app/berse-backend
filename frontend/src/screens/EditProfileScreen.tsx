@@ -8,6 +8,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config/services.config';
 import { ImageCropper } from '../components/ImageCropper';
 import { makeAuthenticatedRequest, getAuthToken, clearAuthTokens } from '../utils/authUtils';
+import { profileService } from '../services/profile.service';
 import { TravelLogbookModal } from '../components/TravelLogbookModal';
 import { SearchableCommunities } from '../components/SearchableCommunities';
 import { EventsAttended } from '../components/EventsAttended';
@@ -521,32 +522,34 @@ export const EditProfileScreen: React.FC = () => {
   // Save profile
   const handleSave = async () => {
     try {
-      // Prepare complete profile data
-      const profileData = {
-        ...formData,
-        profilePicture: profileImage,
-        topInterests: formData.interests.filter(i => i !== ''),
-        dateOfBirth: formData.dateOfBirth || user?.dateOfBirth,
-      };
+      // Check authentication first
+      const token = getAuthToken();
+      if (!token) {
+        alert('Please login to save your profile.');
+        navigate('/login');
+        return;
+      }
 
-      console.log('Saving profile data:', profileData);
-      
-      // Build complete user object with all fields
-      const updatedUser = {
-        ...user,
-        ...profileData,
+      // Prepare complete profile data for backend
+      const profileData = {
         username: formData.username,
-        fullName: formData.fullName,
+        fullName: formData.fullName || formData.username,
         phoneNumber: formData.phone,
-        nationality: formData.nationality,
+        profilePicture: profileImage,
+        shortBio: formData.shortBio,
+        bio: formData.fullBio,
         currentLocation: formData.currentLocation,
         city: formData.currentLocation?.split(',')[0]?.trim() || '',
+        originallyFrom: formData.originallyFrom,
+        nationality: formData.nationality,
         gender: formData.gender,
-        dateOfBirth: formData.dateOfBirth,
         age: formData.age,
+        dateOfBirth: formData.dateOfBirth,
         profession: formData.profession || formData.shortBio,
-        bio: formData.fullBio,
         interests: formData.interests.filter(i => i !== ''),
+        topInterests: formData.interests.filter(i => i !== ''),
+        languages: formData.languages,
+        personalityType: formData.personalityType,
         instagramHandle: formData.instagram,
         linkedinHandle: formData.linkedin,
         website: formData.website,
@@ -554,64 +557,124 @@ export const EditProfileScreen: React.FC = () => {
         communities: formData.communities,
         eventsAttended: formData.eventsAttended,
         travelHistory: formData.travelHistory,
-        languages: formData.languages,
-        originallyFrom: formData.originallyFrom,
-        personalityType: formData.personalityType
+        email: formData.email || user?.email,
+        role: formData.role
       };
 
-      // Update auth context immediately with the full data
-      updateUser(updatedUser);
+      console.log('Saving profile to backend:', profileData);
       
-      // Store in localStorage for persistence
-      localStorage.setItem('bersemuka_user', JSON.stringify(updatedUser));
-      localStorage.setItem('userProfile', JSON.stringify(profileData));
+      // Save to backend API first (primary storage) using profile service
+      const response = await profileService.saveProfile(profileData);
       
-      // Try to save to backend if we have a token
-      const token = getAuthToken();
-      if (token) {
-        try {
-          // Attempt backend save but don't fail the whole operation
-          const response = await makeAuthenticatedRequest(
-            'PUT',
-            '/api/v1/users/profile',
-            profileData
-          );
-          console.log('Profile saved to backend:', response.data);
-          
-          // If backend returns updated data, use it
-          if (response.data.success && response.data.data) {
-            const backendUser = { ...updatedUser, ...response.data.data };
-            updateUser(backendUser);
-            localStorage.setItem('bersemuka_user', JSON.stringify(backendUser));
-          }
-        } catch (apiError) {
-          // Backend save failed but local save succeeded
-          console.warn('Could not save to backend, but local save successful:', apiError);
-        }
+      console.log('Backend response:', response.data);
+      
+      if (response.data.success) {
+        // Update local state with backend response
+        const savedUser = response.data.data || profileData;
+        const updatedUser = {
+          ...user,
+          ...savedUser
+        };
+        
+        // Update auth context
+        updateUser(updatedUser);
+        
+        // Update localStorage as cache
+        localStorage.setItem('bersemuka_user', JSON.stringify(updatedUser));
+        localStorage.setItem('userProfile', JSON.stringify(savedUser));
+        
+        alert('✅ Profile saved successfully!');
+        navigate('/profile');
+      } else {
+        throw new Error(response.data.message || 'Failed to save profile');
       }
-      
-      alert('Profile updated successfully!');
-      navigate('/profile');
     } catch (error: any) {
       console.error('Failed to save profile:', error);
-      alert('Failed to save profile. Please try again.');
+      
+      // Handle specific error cases
+      if (error.message?.includes('Session expired') || error.message?.includes('Please login')) {
+        clearAuthTokens();
+        alert('Your session has expired. Please login again.');
+        navigate('/login');
+      } else if (error.response?.status === 401) {
+        clearAuthTokens();
+        alert('Authentication failed. Please login again.');
+        navigate('/login');
+      } else if (error.response?.status === 400) {
+        alert('Invalid profile data. Please check your inputs.');
+      } else if (error.response?.status === 500) {
+        alert('Server error. Please try again later.');
+      } else {
+        alert(`Failed to save profile: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
-  // Load saved profile data
+  // Load saved profile data from backend or localStorage
   useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
+    const loadProfile = async () => {
       try {
-        const parsed = JSON.parse(savedProfile);
-        setFormData(prev => ({ ...prev, ...parsed }));
-        if (parsed.profilePicture) {
-          setProfileImage(parsed.profilePicture);
+        // Try to load from backend first
+        const token = getAuthToken();
+        if (token) {
+          try {
+            const response = await profileService.getProfile();
+            if (response.data.success && response.data.data) {
+              const profileData = response.data.data;
+              console.log('Loaded profile from backend:', profileData);
+              
+              // Update form data with backend data
+              setFormData(prev => ({
+                ...prev,
+                username: profileData.username || prev.username,
+                fullName: profileData.fullName || prev.fullName,
+                shortBio: profileData.shortBio || profileData.profession || prev.shortBio,
+                currentLocation: profileData.currentLocation || prev.currentLocation,
+                originallyFrom: profileData.originallyFrom || prev.originallyFrom,
+                interests: profileData.interests || profileData.topInterests || prev.interests,
+                fullBio: profileData.bio || prev.fullBio,
+                personalityType: profileData.personalityType || prev.personalityType,
+                communities: profileData.communities || prev.communities,
+                eventsAttended: profileData.eventsAttended || prev.eventsAttended,
+                email: profileData.email || prev.email,
+                phone: profileData.phoneNumber || prev.phone,
+                age: profileData.age || prev.age,
+                languages: profileData.languages || prev.languages,
+                gender: profileData.gender || prev.gender,
+                profession: profileData.profession || prev.profession,
+                nationality: profileData.nationality || prev.nationality,
+                instagram: profileData.instagramHandle || prev.instagram,
+                linkedin: profileData.linkedinHandle || prev.linkedin,
+                website: profileData.website || prev.website,
+                travelHistory: profileData.travelHistory || prev.travelHistory,
+                offerings: profileData.offerings || prev.offerings
+              }));
+              
+              if (profileData.profilePicture) {
+                setProfileImage(profileData.profilePicture);
+              }
+              return;
+            }
+          } catch (error) {
+            console.warn('Could not load profile from backend, using local storage:', error);
+          }
+        }
+        
+        // Fall back to localStorage
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+          const parsed = JSON.parse(savedProfile);
+          setFormData(prev => ({ ...prev, ...parsed }));
+          if (parsed.profilePicture) {
+            setProfileImage(parsed.profilePicture);
+          }
         }
       } catch (e) {
-        console.error('Failed to load saved profile:', e);
+        console.error('Failed to load profile:', e);
       }
-    }
+    };
+    
+    loadProfile();
   }, []);
 
   return (
