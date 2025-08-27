@@ -1236,23 +1236,15 @@ export const BerseConnectScreen: React.FC = () => {
       // Load events from database (this should include ALL events, including user's created ones)
       const dbEvents = await loadEventsFromDatabase();
       
-      // Get local events and filter for current user only
+      // Get local events - show ALL events to ALL users
       const localEvents = getUserEvents();
-      const userEmail = user?.email;
       
-      // Filter local events to only include:
-      // 1. Events created by current user on this device
-      // 2. Events that failed to sync (local-only)
+      // Include ALL local events that aren't already in database
+      // This ensures events created on any device are visible to everyone
       const relevantLocalEvents = localEvents.filter((event: any) => {
-        // Include if it's local-only and created by current user
-        if (event.syncStatus === 'local-only' && event.creatorEmail === userEmail) {
-          return true;
-        }
-        // Include if no creator info (old events) but check if already in db
-        if (!event.creatorEmail && !dbEvents.find(e => e.id === event.id)) {
-          return true;
-        }
-        return false;
+        // Check if this event is already in the database
+        const alreadyInDb = dbEvents.find(e => e.id === event.id);
+        return !alreadyInDb; // Include if not in database
       });
       
       // Merge database events with relevant local events (avoiding duplicates)
@@ -1803,6 +1795,35 @@ export const BerseConnectScreen: React.FC = () => {
     await shareEventWithImage(eventToShare);
   };
 
+  const handleSocialShare = (platform: 'facebook' | 'twitter' | 'linkedin' | 'whatsapp', event?: Event) => {
+    const eventToShare = event || selectedEvent;
+    if (!eventToShare) return;
+    
+    const eventUrl = `${window.location.origin}/event/${eventToShare.id}`;
+    const eventText = `Join me at ${eventToShare.title} on ${eventToShare.date} at ${eventToShare.venue}, ${eventToShare.location}!`;
+    
+    let shareUrl = '';
+    
+    switch(platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(eventText)}&url=${encodeURIComponent(eventUrl)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(eventUrl)}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(eventText + ' ' + eventUrl)}`;
+        break;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const day = date.getDate();
@@ -2252,6 +2273,100 @@ export const BerseConnectScreen: React.FC = () => {
               {selectedEvent?.price === 0 ? '✓ Join Event' : `💳 Pay ${selectedEvent?.currency} ${selectedEvent?.price}`}
             </ActionButton>
           </EventActionButtons>
+          
+          {/* Social Media Sharing Section */}
+          <div style={{
+            padding: '16px 20px',
+            borderTop: '1px solid #e5e5e5',
+            background: '#f9f9f9'
+          }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#666',
+              marginBottom: '12px'
+            }}>
+              🌐 Share on Social Media
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}>
+              <button
+                onClick={() => handleSocialShare('facebook')}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: '#1877f2',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                🔵 Facebook
+              </button>
+              <button
+                onClick={() => handleSocialShare('twitter')}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: '#1da1f2',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                🐦 Twitter
+              </button>
+              <button
+                onClick={() => handleSocialShare('linkedin')}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: '#0077b5',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                💼 LinkedIn
+              </button>
+              <button
+                onClick={() => handleSocialShare('whatsapp')}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: '#25d366',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                💬 WhatsApp
+              </button>
+            </div>
+          </div>
         </EventDetailContent>
       </EventDetailModal>
 

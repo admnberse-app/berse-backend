@@ -256,6 +256,40 @@ const TermsCheckbox = styled.label`
   }
 `;
 
+const NotesSection = styled.div`
+  margin-top: 16px;
+`;
+
+const NotesTextarea = styled.textarea`
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  
+  &:focus {
+    outline: none;
+    border-color: #2fce98;
+  }
+  
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const LocationLink = styled.a`
+  color: #2fce98;
+  text-decoration: none;
+  cursor: pointer;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   gap: 12px;
@@ -369,6 +403,7 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [step, setStep] = useState<'details' | 'payment' | 'success'>('details');
+  const [notes, setNotes] = useState('');
 
   if (!event) return null;
 
@@ -411,6 +446,22 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
     if (!agreeToTerms) return;
     
     setProcessing(true);
+    
+    // Save registration with notes
+    const registrationData = {
+      eventId: event.id,
+      eventTitle: event.title,
+      userName,
+      userEmail,
+      userPhone,
+      notes,
+      registeredAt: new Date().toISOString()
+    };
+    
+    // Store in localStorage for now (could be sent to backend)
+    const registrations = JSON.parse(localStorage.getItem('event_registrations') || '[]');
+    registrations.push(registrationData);
+    localStorage.setItem('event_registrations', JSON.stringify(registrations));
     
     // Simulate payment processing
     setTimeout(() => {
@@ -570,7 +621,16 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
                   </DetailRow>
                   <DetailRow>
                     <DetailLabel>📍 Location</DetailLabel>
-                    <DetailValue>{event.venue}, {event.location}</DetailValue>
+                    <DetailValue>
+                      <LocationLink
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue + ', ' + event.location)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {event.venue}, {event.location} 🗺️
+                      </LocationLink>
+                    </DetailValue>
                   </DetailRow>
                   {event.organizer && (
                     <DetailRow>
@@ -601,6 +661,18 @@ export const EventPaymentModal: React.FC<EventPaymentModalProps> = ({
                   <DetailLabel>Phone</DetailLabel>
                   <DetailValue>{userPhone || 'Not provided'}</DetailValue>
                 </DetailRow>
+                <NotesSection>
+                  <DetailLabel style={{ marginBottom: '8px', display: 'block' }}>Notes (Optional)</DetailLabel>
+                  <NotesTextarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any special requirements, dietary restrictions, or questions for the organizer..."
+                    maxLength={500}
+                  />
+                  <div style={{ fontSize: '11px', color: '#999', marginTop: '4px', textAlign: 'right' }}>
+                    {notes.length}/500 characters
+                  </div>
+                </NotesSection>
               </Section>
 
               <TermsCheckbox>
