@@ -12,6 +12,7 @@ import { UnifiedParticipants } from '../components/UnifiedParticipants';
 import { EditEventModal } from '../components/EditEventModal';
 import { EventPaymentModal } from '../components/EventPaymentModal';
 import { shareEventWithImage } from '../utils/shareUtils';
+import { syncLocalEventsToBackend, cleanupOldEvents } from '../utils/eventSync';
 
 // Event Interface
 interface Event {
@@ -1218,29 +1219,44 @@ export const BerseConnectScreen: React.FC = () => {
   // Load events on component mount and when navigating to the page
   useEffect(() => {
     const loadEvents = async () => {
-      // Show cached events immediately if available
-      const cachedEvents = localStorage.getItem('cached_events');
-      if (cachedEvents) {
-        try {
-          const parsed = JSON.parse(cachedEvents);
-          setAllEvents(parsed);
-          setIsLoadingEvents(false);
-        } catch (e) {
-          console.error('Failed to parse cached events');
-        }
+      setIsLoadingEvents(true);
+      
+      // First, try to sync any local-only events to backend
+      const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
+      if (token && user?.email) {
+        await syncLocalEventsToBackend(user.email, token);
       }
+      
+      // Clean up old cached events
+      cleanupOldEvents();
       
       const baseEvents = [];
       
-      // Load events from database
+      // Load events from database (this should include ALL events, including user's created ones)
       const dbEvents = await loadEventsFromDatabase();
       
-      // Also get local events as fallback
+      // Get local events and filter for current user only
       const localEvents = getUserEvents();
+      const userEmail = user?.email;
       
-      // Merge database events with local events (avoiding duplicates)
+      // Filter local events to only include:
+      // 1. Events created by current user on this device
+      // 2. Events that failed to sync (local-only)
+      const relevantLocalEvents = localEvents.filter((event: any) => {
+        // Include if it's local-only and created by current user
+        if (event.syncStatus === 'local-only' && event.creatorEmail === userEmail) {
+          return true;
+        }
+        // Include if no creator info (old events) but check if already in db
+        if (!event.creatorEmail && !dbEvents.find(e => e.id === event.id)) {
+          return true;
+        }
+        return false;
+      });
+      
+      // Merge database events with relevant local events (avoiding duplicates)
       const allFetchedEvents = [...dbEvents];
-      localEvents.forEach((localEvent: Event) => {
+      relevantLocalEvents.forEach((localEvent: Event) => {
         if (!allFetchedEvents.find(e => e.id === localEvent.id)) {
           allFetchedEvents.push(localEvent);
         }
@@ -1292,7 +1308,7 @@ export const BerseConnectScreen: React.FC = () => {
     
     // Remove auto-refresh to prevent delays
     // Users can manually refresh if needed
-  }, []);
+  }, [user]); // Re-run when user changes to sync their events
 
   const getFilteredEvents = () => {
     let filtered = [...allEvents];

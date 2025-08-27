@@ -1278,7 +1278,17 @@ export const CreateEventScreen: React.FC = () => {
 
       console.log('Creating event:', newEvent);
       
+      // Mark the event with creator's email for cross-device sync
+      const userEmail = user?.email;
+      const eventWithCreator = {
+        ...newEvent,
+        creatorEmail: userEmail,
+        creatorId: user?.id,
+        syncStatus: 'pending' // Will be 'synced' when saved to backend
+      };
+      
       // Save event to database
+      let savedToBackend = false;
       try {
         const token = localStorage.getItem('bersemuka_token') || localStorage.getItem('auth_token');
         const API_BASE_URL = window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app'
@@ -1326,17 +1336,20 @@ export const CreateEventScreen: React.FC = () => {
           if (response.data.success) {
             console.log('Event saved to database:', response.data.data);
             // Update the event ID with the one from the database
-            newEvent.id = response.data.data.id;
+            eventWithCreator.id = response.data.data.id;
+            eventWithCreator.syncStatus = 'synced';
+            savedToBackend = true;
           }
         }
       } catch (error) {
         console.error('Failed to save event to database:', error);
-        // Continue with local storage save as fallback
+        // Mark as local-only for later sync
+        eventWithCreator.syncStatus = 'local-only';
       }
       
-      // Save event to localStorage for offline/fallback support
+      // Save event to localStorage with sync status and creator info
       const existingEvents = JSON.parse(localStorage.getItem('userCreatedEvents') || '[]');
-      existingEvents.push(newEvent);
+      existingEvents.push(eventWithCreator);
       localStorage.setItem('userCreatedEvents', JSON.stringify(existingEvents));
       
       // Also save to berseConnectEvents for immediate display
