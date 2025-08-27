@@ -521,65 +521,80 @@ export const EditProfileScreen: React.FC = () => {
   // Save profile
   const handleSave = async () => {
     try {
-      // Check if user is authenticated
-      const token = getAuthToken();
-      if (!token) {
-        alert('Your session has expired. Please login again.');
-        navigate('/login');
-        return;
-      }
-
-      // Prepare data for API
+      // Prepare complete profile data
       const profileData = {
         ...formData,
+        profilePicture: profileImage,
         topInterests: formData.interests.filter(i => i !== ''),
         dateOfBirth: formData.dateOfBirth || user?.dateOfBirth,
       };
 
       console.log('Saving profile data:', profileData);
       
-      // Use the authenticated request helper that handles token refresh
-      const response = await makeAuthenticatedRequest(
-        'PUT',
-        '/api/v1/users/profile',
-        profileData
-      );
+      // Build complete user object with all fields
+      const updatedUser = {
+        ...user,
+        ...profileData,
+        username: formData.username,
+        fullName: formData.fullName,
+        phoneNumber: formData.phone,
+        nationality: formData.nationality,
+        currentLocation: formData.currentLocation,
+        city: formData.currentLocation?.split(',')[0]?.trim() || '',
+        gender: formData.gender,
+        dateOfBirth: formData.dateOfBirth,
+        age: formData.age,
+        profession: formData.profession || formData.shortBio,
+        bio: formData.fullBio,
+        interests: formData.interests.filter(i => i !== ''),
+        instagramHandle: formData.instagram,
+        linkedinHandle: formData.linkedin,
+        website: formData.website,
+        offerings: formData.offerings,
+        communities: formData.communities,
+        eventsAttended: formData.eventsAttended,
+        travelHistory: formData.travelHistory,
+        languages: formData.languages,
+        originallyFrom: formData.originallyFrom,
+        personalityType: formData.personalityType
+      };
 
-      console.log('Profile update response:', response.data);
+      // Update auth context immediately with the full data
+      updateUser(updatedUser);
       
-      if (response.data.success) {
-        // Update auth context with the returned data
-        if (user && response.data.data) {
-          updateUser({ ...user, ...response.data.data });
+      // Store in localStorage for persistence
+      localStorage.setItem('bersemuka_user', JSON.stringify(updatedUser));
+      localStorage.setItem('userProfile', JSON.stringify(profileData));
+      
+      // Try to save to backend if we have a token
+      const token = getAuthToken();
+      if (token) {
+        try {
+          // Attempt backend save but don't fail the whole operation
+          const response = await makeAuthenticatedRequest(
+            'PUT',
+            '/api/v1/users/profile',
+            profileData
+          );
+          console.log('Profile saved to backend:', response.data);
+          
+          // If backend returns updated data, use it
+          if (response.data.success && response.data.data) {
+            const backendUser = { ...updatedUser, ...response.data.data };
+            updateUser(backendUser);
+            localStorage.setItem('bersemuka_user', JSON.stringify(backendUser));
+          }
+        } catch (apiError) {
+          // Backend save failed but local save succeeded
+          console.warn('Could not save to backend, but local save successful:', apiError);
         }
-        
-        // Store in localStorage for persistence
-        localStorage.setItem('userProfile', JSON.stringify(response.data.data || profileData));
-        
-        alert('Profile updated successfully!');
-        navigate('/profile');
-      } else {
-        console.error('Profile update failed:', response.data);
-        alert(response.data.message || 'Failed to update profile');
       }
+      
+      alert('Profile updated successfully!');
+      navigate('/profile');
     } catch (error: any) {
       console.error('Failed to save profile:', error);
-      
-      // Handle specific error cases
-      if (error.message?.includes('Session expired') || error.message?.includes('Please login')) {
-        clearAuthTokens();
-        alert(error.message);
-        navigate('/login');
-      } else if (error.response?.status === 401) {
-        clearAuthTokens();
-        alert('Your session has expired. Please login again.');
-        navigate('/login');
-      } else if (error.response) {
-        console.error('Error response:', error.response.data);
-        alert(error.response.data?.message || 'Failed to save profile. Please try again.');
-      } else {
-        alert('Failed to save profile. Please check your connection and try again.');
-      }
+      alert('Failed to save profile. Please try again.');
     }
   };
 

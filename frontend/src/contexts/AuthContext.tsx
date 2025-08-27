@@ -190,11 +190,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.register({ email, password, fullName, username, phoneNumber, ...additionalData });
       if (response.success && response.data) {
         console.log('Registration successful with backend, setting user:', response.data.user);
-        setUser(response.data.user);
+        // Merge all registration data into user object
+        const fullUserData = {
+          ...response.data.user,
+          phoneNumber: phoneNumber || response.data.user.phoneNumber,
+          ...additionalData // Include all additional fields like nationality, city, etc.
+        };
+        setUser(fullUserData);
         // Store authentication data for persistence
         if (response.data.token) {
           localStorage.setItem('bersemuka_token', response.data.token);
-          localStorage.setItem('bersemuka_user', JSON.stringify(response.data.user));
+          localStorage.setItem('bersemuka_user', JSON.stringify(fullUserData));
           localStorage.setItem('rememberMe', 'true'); // Remember new registrations
           // Store refresh token if provided
           if (response.data.refreshToken) {
