@@ -270,6 +270,93 @@ const AddButton = styled.button`
   }
 `;
 
+const OfferingSection = styled.div`
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f9f9f9;
+  border-radius: 12px;
+`;
+
+const OfferingToggle = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+`;
+
+const ToggleSwitch = styled.label`
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+  
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  span {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+    
+    &:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+  }
+  
+  input:checked + span {
+    background-color: #2fce98;
+  }
+  
+  input:checked + span:before {
+    transform: translateX(24px);
+  }
+`;
+
+const ChipContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+const Chip = styled.div`
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    font-size: 14px;
+  }
+`;
+
 export const EditProfileScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
@@ -326,7 +413,34 @@ export const EditProfileScreen: React.FC = () => {
     website: '',
     
     // Travel Logbook
-    travelHistory: [] as any[]
+    travelHistory: [] as any[],
+    
+    // Offerings
+    offerings: {
+      berseGuide: {
+        enabled: false,
+        price: '',
+        duration: 'Half day',
+        locations: [] as string[],
+        specialties: [] as string[]
+      },
+      homeSurf: {
+        enabled: false,
+        maxDays: 3,
+        amenities: [] as string[]
+      },
+      berseBuddy: {
+        enabled: false,
+        activities: [] as string[],
+        availability: 'Weekends'
+      },
+      berseMentor: {
+        enabled: false,
+        expertise: [] as string[],
+        rate: '',
+        format: [] as string[]
+      }
+    }
   });
 
   const [eventsSearch, setEventsSearch] = useState('');
@@ -798,6 +912,355 @@ export const EditProfileScreen: React.FC = () => {
           <AddButton onClick={() => setShowTravelModal(true)}>
             + Add Travel Entry
           </AddButton>
+        </FormSection>
+
+        {/* Offerings Section */}
+        <FormSection>
+          <SectionTitle>💼 My Offerings</SectionTitle>
+          <p style={{ fontSize: '12px', color: '#666', marginBottom: '16px' }}>
+            Share your skills and services with the community
+          </p>
+
+          {/* BerseGuide */}
+          <OfferingSection>
+            <OfferingToggle>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                  🗺️ BerseGuide
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  Offer local guide services
+                </div>
+              </div>
+              <ToggleSwitch>
+                <input
+                  type="checkbox"
+                  checked={formData.offerings.berseGuide.enabled}
+                  onChange={(e) => handleInputChange('offerings', {
+                    ...formData.offerings,
+                    berseGuide: { ...formData.offerings.berseGuide, enabled: e.target.checked }
+                  })}
+                />
+                <span></span>
+              </ToggleSwitch>
+            </OfferingToggle>
+            
+            {formData.offerings.berseGuide.enabled && (
+              <div>
+                <FormField>
+                  <FieldLabel>Price</FieldLabel>
+                  <FieldInput
+                    value={formData.offerings.berseGuide.price}
+                    onChange={(e) => handleInputChange('offerings', {
+                      ...formData.offerings,
+                      berseGuide: { ...formData.offerings.berseGuide, price: e.target.value }
+                    })}
+                    placeholder="e.g., RM50-80/day or skill trade"
+                  />
+                </FormField>
+                
+                <FormField>
+                  <FieldLabel>Duration</FieldLabel>
+                  <FieldSelect
+                    value={formData.offerings.berseGuide.duration}
+                    onChange={(e) => handleInputChange('offerings', {
+                      ...formData.offerings,
+                      berseGuide: { ...formData.offerings.berseGuide, duration: e.target.value }
+                    })}
+                  >
+                    <option value="Half day">Half day</option>
+                    <option value="Full day">Full day</option>
+                    <option value="Multiple days">Multiple days</option>
+                  </FieldSelect>
+                </FormField>
+                
+                <FormField>
+                  <FieldLabel>Locations (press Enter to add)</FieldLabel>
+                  <FieldInput
+                    placeholder="e.g., KL, Penang, Langkawi"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = (e.target as HTMLInputElement).value.trim();
+                        if (value) {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            berseGuide: {
+                              ...formData.offerings.berseGuide,
+                              locations: [...formData.offerings.berseGuide.locations, value]
+                            }
+                          });
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <ChipContainer>
+                    {formData.offerings.berseGuide.locations.map((loc, i) => (
+                      <Chip key={i}>
+                        {loc}
+                        <button onClick={() => {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            berseGuide: {
+                              ...formData.offerings.berseGuide,
+                              locations: formData.offerings.berseGuide.locations.filter((_, idx) => idx !== i)
+                            }
+                          });
+                        }}>×</button>
+                      </Chip>
+                    ))}
+                  </ChipContainer>
+                </FormField>
+              </div>
+            )}
+          </OfferingSection>
+
+          {/* HomeSurf */}
+          <OfferingSection>
+            <OfferingToggle>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                  🏠 HomeSurf
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  Host travelers at your place
+                </div>
+              </div>
+              <ToggleSwitch>
+                <input
+                  type="checkbox"
+                  checked={formData.offerings.homeSurf.enabled}
+                  onChange={(e) => handleInputChange('offerings', {
+                    ...formData.offerings,
+                    homeSurf: { ...formData.offerings.homeSurf, enabled: e.target.checked }
+                  })}
+                />
+                <span></span>
+              </ToggleSwitch>
+            </OfferingToggle>
+            
+            {formData.offerings.homeSurf.enabled && (
+              <div>
+                <FormField>
+                  <FieldLabel>Max Days</FieldLabel>
+                  <FieldInput
+                    type="number"
+                    value={formData.offerings.homeSurf.maxDays}
+                    onChange={(e) => handleInputChange('offerings', {
+                      ...formData.offerings,
+                      homeSurf: { ...formData.offerings.homeSurf, maxDays: parseInt(e.target.value) }
+                    })}
+                    min="1"
+                    max="30"
+                  />
+                </FormField>
+                
+                <FormField>
+                  <FieldLabel>Amenities (press Enter to add)</FieldLabel>
+                  <FieldInput
+                    placeholder="e.g., WiFi, Kitchen, Private Room"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = (e.target as HTMLInputElement).value.trim();
+                        if (value) {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            homeSurf: {
+                              ...formData.offerings.homeSurf,
+                              amenities: [...formData.offerings.homeSurf.amenities, value]
+                            }
+                          });
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <ChipContainer>
+                    {formData.offerings.homeSurf.amenities.map((amenity, i) => (
+                      <Chip key={i}>
+                        {amenity}
+                        <button onClick={() => {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            homeSurf: {
+                              ...formData.offerings.homeSurf,
+                              amenities: formData.offerings.homeSurf.amenities.filter((_, idx) => idx !== i)
+                            }
+                          });
+                        }}>×</button>
+                      </Chip>
+                    ))}
+                  </ChipContainer>
+                </FormField>
+              </div>
+            )}
+          </OfferingSection>
+
+          {/* BerseBuddy */}
+          <OfferingSection>
+            <OfferingToggle>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                  👫 BerseBuddy
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  Be a local friend and companion
+                </div>
+              </div>
+              <ToggleSwitch>
+                <input
+                  type="checkbox"
+                  checked={formData.offerings.berseBuddy.enabled}
+                  onChange={(e) => handleInputChange('offerings', {
+                    ...formData.offerings,
+                    berseBuddy: { ...formData.offerings.berseBuddy, enabled: e.target.checked }
+                  })}
+                />
+                <span></span>
+              </ToggleSwitch>
+            </OfferingToggle>
+            
+            {formData.offerings.berseBuddy.enabled && (
+              <div>
+                <FormField>
+                  <FieldLabel>Availability</FieldLabel>
+                  <FieldSelect
+                    value={formData.offerings.berseBuddy.availability}
+                    onChange={(e) => handleInputChange('offerings', {
+                      ...formData.offerings,
+                      berseBuddy: { ...formData.offerings.berseBuddy, availability: e.target.value }
+                    })}
+                  >
+                    <option value="Weekends">Weekends</option>
+                    <option value="Weekdays">Weekdays</option>
+                    <option value="Evenings">Evenings</option>
+                    <option value="Flexible">Flexible</option>
+                  </FieldSelect>
+                </FormField>
+                
+                <FormField>
+                  <FieldLabel>Activities (press Enter to add)</FieldLabel>
+                  <FieldInput
+                    placeholder="e.g., Coffee Meetups, Weekend Trips"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = (e.target as HTMLInputElement).value.trim();
+                        if (value) {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            berseBuddy: {
+                              ...formData.offerings.berseBuddy,
+                              activities: [...formData.offerings.berseBuddy.activities, value]
+                            }
+                          });
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <ChipContainer>
+                    {formData.offerings.berseBuddy.activities.map((activity, i) => (
+                      <Chip key={i}>
+                        {activity}
+                        <button onClick={() => {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            berseBuddy: {
+                              ...formData.offerings.berseBuddy,
+                              activities: formData.offerings.berseBuddy.activities.filter((_, idx) => idx !== i)
+                            }
+                          });
+                        }}>×</button>
+                      </Chip>
+                    ))}
+                  </ChipContainer>
+                </FormField>
+              </div>
+            )}
+          </OfferingSection>
+
+          {/* BerseMentor */}
+          <OfferingSection>
+            <OfferingToggle>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
+                  🎓 BerseMentor
+                </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  Share your expertise as a mentor
+                </div>
+              </div>
+              <ToggleSwitch>
+                <input
+                  type="checkbox"
+                  checked={formData.offerings.berseMentor.enabled}
+                  onChange={(e) => handleInputChange('offerings', {
+                    ...formData.offerings,
+                    berseMentor: { ...formData.offerings.berseMentor, enabled: e.target.checked }
+                  })}
+                />
+                <span></span>
+              </ToggleSwitch>
+            </OfferingToggle>
+            
+            {formData.offerings.berseMentor.enabled && (
+              <div>
+                <FormField>
+                  <FieldLabel>Rate</FieldLabel>
+                  <FieldInput
+                    value={formData.offerings.berseMentor.rate}
+                    onChange={(e) => handleInputChange('offerings', {
+                      ...formData.offerings,
+                      berseMentor: { ...formData.offerings.berseMentor, rate: e.target.value }
+                    })}
+                    placeholder="e.g., 100 BersePoints/hour or RM50/session"
+                  />
+                </FormField>
+                
+                <FormField>
+                  <FieldLabel>Expertise (press Enter to add)</FieldLabel>
+                  <FieldInput
+                    placeholder="e.g., Architecture, Photography"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = (e.target as HTMLInputElement).value.trim();
+                        if (value) {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            berseMentor: {
+                              ...formData.offerings.berseMentor,
+                              expertise: [...formData.offerings.berseMentor.expertise, value]
+                            }
+                          });
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <ChipContainer>
+                    {formData.offerings.berseMentor.expertise.map((exp, i) => (
+                      <Chip key={i}>
+                        {exp}
+                        <button onClick={() => {
+                          handleInputChange('offerings', {
+                            ...formData.offerings,
+                            berseMentor: {
+                              ...formData.offerings.berseMentor,
+                              expertise: formData.offerings.berseMentor.expertise.filter((_, idx) => idx !== i)
+                            }
+                          });
+                        }}>×</button>
+                      </Chip>
+                    ))}
+                  </ChipContainer>
+                </FormField>
+              </div>
+            )}
+          </OfferingSection>
         </FormSection>
       </Content>
 

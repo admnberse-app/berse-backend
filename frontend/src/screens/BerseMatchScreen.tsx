@@ -2603,7 +2603,7 @@ export const BerseMatchScreen: React.FC = () => {
     // User's profile data - using AuthContext user data
     const userProfile = {
       id: 1,
-      name: user?.fullName || 'User',
+      name: user?.username || user?.fullName || 'User',
       age: parseInt(user?.age as string) || 25,
       profession: user?.profession || 'Professional',
       location: user?.currentLocation || 'Location not set',
@@ -2719,7 +2719,7 @@ export const BerseMatchScreen: React.FC = () => {
       userProfile,
       ...users.map(u => ({
         id: u.id,
-        name: u.fullName || 'User',
+        name: u.username || u.fullName || 'User',
         age: u.age || 25,
         profession: u.profession || u.shortBio || 'Professional',
         location: u.currentLocation || u.city || 'Location not set',
