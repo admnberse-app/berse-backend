@@ -7,9 +7,9 @@ echo "🔄 Migrating Fork to Fresh Repository"
 echo "====================================="
 
 # Configuration - CHANGE THESE!
-YOUR_GITHUB_USERNAME="raihaan123"  # Your GitHub username
-NEW_REPO_NAME="BerseMuka-Fresh"    # Temporary name for new repo
-ORG_NAME="berse-app"               # Your organization name
+YOUR_GITHUB_USERNAME="zaydmahdaly00"  # Your GitHub username
+NEW_REPO_NAME="BerseMuka-Fresh"      # Temporary name for new repo
+ORG_NAME="berse-app"                 # Your organization name
 
 echo ""
 echo "📋 Step 1: Create a new empty repository on GitHub"
