@@ -3,7 +3,7 @@
 # Script to update git remotes to new organization
 # Replace YOUR-ORG-NAME with your actual organization name
 
-ORG_NAME="YOUR-ORG-NAME"  # <-- Change this to your org name (e.g., "nama-fund")
+ORG_NAME="berse-app"  # Your GitHub organization
 
 echo "🔄 Updating git remotes to organization: $ORG_NAME"
 echo "================================================"
