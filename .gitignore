@@ -13,6 +13,7 @@ bower_components/
 
 # Build output
 dist/
+dev-dist/
 build/
 *.tsbuildinfo
 .next/
