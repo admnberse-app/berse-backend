@@ -29,9 +29,11 @@ Complete social networking and trust-building platform backend - connecting peop
 - Basic event check-in
 
 **🤝 Basic Trust Chain** *(MVP Differentiator)*
-- Simple trust moments/feedback system
-- Basic trust score calculation
+- Simple vouch system: Request 1-3 primary and 3+ secondary vouchers
+- Community affiliation tags and group memberships
+- Trust moments: Basic "I met this person" feedback system
 - Manual connection validation (meet in person → give feedback)
+- No complex calculations - just simple vouch display
 
 **🎮 BerseCardGame** *(Engagement Hook)*
 - Question/topic system
@@ -44,10 +46,11 @@ Complete social networking and trust-building platform backend - connecting peop
 - Basic point history
 
 **👤 Profile Discovery** *(Core Social Feature)*
-- Browse user profiles
-- Basic search functionality
-- View what services people offer (in profile settings)
-- Location-based discovery
+- Browse user profiles with basic info
+- Basic search functionality by name and location
+- Simple service flags: BerseGuide (city tours) and Homesurf (hosting) only
+- Location-based user discovery
+- Manual service listings - no booking system yet
 
 ---
 
@@ -111,9 +114,11 @@ Complete social networking and trust-building platform backend - connecting peop
 ### **Week 3-4: Events & Trust**
 ```
 🏆 Event creation and joining system
-🤝 Basic trust feedback mechanism
+🤝 Simple vouch request system (primary/secondary vouchers)
+👥 Community affiliation tags
 📍 Location-based event discovery
-🔒 Event privacy and moderation
+✋ Basic "I met this person" trust moments
+🏷️ Simple service flags (BerseGuide/Homesurf)
 ```
 
 ### **Week 5-6: Engagement & Discovery**
@@ -160,9 +165,9 @@ Complete social networking and trust-building platform backend - connecting peop
 - 🚀 **Phase 3**: Multi-factor authentication, enterprise features
 
 ### 🤝 Trust Chain System  
-- ✅ **MVP**: Basic trust feedback and scoring
-- 🔄 **Phase 2**: Travel-based verification, mutual validation
-- 🚀 **Phase 3**: Decentralized trust network, reputation algorithms
+- ✅ **MVP**: Simple vouch system, community affiliations, basic trust moments
+- 🔄 **Phase 2**: Travel-based verification, trust score calculations
+- 🚀 **Phase 3**: Decentralized trust network, advanced reputation algorithms
 
 ### 🏆 Events & Activities
 - ✅ **MVP**: Event creation, RSVP, basic check-in
@@ -175,9 +180,9 @@ Complete social networking and trust-building platform backend - connecting peop
 - 🚀 **Phase 3**: Premium matching features, advanced algorithms
 
 ### 🛍️ Service Marketplace
-- ✅ **MVP**: Service listings in profiles
-- 🔄 **Phase 2**: Basic service categories and discovery
-- 🚀 **Phase 3**: Full marketplace with payments and transactions
+- ✅ **MVP**: Simple BerseGuide and Homesurf flags in profiles
+- 🔄 **Phase 2**: Enhanced service categories, basic booking system
+- 🚀 **Phase 3**: Full marketplace with payments, reviews, and transactions
 
 ### 🎮 Community Features
 - ✅ **MVP**: BerseCardGame, basic interactions
