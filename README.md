@@ -23,17 +23,18 @@ Complete social networking and trust-building platform backend - connecting peop
 - Session management with refresh tokens
 
 **🏆 Events System** *(Core Community Feature)*
-- Create and join events
-- RSVP system
-- See event attendees
-- Basic event check-in
+- **Create and join events** with full event management
+- **RSVP system** for event attendance tracking
+- **See event attendees** and participant lists
+- **Basic event check-in** system
+- **Paid events support** - Stripe API integration for sports sessions and premium events
 
 **🤝 Basic Trust Chain** *(MVP Differentiator)*
-- Simple vouch system: Request 1-3 primary and 3+ secondary vouchers
-- Community affiliation tags and group memberships
-- Trust moments: Basic "I met this person" feedback system
-- Manual connection validation (meet in person → give feedback)
-- No complex calculations - just simple vouch display
+- **Simple trust moments/feedback system** - create unlimited connections on the app
+- **Vouch system**: Request 1-3 primary and 3+ secondary vouchers
+- **Community affiliation tags** and group memberships
+- **Manual connection validation** (meet in person → give feedback)
+- **No complex calculations** - just simple vouch display and connection creation
 
 **🎮 BerseCardGame** *(Engagement Hook)*
 - Question/topic system
@@ -45,12 +46,13 @@ Complete social networking and trust-building platform backend - connecting peop
 - Simple rewards redemption system
 - Basic point history
 
-**👤 Profile Discovery** *(Core Social Feature)*
-- Browse user profiles with basic info
-- Basic search functionality by name and location
-- Simple service flags: BerseGuide (city tours) and Homesurf (hosting) only
-- Location-based user discovery
-- Manual service listings - no booking system yet
+**👤 Service Offerings** *(Core Social Feature)*
+- **Only 2 services**: BerseGuide (city tours) and Homesurf (hosting)
+- **Simple profile flags** - no booking system
+- **Manual listings** - just descriptions
+- **Basic discovery** - search and filter by service type
+- **Contact through messaging** - WhatsApp API integration for conversations
+- **Location-based discovery** of service providers
 
 ---
 
@@ -113,12 +115,13 @@ Complete social networking and trust-building platform backend - connecting peop
 
 ### **Week 3-4: Events & Trust**
 ```
-🏆 Event creation and joining system
+🏆 Event creation and joining system with Stripe payment integration
 🤝 Simple vouch request system (primary/secondary vouchers)
-👥 Community affiliation tags
+👥 Community affiliation tags and unlimited connection creation
 📍 Location-based event discovery
 ✋ Basic "I met this person" trust moments
 🏷️ Simple service flags (BerseGuide/Homesurf)
+📱 WhatsApp API integration for service provider messaging
 ```
 
 ### **Week 5-6: Engagement & Discovery**
@@ -227,7 +230,8 @@ Complete social networking and trust-building platform backend - connecting peop
 
 ### External Integrations
 - **Twilio** for SMS communications  
-- **Payment gateway** integration ready
+- **Stripe** payment processing for paid events
+- **WhatsApp Business API** for service provider messaging
 - **QR code** generation for event check-ins
 - **Speakeasy** for 2FA implementation
 
