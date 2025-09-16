@@ -1,3 +1,6 @@
+// Load environment from parent directory
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+
 import { PrismaClient, BadgeType, UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
