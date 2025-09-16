@@ -1,4 +1,5 @@
-import { PrismaClient, BadgeType } from '@prisma/client';
+import { PrismaClient, BadgeType, UserRole } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -139,6 +140,9 @@ async function main() {
     },
   ];
 
+  // Clear existing rewards to avoid duplicates
+  await prisma.reward.deleteMany({});
+  
   for (const reward of rewards) {
     await prisma.reward.create({
       data: reward,
@@ -146,6 +150,154 @@ async function main() {
   }
 
   console.log('✅ Sample rewards created');
+
+  // ===========================================
+  // ADD TEST USERS FOR LOGIN
+  // ===========================================
+  
+  console.log('👥 Creating test users...');
+  
+  // Hash passwords
+  const defaultPassword = await bcrypt.hash('password123', 12);
+  const adminPassword = await bcrypt.hash('admin123', 12);
+
+  // Clear existing users (optional - remove this line if you want to keep existing users)
+  await prisma.user.deleteMany({});
+  
+  // Create 5 test users
+  const users = [
+    {
+      email: 'admin@test.com',
+      username: 'admin',
+      password: adminPassword,
+      fullName: 'Admin User',
+      phone: '+60123456789',
+      role: UserRole.ADMIN,
+      isHostCertified: true,
+      totalPoints: 1000,
+      bio: 'System administrator with full access',
+      city: 'Kuala Lumpur',
+      interests: ['technology', 'management'],
+      timezone: 'Asia/Kuala_Lumpur',
+      preferredLanguage: 'en',
+      currency: 'MYR'
+    },
+    {
+      email: 'host@test.com',
+      username: 'host1',
+      password: defaultPassword,
+      fullName: 'Sarah Host',
+      phone: '+60123456790',
+      role: UserRole.GENERAL_USER,
+      isHostCertified: true,
+      totalPoints: 250,
+      bio: 'Certified event host in KL',
+      city: 'Kuala Lumpur',
+      interests: ['events', 'networking', 'social'],
+      timezone: 'Asia/Kuala_Lumpur',
+      preferredLanguage: 'en',
+      currency: 'MYR'
+    },
+    {
+      email: 'alice@test.com',
+      username: 'alice',
+      password: defaultPassword,
+      fullName: 'Alice Johnson',
+      phone: '+60123456791',
+      role: UserRole.GENERAL_USER,
+      isHostCertified: false,
+      totalPoints: 120,
+      bio: 'Love meeting new people and exploring KL',
+      city: 'Petaling Jaya',
+      interests: ['food', 'travel', 'photography'],
+      timezone: 'Asia/Kuala_Lumpur',
+      preferredLanguage: 'en',
+      currency: 'MYR'
+    },
+    {
+      email: 'bob@test.com',
+      username: 'bob',
+      password: defaultPassword,
+      fullName: 'Bob Smith',
+      phone: '+60123456792',
+      role: UserRole.GENERAL_USER,
+      isHostCertified: false,
+      totalPoints: 85,
+      bio: 'Sports enthusiast and coffee lover',
+      city: 'Shah Alam',
+      interests: ['sports', 'fitness', 'coffee'],
+      timezone: 'Asia/Kuala_Lumpur',
+      preferredLanguage: 'en',
+      currency: 'MYR'
+    },
+    {
+      email: 'demo@test.com',
+      username: 'demo',
+      password: defaultPassword,
+      fullName: 'Demo User',
+      phone: '+60123456793',
+      role: UserRole.GENERAL_USER,
+      isHostCertified: false,
+      totalPoints: 50,
+      bio: 'New to the community, excited to connect',
+      city: 'Subang Jaya',
+      interests: ['networking', 'learning'],
+      timezone: 'Asia/Kuala_Lumpur',
+      preferredLanguage: 'en',
+      currency: 'MYR'
+    }
+  ];
+
+  for (const userData of users) {
+    await prisma.user.create({
+      data: userData
+    });
+  }
+
+  console.log('✅ Test users created successfully');
+
+  // Create sample refresh tokens for first 2 users
+  const createdUsers = await prisma.user.findMany({
+    select: { id: true, email: true },
+    take: 2
+  });
+
+  for (const user of createdUsers) {
+    await prisma.refreshToken.create({
+      data: {
+        tokenHash: `refresh_hash_${user.id}_${Date.now()}`,
+        tokenFamily: `family_${user.id}`,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        isRevoked: false
+      }
+    });
+  }
+
+  console.log('✅ Sample refresh tokens created');
+
+  // Display created users
+  const allUsers = await prisma.user.findMany({
+    select: {
+      email: true,
+      fullName: true,
+      role: true,
+      isHostCertified: true,
+      totalPoints: true,
+      city: true
+    }
+  });
+
+  console.log('\n📋 Created Users:');
+  console.table(allUsers);
+
+  console.log('\n🔐 Login Credentials:');
+  console.log('1. Admin : admin@test.com / admin123');
+  console.log('2. Host  : host@test.com / password123');
+  console.log('3. User  : alice@test.com / password123'); 
+  console.log('4. User  : bob@test.com / password123');
+  console.log('5. Demo  : demo@test.com / password123');
+
   console.log('🎉 Seed completed successfully');
 }
 
