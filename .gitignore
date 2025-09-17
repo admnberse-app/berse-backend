@@ -121,3 +121,5 @@ docker-volumes/
 .sass-cache/
 # Local Netlify folder
 .netlify
+gemini/
+bmad-core/
