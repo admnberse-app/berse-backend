@@ -11,7 +11,7 @@ class AuthService {
     try {
       // Direct URL to avoid buildApiUrl issues
       const loginUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '/api/v1/auth/login'
+        ? 'http://localhost:3001/api/v1/auth/login'  // Changed from '/api/v1/auth/login'
         : 'https://api.berse.app/api/v1/auth/login';
       
       const response = await fetch(loginUrl, {
@@ -46,7 +46,7 @@ class AuthService {
     try {
       // Direct URL to avoid buildApiUrl issues
       const registerUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '/api/v1/auth/register'
+        ? 'http://localhost:3001/api/v1/auth/register'  // Changed from '/api/v1/auth/register'
         : 'https://api.berse.app/api/v1/auth/register';
       
       const response = await fetch(registerUrl, {
@@ -85,8 +85,8 @@ class AuthService {
     try {
       // Direct URL to avoid buildApiUrl issues
       const meUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? '/api/auth/me'
-        : 'https://api.berse.app/api/auth/me';
+        ? 'http://localhost:3001/api/v1/auth/me'  // Changed from '/api/auth/me'
+        : 'https://api.berse.app/api/v1/auth/me';
       
       const response = await fetch(meUrl, {
         headers: {
