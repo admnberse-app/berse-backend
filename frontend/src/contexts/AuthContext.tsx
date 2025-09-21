@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             // Try to validate token in the background (non-blocking)
             // Only clear session if we get explicit 401 unauthorized
-            fetch(`${window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app' ? 'https://api.berse.app' : ''}/api/v1/users/profile`, {
+            fetch(`${window.location.hostname === 'berse.app' || window.location.hostname === 'www.berse.app' ? 'https://api.berse.app' : 'http://localhost:3001'}/api/v1/users/profile`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
