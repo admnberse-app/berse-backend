@@ -11,7 +11,7 @@ interface TokenRefreshResponse {
 
 export const getApiUrl = (endpoint: string): string => {
   const isLocalhost = window.location.hostname === 'localhost';
-  const baseUrl = isLocalhost ? '' : 'https://api.berse.app';
+  const baseUrl = isLocalhost ? 'http://localhost:3001' : 'https://api.berse.app';
   return `${baseUrl}${endpoint}`;
 };
 
