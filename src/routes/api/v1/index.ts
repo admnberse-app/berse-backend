@@ -7,6 +7,7 @@ import matchingRouter from './matching.routes';
 import pushRouter from '../../push.routes';
 import cardgameRouter from './cardgame.routes';
 import messagesRouter from '../../message.routes';
+import emailRouter from './email.routes';
 // import paymentsRouter from './payments.routes';
 // import notificationsRouter from './notifications.routes';
 // import analyticsRouter from './analytics.routes';
@@ -23,6 +24,7 @@ router.use('/matches', matchingRouter); // Alias for matching
 router.use('/push', pushRouter);
 router.use('/cardgame', cardgameRouter);
 router.use('/messages', messagesRouter);
+router.use('/email', emailRouter);
 // router.use('/payments', paymentsRouter);
 // router.use('/notifications', notificationsRouter);
 // router.use('/analytics', analyticsRouter);
@@ -89,6 +91,18 @@ router.get('/docs', (req, res) => {
         'GET /cardgame/feedback/topic/:topicId': 'Get topic feedback',
         'GET /cardgame/stats': 'Get topic statistics',
         'DELETE /cardgame/feedback/:feedbackId': 'Delete feedback',
+      },
+      email: {
+        'POST /email/test': 'Send test email (dev only)',
+        'POST /email/verification': 'Send verification email',
+        'POST /email/welcome': 'Send welcome email',
+        'POST /email/password-reset': 'Send password reset email',
+        'POST /email/event': 'Send event email',
+        'POST /email/notification': 'Send notification email',
+        'POST /email/campaign': 'Send campaign email',
+        'POST /email/campaign/bulk': 'Send bulk campaign',
+        'GET /email/queue/status': 'Get email queue status',
+        'DELETE /email/queue': 'Clear email queue',
       },
       payments: {
         'POST /payments/process': 'Process payment',

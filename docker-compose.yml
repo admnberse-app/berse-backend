@@ -31,9 +31,18 @@ services:
       DATABASE_URL: postgresql://bersemuka_user:bersemuka_pass@postgres:5432/bersemuka_db?schema=public
       PORT: 3000
       NODE_ENV: development
-      JWT_SECRET: your-super-secret-jwt-key-change-this
-      JWT_EXPIRY: 7d
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production-min-256-bits
+      JWT_REFRESH_SECRET: your-super-secret-refresh-jwt-key-change-this-in-production-min-256-bits
+      JWT_EXPIRES_IN: "15m"
+      JWT_REFRESH_EXPIRES_IN: "7d"
       CORS_ORIGIN: http://localhost:5173
+      COOKIE_SECRET: your-cookie-secret-key-change-this-in-production
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      MAX_FILE_SIZE: "10mb"
+      UPLOAD_DIR: "uploads"
     volumes:
       - ./src:/app/src
       - ./prisma:/app/prisma
