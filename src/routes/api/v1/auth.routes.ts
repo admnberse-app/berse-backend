@@ -91,20 +91,14 @@ router.post('/forgot-password',
   // authLimiter, // DISABLED FOR DEVELOPMENT
   forgotPasswordValidation,
   handleValidationErrors,
-  asyncHandler(async (req, res) => {
-    // TODO: Implement forgot password
-    res.json({ message: 'Password reset email sent' });
-  })
+  asyncHandler(AuthController.forgotPassword)
 );
 
 router.post('/reset-password',
   // authLimiter, // DISABLED FOR DEVELOPMENT
   resetPasswordValidation,
   handleValidationErrors,
-  asyncHandler(async (req, res) => {
-    // TODO: Implement reset password
-    res.json({ message: 'Password reset successful' });
-  })
+  asyncHandler(AuthController.resetPassword)
 );
 
 router.post('/verify-email',

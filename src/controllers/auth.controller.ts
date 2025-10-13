@@ -7,6 +7,9 @@ import { MembershipService } from '../services/membership.service';
 import { AppError } from '../middleware/error';
 import JwtManager from '../utils/jwt';
 import logger from '../utils/logger';
+import crypto from 'crypto';
+import { emailQueue } from '../services/emailQueue.service';
+import { EmailTemplate } from '../types/email.types';
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -357,6 +360,122 @@ export class AuthController {
       logger.error('Password change failed', { 
         error: error instanceof Error ? error.message : 'Unknown error', 
         userId: (req as any).user?.id 
+      });
+      next(error);
+    }
+  }
+
+  static async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      // Always return success to prevent email enumeration
+      if (!user) {
+        logger.warn('Password reset requested for non-existent email', { email });
+        sendSuccess(res, null, 'If the email exists, a password reset link has been sent.');
+        return;
+      }
+
+      // Generate reset token (32 bytes = 64 hex characters)
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+      
+      // Token expires in 1 hour
+      const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+      // Save hashed token to database
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetToken: resetTokenHash,
+          passwordResetExpires: resetTokenExpires,
+        },
+      });
+
+      // Generate 6-digit code for backup
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Create reset URL
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+      // Queue password reset email
+      emailQueue.add(
+        user.email,
+        EmailTemplate.PASSWORD_RESET,
+        {
+          userName: user.fullName,
+          resetUrl,
+          resetCode,
+          expiresIn: '1 hour',
+        }
+      );
+
+      logger.info('Password reset email queued', { 
+        userId: user.id, 
+        email: user.email,
+        expiresAt: resetTokenExpires 
+      });
+
+      sendSuccess(res, null, 'If the email exists, a password reset link has been sent.');
+    } catch (error) {
+      logger.error('Forgot password failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error', 
+        email: req.body.email 
+      });
+      next(error);
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token, password } = req.body;
+
+      // Hash the token from URL to compare with database
+      const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Find user with valid reset token
+      const user = await prisma.user.findFirst({
+        where: {
+          passwordResetToken: resetTokenHash,
+          passwordResetExpires: {
+            gt: new Date(), // Token not expired
+          },
+        },
+      });
+
+      if (!user) {
+        throw new AppError('Invalid or expired reset token', 400);
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(password);
+
+      // Update password and clear reset token
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          passwordResetToken: null,
+          passwordResetExpires: null,
+          lastPasswordChangeAt: new Date(),
+        },
+      });
+
+      // Revoke all refresh tokens for security
+      await JwtManager.revokeAllUserTokens(user.id);
+
+      // Log password reset
+      logger.info('Password reset successful', { userId: user.id, email: user.email });
+
+      sendSuccess(res, null, 'Password reset successfully. Please log in with your new password.');
+    } catch (error) {
+      logger.error('Password reset failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
       next(error);
     }
