@@ -1,8 +1,23 @@
 // Berse Platform - Comprehensive Database Schema
 // Generated: 2025-10-14
-// Version: 2.7.0
+// Version: 2.8.0
 // 
 // Changelog:
+// - v2.8.0: App Configuration & Content Management System
+//   - Added AppConfig model for dynamic app settings (version, maintenance, feature flags)
+//   - Added OnboardingScreen model with analytics for customizable onboarding flow
+//   - Added AppVersion model for version control and changelogs (iOS/Android/Web)
+//   - Added LegalDocument model with versioning for TOS, Privacy Policy, EULA, etc.
+//   - Added LegalDocumentAcceptance model for tracking user consent
+//   - Added Announcement model with advanced targeting and analytics
+//   - Added FAQ and FAQCategory models with helpfulness tracking
+//   - Added HelpArticle and HelpArticleCategory models for comprehensive documentation
+//   - Added MaintenanceSchedule model for planned maintenance communication
+//   - Added FeatureFlag model for A/B testing and gradual feature rollouts
+//   - Added AppNotice model for in-app notices and banners
+//   - Full analytics tracking for all content (views, clicks, engagement)
+//   - Rich content support (Markdown/HTML) for easy content editing
+//   - Advanced targeting (country, user segment, app version, platform)
 // - v2.7.0: Comprehensive Referral System
 //   - Added Referral model for tracking individual referrals with activation criteria
 //   - Added ReferralCampaign model for promotional campaigns with bonus rewards
@@ -2485,6 +2500,633 @@ model PushSubscription {
 }
 
 // ============================================================================
+// APP CONFIGURATION & CONTENT MANAGEMENT
+// ============================================================================
+
+model AppConfig {
+  id                    String   @id @default(uuid())
+  configKey             String   @unique  // app_version, maintenance_mode, api_base_url
+  configValue           String   // JSON string for complex values
+  dataType              String   @default("string")  // string, number, boolean, json
+  category              String   @default("general") // general, features, api, ui
+  description           String?
+  isPublic              Boolean  @default(false)  // Expose to mobile app
+  isEditable            Boolean  @default(true)   // Can be edited via admin panel
+  updatedBy             String?  // Admin user ID
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([configKey])
+  @@index([category, isPublic])
+  @@map("app_configs")
+}
+
+model OnboardingScreen {
+  id                String   @id @default(uuid())
+  screenOrder       Int      // Display order (1, 2, 3, etc.)
+  title             String
+  subtitle          String?
+  description       String?  // Markdown/HTML supported
+  imageUrl          String?
+  videoUrl          String?
+  ctaText           String?  // Call-to-action button text
+  ctaAction         String?  // next, skip, complete, external_link
+  ctaUrl            String?  // For external links
+  backgroundColor   String?  // Hex color
+  isSkippable       Boolean  @default(true)
+  isActive          Boolean  @default(true)
+  targetAudience    String   @default("all")  // all, new_users, returning_users
+  minAppVersion     String?  // Show only for specific versions
+  metadata          Json?    // Additional flexible data
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  analytics         OnboardingAnalytics[]
+  
+  @@index([screenOrder, isActive])
+  @@index([isActive])
+  @@map("onboarding_screens")
+}
+
+model OnboardingAnalytics {
+  id                String   @id @default(uuid())
+  screenId          String
+  userId            String?  // Null for anonymous users
+  
+  // Events
+  viewed            Boolean  @default(false)
+  viewedAt          DateTime?
+  completed         Boolean  @default(false)
+  completedAt       DateTime?
+  skipped           Boolean  @default(false)
+  skippedAt         DateTime?
+  
+  // Duration
+  timeSpentSeconds  Int?     // Time spent on this screen
+  
+  // Device Info
+  deviceInfo        Json?
+  appVersion        String?
+  
+  createdAt         DateTime @default(now())
+  
+  screen            OnboardingScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  
+  @@index([screenId, viewed])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("onboarding_analytics")
+}
+
+model AppVersion {
+  id                String   @id @default(uuid())
+  versionNumber     String   // 1.0.0, 1.0.1, etc.
+  versionCode       Int      // Build number
+  platform          AppPlatform  // IOS, ANDROID, WEB
+  
+  // Release Info
+  releaseDate       DateTime
+  releaseNotes      String   // Markdown/HTML changelog
+  releaseType       String   @default("stable")  // alpha, beta, stable, hotfix
+  
+  // Update Requirements
+  isForceUpdate     Boolean  @default(false)  // Force users to update
+  minSupportedVersion String?  // Minimum version still supported
+  
+  // Status
+  isActive          Boolean  @default(true)
+  isCurrent         Boolean  @default(false)  // Current production version
+  
+  // Download/Store Links
+  downloadUrl       String?
+  storeUrl          String?  // App Store / Play Store URL
+  
+  // Metadata
+  features          Json?    // New features in this version
+  bugFixes          Json?    // Bug fixes
+  improvements      Json?    // Improvements
+  deprecations      Json?    // Deprecated features
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@unique([versionNumber, platform])
+  @@index([platform, isCurrent])
+  @@index([platform, isActive])
+  @@index([releaseDate])
+  @@map("app_versions")
+}
+
+model LegalDocument {
+  id                String   @id @default(uuid())
+  documentType      LegalDocumentType  // TOS, PRIVACY_POLICY, EULA, etc.
+  version           String   // 1.0, 1.1, 2.0, etc.
+  
+  // Content
+  title             String
+  content           String   // Full document in Markdown/HTML
+  summary           String?  // Brief summary
+  
+  // Versioning
+  effectiveDate     DateTime // When this version takes effect
+  expiryDate        DateTime? // When this version expires (null = current)
+  
+  // Status
+  isActive          Boolean  @default(false)
+  isCurrent         Boolean  @default(false)
+  requiresAcceptance Boolean @default(false)  // Require users to accept
+  
+  // Changelog
+  changesSummary    String?  // What changed from previous version
+  previousVersionId String?  // Link to previous version
+  
+  // Metadata
+  createdBy         String?  // Admin user ID
+  approvedBy        String?  // Legal team approval
+  approvedAt        DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  acceptances       LegalDocumentAcceptance[]
+  
+  @@unique([documentType, version])
+  @@index([documentType, isCurrent])
+  @@index([effectiveDate])
+  @@map("legal_documents")
+}
+
+model LegalDocumentAcceptance {
+  id                String   @id @default(uuid())
+  documentId        String
+  userId            String
+  
+  // Acceptance Details
+  acceptedAt        DateTime @default(now())
+  ipAddress         String?
+  userAgent         String?
+  deviceInfo        Json?
+  
+  // Version Info
+  documentVersion   String
+  documentType      LegalDocumentType
+  
+  document          LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, documentId])
+  @@index([userId, documentType])
+  @@index([documentId])
+  @@map("legal_document_acceptances")
+}
+
+model Announcement {
+  id                String   @id @default(uuid())
+  title             String
+  content           String   // Markdown/HTML
+  excerpt           String?  // Short summary
+  
+  // Media
+  imageUrl          String?
+  thumbnailUrl      String?
+  videoUrl          String?
+  
+  // Priority & Display
+  priority          AnnouncementPriority @default(NORMAL)
+  displayType       String   @default("banner")  // banner, modal, inline, push
+  
+  // Targeting
+  targetAudience    String   @default("all")  // all, premium, free, specific_country
+  targetCountries   String[] @default([])  // Empty = all countries
+  targetUserSegment String[] @default([])  // new_users, active_users, dormant_users
+  minAppVersion     String?
+  
+  // CTA (Call to Action)
+  ctaText           String?
+  ctaUrl            String?
+  ctaAction         String?  // open_url, navigate_to, dismiss
+  
+  // Scheduling
+  publishedAt       DateTime?
+  expiresAt         DateTime?
+  
+  // Status
+  isActive          Boolean  @default(true)
+  isPinned          Boolean  @default(false)
+  isDismissible     Boolean  @default(true)
+  
+  // Analytics
+  viewCount         Int      @default(0)
+  clickCount        Int      @default(0)
+  
+  // Metadata
+  createdBy         String?  // Admin user ID
+  tags              String[] @default([])
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  analytics         AnnouncementAnalytics[]
+  
+  @@index([isActive, publishedAt])
+  @@index([priority, isActive])
+  @@index([expiresAt])
+  @@index([isPinned, isActive])
+  @@map("announcements")
+}
+
+model AnnouncementAnalytics {
+  id                String   @id @default(uuid())
+  announcementId    String
+  userId            String?  // Null for anonymous
+  
+  // Events
+  viewed            Boolean  @default(false)
+  viewedAt          DateTime?
+  clicked           Boolean  @default(false)
+  clickedAt         DateTime?
+  dismissed         Boolean  @default(false)
+  dismissedAt       DateTime?
+  
+  // Context
+  viewedFrom        String?  // home, profile, notifications
+  deviceInfo        Json?
+  
+  createdAt         DateTime @default(now())
+  
+  announcement      Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  
+  @@index([announcementId, viewed])
+  @@index([userId])
+  @@map("announcement_analytics")
+}
+
+model FAQ {
+  id                String   @id @default(uuid())
+  categoryId        String?
+  
+  // Content
+  question          String
+  answer            String   // Markdown/HTML
+  
+  // Organization
+  displayOrder      Int      @default(0)
+  tags              String[] @default([])
+  
+  // Metadata
+  isActive          Boolean  @default(true)
+  isFeatured        Boolean  @default(false)  // Show in featured/popular section
+  
+  // Analytics
+  viewCount         Int      @default(0)
+  helpfulCount      Int      @default(0)
+  notHelpfulCount   Int      @default(0)
+  
+  // Related
+  relatedFaqIds     String[] @default([])  // IDs of related FAQs
+  relatedArticleIds String[] @default([])  // IDs of related help articles
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  category          FAQCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  analytics         FAQAnalytics[]
+  
+  @@index([categoryId, isActive])
+  @@index([isFeatured, isActive])
+  @@index([displayOrder])
+  @@map("faqs")
+}
+
+model FAQCategory {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  icon              String?  // Icon name or URL
+  displayOrder      Int      @default(0)
+  isActive          Boolean  @default(true)
+  
+  faqs              FAQ[]
+  
+  @@index([displayOrder, isActive])
+  @@map("faq_categories")
+}
+
+model FAQAnalytics {
+  id                String   @id @default(uuid())
+  faqId             String
+  userId            String?
+  
+  // Events
+  viewed            Boolean  @default(false)
+  viewedAt          DateTime?
+  markedHelpful     Boolean? // true = helpful, false = not helpful
+  markedAt          DateTime?
+  
+  // Search Context
+  searchQuery       String?  // What user searched to find this
+  viewedFrom        String?  // search, browse, related
+  
+  createdAt         DateTime @default(now())
+  
+  faq               FAQ @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  
+  @@index([faqId, viewed])
+  @@index([userId])
+  @@map("faq_analytics")
+}
+
+model HelpArticle {
+  id                String   @id @default(uuid())
+  categoryId        String?
+  
+  // Content
+  title             String
+  slug              String   @unique
+  content           String   // Markdown/HTML
+  excerpt           String?
+  
+  // Media
+  thumbnailUrl      String?
+  videoUrl          String?
+  attachments       Json?    // Array of file URLs
+  
+  // Organization
+  displayOrder      Int      @default(0)
+  tags              String[] @default([])
+  
+  // SEO & Search
+  metaDescription   String?
+  keywords          String[] @default([])
+  
+  // Status
+  isActive          Boolean  @default(true)
+  isFeatured        Boolean  @default(false)
+  isPremiumOnly     Boolean  @default(false)
+  
+  // Analytics
+  viewCount         Int      @default(0)
+  helpfulCount      Int      @default(0)
+  notHelpfulCount   Int      @default(0)
+  averageTimeSpent  Float?   // In seconds
+  
+  // Related Content
+  relatedArticleIds String[] @default([])
+  relatedFaqIds     String[] @default([])
+  
+  // Metadata
+  createdBy         String?  // Admin user ID
+  publishedAt       DateTime?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  category          HelpArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  analytics         HelpArticleAnalytics[]
+  
+  @@index([categoryId, isActive])
+  @@index([slug])
+  @@index([isFeatured, isActive])
+  @@index([publishedAt])
+  @@map("help_articles")
+}
+
+model HelpArticleCategory {
+  id                String   @id @default(uuid())
+  name              String
+  slug              String   @unique
+  description       String?
+  icon              String?
+  displayOrder      Int      @default(0)
+  isActive          Boolean  @default(true)
+  
+  articles          HelpArticle[]
+  
+  @@index([displayOrder, isActive])
+  @@map("help_article_categories")
+}
+
+model HelpArticleAnalytics {
+  id                String   @id @default(uuid())
+  articleId         String
+  userId            String?
+  
+  // Events
+  viewed            Boolean  @default(false)
+  viewedAt          DateTime?
+  markedHelpful     Boolean?
+  markedAt          DateTime?
+  
+  // Engagement
+  timeSpentSeconds  Int?
+  scrollDepth       Float?   // Percentage of article scrolled
+  
+  // Context
+  viewedFrom        String?  // search, browse, related, notification
+  searchQuery       String?
+  
+  createdAt         DateTime @default(now())
+  
+  article           HelpArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  
+  @@index([articleId, viewed])
+  @@index([userId])
+  @@map("help_article_analytics")
+}
+
+model MaintenanceSchedule {
+  id                String   @id @default(uuid())
+  title             String
+  description       String   // Markdown/HTML
+  
+  // Schedule
+  startTime         DateTime
+  endTime           DateTime
+  estimatedDuration Int?     // In minutes
+  
+  // Status
+  status            MaintenanceStatus @default(SCHEDULED)
+  
+  // Impact
+  affectedFeatures  String[] @default([])  // Array of feature keys
+  isFullDowntime    Boolean  @default(false)  // Complete app unavailable
+  severity          String   @default("medium")  // low, medium, high, critical
+  
+  // Messaging
+  userMessage       String?  // Message to show users
+  technicalDetails  String?  // Internal technical details
+  
+  // Updates
+  updates           Json?    // Array of status updates during maintenance
+  // Example: [
+  //   {"time": "2025-01-15T10:00:00Z", "message": "Maintenance started"},
+  //   {"time": "2025-01-15T10:30:00Z", "message": "50% complete"}
+  // ]
+  
+  // Notifications
+  notifyUsers       Boolean  @default(true)
+  notificationSent  Boolean  @default(false)
+  notifiedAt        DateTime?
+  
+  // Completion
+  actualStartTime   DateTime?
+  actualEndTime     DateTime?
+  completionNotes   String?
+  
+  // Metadata
+  createdBy         String?  // Admin user ID
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([status, startTime])
+  @@index([startTime, endTime])
+  @@map("maintenance_schedules")
+}
+
+model FeatureFlag {
+  id                String   @id @default(uuid())
+  featureKey        String   @unique  // new_chat_ui, payment_v2, dark_mode
+  featureName       String
+  description       String?
+  
+  // Status
+  isEnabled         Boolean  @default(false)
+  isGlobal          Boolean  @default(false)  // Enable for everyone
+  
+  // Rollout Strategy
+  rolloutPercentage Float    @default(0.0)  // 0-100, percentage of users to enable
+  rolloutStrategy   String   @default("percentage")  // percentage, whitelist, segment
+  
+  // Targeting
+  targetUserIds     String[] @default([])  // Specific user whitelist
+  targetSegments    String[] @default([])  // user_segment values
+  targetCountries   String[] @default([])
+  targetPlatforms   String[] @default([])  // ios, android, web
+  minAppVersion     String?
+  maxAppVersion     String?
+  
+  // A/B Testing
+  isABTest          Boolean  @default(false)
+  abTestVariant     String?  // A, B, C, etc.
+  abTestMetrics     Json?    // Metrics to track
+  
+  // Scheduling
+  enabledAt         DateTime?
+  disabledAt        DateTime?
+  scheduledEnableAt DateTime?
+  scheduledDisableAt DateTime?
+  
+  // Metadata
+  createdBy         String?
+  tags              String[] @default([])
+  dependencies      String[] @default([])  // Other feature flags this depends on
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  analytics         FeatureFlagAnalytics[]
+  
+  @@index([featureKey, isEnabled])
+  @@index([isEnabled, isGlobal])
+  @@map("feature_flags")
+}
+
+model FeatureFlagAnalytics {
+  id                String   @id @default(uuid())
+  featureFlagId     String
+  userId            String?
+  
+  // Evaluation
+  wasEnabled        Boolean  // Was feature enabled for this user
+  evaluatedAt       DateTime @default(now())
+  
+  // Context
+  variant           String?  // For A/B tests
+  userSegment       String?
+  platform          String?
+  appVersion        String?
+  
+  // Usage (tracked separately after evaluation)
+  featureUsed       Boolean  @default(false)
+  usedAt            DateTime?
+  usageCount        Int      @default(0)
+  
+  featureFlag       FeatureFlag @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
+  
+  @@index([featureFlagId, wasEnabled])
+  @@index([userId])
+  @@index([evaluatedAt])
+  @@map("feature_flag_analytics")
+}
+
+model AppNotice {
+  id                String   @id @default(uuid())
+  noticeType        AppNoticeType  // INFO, WARNING, ERROR, SUCCESS, PROMOTION
+  
+  // Content
+  title             String
+  message           String   // Markdown/HTML
+  icon              String?
+  
+  // Display
+  displayLocation   String[] @default(["home"])  // home, profile, settings, all_screens
+  displayStyle      String   @default("banner")  // banner, toast, modal, inline
+  priority          Int      @default(0)  // Higher = shown first
+  
+  // Behavior
+  isDismissible     Boolean  @default(true)
+  autoDismiss       Boolean  @default(false)
+  autoDismissSeconds Int?    // Auto-dismiss after X seconds
+  
+  // Targeting
+  targetAudience    String   @default("all")
+  targetUserIds     String[] @default([])
+  targetSegments    String[] @default([])
+  targetCountries   String[] @default([])
+  minAppVersion     String?
+  
+  // CTA
+  ctaText           String?
+  ctaAction         String?
+  ctaUrl            String?
+  
+  // Scheduling
+  startDate         DateTime @default(now())
+  endDate           DateTime?
+  
+  // Status
+  isActive          Boolean  @default(true)
+  
+  // Analytics
+  impressionCount   Int      @default(0)
+  dismissCount      Int      @default(0)
+  clickCount        Int      @default(0)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  dismissals        AppNoticeDismissal[]
+  
+  @@index([isActive, startDate, endDate])
+  @@index([noticeType, isActive])
+  @@index([priority, isActive])
+  @@map("app_notices")
+}
+
+model AppNoticeDismissal {
+  id                String   @id @default(uuid())
+  noticeId          String
+  userId            String
+  dismissedAt       DateTime @default(now())
+  
+  notice            AppNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  
+  @@unique([noticeId, userId])
+  @@index([userId])
+  @@map("app_notice_dismissals")
+}
+
+// ============================================================================
 // ENUMS
 // ============================================================================
 
@@ -2718,4 +3360,44 @@ enum SubscriptionStatus {
   EXPIRED             // Subscription has ended
   PAUSED              // Temporarily paused
   INCOMPLETE          // Payment incomplete
+}
+
+enum AppPlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum LegalDocumentType {
+  TOS
+  PRIVACY_POLICY
+  EULA
+  COOKIE_POLICY
+  COMMUNITY_GUIDELINES
+  REFUND_POLICY
+  ACCEPTABLE_USE
+}
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DELAYED
+}
+
+enum AppNoticeType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+  PROMOTION
+  UPDATE
 }

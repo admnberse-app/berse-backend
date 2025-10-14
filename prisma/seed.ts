@@ -1212,6 +1212,12 @@ async function main() {
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('='.repeat(50) + '\n');
+  
+  // ===================================
+  // OPTIONAL: RUN APP CONFIG SEED
+  // ===================================
+  console.log('\n💡 To seed app configuration data, run:');
+  console.log('   npx ts-node prisma/seed-app-config.ts\n');
 }
 
 main()
