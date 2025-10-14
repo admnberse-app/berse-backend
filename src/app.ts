@@ -5,7 +5,10 @@ import compression from 'compression';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import swaggerUi from 'swagger-ui-express';
+import redoc from 'redoc-express';
 import { config } from './config';
+import { swaggerSpec } from './config/swagger';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { generalLimiter } from './middleware/rateLimiter';
 import { securityMiddleware } from './middleware/validation';
@@ -14,6 +17,7 @@ import logger, { stream } from './utils/logger';
 
 // Import API routers
 import apiV1Router from './routes/api/v1';
+import apiV2Router from './routes/v2';
 
 const app: Application = express();
 
@@ -22,14 +26,14 @@ if (config.isProduction) {
   app.set('trust proxy', 1);
 }
 
-// Security middleware
+// Security middleware (adjusted for Swagger UI)
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: config.isDevelopment ? false : {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "validator.swagger.io"],
     },
   },
   crossOriginEmbedderPolicy: !config.isDevelopment,
@@ -140,19 +144,101 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   lastModified: true,
 }));
 
+// ============================================================================
+// API DOCUMENTATION
+// ============================================================================
+
+// Swagger UI - Interactive API documentation
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Berse API Documentation',
+  customfavIcon: '/favicon.ico',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true,
+    syntaxHighlight: {
+      activate: true,
+      theme: 'monokai',
+    },
+  },
+}));
+
+// ReDoc - Alternative beautiful documentation
+app.get('/docs', 
+  redoc({
+    title: 'Berse API Documentation',
+    specUrl: '/api-docs.json',
+    redocOptions: {
+      theme: {
+        colors: {
+          primary: {
+            main: '#6366f1',
+          },
+        },
+        typography: {
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontSize: '14px',
+        },
+      },
+      hideDownloadButton: false,
+      disableSearch: false,
+      hideHostname: false,
+      expandResponses: '200,201',
+      pathInMiddlePanel: true,
+      sortPropsAlphabetically: true,
+      sortEnumValuesAlphabetically: true,
+    },
+  })
+);
+
+// OpenAPI JSON spec endpoint
+app.get('/api-docs.json', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// ============================================================================
+// API ROUTES
+// ============================================================================
+
 // API Routes with versioning
-app.use('/api/v1', apiV1Router);
+app.use('/api/v1', apiV1Router); // Legacy v1 routes (kept for backward compatibility)
+app.use('/v2', apiV2Router);      // New v2 routes (primary)
 
 // CSRF token endpoint
-app.get('/api/csrf-token', csrfTokenEndpoint);
+app.get('/csrf-token', csrfTokenEndpoint);
 
 // Root route
 app.get('/', (_req: Request, res: Response) => {
   res.json({ 
-    name: 'BerseMuka API',
-    version: '1.0.0',
+    name: 'Berse Platform API',
+    version: '2.0.0',
     status: 'running',
-    documentation: '/api/docs',
+    baseUrl: 'https://api.berse-app.com',
+    documentation: {
+      swagger: '/api-docs (Swagger UI)',
+      redoc: '/docs (ReDoc)',
+      openapi: '/api-docs.json (OpenAPI Spec)',
+      v2: '/v2/docs (JSON)',
+      v1: '/api/v1/docs (JSON - Legacy)',
+    },
+    endpoints: {
+      v2: {
+        auth: '/v2/auth',
+        users: '/v2/users',
+        health: '/v2/health',
+        docs: '/v2/docs',
+      },
+      v1: {
+        note: 'Legacy endpoints - use v2 for new integrations',
+        base: '/api/v1',
+      },
+    },
     health: '/health',
   });
 });

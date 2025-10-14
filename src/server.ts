@@ -4,7 +4,8 @@ import { prisma } from './config/database';
 import logger from './utils/logger';
 import cluster from 'cluster';
 import os from 'os';
-import { initializeProfileReminderJob } from './jobs/profileCompletionReminders';
+// TEMPORARILY DISABLED - Job needs schema compliance updates
+// import { initializeProfileReminderJob } from './jobs/profileCompletionReminders';
 import { MembershipService } from './services/membership.service';
 
 // Enable cluster mode for production
@@ -68,24 +69,54 @@ const startServer = async () => {
       logger.info(`👥 Worker ${process.pid} started`);
       
       // Initialize profile completion reminder job
-      if (cluster.isPrimary || !config.isProduction) {
-        try {
-          initializeProfileReminderJob();
-          logger.info('✅ Profile completion reminder job initialized');
-        } catch (error) {
-          logger.error('Failed to initialize profile reminder job:', error);
-        }
-      }
+      // TEMPORARILY DISABLED - Job needs schema compliance updates
+      // if (cluster.isPrimary || !config.isProduction) {
+      //   try {
+      //     initializeProfileReminderJob();
+      //     logger.info('✅ Profile completion reminder job initialized');
+      //   } catch (error) {
+      //     logger.error('Failed to initialize profile reminder job:', error);
+      //   }
+      // }
       
       if (config.isDevelopment) {
-        logger.info('\n📌 Available endpoints:');
+        logger.info('\n� API DOCUMENTATION:');
+        logger.info(`   🎨 Swagger UI:  http://localhost:${config.port}/api-docs`);
+        logger.info(`   📖 ReDoc:       http://localhost:${config.port}/docs`);
+        logger.info(`   📄 OpenAPI:     http://localhost:${config.port}/api-docs.json`);
+        
+        logger.info('\n�📌 Available V2 Endpoints (Primary):');
         logger.info(`   GET  http://localhost:${config.port}/`);
         logger.info(`   GET  http://localhost:${config.port}/health`);
-        logger.info(`   GET  http://localhost:${config.port}/api/v1/health`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/health`);
+        
+        logger.info('\n🔐 Authentication:');
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/register`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/login`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/logout`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/refresh`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/forgot-password`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/reset-password`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/verify-email`);
+        logger.info(`   POST http://localhost:${config.port}/v2/auth/resend-verification`);
+        
+        logger.info('\n👥 Users & Connections:');
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/profile`);
+        logger.info(`   PUT  http://localhost:${config.port}/v2/users/profile`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/search`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/:id`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/connection-request`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/accept-connection/:id`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/reject-connection/:id`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/cancel-connection/:id`);
+        logger.info(`   DEL  http://localhost:${config.port}/v2/users/remove-connection/:id`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/connections`);
+        
+        logger.info('\n📋 Legacy V1 Endpoints (Backward Compatibility):');
         logger.info(`   POST http://localhost:${config.port}/api/v1/auth/register`);
         logger.info(`   POST http://localhost:${config.port}/api/v1/auth/login`);
-        logger.info(`   GET  http://localhost:${config.port}/api/v1/push/vapid-public-key`);
-        logger.info(`   POST http://localhost:${config.port}/api/v1/push/subscribe`);
+        logger.info(`   GET  http://localhost:${config.port}/api/v1/users/profile`);
+        logger.info(`   Note: Most v1 endpoints temporarily disabled - use v2`);
       }
     });
 

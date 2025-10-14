@@ -16,8 +16,8 @@ export class MembershipService {
       const membershipId = `${prefix}${randomNum}`;
       
       try {
-        // Check if this ID already exists
-        const existing = await prisma.user.findUnique({
+        // Check if this ID already exists in UserMetadata
+        const existing = await prisma.userMetadata.findFirst({
           where: { membershipId }
         });
         
@@ -41,15 +41,23 @@ export class MembershipService {
    */
   static async fixMissingMembershipIds(): Promise<void> {
     try {
-      // Find all users without membership IDs
+      // Find all users without membership IDs in their metadata
       const usersWithoutIds = await prisma.user.findMany({
         where: {
-          membershipId: null
+          OR: [
+            { metadata: { is: { membershipId: null } } },
+            { metadata: { is: null } }
+          ]
         },
         select: {
           id: true,
           fullName: true,
-          email: true
+          email: true,
+          metadata: {
+            select: {
+              membershipId: true
+            }
+          }
         }
       });
       
@@ -63,9 +71,15 @@ export class MembershipService {
         try {
           const membershipId = await this.generateUniqueMembershipId();
           
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { membershipId }
+          // Upsert the metadata with membership ID
+          await prisma.userMetadata.upsert({
+            where: { userId: user.id },
+            update: { membershipId },
+            create: {
+              userId: user.id,
+              membershipId,
+              referralCode: `REF-${user.id.substring(0, 8).toUpperCase()}`
+            }
           });
           
           logger.info('Generated membership ID for user', {
@@ -93,19 +107,31 @@ export class MembershipService {
     try {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { membershipId: true }
+        select: { 
+          metadata: {
+            select: {
+              membershipId: true
+            }
+          }
+        }
       });
       
-      if (user?.membershipId) {
-        return user.membershipId;
+      if (user?.metadata?.membershipId) {
+        return user.metadata.membershipId;
       }
       
       // Generate new membership ID
       const membershipId = await this.generateUniqueMembershipId();
       
-      await prisma.user.update({
-        where: { id: userId },
-        data: { membershipId }
+      // Upsert the metadata
+      await prisma.userMetadata.upsert({
+        where: { userId },
+        update: { membershipId },
+        create: {
+          userId,
+          membershipId,
+          referralCode: `REF-${userId.substring(0, 8).toUpperCase()}`
+        }
       });
       
       logger.info('Generated membership ID for user', { userId, membershipId });

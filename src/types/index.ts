@@ -1,8 +1,22 @@
 import { Request } from 'express';
-import { User } from '@prisma/client';
+import { User, UserRole, UserStatus } from '@prisma/client';
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  status: UserStatus;
+  totalPoints: number;
+  serviceProfile?: {
+    isHostCertified: boolean;
+    isHostAvailable: boolean;
+    isGuideAvailable: boolean;
+  } | null;
+}
 
 export interface AuthRequest extends Request {
-  user?: User;
+  user?: AuthenticatedUser;
 }
 
 export interface JwtPayload {

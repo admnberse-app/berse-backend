@@ -31,13 +31,24 @@ export const authenticateToken = async (
         email: true,
         fullName: true,
         role: true,
-        isHostCertified: true,
+        status: true,
         totalPoints: true,
+        serviceProfile: {
+          select: {
+            isHostCertified: true,
+            isHostAvailable: true,
+            isGuideAvailable: true,
+          },
+        },
       },
     });
 
     if (!user) {
       throw new AuthenticationError('User not found');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      throw new AuthenticationError('Account is not active');
     }
 
     // Add user to request object
@@ -86,12 +97,19 @@ export const optionalAuth = async (
         email: true,
         fullName: true,
         role: true,
-        isHostCertified: true,
+        status: true,
         totalPoints: true,
+        serviceProfile: {
+          select: {
+            isHostCertified: true,
+            isHostAvailable: true,
+            isGuideAvailable: true,
+          },
+        },
       },
     });
 
-    if (user) {
+    if (user && user.status === 'ACTIVE') {
       req.user = user as any;
     }
     
@@ -132,7 +150,7 @@ export const requireHostCertification = (
     throw new AuthenticationError('Authentication required');
   }
 
-  if (!req.user.isHostCertified) {
+  if (!req.user.serviceProfile?.isHostCertified) {
     throw new AuthorizationError('Host certification required');
   }
 
