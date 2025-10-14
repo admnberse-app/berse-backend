@@ -197,7 +197,6 @@ model User {
   // Referral System
   referralStats               ReferralStats?
   referralsGenerated          Referral[]        @relation("ReferralsGenerated")
-  referredUsers               Referral[]        @relation("ReferredUsers")
   referralRewardsEarned       ReferralReward[]  @relation("ReferralRewardsEarned")
   
   // Legacy
@@ -409,6 +408,7 @@ model UserMetadata {
   
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
+  @@unique([referralCode])
   @@index([referralSource])
   @@index([affiliateId])
   @@map("user_metadata")
@@ -1612,7 +1612,7 @@ model Referral {
   
   // Relations
   referrer          User     @relation("ReferralsGenerated", fields: [referrerId], references: [id], onDelete: Cascade)
-  referee           User?    @relation("ReferredUsers", fields: [refereeId], references: [id], onDelete: SetNull)
+  referee           User?    @relation("Referrals", fields: [refereeId], references: [id], onDelete: SetNull)
   campaign          ReferralCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   rewards           ReferralReward[]
   
