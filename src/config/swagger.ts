@@ -41,6 +41,10 @@ const swaggerDefinition = {
       description: 'User connection and relationship management',
     },
     {
+      name: 'Metadata',
+      description: 'Country, region, timezone, and other metadata endpoints',
+    },
+    {
       name: 'Health',
       description: 'API health and status checks',
     },

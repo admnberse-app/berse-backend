@@ -1,70 +1,3 @@
-// Berse Platform - Comprehensive Database Schema
-// Generated: 2025-10-14
-// Version: 2.8.0
-// 
-// Changelog:
-// - v2.8.0: App Configuration & Content Management System
-//   - Added AppConfig model for dynamic app settings (version, maintenance, feature flags)
-//   - Added OnboardingScreen model with analytics for customizable onboarding flow
-//   - Added AppVersion model for version control and changelogs (iOS/Android/Web)
-//   - Added LegalDocument model with versioning for TOS, Privacy Policy, EULA, etc.
-//   - Added LegalDocumentAcceptance model for tracking user consent
-//   - Added Announcement model with advanced targeting and analytics
-//   - Added FAQ and FAQCategory models with helpfulness tracking
-//   - Added HelpArticle and HelpArticleCategory models for comprehensive documentation
-//   - Added MaintenanceSchedule model for planned maintenance communication
-//   - Added FeatureFlag model for A/B testing and gradual feature rollouts
-//   - Added AppNotice model for in-app notices and banners
-//   - Full analytics tracking for all content (views, clicks, engagement)
-//   - Rich content support (Markdown/HTML) for easy content editing
-//   - Advanced targeting (country, user segment, app version, platform)
-// - v2.7.0: Comprehensive Referral System
-//   - Added Referral model for tracking individual referrals with activation criteria
-//   - Added ReferralCampaign model for promotional campaigns with bonus rewards
-//   - Added ReferralReward model for points, credits, subscription discounts
-//   - Added ReferralStats model for analytics and leaderboard rankings
-//   - Added ReferralRewardStatus enum for reward lifecycle tracking
-//   - Milestone-based rewards (5 referrals → 500 points, 10 referrals → premium discount)
-//   - Click/signup/activation funnel tracking with conversion rates
-//   - Referral streaks and best performer tracking
-//   - Campaign targeting by country and user segment
-//   - Flexible activation criteria (profile completion, first event, minimum days active)
-// - v2.6.0: Trust Chain & Connection Universe enhancements
-//   - Enhanced UserConnection with ratings, relationship labels, trust metrics
-//   - Added ConnectionReview model for 5-star ratings and testimonials
-//   - Added ConnectionStats model for trust network analytics
-//   - Added badges system ("Most Trusted", "Close Friend", etc.)
-//   - Added mutual friends and trust strength calculations
-//   - Added relationship categorization (professional, mentor, travel, etc.)
-//   - Integrated with events and travel for verified reviews
-// - v2.5.0: Travel Logbook system
-//   - Added TravelTrip model for trip entries with countries, cities, dates
-//   - Added TravelCompanion model with "Request Intro" feature for trust building
-//   - Added TravelLocation model for detailed place tracking
-//   - Added TravelHighlight model for memorable moments
-//   - Added TravelStats model with countries visited, travel days, companions count
-//   - Added TravelBucketList model for future trip planning
-//   - Enhanced UserProfile with travelStyle, bucketList, travelBio
-//   - Integrated with Vouch system for travel companion vouching
-// - v2.4.0: Profile completion tracking and recommendations
-//   - Added ProfileCompletionStatus model for tracking profile completion
-//   - Removed coverPhoto field from UserProfile (not needed)
-//   - Added weighted scoring system for profile fields
-//   - Added completion milestones and gamification support
-//   - Added next field recommendations for users
-// - v2.3.0: Subscription and tier management system
-//   - Added SubscriptionTier model for free/paid tier configuration
-//   - Added UserSubscription for user subscription tracking
-//   - Added SubscriptionPayment for recurring billing
-//   - Added FeatureUsage for usage tracking and limits
-//   - Added SubscriptionStatus enum for subscription lifecycle
-// - v2.2.0: Unified payment system with centralized fee configuration
-//   - Added TransactionType enum for type-safe transaction references
-//   - Enhanced PlatformFeeConfig to support all transaction types
-//   - Integrated MarketplaceOrder with PaymentTransaction system
-//   - Integrated ServiceBooking with PaymentTransaction system
-//   - Added revenue distribution tracking to all paid transactions
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -74,468 +7,1943 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-// USERS & AUTHENTICATION
-// ============================================================================
+model announcement_analytics {
+  id             String        @id
+  announcementId String
+  userId         String?
+  viewed         Boolean       @default(false)
+  viewedAt       DateTime?
+  clicked        Boolean       @default(false)
+  clickedAt      DateTime?
+  dismissed      Boolean       @default(false)
+  dismissedAt    DateTime?
+  viewedFrom     String?
+  deviceInfo     Json?
+  createdAt      DateTime      @default(now())
+  announcements  announcements @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
-model User {
-  id                String    @id @default(uuid())
-  
-  // Core Identity (Essential fields only)
-  email             String?   @unique
-  phone             String?   @unique
-  username          String?   @unique
-  password          String?   // Hashed password for password-based auth
-  fullName          String
-  
-  // Account Status
-  role              UserRole   @default(GENERAL_USER)
-  status            UserStatus @default(ACTIVE)
-  
-  // Trust & Reputation
-  // Trust Score Calculation (0-100):
-  // - 40% from Vouches (30% primary + 30% secondary + 40% community)
-  // - 30% from Trust Moments (feedback from interactions)
-  // - 30% from Activity Participation (events, community engagement)
-  trustScore        Float     @default(0.0)
-  trustLevel        String    @default("starter") // starter, trusted, scout, leader
-  totalPoints       Int       @default(0)
-  
-  // Timestamps
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  deletedAt         DateTime?
-  
-  // Self-referential (Referrals)
-  referredById      String?
-  referredBy        User?     @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals         User[]    @relation("Referrals")
-  
-  // Relations (Core)
-  profile                     UserProfile?
-  location                    UserLocation?
-  security                    UserSecurity?
-  privacy                     UserPrivacy?
-  preferences                 UserPreferences?
-  metadata                    UserMetadata?
-  serviceProfile              UserServiceProfile?
-  
-  // Auth & Sessions
-  authIdentities              AuthIdentity[]
-  sessions                    UserSession[]
-  devices                     DeviceRegistration[]
-  loginAttempts               LoginAttempt[]
-  passwordResetTokens         PasswordResetToken[]
-  emailVerificationTokens     EmailVerificationToken[]
-  securityEvents              SecurityEvent[]
-  
-  // Stats & Activities
-  userStats                   UserStats?
-  activities                  UserActivity[]
-  profileCompletion           ProfileCompletionStatus?
-  
-  // Vouches (Trust System)
-  vouchesGiven                Vouch[]       @relation("VouchesGiven")
-  vouchesReceived             Vouch[]       @relation("VouchesReceived")
-  
-  // Events
-  hostedEvents                Event[]       @relation("EventHost")
-  attendedEvents              EventAttendance[]
-  rsvpEvents                  EventRSVP[]
-  eventTickets                EventTicket[]
-  
-  // Communities
-  createdCommunities          Community[]   @relation("CommunityCreator")
-  communityMembers            CommunityMember[]
-  
-  // Social
-  connectionsInitiated        UserConnection[] @relation("ConnectionInitiator")
-  connectionsReceived         UserConnection[] @relation("ConnectionReceiver")
-  connectionReviewsGiven      ConnectionReview[] @relation("ReviewsGiven")
-  connectionReviewsReceived   ConnectionReview[] @relation("ReviewsReceived")
-  connectionStats             ConnectionStats?
-  blocksInitiated             UserBlock[]   @relation("BlocksInitiated")
-  blocksReceived              UserBlock[]   @relation("BlocksReceived")
-  
-  // Matching
-  receivedMatches             Match[]       @relation("MatchReceiver")
-  sentMatches                 Match[]       @relation("MatchSender")
-  
-  // Messaging
-  receivedMessages            Message[]     @relation("MessageReceiver")
-  sentMessages                Message[]     @relation("MessageSender")
-  
-  // Notifications
-  notifications               Notification[]
-  notificationPreference      NotificationPreference?
-  
-  // Gamification
-  pointsHistory               PointHistory[]
-  badges                      UserBadge[]
-  redemptions                 Redemption[]
-  
-  // Services
-  servicesProvided            Service[]     @relation("ServicesProvided")
-  bookingsAsCustomer          ServiceBooking[] @relation("BookingsAsCustomer")
-  bookingsAsProvider          ServiceBooking[] @relation("BookingsAsProvider")
-  
-  // Marketplace
-  marketplaceListings         MarketplaceListing[] @relation("MarketplaceListings")
-  ordersAsBuyer               MarketplaceOrder[] @relation("OrdersAsBuyer")
-  ordersAsSeller              MarketplaceOrder[] @relation("OrdersAsSeller")
-  marketplaceReviewsGiven     MarketplaceReview[] @relation("ReviewsGiven")
-  marketplaceReviewsReceived  MarketplaceReview[] @relation("ReviewsReceived")
-  cartItems                   MarketplaceCartItem[]
-  initiatedDisputes           MarketplaceDispute[] @relation("DisputeInitiator")
-  
-  // Payments
-  paymentTransactions         PaymentTransaction[] @relation("PaymentTransactions")
-  paymentMethods              UserPaymentMethod[]
-  payoutsReceived             PayoutDistribution[] @relation("PayoutsReceived")
-  
-  // Subscriptions
-  subscriptions               UserSubscription[]
-  subscriptionPayments        SubscriptionPayment[]
-  featureUsage                FeatureUsage[]
-  
-  // Card Game
-  cardGameFeedback            CardGameFeedback[]
-  cardGameReplies             CardGameReply[]
-  cardGameUpvotes             CardGameUpvote[]
-  
-  // Travel Logbook
-  travelTrips                 TravelTrip[]      @relation("UserTrips")
-  travelCompanions            TravelCompanion[] @relation("TravelCompanions")
-  accompaniedTrips            TravelCompanion[] @relation("AccompaniedTrips")
-  travelStats                 TravelStats?
-  
-  // Referral System
-  referralStats               ReferralStats?
-  referralsGenerated          Referral[]        @relation("ReferralsGenerated")
-  referredUsers               Referral[]        @relation("ReferredUsers")
-  referralRewardsEarned       ReferralReward[]  @relation("ReferralRewardsEarned")
-  
-  // Legacy
-  refreshTokens               RefreshToken[]
-  pushSubscription            PushSubscription?
+  @@index([announcementId, viewed])
+  @@index([userId])
+}
 
-  @@index([email])
-  @@index([phone])
-  @@index([username])
-  @@index([role])
-  @@index([status])
-  @@index([trustScore])
-  @@index([trustLevel])
-  @@index([totalPoints])
+model announcements {
+  id                     String                   @id
+  title                  String
+  content                String
+  excerpt                String?
+  imageUrl               String?
+  thumbnailUrl           String?
+  videoUrl               String?
+  priority               AnnouncementPriority     @default(NORMAL)
+  displayType            String                   @default("banner")
+  targetAudience         String                   @default("all")
+  targetCountries        String[]                 @default([])
+  targetUserSegment      String[]                 @default([])
+  minAppVersion          String?
+  ctaText                String?
+  ctaUrl                 String?
+  ctaAction              String?
+  publishedAt            DateTime?
+  expiresAt              DateTime?
+  isActive               Boolean                  @default(true)
+  isPinned               Boolean                  @default(false)
+  isDismissible          Boolean                  @default(true)
+  viewCount              Int                      @default(0)
+  clickCount             Int                      @default(0)
+  createdBy              String?
+  tags                   String[]                 @default([])
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime
+  announcement_analytics announcement_analytics[]
+
+  @@index([expiresAt])
+  @@index([isActive, publishedAt])
+  @@index([isPinned, isActive])
+  @@index([priority, isActive])
+}
+
+model app_configs {
+  id          String   @id
+  configKey   String   @unique
+  configValue String
+  dataType    String   @default("string")
+  category    String   @default("general")
+  description String?
+  isPublic    Boolean  @default(false)
+  isEditable  Boolean  @default(true)
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+
+  @@index([category, isPublic])
+  @@index([configKey])
+}
+
+model app_notice_dismissals {
+  id          String      @id
+  noticeId    String
+  userId      String
+  dismissedAt DateTime    @default(now())
+  app_notices app_notices @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, userId])
+  @@index([userId])
+}
+
+model app_notices {
+  id                    String                  @id
+  noticeType            AppNoticeType
+  title                 String
+  message               String
+  icon                  String?
+  displayLocation       String[]                @default(["home"])
+  displayStyle          String                  @default("banner")
+  priority              Int                     @default(0)
+  isDismissible         Boolean                 @default(true)
+  autoDismiss           Boolean                 @default(false)
+  autoDismissSeconds    Int?
+  targetAudience        String                  @default("all")
+  targetUserIds         String[]                @default([])
+  targetSegments        String[]                @default([])
+  targetCountries       String[]                @default([])
+  minAppVersion         String?
+  ctaText               String?
+  ctaAction             String?
+  ctaUrl                String?
+  startDate             DateTime                @default(now())
+  endDate               DateTime?
+  isActive              Boolean                 @default(true)
+  impressionCount       Int                     @default(0)
+  dismissCount          Int                     @default(0)
+  clickCount            Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  app_notice_dismissals app_notice_dismissals[]
+
+  @@index([isActive, startDate, endDate])
+  @@index([noticeType, isActive])
+  @@index([priority, isActive])
+}
+
+model app_versions {
+  id                  String      @id
+  versionNumber       String
+  versionCode         Int
+  platform            AppPlatform
+  releaseDate         DateTime
+  releaseNotes        String
+  releaseType         String      @default("stable")
+  isForceUpdate       Boolean     @default(false)
+  minSupportedVersion String?
+  isActive            Boolean     @default(true)
+  isCurrent           Boolean     @default(false)
+  downloadUrl         String?
+  storeUrl            String?
+  features            Json?
+  bugFixes            Json?
+  improvements        Json?
+  deprecations        Json?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime
+
+  @@unique([versionNumber, platform])
+  @@index([platform, isActive])
+  @@index([platform, isCurrent])
+  @@index([releaseDate])
+}
+
+model auth_identities {
+  id          String   @id
+  userId      String
+  provider    String
+  providerUid String
+  email       String?
+  createdAt   DateTime @default(now())
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUid])
+  @@index([userId])
+}
+
+model badges {
+  id          String        @id
+  type        BadgeType     @unique
+  name        String
+  description String
+  criteria    String
+  imageUrl    String?
+  user_badges user_badges[]
+}
+
+model card_game_feedbacks {
+  id                String              @id
+  userId            String
+  topicId           String
+  sessionNumber     Int
+  questionId        String
+  rating            Int
+  comment           String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  users             users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card_game_replies card_game_replies[]
+  card_game_upvotes card_game_upvotes[]
+
+  @@index([questionId])
+  @@index([topicId])
+  @@index([userId])
+}
+
+model card_game_replies {
+  id                  String              @id
+  userId              String
+  feedbackId          String
+  text                String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime
+  card_game_feedbacks card_game_feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  users               users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@index([userId])
+}
+
+model card_game_stats {
+  id            String   @id
+  topicId       String   @unique
+  totalSessions Int      @default(0)
+  averageRating Float    @default(0)
+  totalFeedback Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+
+  @@index([topicId])
+}
+
+model card_game_upvotes {
+  id                  String              @id
+  userId              String
+  feedbackId          String
+  createdAt           DateTime            @default(now())
+  card_game_feedbacks card_game_feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  users               users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feedbackId])
+  @@index([feedbackId])
+  @@index([userId])
+}
+
+model communities {
+  id                String              @id
+  name              String              @unique
+  description       String?
+  imageUrl          String?
+  category          String?
+  isVerified        Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  createdById       String
+  users             users               @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  community_members community_members[]
+  events            events[]
+
+  @@index([category])
   @@index([createdAt])
-  @@index([referredById])
-  @@index([deletedAt])
-  @@map("users")
+  @@index([name])
 }
 
-// ============================================================================
-// USER EXTENDED PROFILES
-// ============================================================================
+model community_members {
+  id          String        @id
+  role        CommunityRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+  isApproved  Boolean       @default(false)
+  userId      String
+  communityId String
+  communities communities   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model UserProfile {
-  userId           String   @id
-  
-  // Public Profile
-  displayName      String?
-  profilePicture   String?
-  bio              String?
-  shortBio         String?  // Max 160 chars for quick display
-  
-  // Demographics
-  dateOfBirth      DateTime?
-  gender           String?
-  age              Int?     // Auto-calculated from DOB
-  
-  // Professional
-  profession       String?
-  occupation       String?
-  website          String?
-  
-  // Personal
-  personalityType  String?  // MBTI, Enneagram, etc.
-  interests        String[] @default([])
-  languages        String[] @default([])
-  
-  // Social Handles
-  instagramHandle  String?
-  linkedinHandle   String?
-  
-  // Travel Preferences
-  travelStyle      String?  // backpacker, luxury, adventure, cultural, etc.
-  bucketList       String[] @default([])  // Places they want to visit
-  travelBio        String?  // Travel-specific bio
-  
-  // Additional Data
-  customFields     Json?    // Flexible for future expansion
-  
-  // Timestamps
-  updatedAt        DateTime @updatedAt
-  
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([displayName])
-  @@map("user_profiles")
+  @@unique([userId, communityId])
+  @@index([communityId])
+  @@index([role])
+  @@index([userId])
 }
 
-model UserLocation {
-  userId              String   @id
-  
-  // Current Location
-  currentCity         String?
-  countryOfResidence  String?
-  currentLocation     String?  // More specific address/area
-  
-  // Origin
-  nationality         String?
-  originallyFrom      String?  // Hometown/birth city
-  
-  // Settings
-  timezone            String   @default("Asia/Kuala_Lumpur")
-  preferredLanguage   String   @default("en")
-  currency            String   @default("MYR")
-  
-  // Timestamps
-  updatedAt           DateTime @updatedAt
-  
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([currentCity])
+model connection_reviews {
+  id                                         String           @id
+  connectionId                               String
+  reviewerId                                 String
+  revieweeId                                 String
+  rating                                     Int
+  review                                     String?
+  reviewType                                 String           @default("general")
+  isPublic                                   Boolean          @default(true)
+  isFeatured                                 Boolean          @default(false)
+  isVerified                                 Boolean          @default(false)
+  verificationSource                         String?
+  helpfulCount                               Int              @default(0)
+  createdAt                                  DateTime         @default(now())
+  updatedAt                                  DateTime
+  user_connections                           user_connections @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  users_connection_reviews_revieweeIdTousers users            @relation("connection_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_connection_reviews_reviewerIdTousers users            @relation("connection_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, reviewerId])
+  @@index([connectionId])
+  @@index([createdAt])
+  @@index([isPublic, isFeatured])
+  @@index([rating])
+  @@index([revieweeId])
+  @@index([reviewerId])
+}
+
+model connection_stats {
+  userId                  String   @id
+  totalConnections        Int      @default(0)
+  pendingRequests         Int      @default(0)
+  sentRequests            Int      @default(0)
+  professionalConnections Int      @default(0)
+  friendConnections       Int      @default(0)
+  familyConnections       Int      @default(0)
+  mentorConnections       Int      @default(0)
+  travelConnections       Int      @default(0)
+  communityConnections    Int      @default(0)
+  averageRating           Float?
+  highestRating           Float?
+  totalReviewsReceived    Int      @default(0)
+  totalReviewsGiven       Int      @default(0)
+  totalMutualFriends      Int      @default(0)
+  trustChainDepth         Int      @default(1)
+  connectionQuality       Float    @default(0.0)
+  lastCalculatedAt        DateTime @default(now())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime
+  users                   users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([averageRating])
+  @@index([connectionQuality])
+  @@index([totalConnections])
+}
+
+model device_registrations {
+  id                String   @id
+  userId            String
+  deviceFingerprint String
+  deviceName        String?
+  deviceInfo        Json
+  isTrusted         Boolean  @default(false)
+  lastSeenAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  users             users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceFingerprint])
+  @@index([userId])
+}
+
+model email_verification_tokens {
+  id         String    @id
+  userId     String
+  email      String
+  token      String    @unique
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  users      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model event_attendances {
+  id          String   @id
+  checkedInAt DateTime @default(now())
+  userId      String
+  eventId     String
+  events      events   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([checkedInAt])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model event_rsvps {
+  id        String   @id
+  qrCode    String   @unique
+  createdAt DateTime @default(now())
+  userId    String
+  eventId   String
+  events    events   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([createdAt])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model event_ticket_tiers {
+  id             String          @id
+  eventId        String
+  tierName       String
+  description    String?
+  price          Float
+  currency       String          @default("MYR")
+  totalQuantity  Int?
+  soldQuantity   Int             @default(0)
+  minPurchase    Int             @default(1)
+  maxPurchase    Int             @default(10)
+  availableFrom  DateTime?
+  availableUntil DateTime?
+  displayOrder   Int             @default(0)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  events         events          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event_tickets  event_tickets[]
+
+  @@index([availableFrom, availableUntil])
+  @@index([eventId, isActive])
+}
+
+model event_tickets {
+  id                   String                @id
+  eventId              String
+  userId               String
+  ticketTierId         String?
+  ticketType           String                @default("GENERAL")
+  price                Float
+  currency             String                @default("MYR")
+  status               EventTicketStatus     @default(PENDING)
+  paymentTransactionId String?
+  paymentStatus        PaymentStatus         @default(PENDING)
+  ticketNumber         String                @unique
+  quantity             Int                   @default(1)
+  purchasedAt          DateTime              @default(now())
+  checkedInAt          DateTime?
+  canceledAt           DateTime?
+  refundedAt           DateTime?
+  attendeeName         String?
+  attendeeEmail        String?
+  attendeePhone        String?
+  events               events                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  payment_transactions payment_transactions? @relation(fields: [paymentTransactionId], references: [id])
+  event_ticket_tiers   event_ticket_tiers?   @relation(fields: [ticketTierId], references: [id])
+  users                users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, ticketNumber])
+  @@index([eventId])
+  @@index([paymentTransactionId])
+  @@index([purchasedAt])
+  @@index([status])
+  @@index([ticketNumber])
+  @@index([ticketTierId])
+  @@index([userId])
+  @@index([userId, status])
+}
+
+model events {
+  id                 String               @id
+  title              String
+  description        String?
+  type               EventType
+  date               DateTime
+  location           String
+  mapLink            String?
+  maxAttendees       Int?
+  notes              String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  hostId             String
+  communityId        String?
+  currency           String               @default("MYR")
+  hostType           EventHostType        @default(PERSONAL)
+  images             String[]             @default([])
+  isFree             Boolean              @default(true)
+  organizerPayout    Float?               @default(0.0)
+  platformFee        Float?               @default(0.0)
+  price              Float?
+  status             EventStatus          @default(DRAFT)
+  ticketsSold        Int                  @default(0)
+  totalRevenue       Float?               @default(0.0)
+  event_attendances  event_attendances[]
+  event_rsvps        event_rsvps[]
+  event_ticket_tiers event_ticket_tiers[]
+  event_tickets      event_tickets[]
+  communities        communities?         @relation(fields: [communityId], references: [id])
+  users              users                @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, date])
+  @@index([communityId])
+  @@index([createdAt])
+  @@index([date])
+  @@index([hostId, date])
+  @@index([hostId])
+  @@index([hostType])
+  @@index([isFree])
+  @@index([location])
+  @@index([status])
+  @@index([type, date])
+  @@index([type])
+}
+
+model faq_analytics {
+  id            String    @id
+  faqId         String
+  userId        String?
+  viewed        Boolean   @default(false)
+  viewedAt      DateTime?
+  markedHelpful Boolean?
+  markedAt      DateTime?
+  searchQuery   String?
+  viewedFrom    String?
+  createdAt     DateTime  @default(now())
+  faqs          faqs      @relation(fields: [faqId], references: [id], onDelete: Cascade)
+
+  @@index([faqId, viewed])
+  @@index([userId])
+}
+
+model faq_categories {
+  id           String  @id
+  name         String
+  description  String?
+  icon         String?
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+  faqs         faqs[]
+
+  @@index([displayOrder, isActive])
+}
+
+model faqs {
+  id                String          @id
+  categoryId        String?
+  question          String
+  answer            String
+  displayOrder      Int             @default(0)
+  tags              String[]        @default([])
+  isActive          Boolean         @default(true)
+  isFeatured        Boolean         @default(false)
+  viewCount         Int             @default(0)
+  helpfulCount      Int             @default(0)
+  notHelpfulCount   Int             @default(0)
+  relatedFaqIds     String[]        @default([])
+  relatedArticleIds String[]        @default([])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime
+  faq_analytics     faq_analytics[]
+  faq_categories    faq_categories? @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId, isActive])
+  @@index([displayOrder])
+  @@index([isFeatured, isActive])
+}
+
+model feature_flag_analytics {
+  id            String        @id
+  featureFlagId String
+  userId        String?
+  wasEnabled    Boolean
+  evaluatedAt   DateTime      @default(now())
+  variant       String?
+  userSegment   String?
+  platform      String?
+  appVersion    String?
+  featureUsed   Boolean       @default(false)
+  usedAt        DateTime?
+  usageCount    Int           @default(0)
+  feature_flags feature_flags @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
+
+  @@index([evaluatedAt])
+  @@index([featureFlagId, wasEnabled])
+  @@index([userId])
+}
+
+model feature_flags {
+  id                     String                   @id
+  featureKey             String                   @unique
+  featureName            String
+  description            String?
+  isEnabled              Boolean                  @default(false)
+  isGlobal               Boolean                  @default(false)
+  rolloutPercentage      Float                    @default(0.0)
+  rolloutStrategy        String                   @default("percentage")
+  targetUserIds          String[]                 @default([])
+  targetSegments         String[]                 @default([])
+  targetCountries        String[]                 @default([])
+  targetPlatforms        String[]                 @default([])
+  minAppVersion          String?
+  maxAppVersion          String?
+  isABTest               Boolean                  @default(false)
+  abTestVariant          String?
+  abTestMetrics          Json?
+  enabledAt              DateTime?
+  disabledAt             DateTime?
+  scheduledEnableAt      DateTime?
+  scheduledDisableAt     DateTime?
+  createdBy              String?
+  tags                   String[]                 @default([])
+  dependencies           String[]                 @default([])
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime
+  feature_flag_analytics feature_flag_analytics[]
+
+  @@index([featureKey, isEnabled])
+  @@index([isEnabled, isGlobal])
+}
+
+model feature_usage {
+  id             String   @id
+  userId         String
+  subscriptionId String?
+  featureCode    String
+  entityType     String
+  entityId       String?
+  usedAt         DateTime @default(now())
+  periodStart    DateTime
+  periodEnd      DateTime
+  metadata       Json?
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([periodStart, periodEnd])
+  @@index([subscriptionId, featureCode])
+  @@index([usedAt])
+  @@index([userId, featureCode])
+}
+
+model help_article_analytics {
+  id               String        @id
+  articleId        String
+  userId           String?
+  viewed           Boolean       @default(false)
+  viewedAt         DateTime?
+  markedHelpful    Boolean?
+  markedAt         DateTime?
+  timeSpentSeconds Int?
+  scrollDepth      Float?
+  viewedFrom       String?
+  searchQuery      String?
+  createdAt        DateTime      @default(now())
+  help_articles    help_articles @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, viewed])
+  @@index([userId])
+}
+
+model help_article_categories {
+  id            String          @id
+  name          String
+  slug          String          @unique
+  description   String?
+  icon          String?
+  displayOrder  Int             @default(0)
+  isActive      Boolean         @default(true)
+  help_articles help_articles[]
+
+  @@index([displayOrder, isActive])
+}
+
+model help_articles {
+  id                      String                   @id
+  categoryId              String?
+  title                   String
+  slug                    String                   @unique
+  content                 String
+  excerpt                 String?
+  thumbnailUrl            String?
+  videoUrl                String?
+  attachments             Json?
+  displayOrder            Int                      @default(0)
+  tags                    String[]                 @default([])
+  metaDescription         String?
+  keywords                String[]                 @default([])
+  isActive                Boolean                  @default(true)
+  isFeatured              Boolean                  @default(false)
+  isPremiumOnly           Boolean                  @default(false)
+  viewCount               Int                      @default(0)
+  helpfulCount            Int                      @default(0)
+  notHelpfulCount         Int                      @default(0)
+  averageTimeSpent        Float?
+  relatedArticleIds       String[]                 @default([])
+  relatedFaqIds           String[]                 @default([])
+  createdBy               String?
+  publishedAt             DateTime?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime
+  help_article_analytics  help_article_analytics[]
+  help_article_categories help_article_categories? @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId, isActive])
+  @@index([isFeatured, isActive])
+  @@index([publishedAt])
+  @@index([slug])
+}
+
+model legal_document_acceptances {
+  id              String            @id
+  documentId      String
+  userId          String
+  acceptedAt      DateTime          @default(now())
+  ipAddress       String?
+  userAgent       String?
+  deviceInfo      Json?
+  documentVersion String
+  documentType    LegalDocumentType
+  legal_documents legal_documents   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([documentId])
+  @@index([userId, documentType])
+}
+
+model legal_documents {
+  id                         String                       @id
+  documentType               LegalDocumentType
+  version                    String
+  title                      String
+  content                    String
+  summary                    String?
+  effectiveDate              DateTime
+  expiryDate                 DateTime?
+  isActive                   Boolean                      @default(false)
+  isCurrent                  Boolean                      @default(false)
+  requiresAcceptance         Boolean                      @default(false)
+  changesSummary             String?
+  previousVersionId          String?
+  createdBy                  String?
+  approvedBy                 String?
+  approvedAt                 DateTime?
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime
+  legal_document_acceptances legal_document_acceptances[]
+
+  @@unique([documentType, version])
+  @@index([documentType, isCurrent])
+  @@index([effectiveDate])
+}
+
+model listing_price_history {
+  id                   String               @id
+  listingId            String
+  price                Float
+  currency             String               @default("MYR")
+  reason               String?
+  changedAt            DateTime             @default(now())
+  marketplace_listings marketplace_listings @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, changedAt])
+}
+
+model login_attempts {
+  id            String   @id
+  userId        String?
+  identifier    String
+  ipAddress     String
+  userAgent     String?
+  success       Boolean
+  failureReason String?
+  attemptedAt   DateTime @default(now())
+  users         users?   @relation(fields: [userId], references: [id])
+
+  @@index([identifier, attemptedAt])
+  @@index([ipAddress, attemptedAt])
+  @@index([userId, attemptedAt])
+}
+
+model maintenance_schedules {
+  id                String            @id
+  title             String
+  description       String
+  startTime         DateTime
+  endTime           DateTime
+  estimatedDuration Int?
+  status            MaintenanceStatus @default(SCHEDULED)
+  affectedFeatures  String[]          @default([])
+  isFullDowntime    Boolean           @default(false)
+  severity          String            @default("medium")
+  userMessage       String?
+  technicalDetails  String?
+  updates           Json?
+  notifyUsers       Boolean           @default(true)
+  notificationSent  Boolean           @default(false)
+  notifiedAt        DateTime?
+  actualStartTime   DateTime?
+  actualEndTime     DateTime?
+  completionNotes   String?
+  createdBy         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+
+  @@index([startTime, endTime])
+  @@index([status, startTime])
+}
+
+model marketplace_cart_items {
+  id                   String               @id
+  userId               String
+  listingId            String
+  quantity             Int
+  addedAt              DateTime             @default(now())
+  marketplace_listings marketplace_listings @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  users                users                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
+}
+
+model marketplace_disputes {
+  id                 String             @id
+  orderId            String
+  initiatedBy        String
+  reason             String
+  status             DisputeStatus      @default(OPEN)
+  resolution         Json?
+  createdAt          DateTime           @default(now())
+  resolvedAt         DateTime?
+  users              users              @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
+  marketplace_orders marketplace_orders @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model marketplace_listings {
+  id                     String                   @id
+  userId                 String
+  title                  String
+  description            String?
+  category               String?
+  price                  Float
+  currency               String                   @default("MYR")
+  quantity               Int?
+  location               String?
+  images                 String[]                 @default([])
+  status                 ListingStatus            @default(DRAFT)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime
+  listing_price_history  listing_price_history[]
+  marketplace_cart_items marketplace_cart_items[]
+  users                  users                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketplace_orders     marketplace_orders[]
+
+  @@index([category])
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId, status])
+}
+
+model marketplace_orders {
+  id                                       String                 @id
+  listingId                                String
+  buyerId                                  String
+  sellerId                                 String
+  quantity                                 Int
+  unitPrice                                Float
+  subtotal                                 Float
+  shippingFee                              Float                  @default(0.0)
+  totalAmount                              Float
+  currency                                 String                 @default("MYR")
+  paymentTransactionId                     String?
+  paymentStatus                            PaymentStatus          @default(PENDING)
+  platformFee                              Float?
+  sellerPayout                             Float?
+  status                                   OrderStatus            @default(PENDING)
+  shippingAddress                          Json?
+  trackingNumber                           String?
+  notes                                    String?
+  createdAt                                DateTime               @default(now())
+  updatedAt                                DateTime
+  confirmedAt                              DateTime?
+  shippedAt                                DateTime?
+  deliveredAt                              DateTime?
+  canceledAt                               DateTime?
+  marketplace_disputes                     marketplace_disputes[]
+  users_marketplace_orders_buyerIdTousers  users                  @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
+  marketplace_listings                     marketplace_listings   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  payment_transactions                     payment_transactions?  @relation(fields: [paymentTransactionId], references: [id])
+  users_marketplace_orders_sellerIdTousers users                  @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
+  marketplace_reviews                      marketplace_reviews[]
+
+  @@index([buyerId, status])
+  @@index([createdAt])
+  @@index([listingId])
+  @@index([paymentStatus])
+  @@index([paymentTransactionId])
+  @@index([sellerId, status])
+  @@index([status])
+}
+
+model marketplace_reviews {
+  id                                          String             @id
+  orderId                                     String
+  reviewerId                                  String
+  revieweeId                                  String
+  rating                                      Int
+  comment                                     String?
+  createdAt                                   DateTime           @default(now())
+  marketplace_orders                          marketplace_orders @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  users_marketplace_reviews_revieweeIdTousers users              @relation("marketplace_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_marketplace_reviews_reviewerIdTousers users              @relation("marketplace_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, reviewerId])
+  @@index([revieweeId, rating])
+}
+
+model matches {
+  id                              String      @id
+  type                            MatchType
+  status                          MatchStatus @default(PENDING)
+  compatibility                   Float
+  reason                          String
+  interests                       String[]
+  availability                    Json?
+  location                        String?
+  message                         String?
+  createdAt                       DateTime    @default(now())
+  updatedAt                       DateTime
+  expiresAt                       DateTime
+  senderId                        String
+  receiverId                      String
+  users_matches_receiverIdTousers users       @relation("matches_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  users_matches_senderIdTousers   users       @relation("matches_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId, type])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@index([receiverId])
+  @@index([receiverId, status])
+  @@index([senderId])
+  @@index([senderId, status])
+  @@index([status])
+  @@index([type])
+}
+
+model messages {
+  id                               String   @id
+  content                          String
+  isRead                           Boolean  @default(false)
+  createdAt                        DateTime @default(now())
+  senderId                         String
+  receiverId                       String
+  users_messages_receiverIdTousers users    @relation("messages_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  users_messages_senderIdTousers   users    @relation("messages_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([isRead])
+  @@index([receiverId])
+  @@index([receiverId, isRead])
+  @@index([senderId])
+  @@index([senderId, receiverId])
+}
+
+model notification_preferences {
+  userId       String   @id
+  emailEnabled Boolean  @default(true)
+  pushEnabled  Boolean  @default(true)
+  smsEnabled   Boolean  @default(false)
+  inAppEnabled Boolean  @default(true)
+  preferences  Json     @default("{}")
+  quietHours   Json?
+  timezone     String   @default("Asia/Kuala_Lumpur")
+  updatedAt    DateTime
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model notifications {
+  id                String           @id
+  type              NotificationType
+  title             String
+  message           String
+  actionUrl         String?
+  metadata          Json?
+  createdAt         DateTime         @default(now())
+  userId            String
+  channels          String[]         @default([])
+  deliveredAt       DateTime?
+  expiresAt         DateTime?
+  priority          String           @default("normal")
+  readAt            DateTime?
+  relatedEntityId   String?
+  relatedEntityType String?
+  scheduledFor      DateTime?
+  users             users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([priority])
+  @@index([readAt])
+  @@index([type])
+  @@index([userId, createdAt])
+  @@index([userId])
+  @@index([userId, readAt])
+}
+
+model onboarding_analytics {
+  id                 String             @id
+  screenId           String
+  userId             String?
+  viewed             Boolean            @default(false)
+  viewedAt           DateTime?
+  completed          Boolean            @default(false)
+  completedAt        DateTime?
+  skipped            Boolean            @default(false)
+  skippedAt          DateTime?
+  timeSpentSeconds   Int?
+  deviceInfo         Json?
+  appVersion         String?
+  createdAt          DateTime           @default(now())
+  onboarding_screens onboarding_screens @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([screenId, viewed])
+  @@index([userId])
+}
+
+model onboarding_screens {
+  id                   String                 @id
+  screenOrder          Int
+  title                String
+  subtitle             String?
+  description          String?
+  imageUrl             String?
+  videoUrl             String?
+  ctaText              String?
+  ctaAction            String?
+  ctaUrl               String?
+  backgroundColor      String?
+  isSkippable          Boolean                @default(true)
+  isActive             Boolean                @default(true)
+  targetAudience       String                 @default("all")
+  minAppVersion        String?
+  metadata             Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  onboarding_analytics onboarding_analytics[]
+
+  @@index([isActive])
+  @@index([screenOrder, isActive])
+}
+
+model password_reset_tokens {
+  id        String    @id
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  ipAddress String
+  createdAt DateTime  @default(now())
+  users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model payment_provider_routing {
+  id                String            @id
+  ruleName          String
+  providerId        String
+  conditions        Json
+  priority          Int               @default(0)
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  payment_providers payment_providers @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([priority, isActive])
+  @@index([providerId, isActive])
+}
+
+model payment_providers {
+  id                       String                     @id
+  providerCode             String                     @unique
+  providerName             String
+  providerType             String
+  supportedCountries       String[]
+  supportedCurrencies      String[]
+  isActive                 Boolean                    @default(true)
+  isDefault                Boolean                    @default(false)
+  priorityOrder            Int                        @default(0)
+  configuration            Json                       @default("{}")
+  feeStructure             Json                       @default("{}")
+  capabilities             Json                       @default("{}")
+  webhookConfig            Json?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  payment_provider_routing payment_provider_routing[]
+  payment_transactions     payment_transactions[]
+
+  @@index([isActive, priorityOrder])
+  @@index([providerCode])
+}
+
+model payment_transactions {
+  id                     String                  @id
+  userId                 String
+  transactionType        TransactionType
+  referenceType          String
+  referenceId            String
+  amount                 Float
+  currency               String                  @default("MYR")
+  totalFees              Float                   @default(0.0)
+  platformFee            Float                   @default(0.0)
+  gatewayFee             Float                   @default(0.0)
+  netAmount              Float                   @default(0.0)
+  providerId             String
+  gatewayTransactionId   String                  @unique
+  gatewayPaymentMethodId String?
+  gatewayMetadata        Json?
+  status                 PaymentStatus           @default(PENDING)
+  failureReason          String?
+  processedAt            DateTime?
+  refundedAmount         Float?                  @default(0.0)
+  refundedAt             DateTime?
+  refundReason           String?
+  description            String?
+  metadata               Json?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime
+  event_tickets          event_tickets[]
+  marketplace_orders     marketplace_orders[]
+  payment_providers      payment_providers       @relation(fields: [providerId], references: [id])
+  users                  users                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payout_distributions   payout_distributions[]
+  service_bookings       service_bookings[]
+  subscription_payments  subscription_payments[]
+  transaction_fees       transaction_fees[]
+
+  @@index([createdAt])
+  @@index([gatewayTransactionId])
+  @@index([processedAt, status])
+  @@index([providerId, status])
+  @@index([referenceType, referenceId])
+  @@index([transactionType])
+  @@index([transactionType, status])
+  @@index([userId, status])
+}
+
+model payout_distributions {
+  id                   String               @id
+  paymentTransactionId String
+  recipientId          String
+  recipientType        String
+  amount               Float
+  currency             String               @default("MYR")
+  status               PayoutStatus         @default(PENDING)
+  releaseDate          DateTime?
+  gatewayPayoutId      String?
+  createdAt            DateTime             @default(now())
+  releasedAt           DateTime?
+  payment_transactions payment_transactions @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
+  users                users                @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([paymentTransactionId])
+  @@index([recipientId, status])
+  @@index([releaseDate, status])
+}
+
+model platform_fee_configs {
+  id               String             @id
+  configName       String
+  transactionType  TransactionType
+  feePercentage    Float?
+  feeFixed         Float?
+  minFee           Float?
+  maxFee           Float?
+  currency         String             @default("MYR")
+  conditions       Json               @default("{}")
+  recipientType    String             @default("platform")
+  recipientId      String?
+  isActive         Boolean            @default(true)
+  priority         Int                @default(0)
+  effectiveFrom    DateTime           @default(now())
+  effectiveUntil   DateTime?
+  description      String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  transaction_fees transaction_fees[]
+
+  @@index([effectiveFrom, effectiveUntil])
+  @@index([priority, isActive])
+  @@index([transactionType, isActive])
+}
+
+model point_histories {
+  id          String   @id
+  points      Int
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+  userId      String
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+model profile_completion_status {
+  userId              String    @id
+  completionScore     Float     @default(0.0)
+  completionLevel     String    @default("starter")
+  hasProfilePicture   Boolean   @default(false)
+  hasDisplayName      Boolean   @default(false)
+  hasBio              Boolean   @default(false)
+  hasLocation         Boolean   @default(false)
+  hasInterests        Boolean   @default(false)
+  hasLanguages        Boolean   @default(false)
+  hasProfession       Boolean   @default(false)
+  hasDateOfBirth      Boolean   @default(false)
+  hasSocialHandles    Boolean   @default(false)
+  hasVerifiedEmail    Boolean   @default(false)
+  hasVerifiedPhone    Boolean   @default(false)
+  fieldWeights        Json      @default("{}")
+  missingFields       String[]  @default([])
+  nextRecommendation  String?
+  reachedBasic        Boolean   @default(false)
+  reachedIntermediate Boolean   @default(false)
+  reachedComplete     Boolean   @default(false)
+  reachedExpert       Boolean   @default(false)
+  pointsEarned        Int       @default(0)
+  badgesUnlocked      String[]  @default([])
+  lastCalculatedAt    DateTime  @default(now())
+  firstCompleteAt     DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime
+  users               users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([completionLevel])
+  @@index([completionScore])
+  @@index([lastCalculatedAt])
+}
+
+model push_subscriptions {
+  id        String   @id
+  userId    String   @unique
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model redemptions {
+  id          String           @id
+  status      RedemptionStatus @default(PENDING)
+  notes       String?
+  redeemedAt  DateTime         @default(now())
+  processedAt DateTime?
+  userId      String
+  rewardId    String
+  rewards     rewards          @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  users       users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([rewardId])
+  @@index([status])
+  @@index([userId])
+}
+
+model referral_campaigns {
+  id                   String      @id
+  campaignCode         String      @unique
+  campaignName         String
+  description          String?
+  referrerRewardType   String      @default("points")
+  referrerRewardAmount Float       @default(100.0)
+  refereeRewardType    String      @default("points")
+  refereeRewardAmount  Float       @default(50.0)
+  bonusRewards         Json?
+  activationCriteria   Json        @default("{}")
+  startDate            DateTime
+  endDate              DateTime?
+  maxReferrals         Int?
+  maxPerUser           Int?
+  targetCountries      String[]    @default([])
+  targetUserSegment    String?
+  isActive             Boolean     @default(true)
+  isPaused             Boolean     @default(false)
+  totalReferrals       Int         @default(0)
+  totalSignups         Int         @default(0)
+  totalActivated       Int         @default(0)
+  totalRewardsGiven    Float       @default(0.0)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime
+  referrals            referrals[]
+
+  @@index([campaignCode, isActive])
+  @@index([isActive, isPaused])
+  @@index([startDate, endDate])
+}
+
+model referral_rewards {
+  id                String               @id
+  referralId        String
+  userId            String
+  rewardType        String
+  rewardAmount      Float?
+  rewardDuration    Int?
+  description       String
+  status            ReferralRewardStatus @default(PENDING)
+  isMilestoneReward Boolean              @default(false)
+  milestoneCount    Int?
+  awardedAt         DateTime?
+  expiresAt         DateTime?
+  claimedAt         DateTime?
+  metadata          Json?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime
+  referrals         referrals            @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  users             users                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([awardedAt])
+  @@index([isMilestoneReward])
+  @@index([referralId])
+  @@index([status])
+  @@index([userId, status])
+}
+
+model referral_stats {
+  userId                String    @id
+  totalReferrals        Int       @default(0)
+  totalClicks           Int       @default(0)
+  totalSignups          Int       @default(0)
+  totalActivated        Int       @default(0)
+  clickToSignupRate     Float     @default(0.0)
+  signupToActiveRate    Float     @default(0.0)
+  overallConversionRate Float     @default(0.0)
+  totalPointsEarned     Int       @default(0)
+  totalCreditsEarned    Float     @default(0.0)
+  totalRewardsCount     Int       @default(0)
+  milestonesReached     Json      @default("[]")
+  bestConversionMonth   String?
+  bestConversionCount   Int       @default(0)
+  currentStreak         Int       @default(0)
+  longestStreak         Int       @default(0)
+  leaderboardRank       Int?
+  topReferrerBadge      Boolean   @default(false)
+  lastReferralAt        DateTime?
+  lastActivationAt      DateTime?
+  lastCalculatedAt      DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  users                 users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leaderboardRank])
+  @@index([topReferrerBadge])
+  @@index([totalActivated])
+  @@index([totalPointsEarned])
+}
+
+model referrals {
+  id                                String              @id
+  referrerId                        String
+  refereeId                         String?
+  referralCode                      String              @unique
+  referralMethod                    String?
+  referralSource                    String?
+  campaignId                        String?
+  clickedAt                         DateTime?
+  signedUpAt                        DateTime?
+  activatedAt                       DateTime?
+  expiredAt                         DateTime?
+  isActivated                       Boolean             @default(false)
+  activationCriteria                Json?
+  referrerRewardGiven               Boolean             @default(false)
+  refereeRewardGiven                Boolean             @default(false)
+  ipAddress                         String?
+  userAgent                         String?
+  deviceInfo                        Json?
+  metadata                          Json?
+  notes                             String?
+  createdAt                         DateTime            @default(now())
+  updatedAt                         DateTime
+  referral_rewards                  referral_rewards[]
+  referral_campaigns                referral_campaigns? @relation(fields: [campaignId], references: [id])
+  users_referrals_refereeIdTousers  users?              @relation("referrals_refereeIdTousers", fields: [refereeId], references: [id])
+  users_referrals_referrerIdTousers users               @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  @@index([activatedAt])
+  @@index([campaignId])
+  @@index([createdAt])
+  @@index([isActivated])
+  @@index([refereeId])
+  @@index([referralCode])
+  @@index([referrerId, isActivated])
+  @@index([signedUpAt])
+}
+
+model refresh_tokens {
+  id          String   @id
+  tokenHash   String   @unique
+  tokenFamily String
+  userId      String
+  isRevoked   Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([tokenHash])
+  @@index([userId])
+}
+
+model rewards {
+  id             String        @id
+  title          String
+  description    String
+  pointsRequired Int
+  category       String
+  partner        String
+  quantity       Int           @default(0)
+  imageUrl       String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime
+  redemptions    redemptions[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model security_events {
+  id          String   @id
+  userId      String
+  eventType   String
+  severity    String   @default("medium")
+  description String
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventType])
+  @@index([severity])
+  @@index([userId, createdAt])
+}
+
+model service_bookings {
+  id                                       String                @id
+  serviceId                                String
+  customerId                               String
+  providerId                               String
+  bookingType                              ServiceType
+  startDate                                DateTime
+  endDate                                  DateTime
+  guestsCount                              Int                   @default(1)
+  baseAmount                               Float
+  additionalFees                           Float                 @default(0.0)
+  totalAmount                              Float
+  currency                                 String                @default("MYR")
+  paymentTransactionId                     String?
+  paymentStatus                            PaymentStatus         @default(PENDING)
+  platformFee                              Float?
+  providerPayout                           Float?
+  status                                   BookingStatus         @default(PENDING)
+  specialRequests                          String?
+  bookingDetails                           Json?
+  createdAt                                DateTime              @default(now())
+  updatedAt                                DateTime
+  confirmedAt                              DateTime?
+  completedAt                              DateTime?
+  canceledAt                               DateTime?
+  users_service_bookings_customerIdTousers users                 @relation("service_bookings_customerIdTousers", fields: [customerId], references: [id], onDelete: Cascade)
+  payment_transactions                     payment_transactions? @relation(fields: [paymentTransactionId], references: [id])
+  users_service_bookings_providerIdTousers users                 @relation("service_bookings_providerIdTousers", fields: [providerId], references: [id], onDelete: Cascade)
+  services                                 services              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, status])
+  @@index([paymentStatus])
+  @@index([paymentTransactionId])
+  @@index([providerId, status])
+  @@index([serviceId])
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
+model services {
+  id               String             @id
+  providerId       String
+  title            String
+  description      String?
+  serviceType      ServiceType
+  category         String?
+  pricingType      PricingType
+  basePrice        Float
+  currency         String             @default("MYR")
+  maxGuests        Int?
+  location         String?
+  availability     Json?
+  requirements     Json?
+  images           String[]           @default([])
+  status           ServiceStatus      @default(DRAFT)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  service_bookings service_bookings[]
+  users            users              @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, status])
+  @@index([serviceType, status])
+  @@index([status])
+}
+
+model subscription_payments {
+  id                   String                @id
+  subscriptionId       String
+  userId               String
+  amount               Float
+  currency             String                @default("MYR")
+  billingPeriodStart   DateTime
+  billingPeriodEnd     DateTime
+  status               PaymentStatus         @default(PENDING)
+  attemptCount         Int                   @default(1)
+  paymentTransactionId String?
+  gatewayInvoiceId     String?
+  dueDate              DateTime
+  paidAt               DateTime?
+  failedAt             DateTime?
+  failureReason        String?
+  createdAt            DateTime              @default(now())
+  payment_transactions payment_transactions? @relation(fields: [paymentTransactionId], references: [id])
+  user_subscriptions   user_subscriptions    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  users                users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([dueDate])
+  @@index([paymentTransactionId])
+  @@index([status])
+  @@index([subscriptionId, status])
+  @@index([userId, status])
+}
+
+model subscription_tiers {
+  id                 String               @id
+  tierCode           String               @unique
+  tierName           String
+  description        String?
+  price              Float                @default(0.0)
+  currency           String               @default("MYR")
+  billingCycle       String               @default("MONTHLY")
+  features           Json                 @default("{}")
+  displayOrder       Int                  @default(0)
+  isActive           Boolean              @default(true)
+  isPublic           Boolean              @default(true)
+  trialDays          Int?                 @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  user_subscriptions user_subscriptions[]
+
+  @@index([displayOrder])
+  @@index([isActive, isPublic])
+  @@index([tierCode, isActive])
+}
+
+model transaction_fees {
+  id                   String                @id
+  transactionId        String
+  feeConfigId          String?
+  feeType              String
+  feePercentage        Float?
+  feeFixed             Float?
+  calculatedFee        Float
+  recipientType        String
+  recipientId          String?
+  currency             String                @default("MYR")
+  description          String?
+  appliedAt            DateTime              @default(now())
+  platform_fee_configs platform_fee_configs? @relation(fields: [feeConfigId], references: [id])
+  payment_transactions payment_transactions  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([feeConfigId])
+  @@index([recipientType, recipientId])
+  @@index([transactionId, feeType])
+}
+
+model travel_bucket_list {
+  id                String    @id
+  userId            String
+  country           String
+  city              String?
+  destination       String
+  description       String?
+  priority          String    @default("medium")
+  targetYear        Int?
+  estimatedBudget   Float?
+  status            String    @default("planning")
+  visitedDate       DateTime?
+  isPublic          Boolean   @default(true)
+  seekingCompanions Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+
+  @@index([country])
+  @@index([seekingCompanions])
+  @@index([userId, status])
+}
+
+model travel_companions {
+  id                                         String       @id
+  tripId                                     String
+  userId                                     String
+  companionId                                String?
+  companionName                              String?
+  companionEmail                             String?
+  companionPhone                             String?
+  invitationStatus                           String       @default("pending")
+  canRequestIntro                            Boolean      @default(true)
+  relationship                               String?
+  notes                                      String?
+  hasVouched                                 Boolean      @default(false)
+  vouchId                                    String?
+  addedAt                                    DateTime     @default(now())
+  verifiedAt                                 DateTime?
+  users_travel_companions_companionIdTousers users?       @relation("travel_companions_companionIdTousers", fields: [companionId], references: [id])
+  travel_trips                               travel_trips @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  users_travel_companions_userIdTousers      users        @relation("travel_companions_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companionId])
+  @@index([invitationStatus])
+  @@index([tripId])
+  @@index([userId])
+}
+
+model travel_highlights {
+  id            String       @id
+  tripId        String
+  title         String
+  description   String?
+  highlightType String
+  image         String?
+  date          DateTime?
+  location      String?
+  createdAt     DateTime     @default(now())
+  travel_trips  travel_trips @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([highlightType])
+  @@index([tripId])
+}
+
+model travel_locations {
+  id             String       @id
+  tripId         String
+  country        String
+  city           String
+  placeName      String?
+  placeType      String?
+  visitDate      DateTime?
+  duration       Int?
+  rating         Int?
+  notes          String?
+  wouldRecommend Boolean      @default(true)
+  tips           String?
+  images         String[]     @default([])
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime     @default(now())
+  travel_trips   travel_trips @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([country, city])
+  @@index([placeType])
+  @@index([tripId])
+}
+
+model travel_stats {
+  userId                String    @id
+  totalTrips            Int       @default(0)
+  countriesVisited      Int       @default(0)
+  citiesVisited         Int       @default(0)
+  continentsVisited     Int       @default(0)
+  totalTravelDays       Int       @default(0)
+  countriesList         String[]  @default([])
+  continentsList        String[]  @default([])
+  travelCompanionsCount Int       @default(0)
+  soloTripsCount        Int       @default(0)
+  firstTripDate         DateTime?
+  lastTripDate          DateTime?
+  favoriteDestination   String?
+  travelFrequency       String?
+  averageTripDuration   Int?
+  lastCalculatedAt      DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  users                 users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([countriesVisited])
+  @@index([totalTrips])
+}
+
+model travel_trips {
+  id                String              @id
+  userId            String
+  title             String
+  description       String?
+  purpose           String?
+  countries         String[]            @default([])
+  cities            String[]            @default([])
+  startDate         DateTime
+  endDate           DateTime?
+  duration          Int?
+  coverImage        String?
+  images            String[]            @default([])
+  isPublic          Boolean             @default(true)
+  isFeatured        Boolean             @default(false)
+  tags              String[]            @default([])
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  travel_companions travel_companions[]
+  travel_highlights travel_highlights[]
+  travel_locations  travel_locations[]
+  users             users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([countries])
+  @@index([startDate])
+  @@index([userId, isPublic])
+  @@index([userId, startDate])
+}
+
+model user_activities {
+  id           String   @id
+  userId       String
+  activityType String
+  entityType   String
+  entityId     String
+  visibility   String   @default("public")
+  createdAt    DateTime @default(now())
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityType])
+  @@index([userId, createdAt])
+}
+
+model user_badges {
+  id       String   @id
+  earnedAt DateTime @default(now())
+  userId   String
+  badgeId  String
+  badges   badges   @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  users    users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model user_blocks {
+  id                                 String   @id
+  blockerId                          String
+  blockedId                          String
+  reason                             String?
+  blockedAt                          DateTime @default(now())
+  users_user_blocks_blockedIdTousers users    @relation("user_blocks_blockedIdTousers", fields: [blockedId], references: [id], onDelete: Cascade)
+  users_user_blocks_blockerIdTousers users    @relation("user_blocks_blockerIdTousers", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@index([blockerId])
+}
+
+model user_connections {
+  id                                        String               @id
+  initiatorId                               String
+  receiverId                                String
+  status                                    ConnectionStatus     @default(PENDING)
+  message                                   String?
+  relationshipType                          String?
+  relationshipCategory                      String?
+  howWeMet                                  String?
+  trustStrength                             Float                @default(0.0)
+  interactionCount                          Int                  @default(0)
+  lastInteraction                           DateTime?
+  badges                                    String[]             @default([])
+  tags                                      String[]             @default([])
+  mutualFriendsCount                        Int                  @default(0)
+  mutualCommunitiesCount                    Int                  @default(0)
+  createdAt                                 DateTime             @default(now())
+  respondedAt                               DateTime?
+  connectedAt                               DateTime?
+  removedAt                                 DateTime?
+  removedBy                                 String?
+  canReconnectAt                            DateTime?
+  connection_reviews                        connection_reviews[]
+  users_user_connections_initiatorIdTousers users                @relation("user_connections_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
+  users_user_connections_receiverIdTousers  users                @relation("user_connections_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([initiatorId, receiverId])
+  @@index([badges])
+  @@index([canReconnectAt])
+  @@index([initiatorId])
+  @@index([initiatorId, status])
+  @@index([receiverId])
+  @@index([receiverId, status])
+  @@index([relationshipCategory])
+  @@index([status])
+  @@index([trustStrength])
+}
+
+model user_locations {
+  userId             String    @id
+  currentCity        String?
+  countryOfResidence String?
+  currentLocation    String?
+  nationality        String?
+  originallyFrom     String?
+  timezone           String    @default("Asia/Kuala_Lumpur")
+  preferredLanguage  String    @default("en")
+  currency           String    @default("MYR")
+  updatedAt          DateTime
+  lastLocationUpdate DateTime?
+  latitude           Float?
+  longitude          Float?
+  users              users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([countryOfResidence])
+  @@index([currentCity])
+  @@index([latitude, longitude])
   @@index([timezone])
-  @@map("user_locations")
 }
 
-model UserSecurity {
-  userId               String    @id
-  
-  // Verification Status
-  emailVerifiedAt      DateTime?
-  phoneVerifiedAt      DateTime?
-  
-  // Activity Tracking
-  lastSeenAt           DateTime?
-  lastLoginAt          DateTime?
-  lastLoginLocation    String?
-  lastPasswordChangeAt DateTime?
-  
-  // MFA (Multi-Factor Authentication)
-  mfaEnabled           Boolean   @default(false)
-  mfaSecret            String?   // Encrypted TOTP secret
-  mfaRecoveryEmail     String?
-  lastMfaAuthAt        DateTime?
-  mfaBackupCodes       String[]  @default([])
-  
-  // Account Security
-  accountLockedReason  String?
-  lockoutUntil         DateTime?
-  suspendedUntil       DateTime?
-  suspensionReason     String?
-  
-  // Timestamps
-  updatedAt            DateTime  @updatedAt
-  
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([mfaEnabled])
-  @@index([emailVerifiedAt])
-  @@index([phoneVerifiedAt])
-  @@index([lastLoginAt])
-  @@map("user_security")
+model user_metadata {
+  userId         String   @id
+  referralCode   String   @unique
+  membershipId   String?  @unique
+  referralSource String?
+  utmSource      String?
+  utmMedium      String?
+  utmCampaign    String?
+  affiliateId    String?
+  lifetimeValue  Float    @default(0.0)
+  ipAddress      String?
+  userAgent      String?
+  tags           String[] @default([])
+  notes          String?
+  internalNotes  String?
+  updatedAt      DateTime
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([referralSource])
 }
 
-model UserPrivacy {
-  userId               String   @id
-  
-  // Profile Visibility
-  profileVisibility    String   @default("public") // public, friends, private
-  searchableByPhone    Boolean  @default(true)
-  searchableByEmail    Boolean  @default(true)
-  allowDirectMessages  Boolean  @default(true)
-  
-  // GDPR & Compliance
-  consentToDataProcessing Boolean @default(true)
-  consentToMarketing      Boolean @default(false)
+model user_payment_methods {
+  id              String    @id
+  userId          String
+  provider        String
+  gatewayMethodId String
+  type            String
+  lastFour        String?
+  brand           String?
+  expiresAt       DateTime?
+  isDefault       Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  users           users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+model user_preferences {
+  userId                     String   @id
+  darkMode                   Boolean  @default(false)
+  googleCalendarConnected    Boolean  @default(false)
+  googleCalendarRefreshToken String?
+  pushToken                  String?
+  preferences                Json     @default("{}")
+  updatedAt                  DateTime
+  users                      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model user_privacy {
+  userId                  String    @id
+  profileVisibility       String    @default("public")
+  searchableByPhone       Boolean   @default(true)
+  searchableByEmail       Boolean   @default(true)
+  allowDirectMessages     Boolean   @default(true)
+  consentToDataProcessing Boolean   @default(true)
+  consentToMarketing      Boolean   @default(false)
   consentDate             DateTime?
   deletionRequestedAt     DateTime?
   deletionScheduledFor    DateTime?
   dataExportRequestedAt   DateTime?
-  
-  // Timestamps
-  updatedAt            DateTime @updatedAt
-  
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([profileVisibility])
+  updatedAt               DateTime
+  users                   users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([deletionRequestedAt])
-  @@map("user_privacy")
+  @@index([profileVisibility])
 }
 
-model UserPreferences {
-  userId                      String   @id
-  
-  // App Settings
-  darkMode                    Boolean  @default(false)
-  
-  // Integrations
-  googleCalendarConnected     Boolean  @default(false)
-  googleCalendarRefreshToken  String?  // Encrypted
-  pushToken                   String?
-  
-  // Custom Preferences (flexible JSON)
-  preferences                 Json     @default("{}")
-  
-  // Timestamps
-  updatedAt                   DateTime @updatedAt
-  
-  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("user_preferences")
+model user_profiles {
+  userId          String    @id
+  displayName     String?
+  profilePicture  String?
+  bio             String?
+  shortBio        String?
+  dateOfBirth     DateTime?
+  gender          String?
+  age             Int?
+  profession      String?
+  occupation      String?
+  website         String?
+  personalityType String?
+  interests       String[]  @default([])
+  languages       String[]  @default([])
+  instagramHandle String?
+  linkedinHandle  String?
+  travelStyle     String?
+  bucketList      String[]  @default([])
+  travelBio       String?
+  customFields    Json?
+  updatedAt       DateTime
+  users           users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([displayName])
 }
 
-model UserMetadata {
+model user_security {
+  userId               String    @id
+  emailVerifiedAt      DateTime?
+  phoneVerifiedAt      DateTime?
+  lastSeenAt           DateTime?
+  lastLoginAt          DateTime?
+  lastLoginLocation    String?
+  lastPasswordChangeAt DateTime?
+  mfaEnabled           Boolean   @default(false)
+  mfaSecret            String?
+  mfaRecoveryEmail     String?
+  lastMfaAuthAt        DateTime?
+  mfaBackupCodes       String[]  @default([])
+  accountLockedReason  String?
+  lockoutUntil         DateTime?
+  suspendedUntil       DateTime?
+  suspensionReason     String?
+  updatedAt            DateTime
+  users                users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([emailVerifiedAt])
+  @@index([lastLoginAt])
+  @@index([mfaEnabled])
+  @@index([phoneVerifiedAt])
+}
+
+model user_service_profiles {
   userId           String   @id
-  
-  // Referral & Marketing
-  referralCode     String   @unique @default(uuid())
-  membershipId     String?  @unique
-  referralSource   String?  // organic, referral, ads
-  utmSource        String?
-  utmMedium        String?
-  utmCampaign      String?
-  affiliateId      String?
-  
-  // Analytics
-  lifetimeValue    Float    @default(0.0)
-  ipAddress        String?
-  userAgent        String?
-  
-  // Admin Notes
-  tags             String[] @default([])
-  notes            String?         // Public admin notes
-  internalNotes    String?         // Private admin notes
-  
-  // Timestamps
-  updatedAt        DateTime @updatedAt
-  
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([referralSource])
-  @@index([affiliateId])
-  @@map("user_metadata")
-}
+  isHostAvailable  Boolean  @default(false)
+  isGuideAvailable Boolean  @default(false)
+  isHostCertified  Boolean  @default(false)
+  hostDescription  String?
+  guideDescription String?
+  servicesOffered  Json?
+  updatedAt        DateTime
+  users            users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model ProfileCompletionStatus {
-  userId              String   @id
-  
-  // Overall Completion
-  completionScore     Float    @default(0.0)  // 0-100 percentage
-  completionLevel     String   @default("starter") // starter, basic, intermediate, complete, expert
-  
-  // Section Completion (Boolean flags for quick checks)
-  hasProfilePicture   Boolean  @default(false)
-  hasDisplayName      Boolean  @default(false)
-  hasBio              Boolean  @default(false)
-  hasLocation         Boolean  @default(false)
-  hasInterests        Boolean  @default(false)
-  hasLanguages        Boolean  @default(false)
-  hasProfession       Boolean  @default(false)
-  hasDateOfBirth      Boolean  @default(false)
-  hasSocialHandles    Boolean  @default(false)
-  hasVerifiedEmail    Boolean  @default(false)
-  hasVerifiedPhone    Boolean  @default(false)
-  
-  // Field Weights (for calculating completionScore)
-  fieldWeights        Json     @default("{}") 
-  // Example:
-  // {
-  //   "profilePicture": 15,     // Critical field
-  //   "displayName": 10,        // Critical field
-  //   "bio": 10,                // Important field
-  //   "location": 10,           // Important field
-  //   "interests": 8,           // Important field
-  //   "languages": 7,           // Good to have
-  //   "profession": 8,          // Good to have
-  //   "dateOfBirth": 7,         // Good to have
-  //   "socialHandles": 5,       // Optional
-  //   "emailVerified": 10,      // Critical security
-  //   "phoneVerified": 10       // Critical security
-  // }
-  // Total: 100 points
-  
-  // Missing Fields (for recommendations)
-  missingFields       String[] @default([])  // Array of field names still needed
-  nextRecommendation  String?  // Next suggested field to complete
-  
-  // Completion Milestones
-  reachedBasic        Boolean  @default(false)  // 25% completion
-  reachedIntermediate Boolean  @default(false)  // 50% completion
-  reachedComplete     Boolean  @default(false)  // 75% completion
-  reachedExpert       Boolean  @default(false)  // 100% completion
-  
-  // Gamification
-  pointsEarned        Int      @default(0)  // Points earned for profile completion
-  badgesUnlocked      String[] @default([])  // Badges earned (e.g., "profile_complete")
-  
-  // Timestamps
-  lastCalculatedAt    DateTime @default(now())
-  firstCompleteAt     DateTime?  // When user first reached 100%
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([completionScore])
-  @@index([completionLevel])
-  @@index([lastCalculatedAt])
-  @@map("profile_completion_status")
-}
-
-model UserServiceProfile {
-  userId              String   @id
-  
-  // Service Flags
-  isHostAvailable     Boolean  @default(false)
-  isGuideAvailable    Boolean  @default(false)
-  isHostCertified     Boolean  @default(false)
-  
-  // Service Descriptions
-  hostDescription     String?
-  guideDescription    String?
-  servicesOffered     Json?    // Array of service types with details
-  
-  // Timestamps
-  updatedAt           DateTime @updatedAt
-  
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([isHostAvailable])
   @@index([isGuideAvailable])
+  @@index([isHostAvailable])
   @@index([isHostCertified])
-  @@map("user_service_profiles")
 }
 
-model AuthIdentity {
-  id          String   @id @default(uuid())
-  userId      String
-  provider    String   // password, phone, google, apple, facebook, etc.
-  providerUid String   // Provider's unique identifier
-  email       String?
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([provider, providerUid])
-  @@index([userId])
-  @@map("auth_identities")
-}
-
-model UserSession {
-  id             String   @id @default(uuid())
+model user_sessions {
+  id             String   @id
   userId         String
   sessionToken   String   @unique
   deviceInfo     Json?
@@ -546,2615 +1954,305 @@ model UserSession {
   lastActivityAt DateTime @default(now())
   expiresAt      DateTime
   createdAt      DateTime @default(now())
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId, isActive])
-  @@index([sessionToken])
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([expiresAt])
-  @@map("user_sessions")
+  @@index([sessionToken])
+  @@index([userId, isActive])
 }
 
-model LoginAttempt {
-  id            String   @id @default(uuid())
-  userId        String?
-  identifier    String   // email/phone/username attempted
-  ipAddress     String
-  userAgent     String?
-  success       Boolean
-  failureReason String?
-  attemptedAt   DateTime @default(now())
-  
-  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
-  @@index([identifier, attemptedAt])
-  @@index([ipAddress, attemptedAt])
-  @@index([userId, attemptedAt])
-  @@map("login_attempts")
-}
+model user_stats {
+  userId            String   @id
+  eventsAttended    Int      @default(0)
+  eventsHosted      Int      @default(0)
+  vouchesGiven      Int      @default(0)
+  vouchesReceived   Int      @default(0)
+  listingsPosted    Int      @default(0)
+  servicesProvided  Int      @default(0)
+  communitiesJoined Int      @default(0)
+  totalPoints       Int      @default(0)
+  lastCalculatedAt  DateTime @default(now())
+  users             users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model DeviceRegistration {
-  id                String   @id @default(uuid())
-  userId            String
-  deviceFingerprint String
-  deviceName        String?
-  deviceInfo        Json
-  isTrusted         Boolean  @default(false)
-  lastSeenAt        DateTime @default(now())
-  createdAt         DateTime @default(now())
-  
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, deviceFingerprint])
-  @@index([userId])
-  @@map("device_registrations")
-}
-
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  ipAddress String
-  createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([token])
-  @@map("password_reset_tokens")
-}
-
-model EmailVerificationToken {
-  id         String   @id @default(uuid())
-  userId     String
-  email      String
-  token      String   @unique
-  expiresAt  DateTime
-  verifiedAt DateTime?
-  createdAt  DateTime @default(now())
-  
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([token])
-  @@map("email_verification_tokens")
-}
-
-model SecurityEvent {
-  id          String   @id @default(uuid())
-  userId      String
-  eventType   String   // password_change, 2fa_enabled, suspicious_login, etc.
-  severity    String   @default("medium") // low, medium, high, critical
-  description String
-  metadata    Json?
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId, createdAt])
-  @@index([eventType])
-  @@index([severity])
-  @@map("security_events")
-}
-
-model NotificationPreference {
-  userId        String   @id
-  emailEnabled  Boolean  @default(true)
-  pushEnabled   Boolean  @default(true)
-  smsEnabled    Boolean  @default(false)
-  inAppEnabled  Boolean  @default(true)
-  preferences   Json     @default("{}")
-  quietHours    Json?
-  timezone      String   @default("Asia/Kuala_Lumpur")
-  updatedAt     DateTime @updatedAt
-  
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("notification_preferences")
-}
-
-model UserPaymentMethod {
-  id              String   @id @default(uuid())
-  userId          String
-  provider        String   // stripe, paypal, apple_pay, google_pay
-  gatewayMethodId String   // Tokenized payment method
-  type            String   // card, bank_account, ewallet
-  lastFour        String?
-  brand           String?  // visa, mastercard, amex
-  expiresAt       DateTime?
-  isDefault       Boolean  @default(false)
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([userId, isDefault])
-  @@map("user_payment_methods")
-}
-
-model UserActivity {
-  id           String   @id @default(uuid())
-  userId       String
-  activityType String   // event_joined, listing_posted, vouch_given, etc.
-  entityType   String   // event, listing, vouch, community
-  entityId     String
-  visibility   String   @default("public") // public, friends, private
-  createdAt    DateTime @default(now())
-  
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId, createdAt])
-  @@index([activityType])
-  @@map("user_activities")
-}
-
-model UserStats {
-  userId              String   @id
-  eventsAttended      Int      @default(0)
-  eventsHosted        Int      @default(0)
-  vouchesGiven        Int      @default(0)
-  vouchesReceived     Int      @default(0)
-  listingsPosted      Int      @default(0)
-  servicesProvided    Int      @default(0)
-  communitiesJoined   Int      @default(0)
-  totalPoints         Int      @default(0)
-  lastCalculatedAt    DateTime @default(now())
-  
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   @@index([eventsAttended])
   @@index([totalPoints])
-  @@map("user_stats")
 }
 
-// ============================================================================
-// TRUST & VOUCH SYSTEM
-// ============================================================================
-
-model Vouch {
-  id               String    @id @default(uuid())
-  voucherId        String    // User ID or Community ID (for community vouches)
-  voucheeId        String    // User being vouched for
-  vouchType        VouchType @default(PRIMARY)
-  weightPercentage Float     @default(1.0)
-  message          String?
-  status           VouchStatus @default(PENDING)
-  requiresApproval Boolean   @default(true)
-  
-  // Community Vouch Fields
-  isCommunityVouch Boolean   @default(false)
-  communityId      String?   // If community vouch, which community
-  vouchedByAdminId String?   // Admin who vouched on behalf of community
-  isAutoVouched    Boolean   @default(false) // System-triggered auto-vouch
-  autoVouchCriteria Json?    // Criteria met for auto-vouch
-  
-  // Timestamps
-  requestedAt      DateTime  @default(now())
-  approvedAt       DateTime?
-  activatedAt      DateTime?
-  revokedAt        DateTime?
-  revokeReason     String?
-  
-  // Trust Impact
-  trustImpact      Float?    // Calculated impact (0-40 for primary, 0-30 for secondary, 0-40 for community)
-  
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  
-  voucher          User      @relation("VouchesGiven", fields: [voucherId], references: [id], onDelete: Cascade)
-  vouchee          User      @relation("VouchesReceived", fields: [voucheeId], references: [id], onDelete: Cascade)
-  
-  @@unique([voucherId, voucheeId, vouchType])
-  @@index([voucheeId, status])
-  @@index([voucherId, status])
-  @@index([communityId, status])
-  @@index([isCommunityVouch])
-  @@index([createdAt])
-  @@map("vouches")
-}
-
-model VouchConfig {
-  id                  String    @id @default(uuid())
-  
-  // Vouch Limits (Maximum allowed)
-  maxPrimaryVouches   Int       @default(1)   // Max 1 primary vouch
-  maxSecondaryVouches Int       @default(3)   // Max 3 secondary vouches
-  maxCommunityVouches Int       @default(2)   // Max 2 community vouches
-  
-  // Trust Score Weights (out of 100%)
-  primaryVouchWeight    Float   @default(30.0)   // 30% for primary vouch
-  secondaryVouchWeight  Float   @default(30.0)   // 30% total for secondary (10% each)
-  communityVouchWeight  Float   @default(40.0)   // 40% total for community (20% each)
-  trustMomentsWeight    Float   @default(30.0)   // 30% for trust moments feedback
-  activityWeight        Float   @default(30.0)   // 30% for activity participation
-  
-  // Vouch Rules
-  cooldownDays        Int       @default(30)  // Days before can vouch for new user
-  minTrustRequired    Float     @default(50.0) // Minimum trust score to vouch others
-  
-  // Community Auto-Vouch Criteria
-  autoVouchMinEvents       Int  @default(5)    // Min events attended
-  autoVouchMinMemberDays   Int  @default(90)   // Min days as member
-  autoVouchRequireZeroNegativity Boolean @default(true) // Must have zero negative feedback
-  
-  // Reconnection Rules
-  reconnectionCooldownDays Int  @default(30)   // Days before can reconnect after removal
-  
-  perTier             Json?     // Premium tier overrides
-  effectiveFrom       DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  
-  @@index([effectiveFrom])
-  @@map("vouch_configs")
-}
-
-// ============================================================================
-// EVENTS
-// ============================================================================
-
-model Event {
-  id           String            @id @default(uuid())
-  title        String
-  description  String?
-  type         EventType
-  date         DateTime
-  location     String
-  mapLink      String?
-  maxAttendees Int?
-  images       String[]          @default([])
-  notes        String?
-  status       EventStatus       @default(DRAFT)
-  
-  // Event Hosting (Personal vs Community)
-  hostType     EventHostType     @default(PERSONAL) // PERSONAL or COMMUNITY
-  hostId       String            // User who created the event
-  communityId  String?           // If community event, which community
-  
-  // Pricing (Free vs Paid)
-  isFree       Boolean           @default(true)
-  price        Float?            // Base ticket price (null if free or using tiers)
-  currency     String            @default("MYR")
-  
-  // Payment & Revenue Tracking
-  totalRevenue    Float?         @default(0.0)  // Total from all ticket sales
-  platformFee     Float?         @default(0.0)  // Total platform fees collected
-  organizerPayout Float?         @default(0.0)  // Total amount for organizer
-  ticketsSold     Int            @default(0)    // Total tickets sold
-  
-  // Metadata
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  
-  host         User              @relation("EventHost", fields: [hostId], references: [id], onDelete: Cascade)
-  community    Community?        @relation(fields: [communityId], references: [id], onDelete: SetNull)
-  attendance   EventAttendance[]
-  rsvps        EventRSVP[]
-  tickets      EventTicket[]
-  ticketTiers  EventTicketTier[] // Different pricing tiers
-
-  @@index([hostId])
-  @@index([communityId])
-  @@index([type])
-  @@index([date])
-  @@index([location])
-  @@index([status])
-  @@index([hostType])
-  @@index([isFree])
-  @@index([createdAt])
-  @@index([type, date])
-  @@index([hostId, date])
-  @@index([communityId, date])
-  @@map("events")
-}
-
-model EventTicketTier {
-  id              String   @id @default(uuid())
-  eventId         String
-  tierName        String   // "Early Bird", "VIP", "General Admission", "Student"
-  description     String?  // Description of what's included
-  price           Float
-  currency        String   @default("MYR")
-  
-  // Availability
-  totalQuantity   Int?     // Max tickets for this tier (null = unlimited)
-  soldQuantity    Int      @default(0)  // Tickets sold from this tier
-  minPurchase     Int      @default(1)  // Min tickets per purchase
-  maxPurchase     Int      @default(10) // Max tickets per purchase
-  
-  // Scheduling
-  availableFrom   DateTime?  // When this tier becomes available
-  availableUntil  DateTime?  // When this tier closes
-  
-  // Sorting & Display
-  displayOrder    Int      @default(0)  // Order to show tiers
-  isActive        Boolean  @default(true)
-  
-  // Metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  tickets         EventTicket[]
-  
-  @@index([eventId, isActive])
-  @@index([availableFrom, availableUntil])
-  @@map("event_ticket_tiers")
-}
-
-model EventTicket {
-  id              String              @id @default(uuid())
-  eventId         String
-  userId          String
-  
-  // Ticket Tier (if event uses tiers)
-  ticketTierId    String?             // References EventTicketTier
-  ticketType      String              @default("GENERAL") // Fallback if no tier
-  
-  // Pricing
-  price           Float               // Actual price paid for this ticket
-  currency        String              @default("MYR")
-  
-  // Status
-  status          EventTicketStatus   @default(PENDING)
-  
-  // Payment Integration
-  paymentTransactionId String?        // Links to PaymentTransaction.id
-  paymentStatus        PaymentStatus  @default(PENDING)
-  
-  // Ticket Details
-  ticketNumber    String              @unique // QR code content
-  quantity        Int                 @default(1) // Number of tickets in this booking
-  purchasedAt     DateTime            @default(now())
-  checkedInAt     DateTime?
-  canceledAt      DateTime?
-  refundedAt      DateTime?
-  
-  // Attendee Info (can buy for someone else)
-  attendeeName    String?             
-  attendeeEmail   String?
-  attendeePhone   String?
-  
-  // Relations
-  event           Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ticketTier      EventTicketTier?    @relation(fields: [ticketTierId], references: [id], onDelete: SetNull)
-  paymentTransaction PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
-  
-  @@unique([eventId, ticketNumber])
-  @@index([eventId])
-  @@index([userId])
-  @@index([ticketTierId])
-  @@index([status])
-  @@index([paymentTransactionId])
-  @@index([ticketNumber])
-  @@index([purchasedAt])
-  @@index([userId, status])
-  @@map("event_tickets")
-}
-
-model EventRSVP {
-  id        String   @id @default(uuid())
-  qrCode    String   @unique
-  createdAt DateTime @default(now())
-  userId    String
-  eventId   String
-  
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, eventId])
-  @@index([userId])
-  @@index([eventId])
-  @@index([createdAt])
-  @@map("event_rsvps")
-}
-
-model EventAttendance {
-  id          String   @id @default(uuid())
-  checkedInAt DateTime @default(now())
-  userId      String
-  eventId     String
-  
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, eventId])
-  @@index([userId])
-  @@index([eventId])
-  @@index([checkedInAt])
-  @@map("event_attendances")
-}
-
-// ============================================================================
-// SERVICES (Guiding, Homestay, etc.)
-// ============================================================================
-
-model Service {
-  id          String        @id @default(uuid())
-  providerId  String
-  title       String
-  description String?
-  serviceType ServiceType
-  category    String?
-  pricingType PricingType
-  basePrice   Float
-  currency    String        @default("MYR")
-  maxGuests   Int?
-  location    String?
-  availability Json?
-  requirements Json?
-  images      String[]      @default([])
-  status      ServiceStatus @default(DRAFT)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  provider    User          @relation("ServicesProvided", fields: [providerId], references: [id], onDelete: Cascade)
-  bookings    ServiceBooking[]
-  
-  @@index([providerId, status])
-  @@index([serviceType, status])
-  @@index([status])
-  @@map("services")
-}
-
-model ServiceBooking {
-  id              String        @id @default(uuid())
-  serviceId       String
-  customerId      String
-  providerId      String
-  bookingType     ServiceType
-  
-  // Booking Period
-  startDate       DateTime
-  endDate         DateTime
-  guestsCount     Int           @default(1)
-  
-  // Pricing
-  baseAmount      Float
-  additionalFees  Float         @default(0.0)
-  totalAmount     Float
-  currency        String        @default("MYR")
-  
-  // Payment Integration
-  paymentTransactionId String?  // Links to PaymentTransaction
-  paymentStatus        PaymentStatus @default(PENDING)
-  
-  // Revenue Distribution
-  platformFee     Float?        // Platform's commission
-  providerPayout  Float?        // Amount provider receives
-  
-  // Status
-  status          BookingStatus @default(PENDING)
-  
-  // Additional Info
-  specialRequests String?
-  bookingDetails  Json?
-  
-  // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  confirmedAt     DateTime?
-  completedAt     DateTime?
-  canceledAt      DateTime?
-  
-  // Relations
-  service         Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  customer        User          @relation("BookingsAsCustomer", fields: [customerId], references: [id], onDelete: Cascade)
-  provider        User          @relation("BookingsAsProvider", fields: [providerId], references: [id], onDelete: Cascade)
-  paymentTransaction PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
-  
-  @@index([serviceId])
-  @@index([customerId, status])
-  @@index([providerId, status])
-  @@index([status])
-  @@index([paymentTransactionId])
-  @@index([paymentStatus])
-  @@index([startDate, endDate])
-  @@map("service_bookings")
-}
-
-// ============================================================================
-// MARKETPLACE
-// ============================================================================
-
-model MarketplaceListing {
-  id          String         @id @default(uuid())
-  userId      String
-  title       String
-  description String?
-  category    String?
-  price       Float
-  currency    String         @default("MYR")
-  quantity    Int?
-  location    String?
-  images      String[]       @default([])
-  status      ListingStatus  @default(DRAFT)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  user        User           @relation("MarketplaceListings", fields: [userId], references: [id], onDelete: Cascade)
-  orders      MarketplaceOrder[]
-  cartItems   MarketplaceCartItem[]
-  priceHistory ListingPriceHistory[]
-  
-  @@index([userId, status])
-  @@index([category])
-  @@index([status])
-  @@index([createdAt])
-  @@map("marketplace_listings")
-}
-
-model ListingPriceHistory {
-  id        String   @id @default(uuid())
-  listingId String
-  price     Float
-  currency  String   @default("MYR")
-  reason    String?
-  changedAt DateTime @default(now())
-  
-  listing   MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  
-  @@index([listingId, changedAt])
-  @@map("listing_price_history")
-}
-
-model MarketplaceOrder {
-  id              String      @id @default(uuid())
-  listingId       String
-  buyerId         String
-  sellerId        String
-  
-  // Order Details
-  quantity        Int
-  unitPrice       Float
-  subtotal        Float       // quantity * unitPrice
-  shippingFee     Float       @default(0.0)
-  totalAmount     Float       // subtotal + shippingFee
-  currency        String      @default("MYR")
-  
-  // Payment Integration
-  paymentTransactionId String?  // Links to PaymentTransaction
-  paymentStatus        PaymentStatus @default(PENDING)
-  
-  // Revenue Distribution (calculated after payment success)
-  platformFee     Float?      // Platform's commission
-  sellerPayout    Float?      // Amount seller receives
-  
-  // Order Status
-  status          OrderStatus @default(PENDING)
-  
-  // Shipping
-  shippingAddress Json?
-  trackingNumber  String?
-  notes           String?
-  
-  // Timestamps
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  confirmedAt     DateTime?   // Payment confirmed
-  shippedAt       DateTime?
-  deliveredAt     DateTime?
-  canceledAt      DateTime?
-  
-  // Relations
-  listing         MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  buyer           User        @relation("OrdersAsBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
-  seller          User        @relation("OrdersAsSeller", fields: [sellerId], references: [id], onDelete: Cascade)
-  paymentTransaction PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
-  reviews         MarketplaceReview[]
-  disputes        MarketplaceDispute[]
-  
-  @@index([listingId])
-  @@index([buyerId, status])
-  @@index([sellerId, status])
-  @@index([status])
-  @@index([paymentTransactionId])
-  @@index([paymentStatus])
-  @@index([createdAt])
-  @@map("marketplace_orders")
-}
-
-model MarketplaceCartItem {
-  id        String   @id @default(uuid())
-  userId    String
-  listingId String
-  quantity  Int
-  addedAt   DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  listing   MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, listingId])
-  @@index([userId])
-  @@map("marketplace_cart_items")
-}
-
-model MarketplaceDispute {
-  id           String        @id @default(uuid())
-  orderId      String
-  initiatedBy  String
-  reason       String
-  status       DisputeStatus @default(OPEN)
-  resolution   Json?
-  createdAt    DateTime      @default(now())
-  resolvedAt   DateTime?
-  
-  order        MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  initiator    User        @relation("DisputeInitiator", fields: [initiatedBy], references: [id], onDelete: Cascade)
-  
-  @@index([orderId])
-  @@index([status])
-  @@map("marketplace_disputes")
-}
-
-model MarketplaceReview {
-  id         String   @id @default(uuid())
-  orderId    String
-  reviewerId String
-  revieweeId String
-  rating     Int
-  comment    String?
-  createdAt  DateTime @default(now())
-  
-  order      MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  reviewer   User     @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
-  reviewee   User     @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
-  
-  @@unique([orderId, reviewerId])
-  @@index([revieweeId, rating])
-  @@map("marketplace_reviews")
-}
-
-// ============================================================================
-// PAYMENTS
-// ============================================================================
-
-model PaymentProvider {
-  id                  String   @id @default(uuid())
-  providerCode        String   @unique
-  providerName        String
-  providerType        String   // gateway, bank, ewallet, crypto
-  supportedCountries  String[]
-  supportedCurrencies String[]
-  isActive            Boolean  @default(true)
-  isDefault           Boolean  @default(false)
-  priorityOrder       Int      @default(0)
-  configuration       Json     @default("{}")
-  feeStructure        Json     @default("{}")
-  capabilities        Json     @default("{}")
-  webhookConfig       Json?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  transactions        PaymentTransaction[]
-  routingRules        PaymentProviderRouting[]
-  
-  @@index([providerCode])
-  @@index([isActive, priorityOrder])
-  @@map("payment_providers")
-}
-
-model PaymentProviderRouting {
-  id         String   @id @default(uuid())
-  ruleName   String
-  providerId String
-  conditions Json
-  priority   Int      @default(0)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  
-  provider   PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  
-  @@index([providerId, isActive])
-  @@index([priority, isActive])
-  @@map("payment_provider_routing")
-}
-
-model PlatformFeeConfig {
-  id              String    @id @default(uuid())
-  configName      String
-  transactionType TransactionType  // event_ticket, marketplace_order, service_booking, subscription
-  
-  // Fee Structure
-  feePercentage   Float?    // Percentage fee (e.g., 10.0 for 10%)
-  feeFixed        Float?    // Fixed fee amount
-  minFee          Float?    // Minimum fee to charge
-  maxFee          Float?    // Maximum fee cap
-  currency        String    @default("MYR")
-  
-  // Conditions (JSON for flexible rules)
-  // Example: {"hostType": "PERSONAL", "minAmount": 100}
-  // Example: {"category": "electronics", "sellerTier": "premium"}
-  conditions      Json      @default("{}")
-  
-  // Recipient Configuration
-  recipientType   String    @default("platform")  // platform, charity, partner
-  recipientId     String?   // If specific recipient
-  
-  // Activation
-  isActive        Boolean   @default(true)
-  priority        Int       @default(0)  // Higher priority = applied first
-  
-  // Scheduling
-  effectiveFrom   DateTime  @default(now())
-  effectiveUntil  DateTime?
-  
-  // Metadata
-  description     String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  transactionFees TransactionFee[]
-  
-  @@index([transactionType, isActive])
-  @@index([effectiveFrom, effectiveUntil])
-  @@index([priority, isActive])
-  @@map("platform_fee_configs")
-}
-
-model TransactionFee {
-  id              String   @id @default(uuid())
-  transactionId   String
-  feeConfigId     String?
-  
-  // Fee Details
-  feeType         String   // platform, gateway, processing, tax
-  feePercentage   Float?   // Applied percentage
-  feeFixed        Float?   // Applied fixed amount
-  calculatedFee   Float    // Final calculated fee amount
-  
-  // Recipient
-  recipientType   String   // platform, gateway, charity, partner
-  recipientId     String?  // Specific recipient ID if applicable
-  
-  currency        String   @default("MYR")
-  description     String?  // Human-readable fee description
-  appliedAt       DateTime @default(now())
-  
-  transaction     PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  feeConfig       PlatformFeeConfig? @relation(fields: [feeConfigId], references: [id], onDelete: SetNull)
-  
-  @@index([transactionId, feeType])
-  @@index([feeConfigId])
-  @@index([recipientType, recipientId])
-  @@map("transaction_fees")
-}
-
-model PaymentTransaction {
-  id                    String          @id @default(uuid())
+model user_subscriptions {
+  id                    String                  @id
   userId                String
-  transactionType       TransactionType // event_ticket, marketplace_order, service_booking, subscription
-  
-  // Reference to source entity
-  referenceType         String          // Event, MarketplaceOrder, ServiceBooking
-  referenceId           String          // ID of the source entity
-  
-  // Payment Amounts
-  amount                Float           // Gross transaction amount
-  currency              String          @default("MYR")
-  
-  // Fee Breakdown (calculated from TransactionFee records)
-  totalFees             Float           @default(0.0)  // Sum of all fees
-  platformFee           Float           @default(0.0)  // Platform's commission
-  gatewayFee            Float           @default(0.0)  // Payment gateway fee
-  netAmount             Float           @default(0.0)  // Amount after all fees (seller/provider receives this)
-  
-  // Payment Gateway
-  providerId            String
-  gatewayTransactionId  String          @unique  // Transaction ID from payment gateway
-  gatewayPaymentMethodId String?        // Payment method used
-  gatewayMetadata       Json?           // Gateway-specific data
-  
-  // Status & Processing
-  status                PaymentStatus   @default(PENDING)
-  failureReason         String?
-  processedAt           DateTime?
-  
-  // Refund Tracking
-  refundedAmount        Float?          @default(0.0)
-  refundedAt            DateTime?
-  refundReason          String?
-  
-  // Metadata
-  description           String?         // Human-readable description
-  metadata              Json?           // Additional flexible data
-  
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  
-  // Relations
-  user                  User            @relation("PaymentTransactions", fields: [userId], references: [id], onDelete: Cascade)
-  provider              PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  fees                  TransactionFee[]
-  payouts               PayoutDistribution[]
-  
-  // Transaction Type Specific Relations
-  eventTickets          EventTicket[]         // For event_ticket transactions
-  marketplaceOrders     MarketplaceOrder[]    // For marketplace_order transactions
-  serviceBookings       ServiceBooking[]      // For service_booking transactions
-  subscriptionPayments  SubscriptionPayment[] // For subscription transactions
-  
-  @@index([userId, status])
-  @@index([providerId, status])
-  @@index([transactionType])
-  @@index([transactionType, status])
-  @@index([referenceType, referenceId])
-  @@index([gatewayTransactionId])
-  @@index([processedAt, status])
-  @@index([createdAt])
-  @@map("payment_transactions")
-}
+  tierId                String
+  status                SubscriptionStatus      @default(ACTIVE)
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAt              DateTime?
+  canceledAt            DateTime?
+  trialStart            DateTime?
+  trialEnd              DateTime?
+  paymentProviderId     String?
+  gatewaySubscriptionId String?
+  usageData             Json                    @default("{}")
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  subscription_payments subscription_payments[]
+  subscription_tiers    subscription_tiers      @relation(fields: [tierId], references: [id])
+  users                 users                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model PayoutDistribution {
-  id                   String       @id @default(uuid())
-  paymentTransactionId String
-  recipientId          String
-  recipientType        String       // seller, service_provider, event_organizer, platform
-  amount               Float
-  currency             String       @default("MYR")
-  status               PayoutStatus @default(PENDING)
-  releaseDate          DateTime?
-  gatewayPayoutId      String?
-  createdAt            DateTime     @default(now())
-  releasedAt           DateTime?
-  
-  paymentTransaction   PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
-  recipient            User         @relation("PayoutsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
-  
-  @@index([paymentTransactionId])
-  @@index([recipientId, status])
-  @@index([releaseDate, status])
-  @@map("payout_distributions")
-}
-
-// ============================================================================
-// SUBSCRIPTIONS & TIER MANAGEMENT
-// ============================================================================
-
-model SubscriptionTier {
-  id              String   @id @default(uuid())
-  tierCode        String   @unique  // FREE, BASIC, PREMIUM, ENTERPRISE
-  tierName        String   // "Free Tier", "Basic", "Premium", "Enterprise"
-  description     String?
-  
-  // Pricing
-  price           Float    @default(0.0)  // Monthly price (0 for free tier)
-  currency        String   @default("MYR")
-  billingCycle    String   @default("MONTHLY")  // MONTHLY, QUARTERLY, YEARLY
-  
-  // Feature Limits
-  features        Json     @default("{}")  // Feature access configuration
-  // Example:
-  // {
-  //   "canCreateEvents": true,
-  //   "maxEventsPerMonth": 5,
-  //   "canCreateMarketplaceListings": true,
-  //   "maxListingsActive": 10,
-  //   "canCreateServices": false,
-  //   "maxServicesActive": 0,
-  //   "canHostCommunityEvents": false,
-  //   "analyticsAccess": false,
-  //   "prioritySupport": false,
-  //   "customBranding": false
-  // }
-  
-  // Display & Ordering
-  displayOrder    Int      @default(0)
-  isActive        Boolean  @default(true)
-  isPublic        Boolean  @default(true)  // Show in pricing page
-  
-  // Trial Configuration
-  trialDays       Int?     @default(0)  // Free trial period in days
-  
-  // Metadata
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  subscriptions   UserSubscription[]
-  
-  @@index([tierCode, isActive])
-  @@index([isActive, isPublic])
-  @@index([displayOrder])
-  @@map("subscription_tiers")
-}
-
-model UserSubscription {
-  id              String             @id @default(uuid())
-  userId          String
-  tierId          String
-  
-  // Subscription Status
-  status          SubscriptionStatus @default(ACTIVE)
-  
-  // Billing
-  currentPeriodStart  DateTime
-  currentPeriodEnd    DateTime
-  cancelAt            DateTime?      // Scheduled cancellation date
-  canceledAt          DateTime?      // When cancellation was requested
-  trialStart          DateTime?      // Trial period start
-  trialEnd            DateTime?      // Trial period end
-  
-  // Payment
-  paymentProviderId   String?
-  gatewaySubscriptionId String?      // Stripe/Xendit subscription ID
-  
-  // Usage Tracking
-  usageData       Json          @default("{}")
-  // Example:
-  // {
-  //   "eventsCreated": 3,
-  //   "listingsCreated": 5,
-  //   "lastResetDate": "2025-01-01"
-  // }
-  
-  // Metadata
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tier            SubscriptionTier @relation(fields: [tierId], references: [id], onDelete: Restrict)
-  payments        SubscriptionPayment[]
-  
-  @@index([userId, status])
-  @@index([tierId, status])
-  @@index([status])
   @@index([currentPeriodEnd])
   @@index([gatewaySubscriptionId])
-  @@map("user_subscriptions")
-}
-
-model SubscriptionPayment {
-  id              String   @id @default(uuid())
-  subscriptionId  String
-  userId          String
-  
-  // Payment Details
-  amount          Float
-  currency        String   @default("MYR")
-  billingPeriodStart DateTime
-  billingPeriodEnd   DateTime
-  
-  // Payment Status
-  status          PaymentStatus @default(PENDING)
-  attemptCount    Int       @default(1)
-  
-  // Gateway Integration
-  paymentTransactionId String?  // Links to PaymentTransaction
-  gatewayInvoiceId     String?  // Stripe/Xendit invoice ID
-  
-  // Timestamps
-  dueDate         DateTime
-  paidAt          DateTime?
-  failedAt        DateTime?
-  failureReason   String?
-  createdAt       DateTime @default(now())
-  
-  subscription    UserSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  paymentTransaction PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
-  
-  @@index([subscriptionId, status])
+  @@index([status])
+  @@index([tierId, status])
   @@index([userId, status])
-  @@index([dueDate])
-  @@index([status])
-  @@index([paymentTransactionId])
-  @@map("subscription_payments")
 }
 
-model FeatureUsage {
-  id              String   @id @default(uuid())
-  userId          String
-  subscriptionId  String?
-  
-  // Feature Details
-  featureCode     String   // event_creation, listing_creation, service_creation
-  entityType      String   // Event, MarketplaceListing, Service
-  entityId        String?  // ID of created entity
-  
-  // Tracking
-  usedAt          DateTime @default(now())
-  periodStart     DateTime // Start of billing period
-  periodEnd       DateTime // End of billing period
-  
-  // Metadata
-  metadata        Json?
-  
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId, featureCode])
-  @@index([subscriptionId, featureCode])
-  @@index([periodStart, periodEnd])
-  @@index([usedAt])
-  @@map("feature_usage")
-}
+model users {
+  id                                                        String                      @id
+  email                                                     String?                     @unique
+  phone                                                     String?                     @unique
+  password                                                  String?
+  fullName                                                  String
+  role                                                      UserRole                    @default(GENERAL_USER)
+  totalPoints                                               Int                         @default(0)
+  createdAt                                                 DateTime                    @default(now())
+  updatedAt                                                 DateTime
+  referredById                                              String?
+  username                                                  String?                     @unique
+  deletedAt                                                 DateTime?
+  status                                                    UserStatus                  @default(ACTIVE)
+  trustLevel                                                String                      @default("starter")
+  trustScore                                                Float                       @default(0.0)
+  auth_identities                                           auth_identities[]
+  card_game_feedbacks                                       card_game_feedbacks[]
+  card_game_replies                                         card_game_replies[]
+  card_game_upvotes                                         card_game_upvotes[]
+  communities                                               communities[]
+  community_members                                         community_members[]
+  connection_reviews_connection_reviews_revieweeIdTousers   connection_reviews[]        @relation("connection_reviews_revieweeIdTousers")
+  connection_reviews_connection_reviews_reviewerIdTousers   connection_reviews[]        @relation("connection_reviews_reviewerIdTousers")
+  connection_stats                                          connection_stats?
+  device_registrations                                      device_registrations[]
+  email_verification_tokens                                 email_verification_tokens[]
+  event_attendances                                         event_attendances[]
+  event_rsvps                                               event_rsvps[]
+  event_tickets                                             event_tickets[]
+  events                                                    events[]
+  feature_usage                                             feature_usage[]
+  login_attempts                                            login_attempts[]
+  marketplace_cart_items                                    marketplace_cart_items[]
+  marketplace_disputes                                      marketplace_disputes[]
+  marketplace_listings                                      marketplace_listings[]
+  marketplace_orders_marketplace_orders_buyerIdTousers      marketplace_orders[]        @relation("marketplace_orders_buyerIdTousers")
+  marketplace_orders_marketplace_orders_sellerIdTousers     marketplace_orders[]        @relation("marketplace_orders_sellerIdTousers")
+  marketplace_reviews_marketplace_reviews_revieweeIdTousers marketplace_reviews[]       @relation("marketplace_reviews_revieweeIdTousers")
+  marketplace_reviews_marketplace_reviews_reviewerIdTousers marketplace_reviews[]       @relation("marketplace_reviews_reviewerIdTousers")
+  matches_matches_receiverIdTousers                         matches[]                   @relation("matches_receiverIdTousers")
+  matches_matches_senderIdTousers                           matches[]                   @relation("matches_senderIdTousers")
+  messages_messages_receiverIdTousers                       messages[]                  @relation("messages_receiverIdTousers")
+  messages_messages_senderIdTousers                         messages[]                  @relation("messages_senderIdTousers")
+  notification_preferences                                  notification_preferences?
+  notifications                                             notifications[]
+  password_reset_tokens                                     password_reset_tokens[]
+  payment_transactions                                      payment_transactions[]
+  payout_distributions                                      payout_distributions[]
+  point_histories                                           point_histories[]
+  profile_completion_status                                 profile_completion_status?
+  push_subscriptions                                        push_subscriptions?
+  redemptions                                               redemptions[]
+  referral_rewards                                          referral_rewards[]
+  referral_stats                                            referral_stats?
+  referrals_referrals_refereeIdTousers                      referrals[]                 @relation("referrals_refereeIdTousers")
+  referrals_referrals_referrerIdTousers                     referrals[]                 @relation("referrals_referrerIdTousers")
+  refresh_tokens                                            refresh_tokens[]
+  security_events                                           security_events[]
+  service_bookings_service_bookings_customerIdTousers       service_bookings[]          @relation("service_bookings_customerIdTousers")
+  service_bookings_service_bookings_providerIdTousers       service_bookings[]          @relation("service_bookings_providerIdTousers")
+  services                                                  services[]
+  subscription_payments                                     subscription_payments[]
+  travel_companions_travel_companions_companionIdTousers    travel_companions[]         @relation("travel_companions_companionIdTousers")
+  travel_companions_travel_companions_userIdTousers         travel_companions[]         @relation("travel_companions_userIdTousers")
+  travel_stats                                              travel_stats?
+  travel_trips                                              travel_trips[]
+  user_activities                                           user_activities[]
+  user_badges                                               user_badges[]
+  user_blocks_user_blocks_blockedIdTousers                  user_blocks[]               @relation("user_blocks_blockedIdTousers")
+  user_blocks_user_blocks_blockerIdTousers                  user_blocks[]               @relation("user_blocks_blockerIdTousers")
+  user_connections_user_connections_initiatorIdTousers      user_connections[]          @relation("user_connections_initiatorIdTousers")
+  user_connections_user_connections_receiverIdTousers       user_connections[]          @relation("user_connections_receiverIdTousers")
+  user_locations                                            user_locations?
+  user_metadata                                             user_metadata?
+  user_payment_methods                                      user_payment_methods[]
+  user_preferences                                          user_preferences?
+  user_privacy                                              user_privacy?
+  user_profiles                                             user_profiles?
+  user_security                                             user_security?
+  user_service_profiles                                     user_service_profiles?
+  user_sessions                                             user_sessions[]
+  user_stats                                                user_stats?
+  user_subscriptions                                        user_subscriptions[]
+  users                                                     users?                      @relation("usersTousers", fields: [referredById], references: [id])
+  other_users                                               users[]                     @relation("usersTousers")
+  vouches_vouches_voucheeIdTousers                          vouches[]                   @relation("vouches_voucheeIdTousers")
+  vouches_vouches_voucherIdTousers                          vouches[]                   @relation("vouches_voucherIdTousers")
 
-// ============================================================================
-// REFERRAL SYSTEM
-// ============================================================================
-
-model Referral {
-  id                String   @id @default(uuid())
-  referrerId        String   // User who referred
-  refereeId         String?  // User who signed up (null until signup)
-  
-  // Referral Code
-  referralCode      String   @unique  // Unique code used for this referral
-  
-  // Referral Details
-  referralMethod    String?  // link, code, social_share, direct
-  referralSource    String?  // facebook, twitter, whatsapp, email, sms
-  campaignId        String?  // Optional campaign association
-  
-  // Tracking
-  clickedAt         DateTime? // When referral link was clicked
-  signedUpAt        DateTime? // When referee completed signup
-  activatedAt       DateTime? // When referee completed activation criteria
-  expiredAt         DateTime? // When referral expired (if applicable)
-  
-  // Activation Criteria Tracking
-  isActivated       Boolean  @default(false)
-  activationCriteria Json?   // What criteria were met
-  // Example:
-  // {
-  //   "profileCompleted": true,
-  //   "firstEventAttended": true,
-  //   "minimumDaysActive": 7
-  // }
-  
-  // Reward Status
-  referrerRewardGiven Boolean @default(false)
-  refereeRewardGiven  Boolean @default(false)
-  
-  // Device & Location Tracking
-  ipAddress         String?
-  userAgent         String?
-  deviceInfo        Json?
-  
-  // Metadata
-  metadata          Json?    // Additional flexible data
-  notes             String?  // Admin notes
-  
-  // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  // Relations
-  referrer          User     @relation("ReferralsGenerated", fields: [referrerId], references: [id], onDelete: Cascade)
-  referee           User?    @relation("ReferredUsers", fields: [refereeId], references: [id], onDelete: SetNull)
-  campaign          ReferralCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  rewards           ReferralReward[]
-  
-  @@index([referrerId, isActivated])
-  @@index([refereeId])
-  @@index([referralCode])
-  @@index([campaignId])
-  @@index([isActivated])
   @@index([createdAt])
-  @@index([signedUpAt])
-  @@index([activatedAt])
-  @@map("referrals")
-}
-
-model ReferralCampaign {
-  id                String   @id @default(uuid())
-  campaignCode      String   @unique
-  campaignName      String
-  description       String?
-  
-  // Rewards Configuration
-  referrerRewardType    String   @default("points") // points, credits, subscription_discount
-  referrerRewardAmount  Float    @default(100.0)    // Points or discount amount
-  refereeRewardType     String   @default("points")
-  refereeRewardAmount   Float    @default(50.0)
-  
-  // Bonus Rewards (for milestones)
-  bonusRewards      Json?    // Milestone-based bonuses
-  // Example:
-  // [
-  //   {"milestone": 5, "type": "points", "amount": 500, "description": "Refer 5 friends"},
-  //   {"milestone": 10, "type": "subscription_discount", "amount": 50, "description": "50% off premium for 3 months"}
-  // ]
-  
-  // Activation Criteria (what referee must do to trigger rewards)
-  activationCriteria Json     @default("{}") // Required actions for activation
-  // Example:
-  // {
-  //   "requireProfileComplete": true,
-  //   "requireEmailVerified": true,
-  //   "requireFirstEventAttendance": false,
-  //   "minimumDaysActive": 7,
-  //   "requireFirstPurchase": false
-  // }
-  
-  // Campaign Period
-  startDate         DateTime
-  endDate           DateTime?
-  
-  // Limits
-  maxReferrals      Int?     // Max total referrals in campaign (null = unlimited)
-  maxPerUser        Int?     // Max referrals per user (null = unlimited)
-  
-  // Targeting
-  targetCountries   String[] @default([]) // Empty = all countries
-  targetUserSegment String?  // new_users, premium_users, all
-  
-  // Status
-  isActive          Boolean  @default(true)
-  isPaused          Boolean  @default(false)
-  
-  // Analytics
-  totalReferrals    Int      @default(0)
-  totalSignups      Int      @default(0)
-  totalActivated    Int      @default(0)
-  totalRewardsGiven Float    @default(0.0)
-  
-  // Metadata
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  referrals         Referral[]
-  
-  @@index([campaignCode, isActive])
-  @@index([isActive, isPaused])
-  @@index([startDate, endDate])
-  @@map("referral_campaigns")
-}
-
-model ReferralReward {
-  id              String   @id @default(uuid())
-  referralId      String
-  userId          String   // User receiving the reward (referrer or referee)
-  
-  // Reward Details
-  rewardType      String   // points, credits, subscription_discount, badge
-  rewardAmount    Float?   // Points/credits amount or discount percentage
-  rewardDuration  Int?     // Duration in days (for subscription discounts)
-  description     String   // Human-readable description
-  
-  // Status
-  status          ReferralRewardStatus @default(PENDING)
-  
-  // Milestone Tracking
-  isMilestoneReward Boolean @default(false)
-  milestoneCount    Int?    // Which milestone (e.g., 5th referral)
-  
-  // Processing
-  awardedAt       DateTime?
-  expiresAt       DateTime?
-  claimedAt       DateTime?
-  
-  // Metadata
-  metadata        Json?    // Additional data
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  referral        Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  user            User     @relation("ReferralRewardsEarned", fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([referralId])
-  @@index([userId, status])
-  @@index([status])
-  @@index([isMilestoneReward])
-  @@index([awardedAt])
-  @@map("referral_rewards")
-}
-
-model ReferralStats {
-  userId              String   @id
-  
-  // Referral Counts
-  totalReferrals      Int      @default(0)  // Total referral links shared
-  totalClicks         Int      @default(0)  // Total clicks on referral links
-  totalSignups        Int      @default(0)  // Total signups from referrals
-  totalActivated      Int      @default(0)  // Total activated referrals (met criteria)
-  
-  // Conversion Rates
-  clickToSignupRate   Float    @default(0.0)  // signups / clicks
-  signupToActiveRate  Float    @default(0.0)  // activated / signups
-  overallConversionRate Float  @default(0.0)  // activated / clicks
-  
-  // Rewards Earned
-  totalPointsEarned   Int      @default(0)
-  totalCreditsEarned  Float    @default(0.0)
-  totalRewardsCount   Int      @default(0)
-  
-  // Milestones Reached
-  milestonesReached   Json     @default("[]")
-  // Example:
-  // [
-  //   {"milestone": 5, "reachedAt": "2025-01-15", "reward": "500 points"},
-  //   {"milestone": 10, "reachedAt": "2025-03-20", "reward": "Premium discount"}
-  // ]
-  
-  // Best Performers
-  bestConversionMonth String?  // "2025-01"
-  bestConversionCount Int      @default(0)
-  
-  // Current Streak
-  currentStreak       Int      @default(0)  // Consecutive months with referrals
-  longestStreak       Int      @default(0)
-  
-  // Rankings
-  leaderboardRank     Int?     // User's rank in referral leaderboard
-  topReferrerBadge    Boolean  @default(false) // Has "Top Referrer" badge
-  
-  // Activity
-  lastReferralAt      DateTime?
-  lastActivationAt    DateTime?
-  
-  // Timestamps
-  lastCalculatedAt    DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([totalActivated])
-  @@index([totalPointsEarned])
-  @@index([leaderboardRank])
-  @@index([topReferrerBadge])
-  @@map("referral_stats")
-}
-
-// ============================================================================
-// GAMIFICATION
-// ============================================================================
-
-model PointHistory {
-  id          String   @id @default(uuid())
-  points      Int
-  action      String
-  description String?
-  createdAt   DateTime @default(now())
-  userId      String
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@index([userId, createdAt])
-  @@map("point_histories")
-}
-
-model Badge {
-  id          String      @id @default(uuid())
-  type        BadgeType   @unique
-  name        String
-  description String
-  criteria    String
-  imageUrl    String?
-  userBadges  UserBadge[]
-
-  @@map("badges")
-}
-
-model UserBadge {
-  id       String   @id @default(uuid())
-  earnedAt DateTime @default(now())
-  userId   String
-  badgeId  String
-  
-  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, badgeId])
-  @@index([userId])
-  @@map("user_badges")
-}
-
-model Reward {
-  id             String       @id @default(uuid())
-  title          String
-  description    String
-  pointsRequired Int
-  category       String
-  partner        String
-  quantity       Int          @default(0)
-  imageUrl       String?
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  
-  redemptions    Redemption[]
-
-  @@index([isActive])
-  @@index([category])
-  @@map("rewards")
-}
-
-model Redemption {
-  id          String           @id @default(uuid())
-  status      RedemptionStatus @default(PENDING)
-  notes       String?
-  redeemedAt  DateTime         @default(now())
-  processedAt DateTime?
-  userId      String
-  rewardId    String
-  
-  reward      Reward           @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([rewardId])
-  @@index([status])
-  @@map("redemptions")
-}
-
-// ============================================================================
-// SOCIAL FEATURES
-// ============================================================================
-
-model UserConnection {
-  id          String   @id @default(uuid())
-  initiatorId String   // User who sent the connection request
-  receiverId  String   // User who received the connection request
-  status      ConnectionStatus @default(PENDING)
-  message     String?  // Optional message with connection request
-  
-  // Relationship Context
-  relationshipType String?  // "Architecture Colleague", "Photography Mentor", "Travel Buddy"
-  relationshipCategory String? // professional, friend, family, mentor, travel, community
-  howWeMet     String?  // "Met at architecture conference", "Traveled together in Turkey"
-  
-  // Trust & Quality Metrics
-  trustStrength Float    @default(0.0)  // 0-100 calculated trust strength
-  interactionCount Int   @default(0)   // Number of interactions (messages, events attended together)
-  lastInteraction DateTime?             // Last meaningful interaction
-  
-  // Badges & Tags
-  badges       String[] @default([])    // ["Most Trusted", "Close Friend", "Frequent Collaborator"]
-  tags         String[] @default([])    // Custom tags for categorization
-  
-  // Mutual Connections
-  mutualFriendsCount Int @default(0)    // Auto-calculated
-  mutualCommunitiesCount Int @default(0)
-  
-  // Connection Lifecycle Timestamps
-  createdAt   DateTime @default(now())  // Request sent
-  respondedAt DateTime?                 // Request accepted/rejected
-  connectedAt DateTime?                 // Connection established (status = ACCEPTED)
-  removedAt   DateTime?                 // Connection removed by either party
-  removedBy   String?                   // User ID who removed the connection
-  
-  // Reconnection Control
-  canReconnectAt DateTime?  // If removed, earliest date they can reconnect (30 day cooldown)
-  
-  // Relations
-  initiator   User     @relation("ConnectionInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
-  receiver    User     @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  reviews     ConnectionReview[]
-
-  @@unique([initiatorId, receiverId])
-  @@index([initiatorId])
-  @@index([receiverId])
-  @@index([status])
-  @@index([initiatorId, status])
-  @@index([receiverId, status])
-  @@index([relationshipCategory])
-  @@index([trustStrength])
-  @@index([badges])
-  @@index([canReconnectAt])
-  @@map("user_connections")
-}
-
-model ConnectionReview {
-  id           String   @id @default(uuid())
-  connectionId String
-  reviewerId   String   // User giving the review
-  revieweeId   String   // User being reviewed
-  
-  // Rating & Review
-  rating       Int      // 1-5 stars
-  review       String?  // "Excellent photographer and reliable friend"
-  
-  // Review Context
-  reviewType   String   @default("general")  // general, professional, travel, event
-  isPublic     Boolean  @default(true)       // Show on profile
-  isFeatured   Boolean  @default(false)      // Highlight this review
-  
-  // Verification
-  isVerified   Boolean  @default(false)      // Verified through event attendance, etc.
-  verificationSource String? // "Attended 5 events together", "Traveled to Turkey together"
-  
-  // Metadata
-  helpfulCount Int      @default(0)          // Other users found this helpful
-  
-  // Timestamps
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  // Relations
-  connection   UserConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  reviewer     User     @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
-  reviewee     User     @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
-  
-  @@unique([connectionId, reviewerId])
-  @@index([connectionId])
-  @@index([reviewerId])
-  @@index([revieweeId])
-  @@index([rating])
-  @@index([isPublic, isFeatured])
-  @@index([createdAt])
-  @@map("connection_reviews")
-}
-
-model ConnectionStats {
-  userId              String   @id
-  
-  // Connection Counts
-  totalConnections    Int      @default(0)
-  pendingRequests     Int      @default(0)
-  sentRequests        Int      @default(0)
-  
-  // Relationship Breakdown
-  professionalConnections Int  @default(0)
-  friendConnections   Int      @default(0)
-  familyConnections   Int      @default(0)
-  mentorConnections   Int      @default(0)
-  travelConnections   Int      @default(0)
-  communityConnections Int     @default(0)
-  
-  // Trust Metrics
-  averageRating       Float?   // Average rating received
-  highestRating       Float?   // Highest rating received (for display)
-  totalReviewsReceived Int     @default(0)
-  totalReviewsGiven   Int      @default(0)
-  
-  // Trust Network
-  totalMutualFriends  Int      @default(0)  // Across all connections
-  trustChainDepth     Int      @default(1)  // How many degrees of connection
-  
-  // Quality Score
-  connectionQuality   Float    @default(0.0)  // 0-100 based on interactions, reviews, trust
-  
-  // Timestamps
-  lastCalculatedAt    DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([totalConnections])
-  @@index([averageRating])
-  @@index([connectionQuality])
-  @@map("connection_stats")
-}
-
-model UserBlock {
-  id        String   @id @default(uuid())
-  blockerId String
-  blockedId String
-  reason    String?
-  blockedAt DateTime @default(now())
-  
-  blocker   User     @relation("BlocksInitiated", fields: [blockerId], references: [id], onDelete: Cascade)
-  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
-  
-  @@unique([blockerId, blockedId])
-  @@index([blockerId])
-  @@index([blockedId])
-  @@map("user_blocks")
-}
-
-model Message {
-  id         String   @id @default(uuid())
-  content    String
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  senderId   String
-  receiverId String
-  
-  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@index([senderId])
-  @@index([receiverId])
-  @@index([isRead])
-  @@index([createdAt])
-  @@index([receiverId, isRead])
-  @@index([senderId, receiverId])
-  @@map("messages")
-}
-
-model Notification {
-  id                String           @id @default(uuid())
-  type              NotificationType
-  title             String
-  message           String
-  priority          String           @default("normal") // low, normal, high, urgent
-  channels          String[]         @default([])
-  actionUrl         String?
-  relatedEntityType String?
-  relatedEntityId   String?
-  metadata          Json?
-  scheduledFor      DateTime?
-  expiresAt         DateTime?
-  deliveredAt       DateTime?
-  readAt            DateTime?
-  createdAt         DateTime         @default(now())
-  userId            String
-  
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([readAt])
-  @@index([type])
-  @@index([priority])
-  @@index([createdAt])
-  @@index([userId, readAt])
-  @@index([userId, createdAt])
-  @@map("notifications")
-}
-
-// ============================================================================
-// COMMUNITIES
-// ============================================================================
-
-model Community {
-  id          String            @id @default(uuid())
-  name        String            @unique
-  description String?
-  imageUrl    String?
-  category    String?
-  isVerified  Boolean           @default(false)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  createdById String
-  
-  createdBy   User              @relation("CommunityCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  members     CommunityMember[]
-  events      Event[]           // Community-hosted events
-
-  @@index([name])
-  @@index([category])
-  @@index([createdAt])
-  @@map("communities")
-}
-
-model CommunityMember {
-  id          String        @id @default(uuid())
-  role        CommunityRole @default(MEMBER)
-  joinedAt    DateTime      @default(now())
-  isApproved  Boolean       @default(false)
-  userId      String
-  communityId String
-  
-  community   Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, communityId])
-  @@index([userId])
-  @@index([communityId])
+  @@index([deletedAt])
+  @@index([email])
+  @@index([phone])
+  @@index([referredById])
   @@index([role])
-  @@map("community_members")
-}
-
-// ============================================================================
-// MATCHING SYSTEM
-// ============================================================================
-
-model Match {
-  id            String      @id @default(uuid())
-  type          MatchType
-  status        MatchStatus @default(PENDING)
-  compatibility Float
-  reason        String
-  interests     String[]
-  availability  Json?
-  location      String?
-  message       String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  expiresAt     DateTime
-  senderId      String
-  receiverId    String
-  
-  receiver      User        @relation("MatchReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  sender        User        @relation("MatchSender", fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@unique([senderId, receiverId, type])
-  @@index([senderId])
-  @@index([receiverId])
   @@index([status])
-  @@index([type])
-  @@index([expiresAt])
+  @@index([totalPoints])
+  @@index([trustLevel])
+  @@index([trustScore])
+  @@index([username])
+}
+
+model vouch_configs {
+  id                             String    @id
+  maxPrimaryVouches              Int       @default(1)
+  maxSecondaryVouches            Int       @default(3)
+  maxCommunityVouches            Int       @default(2)
+  primaryVouchWeight             Float     @default(30.0)
+  secondaryVouchWeight           Float     @default(30.0)
+  communityVouchWeight           Float     @default(40.0)
+  trustMomentsWeight             Float     @default(30.0)
+  activityWeight                 Float     @default(30.0)
+  cooldownDays                   Int       @default(30)
+  minTrustRequired               Float     @default(50.0)
+  autoVouchMinEvents             Int       @default(5)
+  autoVouchMinMemberDays         Int       @default(90)
+  autoVouchRequireZeroNegativity Boolean   @default(true)
+  reconnectionCooldownDays       Int       @default(30)
+  perTier                        Json?
+  effectiveFrom                  DateTime?
+  createdAt                      DateTime  @default(now())
+  updatedAt                      DateTime
+
+  @@index([effectiveFrom])
+}
+
+model vouches {
+  id                             String      @id
+  voucherId                      String
+  voucheeId                      String
+  vouchType                      VouchType   @default(PRIMARY)
+  weightPercentage               Float       @default(1.0)
+  message                        String?
+  status                         VouchStatus @default(PENDING)
+  requiresApproval               Boolean     @default(true)
+  isCommunityVouch               Boolean     @default(false)
+  communityId                    String?
+  vouchedByAdminId               String?
+  isAutoVouched                  Boolean     @default(false)
+  autoVouchCriteria              Json?
+  requestedAt                    DateTime    @default(now())
+  approvedAt                     DateTime?
+  activatedAt                    DateTime?
+  revokedAt                      DateTime?
+  revokeReason                   String?
+  trustImpact                    Float?
+  createdAt                      DateTime    @default(now())
+  updatedAt                      DateTime
+  users_vouches_voucheeIdTousers users       @relation("vouches_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
+  users_vouches_voucherIdTousers users       @relation("vouches_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@unique([voucherId, voucheeId, vouchType])
+  @@index([communityId, status])
   @@index([createdAt])
-  @@index([senderId, status])
-  @@index([receiverId, status])
-  @@map("matches")
+  @@index([isCommunityVouch])
+  @@index([voucheeId, status])
+  @@index([voucherId, status])
 }
 
-// ============================================================================
-// CARD GAME
-// ============================================================================
-
-model CardGameFeedback {
-  id            String           @id @default(cuid())
-  userId        String
-  topicId       String
-  sessionNumber Int
-  questionId    String
-  rating        Int
-  comment       String?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replies       CardGameReply[]
-  upvotes       CardGameUpvote[]
-
-  @@index([userId])
-  @@index([topicId])
-  @@index([questionId])
-  @@map("card_game_feedbacks")
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 
-model CardGameUpvote {
-  id         String           @id @default(cuid())
-  userId     String
-  feedbackId String
-  createdAt  DateTime         @default(now())
-  
-  feedback   CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, feedbackId])
-  @@index([userId])
-  @@index([feedbackId])
-  @@map("card_game_upvotes")
+enum AppNoticeType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+  PROMOTION
+  UPDATE
 }
 
-model CardGameReply {
-  id         String           @id @default(cuid())
-  userId     String
-  feedbackId String
-  text       String
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  
-  feedback   CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([feedbackId])
-  @@map("card_game_replies")
+enum AppPlatform {
+  IOS
+  ANDROID
+  WEB
 }
 
-model CardGameStats {
-  id            String   @id @default(cuid())
-  topicId       String   @unique
-  totalSessions Int      @default(0)
-  averageRating Float    @default(0)
-  totalFeedback Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([topicId])
-  @@map("card_game_stats")
+enum BadgeType {
+  FIRST_FACE
+  CAFE_FRIEND
+  SUKAN_SQUAD_MVP
+  SOUL_NOURISHER
+  HELPERS_HAND
+  CONNECTOR
+  TOP_FRIEND
+  ICEBREAKER
+  CERTIFIED_HOST
+  STREAK_CHAMP
+  LOCAL_GUIDE
+  KIND_SOUL
+  KNOWLEDGE_SHARER
+  ALL_ROUNDER
 }
 
-// ============================================================================
-// TRAVEL LOGBOOK
-// ============================================================================
-
-model TravelTrip {
-  id              String   @id @default(uuid())
-  userId          String
-  
-  // Trip Details
-  title           String   // "Turkey Adventure", "Malaysia Architecture Tour"
-  description     String?  // Trip story/notes
-  purpose         String?  // "Architecture study and cultural exploration"
-  
-  // Locations
-  countries       String[] @default([])  // ["Turkey", "Malaysia"]
-  cities          String[] @default([])  // ["Istanbul", "Ankara", "Izmir"]
-  
-  // Dates
-  startDate       DateTime
-  endDate         DateTime?
-  duration        Int?     // Days (auto-calculated)
-  
-  // Visual
-  coverImage      String?  // Main trip photo
-  images          String[] @default([])  // Trip photos
-  
-  // Metadata
-  isPublic        Boolean  @default(true)
-  isFeatured      Boolean  @default(false)  // Highlight on profile
-  tags            String[] @default([])    // ["backpacking", "solo", "budget"]
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  user            User     @relation("UserTrips", fields: [userId], references: [id], onDelete: Cascade)
-  companions      TravelCompanion[]
-  locations       TravelLocation[]
-  highlights      TravelHighlight[]
-  
-  @@index([userId, startDate])
-  @@index([userId, isPublic])
-  @@index([startDate])
-  @@index([countries])
-  @@map("travel_trips")
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELED
+  REFUNDED
 }
 
-model TravelCompanion {
-  id              String   @id @default(uuid())
-  tripId          String
-  userId          String   // Trip owner
-  companionId     String?  // User ID if they're on platform
-  
-  // Companion Info (if not on platform)
-  companionName   String?  // "Mehmet Ali", "Ahmad Hassan"
-  companionEmail  String?  // For sending invite
-  companionPhone  String?
-  
-  // Invitation Status
-  invitationStatus String  @default("pending")  // pending, accepted, declined, not_sent
-  canRequestIntro  Boolean @default(true)  // "Request Intro" button
-  
-  // Relationship
-  relationship    String?  // friend, family, colleague, met_on_trip
-  notes           String?  // How they met, memories
-  
-  // Vouch Integration
-  hasVouched      Boolean  @default(false)  // Did they vouch for each other?
-  vouchId         String?  // Link to Vouch record
-  
-  // Timestamps
-  addedAt         DateTime @default(now())
-  verifiedAt      DateTime?  // When companion confirmed they were on trip
-  
-  // Relations
-  trip            TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  user            User     @relation("TravelCompanions", fields: [userId], references: [id], onDelete: Cascade)
-  companion       User?    @relation("AccompaniedTrips", fields: [companionId], references: [id], onDelete: SetNull)
-  
-  @@index([tripId])
-  @@index([userId])
-  @@index([companionId])
-  @@index([invitationStatus])
-  @@map("travel_companions")
-}
-
-model TravelLocation {
-  id              String   @id @default(uuid())
-  tripId          String
-  
-  // Location Details
-  country         String
-  city            String
-  placeName       String?  // Specific place/attraction
-  placeType       String?  // accommodation, attraction, restaurant, activity
-  
-  // Visit Details
-  visitDate       DateTime?
-  duration        Int?     // Hours or days
-  rating          Int?     // 1-5 stars
-  notes           String?  // Personal notes about the place
-  
-  // Recommendations
-  wouldRecommend  Boolean  @default(true)
-  tips            String?  // Travel tips for others
-  
-  // Visual
-  images          String[] @default([])
-  
-  // Geo
-  latitude        Float?
-  longitude       Float?
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  
-  trip            TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  
-  @@index([tripId])
-  @@index([country, city])
-  @@index([placeType])
-  @@map("travel_locations")
-}
-
-model TravelHighlight {
-  id              String   @id @default(uuid())
-  tripId          String
-  
-  // Highlight Details
-  title           String   // "Best meal ever", "Sunrise at Cappadocia"
-  description     String?
-  highlightType   String   // food, nature, culture, adventure, people, accommodation
-  
-  // Visual
-  image           String?
-  
-  // Metadata
-  date            DateTime?
-  location        String?  // City or place name
-  
-  createdAt       DateTime @default(now())
-  
-  trip            TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  
-  @@index([tripId])
-  @@index([highlightType])
-  @@map("travel_highlights")
-}
-
-model TravelStats {
-  userId                String   @id
-  
-  // Overall Stats
-  totalTrips            Int      @default(0)
-  countriesVisited      Int      @default(0)
-  citiesVisited         Int      @default(0)
-  continentsVisited     Int      @default(0)
-  totalTravelDays       Int      @default(0)
-  
-  // Lists
-  countriesList         String[] @default([])  // ["Turkey", "Malaysia", "Japan"]
-  continentsList        String[] @default([])  // ["Asia", "Europe"]
-  
-  // Social
-  travelCompanionsCount Int      @default(0)
-  soloTripsCount        Int      @default(0)
-  
-  // Dates
-  firstTripDate         DateTime?
-  lastTripDate          DateTime?
-  
-  // Preferences (calculated from trip data)
-  favoriteDestination   String?  // Most visited country/city
-  travelFrequency       String?  // frequent, occasional, rare
-  averageTripDuration   Int?     // Days
-  
-  // Timestamps
-  lastCalculatedAt      DateTime @default(now())
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([countriesVisited])
-  @@index([totalTrips])
-  @@map("travel_stats")
-}
-
-model TravelBucketList {
-  id              String   @id @default(uuid())
-  userId          String
-  
-  // Destination
-  country         String
-  city            String?
-  destination     String   // "Santorini", "Northern Lights", "Great Wall"
-  
-  // Details
-  description     String?  // Why they want to visit
-  priority        String   @default("medium")  // high, medium, low
-  targetYear      Int?     // When they hope to visit
-  estimatedBudget Float?
-  
-  // Status
-  status          String   @default("planning")  // planning, booked, visited, cancelled
-  visitedDate     DateTime?
-  
-  // Social
-  isPublic        Boolean  @default(true)
-  seekingCompanions Boolean @default(false)  // Looking for travel buddies?
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([userId, status])
-  @@index([country])
-  @@index([seekingCompanions])
-  @@map("travel_bucket_list")
-}
-
-// ============================================================================
-// LEGACY / AUTHENTICATION TOKENS
-// ============================================================================
-
-model RefreshToken {
-  id          String   @id @default(uuid())
-  tokenHash   String   @unique
-  tokenFamily String
-  userId      String
-  isRevoked   Boolean  @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tokenHash])
-  @@index([expiresAt])
-  @@map("refresh_tokens")
-}
-
-model PushSubscription {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  endpoint  String
-  p256dh    String
-  auth      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("push_subscriptions")
-}
-
-// ============================================================================
-// APP CONFIGURATION & CONTENT MANAGEMENT
-// ============================================================================
-
-model AppConfig {
-  id                    String   @id @default(uuid())
-  configKey             String   @unique  // app_version, maintenance_mode, api_base_url
-  configValue           String   // JSON string for complex values
-  dataType              String   @default("string")  // string, number, boolean, json
-  category              String   @default("general") // general, features, api, ui
-  description           String?
-  isPublic              Boolean  @default(false)  // Expose to mobile app
-  isEditable            Boolean  @default(true)   // Can be edited via admin panel
-  updatedBy             String?  // Admin user ID
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
-  @@index([configKey])
-  @@index([category, isPublic])
-  @@map("app_configs")
-}
-
-model OnboardingScreen {
-  id                String   @id @default(uuid())
-  screenOrder       Int      // Display order (1, 2, 3, etc.)
-  title             String
-  subtitle          String?
-  description       String?  // Markdown/HTML supported
-  imageUrl          String?
-  videoUrl          String?
-  ctaText           String?  // Call-to-action button text
-  ctaAction         String?  // next, skip, complete, external_link
-  ctaUrl            String?  // For external links
-  backgroundColor   String?  // Hex color
-  isSkippable       Boolean  @default(true)
-  isActive          Boolean  @default(true)
-  targetAudience    String   @default("all")  // all, new_users, returning_users
-  minAppVersion     String?  // Show only for specific versions
-  metadata          Json?    // Additional flexible data
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  analytics         OnboardingAnalytics[]
-  
-  @@index([screenOrder, isActive])
-  @@index([isActive])
-  @@map("onboarding_screens")
-}
-
-model OnboardingAnalytics {
-  id                String   @id @default(uuid())
-  screenId          String
-  userId            String?  // Null for anonymous users
-  
-  // Events
-  viewed            Boolean  @default(false)
-  viewedAt          DateTime?
-  completed         Boolean  @default(false)
-  completedAt       DateTime?
-  skipped           Boolean  @default(false)
-  skippedAt         DateTime?
-  
-  // Duration
-  timeSpentSeconds  Int?     // Time spent on this screen
-  
-  // Device Info
-  deviceInfo        Json?
-  appVersion        String?
-  
-  createdAt         DateTime @default(now())
-  
-  screen            OnboardingScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
-  
-  @@index([screenId, viewed])
-  @@index([userId])
-  @@index([createdAt])
-  @@map("onboarding_analytics")
-}
-
-model AppVersion {
-  id                String   @id @default(uuid())
-  versionNumber     String   // 1.0.0, 1.0.1, etc.
-  versionCode       Int      // Build number
-  platform          AppPlatform  // IOS, ANDROID, WEB
-  
-  // Release Info
-  releaseDate       DateTime
-  releaseNotes      String   // Markdown/HTML changelog
-  releaseType       String   @default("stable")  // alpha, beta, stable, hotfix
-  
-  // Update Requirements
-  isForceUpdate     Boolean  @default(false)  // Force users to update
-  minSupportedVersion String?  // Minimum version still supported
-  
-  // Status
-  isActive          Boolean  @default(true)
-  isCurrent         Boolean  @default(false)  // Current production version
-  
-  // Download/Store Links
-  downloadUrl       String?
-  storeUrl          String?  // App Store / Play Store URL
-  
-  // Metadata
-  features          Json?    // New features in this version
-  bugFixes          Json?    // Bug fixes
-  improvements      Json?    // Improvements
-  deprecations      Json?    // Deprecated features
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  @@unique([versionNumber, platform])
-  @@index([platform, isCurrent])
-  @@index([platform, isActive])
-  @@index([releaseDate])
-  @@map("app_versions")
-}
-
-model LegalDocument {
-  id                String   @id @default(uuid())
-  documentType      LegalDocumentType  // TOS, PRIVACY_POLICY, EULA, etc.
-  version           String   // 1.0, 1.1, 2.0, etc.
-  
-  // Content
-  title             String
-  content           String   // Full document in Markdown/HTML
-  summary           String?  // Brief summary
-  
-  // Versioning
-  effectiveDate     DateTime // When this version takes effect
-  expiryDate        DateTime? // When this version expires (null = current)
-  
-  // Status
-  isActive          Boolean  @default(false)
-  isCurrent         Boolean  @default(false)
-  requiresAcceptance Boolean @default(false)  // Require users to accept
-  
-  // Changelog
-  changesSummary    String?  // What changed from previous version
-  previousVersionId String?  // Link to previous version
-  
-  // Metadata
-  createdBy         String?  // Admin user ID
-  approvedBy        String?  // Legal team approval
-  approvedAt        DateTime?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  acceptances       LegalDocumentAcceptance[]
-  
-  @@unique([documentType, version])
-  @@index([documentType, isCurrent])
-  @@index([effectiveDate])
-  @@map("legal_documents")
-}
-
-model LegalDocumentAcceptance {
-  id                String   @id @default(uuid())
-  documentId        String
-  userId            String
-  
-  // Acceptance Details
-  acceptedAt        DateTime @default(now())
-  ipAddress         String?
-  userAgent         String?
-  deviceInfo        Json?
-  
-  // Version Info
-  documentVersion   String
-  documentType      LegalDocumentType
-  
-  document          LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, documentId])
-  @@index([userId, documentType])
-  @@index([documentId])
-  @@map("legal_document_acceptances")
-}
-
-model Announcement {
-  id                String   @id @default(uuid())
-  title             String
-  content           String   // Markdown/HTML
-  excerpt           String?  // Short summary
-  
-  // Media
-  imageUrl          String?
-  thumbnailUrl      String?
-  videoUrl          String?
-  
-  // Priority & Display
-  priority          AnnouncementPriority @default(NORMAL)
-  displayType       String   @default("banner")  // banner, modal, inline, push
-  
-  // Targeting
-  targetAudience    String   @default("all")  // all, premium, free, specific_country
-  targetCountries   String[] @default([])  // Empty = all countries
-  targetUserSegment String[] @default([])  // new_users, active_users, dormant_users
-  minAppVersion     String?
-  
-  // CTA (Call to Action)
-  ctaText           String?
-  ctaUrl            String?
-  ctaAction         String?  // open_url, navigate_to, dismiss
-  
-  // Scheduling
-  publishedAt       DateTime?
-  expiresAt         DateTime?
-  
-  // Status
-  isActive          Boolean  @default(true)
-  isPinned          Boolean  @default(false)
-  isDismissible     Boolean  @default(true)
-  
-  // Analytics
-  viewCount         Int      @default(0)
-  clickCount        Int      @default(0)
-  
-  // Metadata
-  createdBy         String?  // Admin user ID
-  tags              String[] @default([])
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  analytics         AnnouncementAnalytics[]
-  
-  @@index([isActive, publishedAt])
-  @@index([priority, isActive])
-  @@index([expiresAt])
-  @@index([isPinned, isActive])
-  @@map("announcements")
-}
-
-model AnnouncementAnalytics {
-  id                String   @id @default(uuid())
-  announcementId    String
-  userId            String?  // Null for anonymous
-  
-  // Events
-  viewed            Boolean  @default(false)
-  viewedAt          DateTime?
-  clicked           Boolean  @default(false)
-  clickedAt         DateTime?
-  dismissed         Boolean  @default(false)
-  dismissedAt       DateTime?
-  
-  // Context
-  viewedFrom        String?  // home, profile, notifications
-  deviceInfo        Json?
-  
-  createdAt         DateTime @default(now())
-  
-  announcement      Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  
-  @@index([announcementId, viewed])
-  @@index([userId])
-  @@map("announcement_analytics")
-}
-
-model FAQ {
-  id                String   @id @default(uuid())
-  categoryId        String?
-  
-  // Content
-  question          String
-  answer            String   // Markdown/HTML
-  
-  // Organization
-  displayOrder      Int      @default(0)
-  tags              String[] @default([])
-  
-  // Metadata
-  isActive          Boolean  @default(true)
-  isFeatured        Boolean  @default(false)  // Show in featured/popular section
-  
-  // Analytics
-  viewCount         Int      @default(0)
-  helpfulCount      Int      @default(0)
-  notHelpfulCount   Int      @default(0)
-  
-  // Related
-  relatedFaqIds     String[] @default([])  // IDs of related FAQs
-  relatedArticleIds String[] @default([])  // IDs of related help articles
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  category          FAQCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  analytics         FAQAnalytics[]
-  
-  @@index([categoryId, isActive])
-  @@index([isFeatured, isActive])
-  @@index([displayOrder])
-  @@map("faqs")
-}
-
-model FAQCategory {
-  id                String   @id @default(uuid())
-  name              String
-  description       String?
-  icon              String?  // Icon name or URL
-  displayOrder      Int      @default(0)
-  isActive          Boolean  @default(true)
-  
-  faqs              FAQ[]
-  
-  @@index([displayOrder, isActive])
-  @@map("faq_categories")
-}
-
-model FAQAnalytics {
-  id                String   @id @default(uuid())
-  faqId             String
-  userId            String?
-  
-  // Events
-  viewed            Boolean  @default(false)
-  viewedAt          DateTime?
-  markedHelpful     Boolean? // true = helpful, false = not helpful
-  markedAt          DateTime?
-  
-  // Search Context
-  searchQuery       String?  // What user searched to find this
-  viewedFrom        String?  // search, browse, related
-  
-  createdAt         DateTime @default(now())
-  
-  faq               FAQ @relation(fields: [faqId], references: [id], onDelete: Cascade)
-  
-  @@index([faqId, viewed])
-  @@index([userId])
-  @@map("faq_analytics")
-}
-
-model HelpArticle {
-  id                String   @id @default(uuid())
-  categoryId        String?
-  
-  // Content
-  title             String
-  slug              String   @unique
-  content           String   // Markdown/HTML
-  excerpt           String?
-  
-  // Media
-  thumbnailUrl      String?
-  videoUrl          String?
-  attachments       Json?    // Array of file URLs
-  
-  // Organization
-  displayOrder      Int      @default(0)
-  tags              String[] @default([])
-  
-  // SEO & Search
-  metaDescription   String?
-  keywords          String[] @default([])
-  
-  // Status
-  isActive          Boolean  @default(true)
-  isFeatured        Boolean  @default(false)
-  isPremiumOnly     Boolean  @default(false)
-  
-  // Analytics
-  viewCount         Int      @default(0)
-  helpfulCount      Int      @default(0)
-  notHelpfulCount   Int      @default(0)
-  averageTimeSpent  Float?   // In seconds
-  
-  // Related Content
-  relatedArticleIds String[] @default([])
-  relatedFaqIds     String[] @default([])
-  
-  // Metadata
-  createdBy         String?  // Admin user ID
-  publishedAt       DateTime?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  category          HelpArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  analytics         HelpArticleAnalytics[]
-  
-  @@index([categoryId, isActive])
-  @@index([slug])
-  @@index([isFeatured, isActive])
-  @@index([publishedAt])
-  @@map("help_articles")
-}
-
-model HelpArticleCategory {
-  id                String   @id @default(uuid())
-  name              String
-  slug              String   @unique
-  description       String?
-  icon              String?
-  displayOrder      Int      @default(0)
-  isActive          Boolean  @default(true)
-  
-  articles          HelpArticle[]
-  
-  @@index([displayOrder, isActive])
-  @@map("help_article_categories")
-}
-
-model HelpArticleAnalytics {
-  id                String   @id @default(uuid())
-  articleId         String
-  userId            String?
-  
-  // Events
-  viewed            Boolean  @default(false)
-  viewedAt          DateTime?
-  markedHelpful     Boolean?
-  markedAt          DateTime?
-  
-  // Engagement
-  timeSpentSeconds  Int?
-  scrollDepth       Float?   // Percentage of article scrolled
-  
-  // Context
-  viewedFrom        String?  // search, browse, related, notification
-  searchQuery       String?
-  
-  createdAt         DateTime @default(now())
-  
-  article           HelpArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  
-  @@index([articleId, viewed])
-  @@index([userId])
-  @@map("help_article_analytics")
-}
-
-model MaintenanceSchedule {
-  id                String   @id @default(uuid())
-  title             String
-  description       String   // Markdown/HTML
-  
-  // Schedule
-  startTime         DateTime
-  endTime           DateTime
-  estimatedDuration Int?     // In minutes
-  
-  // Status
-  status            MaintenanceStatus @default(SCHEDULED)
-  
-  // Impact
-  affectedFeatures  String[] @default([])  // Array of feature keys
-  isFullDowntime    Boolean  @default(false)  // Complete app unavailable
-  severity          String   @default("medium")  // low, medium, high, critical
-  
-  // Messaging
-  userMessage       String?  // Message to show users
-  technicalDetails  String?  // Internal technical details
-  
-  // Updates
-  updates           Json?    // Array of status updates during maintenance
-  // Example: [
-  //   {"time": "2025-01-15T10:00:00Z", "message": "Maintenance started"},
-  //   {"time": "2025-01-15T10:30:00Z", "message": "50% complete"}
-  // ]
-  
-  // Notifications
-  notifyUsers       Boolean  @default(true)
-  notificationSent  Boolean  @default(false)
-  notifiedAt        DateTime?
-  
-  // Completion
-  actualStartTime   DateTime?
-  actualEndTime     DateTime?
-  completionNotes   String?
-  
-  // Metadata
-  createdBy         String?  // Admin user ID
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  @@index([status, startTime])
-  @@index([startTime, endTime])
-  @@map("maintenance_schedules")
-}
-
-model FeatureFlag {
-  id                String   @id @default(uuid())
-  featureKey        String   @unique  // new_chat_ui, payment_v2, dark_mode
-  featureName       String
-  description       String?
-  
-  // Status
-  isEnabled         Boolean  @default(false)
-  isGlobal          Boolean  @default(false)  // Enable for everyone
-  
-  // Rollout Strategy
-  rolloutPercentage Float    @default(0.0)  // 0-100, percentage of users to enable
-  rolloutStrategy   String   @default("percentage")  // percentage, whitelist, segment
-  
-  // Targeting
-  targetUserIds     String[] @default([])  // Specific user whitelist
-  targetSegments    String[] @default([])  // user_segment values
-  targetCountries   String[] @default([])
-  targetPlatforms   String[] @default([])  // ios, android, web
-  minAppVersion     String?
-  maxAppVersion     String?
-  
-  // A/B Testing
-  isABTest          Boolean  @default(false)
-  abTestVariant     String?  // A, B, C, etc.
-  abTestMetrics     Json?    // Metrics to track
-  
-  // Scheduling
-  enabledAt         DateTime?
-  disabledAt        DateTime?
-  scheduledEnableAt DateTime?
-  scheduledDisableAt DateTime?
-  
-  // Metadata
-  createdBy         String?
-  tags              String[] @default([])
-  dependencies      String[] @default([])  // Other feature flags this depends on
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  analytics         FeatureFlagAnalytics[]
-  
-  @@index([featureKey, isEnabled])
-  @@index([isEnabled, isGlobal])
-  @@map("feature_flags")
-}
-
-model FeatureFlagAnalytics {
-  id                String   @id @default(uuid())
-  featureFlagId     String
-  userId            String?
-  
-  // Evaluation
-  wasEnabled        Boolean  // Was feature enabled for this user
-  evaluatedAt       DateTime @default(now())
-  
-  // Context
-  variant           String?  // For A/B tests
-  userSegment       String?
-  platform          String?
-  appVersion        String?
-  
-  // Usage (tracked separately after evaluation)
-  featureUsed       Boolean  @default(false)
-  usedAt            DateTime?
-  usageCount        Int      @default(0)
-  
-  featureFlag       FeatureFlag @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
-  
-  @@index([featureFlagId, wasEnabled])
-  @@index([userId])
-  @@index([evaluatedAt])
-  @@map("feature_flag_analytics")
-}
-
-model AppNotice {
-  id                String   @id @default(uuid())
-  noticeType        AppNoticeType  // INFO, WARNING, ERROR, SUCCESS, PROMOTION
-  
-  // Content
-  title             String
-  message           String   // Markdown/HTML
-  icon              String?
-  
-  // Display
-  displayLocation   String[] @default(["home"])  // home, profile, settings, all_screens
-  displayStyle      String   @default("banner")  // banner, toast, modal, inline
-  priority          Int      @default(0)  // Higher = shown first
-  
-  // Behavior
-  isDismissible     Boolean  @default(true)
-  autoDismiss       Boolean  @default(false)
-  autoDismissSeconds Int?    // Auto-dismiss after X seconds
-  
-  // Targeting
-  targetAudience    String   @default("all")
-  targetUserIds     String[] @default([])
-  targetSegments    String[] @default([])
-  targetCountries   String[] @default([])
-  minAppVersion     String?
-  
-  // CTA
-  ctaText           String?
-  ctaAction         String?
-  ctaUrl            String?
-  
-  // Scheduling
-  startDate         DateTime @default(now())
-  endDate           DateTime?
-  
-  // Status
-  isActive          Boolean  @default(true)
-  
-  // Analytics
-  impressionCount   Int      @default(0)
-  dismissCount      Int      @default(0)
-  clickCount        Int      @default(0)
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  dismissals        AppNoticeDismissal[]
-  
-  @@index([isActive, startDate, endDate])
-  @@index([noticeType, isActive])
-  @@index([priority, isActive])
-  @@map("app_notices")
-}
-
-model AppNoticeDismissal {
-  id                String   @id @default(uuid())
-  noticeId          String
-  userId            String
-  dismissedAt       DateTime @default(now())
-  
-  notice            AppNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
-  
-  @@unique([noticeId, userId])
-  @@index([userId])
-  @@map("app_notice_dismissals")
-}
-
-// ============================================================================
-// ENUMS
-// ============================================================================
-
-enum UserRole {
-  GENERAL_USER
-  GUIDE
+enum CommunityRole {
+  MEMBER
   MODERATOR
   ADMIN
+  OWNER
 }
 
-enum UserStatus {
-  ACTIVE
-  DEACTIVATED
-  BANNED
+enum ConnectionStatus {
   PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
+  REMOVED
 }
 
-enum VouchType {
-  PRIMARY
-  SECONDARY
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum EventHostType {
+  PERSONAL
   COMMUNITY
 }
 
-enum VouchStatus {
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELED
+  COMPLETED
+}
+
+enum EventTicketStatus {
   PENDING
-  APPROVED
-  ACTIVE
-  REVOKED
+  CONFIRMED
+  CHECKED_IN
+  CANCELED
+  REFUNDED
+  EXPIRED
 }
 
 enum EventType {
@@ -3168,59 +2266,14 @@ enum EventType {
   LOCAL_TRIP
 }
 
-enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELED
-  COMPLETED
-}
-
-enum EventHostType {
-  PERSONAL   // Event hosted by individual user
-  COMMUNITY  // Event hosted on behalf of community
-}
-
-enum EventTicketStatus {
-  PENDING    // Ticket purchase pending
-  CONFIRMED  // Payment confirmed, ticket issued
-  CHECKED_IN // Attendee checked in at event
-  CANCELED   // Ticket canceled before event
-  REFUNDED   // Ticket refunded
-  EXPIRED    // Ticket expired (event passed)
-}
-
-enum ServiceType {
-  GUIDING
-  HOMESTAY
-  TUTORING
-  CONSULTATION
-  TRANSPORT
-  OTHER
-}
-
-enum PricingType {
-  PER_HOUR
-  PER_DAY
-  PER_PERSON
-  PER_NIGHT
-  FIXED
-}
-
-enum ServiceStatus {
-  DRAFT
-  ACTIVE
-  PAUSED
-  INACTIVE
-  SUSPENDED
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  ACTIVE
-  COMPLETED
-  CANCELED
-  REFUNDED
+enum LegalDocumentType {
+  TOS
+  PRIVACY_POLICY
+  EULA
+  COOKIE_POLICY
+  COMMUNITY_GUIDELINES
+  REFUND_POLICY
+  ACCEPTABLE_USE
 }
 
 enum ListingStatus {
@@ -3229,6 +2282,42 @@ enum ListingStatus {
   SOLD
   EXPIRED
   REMOVED
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DELAYED
+}
+
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum MatchType {
+  SPORTS
+  SOCIAL
+  VOLUNTEER
+  STUDY
+  PROFESSIONAL
+  HOBBY
+}
+
+enum NotificationType {
+  EVENT
+  MATCH
+  POINTS
+  MESSAGE
+  SYSTEM
+  VOUCH
+  SERVICE
+  MARKETPLACE
+  PAYMENT
 }
 
 enum OrderStatus {
@@ -3240,13 +2329,6 @@ enum OrderStatus {
   CANCELED
   REFUNDED
   DISPUTED
-}
-
-enum DisputeStatus {
-  OPEN
-  UNDER_REVIEW
-  RESOLVED
-  CLOSED
 }
 
 enum PaymentStatus {
@@ -3268,6 +2350,14 @@ enum PayoutStatus {
   CANCELED
 }
 
+enum PricingType {
+  PER_HOUR
+  PER_DAY
+  PER_PERSON
+  PER_NIGHT
+  FIXED
+}
+
 enum RedemptionStatus {
   PENDING
   APPROVED
@@ -3275,129 +2365,73 @@ enum RedemptionStatus {
 }
 
 enum ReferralRewardStatus {
-  PENDING      // Waiting for activation criteria
-  APPROVED     // Ready to be awarded
-  AWARDED      // Reward given to user
-  CLAIMED      // User has claimed/used the reward
-  EXPIRED      // Reward expired before claiming
-  CANCELED     // Reward canceled (e.g., fraud detected)
-}
-
-enum BadgeType {
-  FIRST_FACE
-  CAFE_FRIEND
-  SUKAN_SQUAD_MVP
-  SOUL_NOURISHER
-  HELPERS_HAND
-  CONNECTOR
-  TOP_FRIEND
-  ICEBREAKER
-  CERTIFIED_HOST
-  STREAK_CHAMP
-  LOCAL_GUIDE
-  KIND_SOUL
-  KNOWLEDGE_SHARER
-  ALL_ROUNDER
-}
-
-enum NotificationType {
-  EVENT
-  MATCH
-  POINTS
-  MESSAGE
-  SYSTEM
-  VOUCH
-  SERVICE
-  MARKETPLACE
-  PAYMENT
-}
-
-enum MatchStatus {
   PENDING
-  ACCEPTED
-  REJECTED
+  APPROVED
+  AWARDED
+  CLAIMED
   EXPIRED
+  CANCELED
 }
 
-enum MatchType {
-  SPORTS
-  SOCIAL
-  VOLUNTEER
-  STUDY
-  PROFESSIONAL
-  HOBBY
+enum ServiceStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  INACTIVE
+  SUSPENDED
 }
 
-enum CommunityRole {
-  MEMBER
-  MODERATOR
-  ADMIN
-  OWNER
-}
-
-enum ConnectionStatus {
-  PENDING   // Request sent, awaiting response
-  ACCEPTED  // Connected (mutual relationship)
-  REJECTED  // Request rejected by receiver
-  CANCELED  // Request canceled by initiator before response
-  REMOVED   // Connection was removed by either party
-}
-
-enum TransactionType {
-  EVENT_TICKET        // Event ticket purchase
-  MARKETPLACE_ORDER   // Marketplace item purchase
-  SERVICE_BOOKING     // Service booking payment
-  SUBSCRIPTION        // Platform subscription
-  DONATION            // Donation/charity
-  REFUND              // Refund transaction
+enum ServiceType {
+  GUIDING
+  HOMESTAY
+  TUTORING
+  CONSULTATION
+  TRANSPORT
+  OTHER
 }
 
 enum SubscriptionStatus {
-  ACTIVE              // Subscription is active
-  TRIALING            // In trial period
-  PAST_DUE            // Payment failed, grace period
-  CANCELED            // Canceled, expires at period end
-  EXPIRED             // Subscription has ended
-  PAUSED              // Temporarily paused
-  INCOMPLETE          // Payment incomplete
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  PAUSED
+  INCOMPLETE
 }
 
-enum AppPlatform {
-  IOS
-  ANDROID
-  WEB
+enum TransactionType {
+  EVENT_TICKET
+  MARKETPLACE_ORDER
+  SERVICE_BOOKING
+  SUBSCRIPTION
+  DONATION
+  REFUND
 }
 
-enum LegalDocumentType {
-  TOS
-  PRIVACY_POLICY
-  EULA
-  COOKIE_POLICY
-  COMMUNITY_GUIDELINES
-  REFUND_POLICY
-  ACCEPTABLE_USE
+enum UserRole {
+  GENERAL_USER
+  GUIDE
+  MODERATOR
+  ADMIN
 }
 
-enum AnnouncementPriority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
+enum UserStatus {
+  ACTIVE
+  DEACTIVATED
+  BANNED
+  PENDING
 }
 
-enum MaintenanceStatus {
-  SCHEDULED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  DELAYED
+enum VouchStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  REVOKED
 }
 
-enum AppNoticeType {
-  INFO
-  WARNING
-  ERROR
-  SUCCESS
-  PROMOTION
-  UPDATE
+enum VouchType {
+  PRIMARY
+  SECONDARY
+  COMMUNITY
 }

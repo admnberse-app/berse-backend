@@ -36,6 +36,10 @@ export interface UpdateProfileRequest {
   nationality?: string;
   originallyFrom?: string;
   
+  // Geospatial Coordinates
+  latitude?: number;
+  longitude?: number;
+  
   // Social Handles
   instagramHandle?: string;
   linkedinHandle?: string;
@@ -98,6 +102,9 @@ export interface UserProfileResponse {
     currentLocation?: string;
     nationality?: string;
     originallyFrom?: string;
+    latitude?: number;
+    longitude?: number;
+    lastLocationUpdate?: Date;
   };
   metadata?: {
     membershipId?: string;

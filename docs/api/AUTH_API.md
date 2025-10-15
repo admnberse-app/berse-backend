@@ -44,7 +44,7 @@ Create a new user account.
   "phone": "+60123456789",
   "nationality": "Malaysian",
   "countryOfResidence": "Malaysia",
-  "city": "Kuala Lumpur",
+  "currentCity": "Kuala Lumpur",
   "gender": "male",
   "dateOfBirth": "1990-01-15",
   "referralCode": "ABC123XYZ"
@@ -61,7 +61,9 @@ Create a new user account.
 - `phone` - Valid phone number
 - `nationality` - 2-50 characters
 - `countryOfResidence` - 2-50 characters
-- `city` - 2-50 characters
+- `currentCity` - 2-50 characters
+- `latitude` - GPS latitude (-90 to 90)
+- `longitude` - GPS longitude (-180 to 180)
 - `gender` - "male" or "female"
 - `dateOfBirth` - ISO 8601 date format
 - `referralCode` - 6-10 characters
@@ -87,7 +89,12 @@ Create a new user account.
       "location": {
         "nationality": "Malaysian",
         "countryOfResidence": "Malaysia",
-        "currentCity": "Kuala Lumpur"
+        "currentCity": "Kuala Lumpur",
+        "currentLocation": null,
+        "originallyFrom": null,
+        "latitude": null,
+        "longitude": null,
+        "lastLocationUpdate": null
       },
       "metadata": {
         "referralCode": "GENERATED_CODE",
@@ -281,8 +288,16 @@ Get the currently authenticated user's profile.
       },
       "location": {
         "currentCity": "Kuala Lumpur",
+        "countryOfResidence": "Malaysia",
+        "currentLocation": "KLCC Area",
         "nationality": "Malaysian",
-        "countryOfResidence": "Malaysia"
+        "originallyFrom": "Penang",
+        "latitude": 3.1390,
+        "longitude": 101.6869,
+        "lastLocationUpdate": "2024-01-15T10:30:00.000Z",
+        "timezone": "Asia/Kuala_Lumpur",
+        "preferredLanguage": "en",
+        "currency": "MYR"
       },
       "metadata": {
         "membershipId": "BM-123456",

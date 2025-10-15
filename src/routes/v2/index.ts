@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authRoutes } from '../../modules/auth';
 import { userRoutes } from '../../modules/user';
+import { countriesRoutes } from '../../modules/metadata';
 
 const router = Router();
 
@@ -19,6 +20,12 @@ router.use('/auth', authRoutes);
  * Base path: /v2/users
  */
 router.use('/users', userRoutes);
+
+/**
+ * Metadata routes (countries, regions, timezones)
+ * Base path: /v2/metadata
+ */
+router.use('/metadata', countriesRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION
@@ -67,6 +74,7 @@ router.get('/health', (req, res) => {
     endpoints: {
       auth: '/v2/auth',
       users: '/v2/users',
+      metadata: '/v2/metadata',
     },
   });
 });

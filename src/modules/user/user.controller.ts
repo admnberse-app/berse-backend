@@ -56,6 +56,9 @@ export class UserController {
               currentLocation: true,
               nationality: true,
               originallyFrom: true,
+              latitude: true,
+              longitude: true,
+              lastLocationUpdate: true,
             },
           },
           metadata: {
@@ -145,6 +148,16 @@ export class UserController {
       if (data.countryOfResidence !== undefined) locationUpdate.countryOfResidence = data.countryOfResidence;
       if (data.nationality !== undefined) locationUpdate.nationality = data.nationality;
       if (data.originallyFrom !== undefined) locationUpdate.originallyFrom = data.originallyFrom;
+      
+      // Geospatial coordinates
+      if (data.latitude !== undefined) {
+        locationUpdate.latitude = data.latitude;
+        locationUpdate.lastLocationUpdate = new Date();
+      }
+      if (data.longitude !== undefined) {
+        locationUpdate.longitude = data.longitude;
+        locationUpdate.lastLocationUpdate = new Date();
+      }
 
       // Perform updates in transaction
       const updatedUser = await prisma.$transaction(async (tx) => {

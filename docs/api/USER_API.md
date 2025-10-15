@@ -82,7 +82,13 @@ Authorization: Bearer <access_token>
       "countryOfResidence": "Malaysia",
       "currentLocation": "KLCC Area",
       "nationality": "American",
-      "originallyFrom": "San Francisco"
+      "originallyFrom": "San Francisco",
+      "latitude": 3.1390,
+      "longitude": 101.6869,
+      "lastLocationUpdate": "2024-01-15T10:30:00.000Z",
+      "timezone": "Asia/Kuala_Lumpur",
+      "preferredLanguage": "en",
+      "currency": "MYR"
     },
     "metadata": {
       "membershipId": "BM-123456",
@@ -129,8 +135,11 @@ Content-Type: application/json
   "languages": ["English", "Spanish"],
   "currentCity": "Kuala Lumpur",
   "countryOfResidence": "Malaysia",
+  "currentLocation": "KLCC Area",
   "nationality": "American",
   "originallyFrom": "San Francisco",
+  "latitude": 3.1390,
+  "longitude": 101.6869,
   "instagramHandle": "johndoe",
   "linkedinHandle": "john-doe",
   "travelStyle": "backpacker",
@@ -143,7 +152,6 @@ Content-Type: application/json
 The API supports multiple field names for convenience:
 - `bio` or `fullBio` - Full biography
 - `interests` or `topInterests` - Array of interests
-- `city` or `currentCity` - Current city
 - `instagram` or `instagramHandle` - Instagram handle
 - `linkedin` or `linkedinHandle` - LinkedIn handle
 
@@ -163,6 +171,10 @@ The API supports multiple field names for convenience:
 - `bucketList`: Max 50 items, each 1-100 characters
 - `instagramHandle`: 1-30 characters, alphanumeric with dots/underscores
 - `linkedinHandle`: 3-100 characters, alphanumeric with hyphens
+- `latitude`: -90 to 90 (GPS latitude)
+- `longitude`: -180 to 180 (GPS longitude)
+- `currentLocation`: 1-100 characters (specific location description)
+- `originallyFrom`: 1-100 characters (city/country of origin)
 
 **Success Response (200):**
 ```json
@@ -312,14 +324,14 @@ Authorization: Bearer <access_token>
 
 **Query Parameters:**
 - `query` (optional): Search term (searches name, username, bio)
-- `city` (optional): Filter by city
+- `currentCity` (optional): Filter by current city
 - `interest` (optional): Filter by specific interest
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 20, max: 100)
 
 **Example:**
 ```
-GET /v2/users/search?city=kuala%20lumpur&interest=travel&page=1
+GET /v2/users/search?currentCity=kuala%20lumpur&interest=travel&page=1
 ```
 
 **Success Response (200):**
@@ -356,7 +368,7 @@ GET /v2/users/search?city=kuala%20lumpur&interest=travel&page=1
 
 **Search Logic:**
 - `query`: Case-insensitive search in fullName, username, and bio
-- `city`: Case-insensitive search in currentCity and currentLocation
+- `currentCity`: Case-insensitive search in currentCity field
 - `interest`: Exact match in interests array
 - Multiple filters are combined with AND logic
 
@@ -831,6 +843,12 @@ interface UserProfile {
     currentLocation?: string;
     nationality?: string;
     originallyFrom?: string;
+    latitude?: number;
+    longitude?: number;
+    lastLocationUpdate?: Date;
+    timezone?: string;
+    preferredLanguage?: string;
+    currency?: string;
   };
   
   // Metadata
@@ -1029,7 +1047,7 @@ const searchUsers = async (filters) => {
 
 // Usage
 const results = await searchUsers({
-  city: 'kuala lumpur',
+  currentCity: 'kuala lumpur',
   interest: 'travel',
   page: 1,
   limit: 20,
@@ -1078,7 +1096,7 @@ curl -X PUT https://api.bersemuka.com/v2/users/profile \
 
 **Search Users:**
 ```bash
-curl -X GET "https://api.bersemuka.com/v2/users/search?city=kuala%20lumpur&interest=travel" \
+curl -X GET "https://api.bersemuka.com/v2/users/search?currentCity=kuala%20lumpur&interest=travel" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 

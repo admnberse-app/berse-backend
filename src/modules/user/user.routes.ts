@@ -99,6 +99,16 @@ router.get('/profile', UserController.getProfile);
  *               country:
  *                 type: string
  *                 example: United States
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 40.7128
+ *                 description: GPS latitude coordinate
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 example: -74.0060
+ *                 description: GPS longitude coordinate
  *               languages:
  *                 type: array
  *                 items:
