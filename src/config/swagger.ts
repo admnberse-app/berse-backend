@@ -5,9 +5,17 @@ const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
     title: 'Berse Platform API',
-    version: '2.0.1',
+    version: '2.0.2',
     description: `Modern, modular API for the Berse social platform with event management, user connections, and community features.
     
+**Version 2.0.2 Updates (October 15, 2025):**
+- **Connection Count Names**: Simplified Prisma-generated relation names in _count responses
+  - user_connections_user_connections_initiatorIdTousers → connectionsInitiated
+  - user_connections_user_connections_receiverIdTousers → connectionsReceived
+  - referrals_referrals_referrerIdTousers → referralsMade
+- **Better DX**: More readable and self-documenting field names in API responses
+- **Activity Logging**: Complete security event tracking system with login attempts, device registration, and session management
+
 **Version 2.0.1 Updates (October 15, 2025):**
 - Fixed Prisma upsert operations for UserProfile and UserLocation
 - Proper ID generation for UserConnection using cuid2
@@ -97,6 +105,36 @@ const swaggerDefinition = {
           trustLevel: { type: 'string' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
+          _count: {
+            type: 'object',
+            description: 'Aggregated counts of related entities',
+            properties: {
+              events: { 
+                type: 'number',
+                description: 'Number of events created by user',
+              },
+              eventRsvps: { 
+                type: 'number',
+                description: 'Number of event RSVPs',
+              },
+              userBadges: { 
+                type: 'number',
+                description: 'Number of badges earned',
+              },
+              connectionsInitiated: { 
+                type: 'number',
+                description: 'Connection requests sent by this user',
+              },
+              connectionsReceived: { 
+                type: 'number',
+                description: 'Connection requests received by this user',
+              },
+              referralsMade: { 
+                type: 'number',
+                description: 'Number of users referred',
+              },
+            },
+          },
         },
       },
       UserProfile: {

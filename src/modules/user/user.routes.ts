@@ -692,48 +692,7 @@ router.post('/connections/:id/cancel', UserController.cancelConnectionRequest);
 router.delete('/connections/:id', UserController.removeConnection);
 
 // ============================================================================
-// GET USER BY ID (Must be after all specific routes)
-// ============================================================================
-
-/**
- * @swagger
- * /v2/users/{id}:
- *   get:
- *     summary: Get user by ID
- *     description: Get detailed profile information for a specific user
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: User ID
- *     responses:
- *       200:
- *         description: User profile retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/User'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- */
-router.get('/:id', UserController.getUserById);
-
-// ============================================================================
-// ACTIVITY & SECURITY ROUTES
+// ACTIVITY & SECURITY ROUTES (Must be BEFORE /:id route)
 // ============================================================================
 
 /**
@@ -868,6 +827,47 @@ router.get('/login-history', UserController.getUserLoginHistory);
  *         $ref: '#/components/responses/NotFoundError'
  */
 router.delete('/sessions/:sessionToken', UserController.terminateSession);
+
+// ============================================================================
+// GET USER BY ID (Must be after all specific routes)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     description: Get detailed profile information for a specific user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User profile retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.get('/:id', UserController.getUserById);
 
 // ============================================================================
 // ADMIN ROUTES

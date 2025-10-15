@@ -104,13 +104,23 @@ const startServer = async () => {
         logger.info(`   GET  http://localhost:${config.port}/v2/users/profile`);
         logger.info(`   PUT  http://localhost:${config.port}/v2/users/profile`);
         logger.info(`   GET  http://localhost:${config.port}/v2/users/search`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/nearby`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/all`);
         logger.info(`   GET  http://localhost:${config.port}/v2/users/:id`);
-        logger.info(`   POST http://localhost:${config.port}/v2/users/connection-request`);
-        logger.info(`   POST http://localhost:${config.port}/v2/users/accept-connection/:id`);
-        logger.info(`   POST http://localhost:${config.port}/v2/users/reject-connection/:id`);
-        logger.info(`   POST http://localhost:${config.port}/v2/users/cancel-connection/:id`);
-        logger.info(`   DEL  http://localhost:${config.port}/v2/users/remove-connection/:id`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/upload-avatar`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/connections/:id/request`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/connections/:id/accept`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/connections/:id/reject`);
+        logger.info(`   POST http://localhost:${config.port}/v2/users/connections/:id/cancel`);
+        logger.info(`   DEL  http://localhost:${config.port}/v2/users/connections/:id`);
         logger.info(`   GET  http://localhost:${config.port}/v2/users/connections`);
+        
+        logger.info('\n🔒 Activity & Security:');
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/activity`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/security-events`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/sessions`);
+        logger.info(`   GET  http://localhost:${config.port}/v2/users/login-history`);
+        logger.info(`   DEL  http://localhost:${config.port}/v2/users/sessions/:sessionToken`);
         
         logger.info('\n📋 Legacy V1 Endpoints (Backward Compatibility):');
         logger.info(`   POST http://localhost:${config.port}/api/v1/auth/register`);

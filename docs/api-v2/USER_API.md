@@ -46,6 +46,12 @@ The User API provides endpoints for managing user profiles, searching users, and
 - [Social Connections](#social-connections)
   - [Follow User](#follow-user)
   - [Unfollow User](#unfollow-user)
+- [Activity & Security](#activity--security)
+  - [Get User Activity History](#get-user-activity-history)
+  - [Get Security Events](#get-security-events)
+  - [Get Active Sessions](#get-active-sessions)
+  - [Get Login History](#get-login-history)
+  - [Terminate Session](#terminate-session)
 - [Admin](#admin)
   - [Delete User](#delete-user)
 - [Data Models](#data-models)
@@ -117,10 +123,12 @@ Authorization: Bearer <access_token>
       "referralCode": "JOHNDOE2024"
     },
     "_count": {
-      "hostedEvents": 5,
-      "attendedEvents": 23,
-      "referrals": 3,
-      "badges": 7
+      "events": 5,
+      "eventRsvps": 23,
+      "userBadges": 7,
+      "connectionsInitiated": 10,
+      "connectionsReceived": 8,
+      "referralsMade": 3
     }
   }
 }
@@ -786,9 +794,12 @@ GET /v2/users/550e8400-e29b-41d4-a716-446655440000
       "originallyFrom": "Paris"
     },
     "_count": {
-      "hostedEvents": 3,
-      "attendedEvents": 15,
-      "badges": 5
+      "events": 3,
+      "eventRsvps": 15,
+      "userBadges": 5,
+      "connectionsInitiated": 8,
+      "connectionsReceived": 12,
+      "referralsMade": 2
     }
   }
 }
@@ -1139,6 +1150,485 @@ DELETE /v2/users/connections/connection-uuid-here
 - Users can now properly remove their own connections
 - Authorization check validates user is either initiator or receiver
 - Does not require admin access (previous bug fixed)
+
+---
+
+## Activity & Security
+
+The Activity & Security endpoints allow users to monitor their account activity, review security events, manage active sessions, and view login history. These features help users maintain account security and track their interactions with the platform.
+
+### Get User Activity History
+
+Get the authenticated user's activity history with pagination.
+
+**Endpoint:** `GET /v2/users/activity`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of activities to return (default: 50, max: 100)
+- `offset` (optional): Number of activities to skip (default: 0)
+
+**Example:**
+```
+GET /v2/users/activity?limit=20&offset=0
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "activities": [
+      {
+        "id": "activity_uuid",
+        "userId": "user_uuid",
+        "activityType": "AUTH_LOGIN",
+        "entityType": "user",
+        "entityId": "user_uuid",
+        "visibility": "private",
+        "createdAt": "2025-10-15T14:20:19.000Z"
+      },
+      {
+        "id": "activity_uuid_2",
+        "userId": "user_uuid",
+        "activityType": "PROFILE_UPDATE",
+        "entityType": "user",
+        "entityId": "user_uuid",
+        "visibility": "private",
+        "createdAt": "2025-10-15T10:15:30.000Z"
+      },
+      {
+        "id": "activity_uuid_3",
+        "userId": "user_uuid",
+        "activityType": "CONNECTION_REQUEST_SEND",
+        "entityType": "connection",
+        "entityId": "connection_uuid",
+        "visibility": "friends",
+        "createdAt": "2025-10-14T16:45:00.000Z"
+      }
+    ],
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 150,
+      "pages": 8
+    }
+  },
+  "message": "User activity retrieved successfully"
+}
+```
+
+**Activity Types:**
+
+Authentication:
+- `AUTH_REGISTER` - User registration
+- `AUTH_LOGIN` - User login
+- `AUTH_LOGOUT` - User logout
+- `AUTH_LOGOUT_ALL` - Logout from all devices
+- `AUTH_TOKEN_REFRESH` - Token refresh
+- `AUTH_PASSWORD_CHANGE` - Password change
+- `AUTH_PASSWORD_RESET_REQUEST` - Password reset request
+- `AUTH_PASSWORD_RESET_COMPLETE` - Password reset complete
+- `AUTH_EMAIL_VERIFY_REQUEST` - Email verification request
+- `AUTH_EMAIL_VERIFY_COMPLETE` - Email verification complete
+- `AUTH_MFA_ENABLE` - MFA enabled
+- `AUTH_MFA_DISABLE` - MFA disabled
+
+Profile:
+- `PROFILE_UPDATE` - Profile updated
+- `PROFILE_PICTURE_UPDATE` - Profile picture updated
+- `PROFILE_VIEW` - Profile viewed
+- `PROFILE_DELETE` - Profile deleted
+
+Connections:
+- `CONNECTION_REQUEST_SEND` - Connection request sent
+- `CONNECTION_REQUEST_ACCEPT` - Connection request accepted
+- `CONNECTION_REQUEST_REJECT` - Connection request rejected
+- `CONNECTION_REMOVE` - Connection removed
+
+Events:
+- `EVENT_CREATE` - Event created
+- `EVENT_UPDATE` - Event updated
+- `EVENT_DELETE` - Event deleted
+- `EVENT_VIEW` - Event viewed
+- `EVENT_RSVP` - Event RSVP
+- `EVENT_CANCEL_RSVP` - Event RSVP cancelled
+- `EVENT_CHECKIN` - Event check-in
+
+And many more activity types for marketplace, points, notifications, and admin actions.
+
+**Visibility Levels:**
+- `public` - Visible to all users
+- `friends` - Visible to connections only
+- `private` - Visible only to the user
+
+**Error Responses:**
+- `401` - Unauthorized (invalid or missing token)
+
+---
+
+### Get Security Events
+
+Get the authenticated user's security event history with pagination.
+
+**Endpoint:** `GET /v2/users/security-events`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of events to return (default: 50, max: 100)
+- `offset` (optional): Number of events to skip (default: 0)
+
+**Example:**
+```
+GET /v2/users/security-events?limit=20&offset=0
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "events": [
+      {
+        "id": "event_uuid",
+        "userId": "user_uuid",
+        "eventType": "LOGIN_SUCCESS",
+        "severity": "low",
+        "description": "Successful login",
+        "metadata": {
+          "identifier": "user@example.com"
+        },
+        "ipAddress": "192.168.1.1",
+        "userAgent": "Mozilla/5.0...",
+        "createdAt": "2025-10-15T14:20:19.000Z"
+      },
+      {
+        "id": "event_uuid_2",
+        "userId": "user_uuid",
+        "eventType": "PASSWORD_CHANGE",
+        "severity": "medium",
+        "description": "Password changed successfully",
+        "metadata": {},
+        "ipAddress": "192.168.1.1",
+        "userAgent": "Mozilla/5.0...",
+        "createdAt": "2025-10-14T09:30:00.000Z"
+      },
+      {
+        "id": "event_uuid_3",
+        "userId": "user_uuid",
+        "eventType": "BRUTE_FORCE_ATTEMPT",
+        "severity": "high",
+        "description": "Multiple failed login attempts detected (5 attempts in 15 minutes)",
+        "metadata": {
+          "identifier": "user@example.com",
+          "ipAddress": "123.45.67.89",
+          "failedAttempts": 5
+        },
+        "ipAddress": "123.45.67.89",
+        "userAgent": "curl/7.68.0",
+        "createdAt": "2025-10-13T22:15:00.000Z"
+      }
+    ],
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 45,
+      "pages": 3
+    }
+  },
+  "message": "Security events retrieved successfully"
+}
+```
+
+**Event Types:**
+- `LOGIN_SUCCESS` - Successful login
+- `LOGIN_FAILED` - Failed login attempt
+- `BRUTE_FORCE_ATTEMPT` - Multiple failed login attempts detected
+- `PASSWORD_CHANGE` - Password changed
+- `SESSION_TERMINATE` - Session terminated
+- `SUSPICIOUS_LOGIN` - Suspicious login activity
+- `ACCOUNT_LOCK` - Account locked
+- `ACCOUNT_UNLOCK` - Account unlocked
+- `DEVICE_REGISTER` - New device registered
+- `DEVICE_REMOVE` - Device removed
+
+**Severity Levels:**
+- `low` - Normal operations (successful login, etc.)
+- `medium` - Notable events (password change, new device, etc.)
+- `high` - Suspicious activity (brute force attempts, unusual location, etc.)
+- `critical` - Security breaches or critical events
+
+**Error Responses:**
+- `401` - Unauthorized (invalid or missing token)
+
+---
+
+### Get Active Sessions
+
+Get all active sessions for the authenticated user.
+
+**Endpoint:** `GET /v2/users/sessions`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Example:**
+```
+GET /v2/users/sessions
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "sessions": [
+      {
+        "id": "session_uuid",
+        "userId": "user_uuid",
+        "sessionToken": "abc123def456...",
+        "deviceInfo": {
+          "platform": "iOS",
+          "appVersion": "1.2.3",
+          "os": "iOS 17.0",
+          "deviceId": "device_123"
+        },
+        "ipAddress": "192.168.1.1",
+        "userAgent": "BerseApp/1.2.3 (iPhone; iOS 17.0)",
+        "locationData": {
+          "city": "Kuala Lumpur",
+          "country": "Malaysia"
+        },
+        "isActive": true,
+        "lastActivityAt": "2025-10-15T14:20:19.000Z",
+        "expiresAt": "2025-11-14T14:20:19.000Z",
+        "createdAt": "2025-10-15T10:30:00.000Z"
+      },
+      {
+        "id": "session_uuid_2",
+        "userId": "user_uuid",
+        "sessionToken": "xyz789uvw012...",
+        "deviceInfo": {
+          "platform": "web",
+          "appVersion": "unknown",
+          "os": "macOS",
+          "deviceId": "unknown"
+        },
+        "ipAddress": "192.168.1.5",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
+        "locationData": null,
+        "isActive": true,
+        "lastActivityAt": "2025-10-15T12:45:30.000Z",
+        "expiresAt": "2025-11-14T10:00:00.000Z",
+        "createdAt": "2025-10-14T10:00:00.000Z"
+      }
+    ]
+  },
+  "message": "Active sessions retrieved successfully"
+}
+```
+
+**Session Fields:**
+- `id` - Unique session identifier
+- `sessionToken` - Session token (used for authentication)
+- `deviceInfo` - Information about the device
+  - `platform` - Device platform (iOS, Android, web)
+  - `appVersion` - Application version
+  - `os` - Operating system
+  - `deviceId` - Unique device identifier
+- `ipAddress` - IP address of the session
+- `userAgent` - Browser/app user agent string
+- `locationData` - Geographic location data (if available)
+- `isActive` - Whether the session is currently active
+- `lastActivityAt` - Last activity timestamp
+- `expiresAt` - Session expiration timestamp (30 days from creation)
+- `createdAt` - Session creation timestamp
+
+**Use Cases:**
+- View all active sessions across devices
+- Identify unfamiliar devices or locations
+- Manage and terminate suspicious sessions
+- Track login activity across platforms
+
+**Error Responses:**
+- `401` - Unauthorized (invalid or missing token)
+
+---
+
+### Get Login History
+
+Get the authenticated user's login attempt history with pagination.
+
+**Endpoint:** `GET /v2/users/login-history`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of login attempts to return (default: 50, max: 100)
+- `offset` (optional): Number of login attempts to skip (default: 0)
+
+**Example:**
+```
+GET /v2/users/login-history?limit=20&offset=0
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "loginHistory": [
+      {
+        "id": "attempt_uuid",
+        "userId": "user_uuid",
+        "identifier": "user@example.com",
+        "ipAddress": "192.168.1.1",
+        "userAgent": "BerseApp/1.2.3 (iPhone; iOS 17.0)",
+        "success": true,
+        "failureReason": null,
+        "attemptedAt": "2025-10-15T14:20:19.000Z"
+      },
+      {
+        "id": "attempt_uuid_2",
+        "userId": "user_uuid",
+        "identifier": "user@example.com",
+        "ipAddress": "192.168.1.1",
+        "userAgent": "Mozilla/5.0 (Macintosh...)...",
+        "success": true,
+        "failureReason": null,
+        "attemptedAt": "2025-10-14T10:00:00.000Z"
+      },
+      {
+        "id": "attempt_uuid_3",
+        "userId": "user_uuid",
+        "identifier": "user@example.com",
+        "ipAddress": "123.45.67.89",
+        "userAgent": "curl/7.68.0",
+        "success": false,
+        "failureReason": "Invalid password",
+        "attemptedAt": "2025-10-13T22:15:30.000Z"
+      }
+    ],
+    "pagination": {
+      "limit": 20,
+      "offset": 0,
+      "total": 250,
+      "pages": 13
+    }
+  },
+  "message": "Login history retrieved successfully"
+}
+```
+
+**Login Attempt Fields:**
+- `id` - Unique attempt identifier
+- `userId` - User ID (null for failed attempts with invalid identifier)
+- `identifier` - Email, username, or phone used for login
+- `ipAddress` - IP address of the attempt
+- `userAgent` - Browser/app user agent string
+- `success` - Whether the login was successful
+- `failureReason` - Reason for failure (if applicable)
+  - "Invalid password"
+  - "User not found"
+  - "Account locked"
+  - "Email not verified"
+  - etc.
+- `attemptedAt` - Timestamp of the login attempt
+
+**Security Features:**
+- Tracks both successful and failed login attempts
+- Logs IP addresses and user agents
+- Helps identify suspicious activity
+- After 3 failed attempts in 15 minutes, logs a high-severity security event
+- Supports account lockout after multiple failed attempts
+
+**Use Cases:**
+- Review recent login activity
+- Identify unfamiliar IP addresses or locations
+- Investigate failed login attempts
+- Monitor for brute force attacks
+- Track login patterns across devices
+
+**Error Responses:**
+- `401` - Unauthorized (invalid or missing token)
+
+---
+
+### Terminate Session
+
+Terminate a specific active session by session token.
+
+**Endpoint:** `DELETE /v2/users/sessions/:sessionToken`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**URL Parameters:**
+- `sessionToken` (required): The session token to terminate
+
+**Example:**
+```
+DELETE /v2/users/sessions/abc123def456ghi789jkl012
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "Session terminated successfully"
+}
+```
+
+**What Happens:**
+1. The specified session is marked as inactive (`isActive: false`)
+2. The user associated with that session will be logged out on their next API request
+3. A security event is logged for session termination
+
+**Use Cases:**
+- Log out from a specific device remotely
+- Terminate suspicious sessions
+- Force logout when device is lost or stolen
+- Clean up old/unused sessions
+
+**Security Notes:**
+- Only the session owner can terminate their own sessions
+- The current session (the one making the request) can also be terminated
+- Terminating your current session will log you out immediately
+
+**Error Responses:**
+- `401` - Unauthorized (invalid or missing token)
+- `403` - Forbidden (trying to terminate another user's session)
+- `404` - Session not found
+
+**Example Use Case:**
+```javascript
+// Terminate an unfamiliar session
+const sessions = await getUserSessions();
+const suspiciousSession = sessions.find(s => 
+  s.ipAddress === '123.45.67.89' && s.deviceInfo.platform === 'web'
+);
+
+if (suspiciousSession) {
+  await terminateSession(suspiciousSession.sessionToken);
+  console.log('Suspicious session terminated');
+}
+```
 
 ---
 
@@ -1586,12 +2076,12 @@ interface UserProfile {
   
   // Stats
   _count?: {
-    hostedEvents: number;
-    attendedEvents: number;
-    referrals: number;
-    badges: number;
-    connectionsInitiated: number;
-    connectionsReceived: number;
+    events: number;
+    eventRsvps: number;
+    userBadges: number;
+    connectionsInitiated: number;  // Connection requests sent by this user
+    connectionsReceived: number;   // Connection requests received by this user
+    referralsMade: number;         // Number of users referred by this user
   };
   
   // Connection Stats
@@ -1801,6 +2291,114 @@ const sendFriendRequest = async (userId) => {
 };
 ```
 
+**Get Activity History:**
+```javascript
+const getUserActivity = async (limit = 50, offset = 0) => {
+  const token = localStorage.getItem('accessToken');
+  
+  const response = await fetch(
+    `https://api.bersemuka.com/v2/users/activity?limit=${limit}&offset=${offset}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  const data = await response.json();
+  return data.data;
+};
+```
+
+**Get Security Events:**
+```javascript
+const getSecurityEvents = async (limit = 50, offset = 0) => {
+  const token = localStorage.getItem('accessToken');
+  
+  const response = await fetch(
+    `https://api.bersemuka.com/v2/users/security-events?limit=${limit}&offset=${offset}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  const data = await response.json();
+  return data.data;
+};
+```
+
+**Get Active Sessions:**
+```javascript
+const getActiveSessions = async () => {
+  const token = localStorage.getItem('accessToken');
+  
+  const response = await fetch(
+    'https://api.bersemuka.com/v2/users/sessions',
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  const data = await response.json();
+  return data.data.sessions;
+};
+```
+
+**Get Login History:**
+```javascript
+const getLoginHistory = async (limit = 50, offset = 0) => {
+  const token = localStorage.getItem('accessToken');
+  
+  const response = await fetch(
+    `https://api.bersemuka.com/v2/users/login-history?limit=${limit}&offset=${offset}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  const data = await response.json();
+  return data.data;
+};
+```
+
+**Terminate Session:**
+```javascript
+const terminateSession = async (sessionToken) => {
+  const token = localStorage.getItem('accessToken');
+  
+  const response = await fetch(
+    `https://api.bersemuka.com/v2/users/sessions/${sessionToken}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    }
+  );
+  
+  const data = await response.json();
+  return data;
+};
+
+// Usage: Terminate all sessions except current one
+const terminateOtherSessions = async () => {
+  const sessions = await getActiveSessions();
+  const currentToken = localStorage.getItem('sessionToken');
+  
+  for (const session of sessions) {
+    if (session.sessionToken !== currentToken) {
+      await terminateSession(session.sessionToken);
+    }
+  }
+};
+```
+
 ### cURL Examples
 
 **Get Profile:**
@@ -1824,6 +2422,36 @@ curl -X PUT https://api.bersemuka.com/v2/users/profile \
 **Search Users:**
 ```bash
 curl -X GET "https://api.bersemuka.com/v2/users/search?currentCity=kuala%20lumpur&interest=travel" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get Activity History:**
+```bash
+curl -X GET "https://api.bersemuka.com/v2/users/activity?limit=20&offset=0" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get Security Events:**
+```bash
+curl -X GET "https://api.bersemuka.com/v2/users/security-events?limit=20&offset=0" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get Active Sessions:**
+```bash
+curl -X GET https://api.bersemuka.com/v2/users/sessions \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get Login History:**
+```bash
+curl -X GET "https://api.bersemuka.com/v2/users/login-history?limit=20&offset=0" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Terminate Session:**
+```bash
+curl -X DELETE https://api.bersemuka.com/v2/users/sessions/SESSION_TOKEN_HERE \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -1863,6 +2491,34 @@ curl -X GET "https://api.bersemuka.com/v2/users/search?currentCity=kuala%20lumpu
 ---
 
 ## Changelog
+
+### v2.0.3 (2025-10-15)
+**New Features - Activity & Security Endpoints:**
+- ✅ **Activity Monitoring**: Added `GET /v2/users/activity` - Get user activity history with pagination
+- ✅ **Security Events**: Added `GET /v2/users/security-events` - Monitor security events and suspicious activity
+- ✅ **Session Management**: Added `GET /v2/users/sessions` - View all active sessions across devices
+- ✅ **Login History**: Added `GET /v2/users/login-history` - Track login attempts with success/failure details
+- ✅ **Session Control**: Added `DELETE /v2/users/sessions/:sessionToken` - Remotely terminate specific sessions
+- ✅ **Comprehensive Documentation**: Full API documentation for all activity and security features
+- ✅ **Activity Types**: Support for 80+ activity types across authentication, profile, connections, events, and more
+- ✅ **Severity Levels**: Security events categorized as low, medium, high, or critical
+- ✅ **Brute Force Detection**: Automatic detection and logging of multiple failed login attempts
+- ✅ **Route Fix**: Fixed route ordering to ensure activity/security endpoints work correctly
+
+**Developer Experience:**
+- Added complete request/response examples for all new endpoints
+- Documented all activity types and security event types
+- Added use cases and security best practices
+- Updated server startup logs to display all endpoints
+
+### v2.0.2 (2025-10-15)
+**API Response Improvements:**
+- **Connection Count Names**: Simplified ugly Prisma-generated relation names in `_count` object
+  - `user_connections_user_connections_initiatorIdTousers` → `connectionsInitiated`
+  - `user_connections_user_connections_receiverIdTousers` → `connectionsReceived`
+  - `referrals_referrals_referrerIdTousers` → `referralsMade`
+- **Better Developer Experience**: More readable and self-documenting field names
+- **Backward Compatibility**: Transformation applied at response layer, no database changes required
 
 ### v2.0.1 (2025-10-15)
 **Bug Fixes & Improvements:**

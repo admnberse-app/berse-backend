@@ -11,6 +11,28 @@ import { ActivityLoggerService } from '../../services/activityLogger.service';
 
 export class UserController {
   /**
+   * Helper function to transform ugly Prisma relation names to simple readable names
+   */
+  private static transformUserResponse(user: any) {
+    if (user && user._count) {
+      const { 
+        user_connections_user_connections_initiatorIdTousers,
+        user_connections_user_connections_receiverIdTousers,
+        referrals_referrals_referrerIdTousers,
+        ...otherCounts 
+      } = user._count;
+
+      user._count = {
+        ...otherCounts,
+        connectionsInitiated: user_connections_user_connections_initiatorIdTousers || 0,
+        connectionsReceived: user_connections_user_connections_receiverIdTousers || 0,
+        referralsMade: referrals_referrals_referrerIdTousers || 0,
+      };
+    }
+    return user;
+  }
+
+  /**
    * Get current user profile
    * @route GET /v2/users/profile
    */
@@ -94,7 +116,10 @@ export class UserController {
         throw new AppError('User not found', 404);
       }
 
-      sendSuccess(res, user);
+      // Transform response to have cleaner count names
+      const transformedUser = this.transformUserResponse(user);
+
+      sendSuccess(res, transformedUser);
     } catch (error) {
       next(error);
     }
@@ -665,7 +690,10 @@ export class UserController {
         throw new AppError('User not found', 404);
       }
 
-      sendSuccess(res, user);
+      // Transform response to have cleaner count names
+      const transformedUser = this.transformUserResponse(user);
+
+      sendSuccess(res, transformedUser);
     } catch (error) {
       next(error);
     }
