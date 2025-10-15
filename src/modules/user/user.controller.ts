@@ -69,12 +69,12 @@ export class UserController {
           },
           _count: {
             select: {
-              hostedEvents: true,
-              attendedEvents: true,
-              referrals: true,
-              badges: true,
-              connectionsInitiated: true,
-              connectionsReceived: true,
+              events: true,
+              eventRsvps: true,
+              referrals_referrals_referrerIdTousers: true,
+              userBadges: true,
+              user_connections_user_connections_initiatorIdTousers: true,
+              user_connections_user_connections_receiverIdTousers: true,
             },
           },
           connectionStats: {
@@ -621,15 +621,15 @@ export class UserController {
               originallyFrom: true,
             },
           },
-          _count: {
-            select: {
-              hostedEvents: true,
-              attendedEvents: true,
-              badges: true,
-              connectionsInitiated: true,
-              connectionsReceived: true,
+                      _count: {
+              select: {
+                events: true,
+                eventRsvps: true,
+                userBadges: true,
+                user_connections_user_connections_initiatorIdTousers: true,
+                user_connections_user_connections_receiverIdTousers: true,
+              },
             },
-          },
           connectionStats: {
             select: {
               totalConnections: true,
@@ -726,9 +726,9 @@ export class UserController {
             message: message || undefined,
             relationshipType: relationshipType || undefined,
             relationshipCategory: relationshipCategory || undefined,
-          },
+          } as any,
           include: {
-            initiator: {
+            users_user_connections_initiatorIdTousers: {
               select: {
                 id: true,
                 fullName: true,
@@ -740,7 +740,7 @@ export class UserController {
                 },
               },
             },
-            receiver: {
+            users_user_connections_receiverIdTousers: {
               select: {
                 id: true,
                 fullName: true,
@@ -763,7 +763,7 @@ export class UserController {
               initiatorName: initiator?.fullName || initiator?.username,
               type: 'connection_request',
             },
-          },
+          } as any,
         });
 
         return connection;
@@ -814,14 +814,14 @@ export class UserController {
             connectedAt: new Date(),
           },
           include: {
-            initiator: {
+            users_user_connections_initiatorIdTousers: {
               select: {
                 id: true,
                 fullName: true,
                 profile: { select: { profilePicture: true } },
               },
             },
-            receiver: {
+            users_user_connections_receiverIdTousers: {
               select: {
                 id: true,
                 fullName: true,
@@ -831,19 +831,25 @@ export class UserController {
           },
         });
 
+        // Get receiver name from the connection
+        const receiverUser = await tx.user.findUnique({
+          where: { id: userId },
+          select: { fullName: true },
+        });
+
         // Notify the initiator
         await tx.notification.create({
           data: {
             userId: connection.initiatorId,
             type: 'MESSAGE',
             title: 'Connection Accepted',
-            message: `${updatedConnection.receiver.fullName} accepted your connection request`,
+            message: `${receiverUser?.fullName || 'Someone'} accepted your connection request`,
             actionUrl: `/profile/${userId}`,
             metadata: {
               connectionId,
               type: 'connection_accepted',
             },
-          },
+          } as any,
         });
 
         return updatedConnection;
@@ -1007,7 +1013,7 @@ export class UserController {
         prisma.userConnection.findMany({
           where: whereClause,
           include: {
-            initiator: {
+            users_user_connections_initiatorIdTousers: {
               select: {
                 id: true,
                 fullName: true,
@@ -1020,7 +1026,7 @@ export class UserController {
                 },
               },
             },
-            receiver: {
+            users_user_connections_receiverIdTousers: {
               select: {
                 id: true,
                 fullName: true,
@@ -1121,7 +1127,7 @@ export class UserController {
         create: {
           userId,
           profilePicture: profilePictureUrl,
-        },
+        } as any,
       });
 
       logger.info('Profile picture uploaded', { userId });

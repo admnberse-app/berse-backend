@@ -6,12 +6,15 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 
 - 🔐 [Authentication API](./AUTH_API.md) - User registration, login, and session management
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, and social connections
+- 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 
 ## Base URL
 
-**Production:** `https://api.bersemuka.com/api/v1`  
-**Staging:** `https://staging-api.bersemuka.com/api/v1`  
-**Development:** `http://localhost:3000/api/v1`
+**Production:** `https://api.bersemuka.com/v2`  
+**Staging:** `https://staging-api.bersemuka.com/v2`  
+**Development:** `http://localhost:3000/v2`
+
+**Legacy V1:** `http://localhost:3000/api/v1` (backward compatibility only)
 
 ## Authentication
 
@@ -19,19 +22,19 @@ Most API endpoints require authentication using JWT (JSON Web Tokens).
 
 ### Getting Started
 
-1. **Register** a new account: `POST /auth/register`
-2. **Login** to get access token: `POST /auth/login`
+1. **Register** a new account: `POST /v2/auth/register`
+2. **Login** to get access token: `POST /v2/auth/login`
 3. **Use token** in requests: `Authorization: Bearer <access_token>`
 
 ### Token Lifecycle
 
 - **Access Token:** Expires in 15 minutes
-- **Refresh Token:** Expires in 365 days
-- **Refresh:** Use `POST /auth/refresh-token` to get new access token
+- **Refresh Token:** Expires in 365 days (stored in HTTP-only cookie)
+- **Refresh:** Use `POST /v2/auth/refresh-token` to get new access token
 
 ## API Modules
 
-### Authentication Module (`/api/v1/auth`)
+### Authentication Module (`/v2/auth`)
 Handles user authentication, registration, password management, and session control.
 
 **Key Endpoints:**
@@ -40,26 +43,42 @@ Handles user authentication, registration, password management, and session cont
 - `POST /refresh-token` - Refresh access token
 - `GET /me` - Get current user
 - `POST /logout` - Logout current session
+- `POST /logout-all` - Logout from all devices
 - `POST /change-password` - Change password
 - `POST /forgot-password` - Request password reset
 - `POST /reset-password` - Reset password with token
 
 📖 [Full Authentication Documentation](./AUTH_API.md)
 
-### User & Profile Module (`/api/v1/users`)
-Manages user profiles, discovery, search, and social connections.
+### User & Profile Module (`/v2/users`)
+Manages user profiles, discovery, search, and social connections using the new UserConnection system.
 
 **Key Endpoints:**
 - `GET /profile` - Get current user profile
 - `PUT /profile` - Update profile
 - `POST /upload-avatar` - Upload profile picture
-- `GET /all` - Get all users
+- `GET /all` - Get all users (discovery)
 - `GET /search` - Search users
+- `GET /nearby` - Find nearby users
 - `GET /:id` - Get user by ID
-- `POST /follow/:id` - Send friend request
-- `DELETE /follow/:id` - Unfollow user
+- `POST /connections/:id/request` - Send connection request
+- `POST /connections/:id/accept` - Accept connection request
+- `POST /connections/:id/reject` - Reject connection request
+- `POST /connections/:id/cancel` - Cancel connection request
+- `DELETE /connections/:id` - Remove connection
+- `GET /connections` - Get all connections
 
 📖 [Full User API Documentation](./USER_API.md)
+
+### Metadata Module (`/v2/metadata`)
+Provides access to geographical and timezone data for the platform.
+
+**Key Endpoints:**
+- `GET /countries` - Get all countries
+- `GET /regions` - Get regions for a country
+- `GET /timezones` - Get available timezones
+
+📖 [Full Metadata Documentation](./METADATA_API.md)
 
 ## Response Format
 
@@ -177,19 +196,20 @@ Endpoints that return lists support pagination:
 ```javascript
 // Login
 const login = async (email, password) => {
-  const response = await fetch('https://api.bersemuka.com/api/v1/auth/login', {
+  const response = await fetch('https://api.bersemuka.com/v2/auth/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ email, password }),
-    credentials: 'include',
+    credentials: 'include', // Important for refresh token cookie
   });
   
   const data = await response.json();
   
   if (data.success) {
-    localStorage.setItem('accessToken', data.data.token);
+    // Store access token in memory or secure storage (NOT localStorage for production)
+    sessionStorage.setItem('accessToken', data.data.token);
     return data.data.user;
   } else {
     throw new Error(data.error.message);
@@ -198,12 +218,13 @@ const login = async (email, password) => {
 
 // Authenticated Request
 const getProfile = async () => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   
-  const response = await fetch('https://api.bersemuka.com/api/v1/users/profile', {
+  const response = await fetch('https://api.bersemuka.com/v2/users/profile', {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
+    credentials: 'include',
   });
   
   const data = await response.json();
@@ -219,20 +240,36 @@ const getProfile = async () => {
 
 // Token Refresh
 const refreshToken = async () => {
-  const response = await fetch('https://api.bersemuka.com/api/v1/auth/refresh-token', {
+  const response = await fetch('https://api.bersemuka.com/v2/auth/refresh-token', {
     method: 'POST',
-    credentials: 'include',
+    credentials: 'include', // Sends refresh token cookie
   });
   
   const data = await response.json();
   
   if (data.success) {
-    localStorage.setItem('accessToken', data.data.token);
+    sessionStorage.setItem('accessToken', data.data.token);
     return data.data.token;
   } else {
-    // Redirect to login
+    // Refresh failed, redirect to login
+    sessionStorage.clear();
     window.location.href = '/login';
   }
+};
+
+// Send Connection Request
+const sendConnectionRequest = async (userId) => {
+  const token = sessionStorage.getItem('accessToken');
+  
+  const response = await fetch(`https://api.bersemuka.com/v2/users/connections/${userId}/request`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    credentials: 'include',
+  });
+  
+  return await response.json();
 };
 ```
 
@@ -240,25 +277,38 @@ const refreshToken = async () => {
 
 ```bash
 # Login
-curl -X POST https://api.bersemuka.com/api/v1/auth/login \
+curl -X POST https://api.bersemuka.com/v2/auth/login \
   -H "Content-Type: application/json" \
+  -c cookies.txt \
   -d '{
     "email": "user@example.com",
     "password": "SecurePass123!"
   }'
 
 # Get Profile
-curl -X GET https://api.bersemuka.com/api/v1/users/profile \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+curl -X GET https://api.bersemuka.com/v2/users/profile \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -b cookies.txt
 
 # Update Profile
-curl -X PUT https://api.bersemuka.com/api/v1/users/profile \
+curl -X PUT https://api.bersemuka.com/v2/users/profile \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
+  -b cookies.txt \
   -d '{
     "bio": "Updated bio",
     "interests": ["travel", "photography"]
   }'
+
+# Send Connection Request
+curl -X POST https://api.bersemuka.com/v2/users/connections/USER_ID/request \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -b cookies.txt
+
+# Search Nearby Users
+curl -X GET "https://api.bersemuka.com/v2/users/nearby?latitude=40.7128&longitude=-74.0060&radius=10" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -b cookies.txt
 ```
 
 ## Error Handling
@@ -268,7 +318,7 @@ curl -X PUT https://api.bersemuka.com/api/v1/users/profile \
 ```javascript
 const apiRequest = async (url, options = {}) => {
   try {
-    const token = localStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken');
     
     const response = await fetch(url, {
       ...options,
@@ -277,7 +327,7 @@ const apiRequest = async (url, options = {}) => {
         'Authorization': token ? `Bearer ${token}` : '',
         ...options.headers,
       },
-      credentials: 'include',
+      credentials: 'include', // Always include for refresh token cookie
     });
     
     const data = await response.json();
@@ -287,11 +337,12 @@ const apiRequest = async (url, options = {}) => {
       switch (response.status) {
         case 401:
           // Try to refresh token
-          if (url !== '/api/v1/auth/refresh-token') {
+          if (url !== '/v2/auth/refresh-token') {
             await refreshToken();
             return apiRequest(url, options); // Retry
           }
-          // Redirect to login
+          // Refresh failed, redirect to login
+          sessionStorage.clear();
           window.location.href = '/login';
           break;
         case 403:
@@ -338,17 +389,46 @@ Download our Postman collection for easy API testing:
 
 See [CHANGELOG.md](../../CHANGELOG.md) for API version history and breaking changes.
 
-## Coming Soon
+## Recent Changes (October 2025)
 
-- 🎫 Events API
-- 💬 Messaging API
-- 🔔 Notifications API
-- 🎯 Matching API
-- 🏘️ Communities API
-- 💳 Payments API
-- 🎮 Card Game API
+### ✅ What's New in V2
+
+- **Modular Architecture:** Clean separation of concerns with dedicated modules
+- **UserConnection System:** New connection system replacing old follow/follower model
+- **Enhanced Profile Data:** Separated profile data into UserProfile, UserLocation, UserMetadata relations
+- **Better Token Security:** Refresh tokens stored in HTTP-only cookies
+- **Improved Error Handling:** More descriptive error messages and validation
+- **Geospatial Features:** Nearby user search with radius-based filtering
+
+### 🔄 Migration from V1 to V2
+
+Key changes when migrating:
+
+1. **Base URL:** Change from `/api/v1/*` to `/v2/*`
+2. **Connections:** Use `/connections/:id/request` instead of `/follow/:id`
+3. **Profile Structure:** Profile data now includes separate relations (profile, location, metadata)
+4. **Token Refresh:** Endpoint changed to `/refresh-token` and uses cookies
+5. **Response Format:** Consistent success/error structure across all endpoints
+
+### 🗂️ Active Modules
+
+The API is currently focused on core functionality:
+- ✅ **Authentication** - Full user auth lifecycle
+- ✅ **User Management** - Profiles, connections, discovery
+- ✅ **Metadata** - Countries, regions, timezones
+
+### 🚧 Coming Soon
+
+- 🎫 Events API (V2)
+- 💬 Messaging API (V2)
+- 🔔 Notifications API (V2)
+- 🎯 Matching API (V2)
+- 🏘️ Communities API (V2)
+- 💳 Payments API (V2)
+- 🎮 Card Game API (V2)
 
 ---
 
-**Last Updated:** January 15, 2024  
-**API Version:** v1.0.0
+**Last Updated:** October 15, 2025  
+**API Version:** v2.0.0  
+**Status:** Active Development

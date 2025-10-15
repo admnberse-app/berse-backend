@@ -89,21 +89,25 @@ export class AuthController {
             create: {
               dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
               gender,
-            },
+              updatedAt: new Date(),
+            } as any,
           },
           location: {
             create: {
               nationality,
               countryOfResidence,
               currentCity: city,
-            },
+              updatedAt: new Date(),
+            } as any,
           },
           metadata: {
             create: {
               membershipId: membershipId || undefined,
-            },
+              referralCode: crypto.randomBytes(4).toString('hex').toUpperCase(),
+              updatedAt: new Date(),
+            } as any,
           },
-        },
+        } as any,
         select: {
           id: true,
           email: true,
@@ -448,7 +452,8 @@ export class AuthController {
         create: {
           userId,
           lastPasswordChangeAt: new Date(),
-        },
+          updatedAt: new Date(),
+        } as any,
       });
 
       // Revoke all refresh tokens for security
@@ -503,7 +508,7 @@ export class AuthController {
           token: resetTokenHash,
           expiresAt: resetTokenExpires,
           ipAddress: req.ip || 'unknown',
-        },
+        } as any,
       });
 
       // Generate 6-digit code for backup
@@ -562,13 +567,11 @@ export class AuthController {
           usedAt: null, // Token not used
         },
         include: {
-          user: true,
+          users: true,
         },
       });
-      
-      const user = resetTokenRecord?.user;
 
-      if (!user) {
+      const user = resetTokenRecord?.users;      if (!user) {
         throw new AppError('Invalid or expired reset token', 400);
       }
 
@@ -597,7 +600,8 @@ export class AuthController {
           create: {
             userId: user.id,
             lastPasswordChangeAt: new Date(),
-          },
+            updatedAt: new Date(),
+          } as any,
         }),
       ]);
 
