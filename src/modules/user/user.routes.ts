@@ -733,6 +733,143 @@ router.delete('/connections/:id', UserController.removeConnection);
 router.get('/:id', UserController.getUserById);
 
 // ============================================================================
+// ACTIVITY & SECURITY ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/activity:
+ *   get:
+ *     summary: Get user activity history
+ *     description: Get the authenticated user's activity history
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of activities to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of activities to skip
+ *     responses:
+ *       200:
+ *         description: Activity history retrieved
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/activity', UserController.getUserActivity);
+
+/**
+ * @swagger
+ * /v2/users/security-events:
+ *   get:
+ *     summary: Get user security events
+ *     description: Get the authenticated user's security event history
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of events to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of events to skip
+ *     responses:
+ *       200:
+ *         description: Security events retrieved
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/security-events', UserController.getUserSecurityEvents);
+
+/**
+ * @swagger
+ * /v2/users/sessions:
+ *   get:
+ *     summary: Get active sessions
+ *     description: Get all active sessions for the authenticated user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Active sessions retrieved
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/sessions', UserController.getUserSessions);
+
+/**
+ * @swagger
+ * /v2/users/login-history:
+ *   get:
+ *     summary: Get login history
+ *     description: Get the authenticated user's login attempt history
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of login attempts to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of login attempts to skip
+ *     responses:
+ *       200:
+ *         description: Login history retrieved
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/login-history', UserController.getUserLoginHistory);
+
+/**
+ * @swagger
+ * /v2/users/sessions/{sessionToken}:
+ *   delete:
+ *     summary: Terminate a session
+ *     description: Terminate a specific active session
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session token to terminate
+ *     responses:
+ *       200:
+ *         description: Session terminated successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.delete('/sessions/:sessionToken', UserController.terminateSession);
+
+// ============================================================================
 // ADMIN ROUTES
 // ============================================================================
 

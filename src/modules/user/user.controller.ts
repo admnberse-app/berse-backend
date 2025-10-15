@@ -7,6 +7,7 @@ import { UpdateProfileRequest, UserSearchQuery } from './user.types';
 import logger from '../../utils/logger';
 import { createId } from '@paralleldrive/cuid2';
 import crypto from 'crypto';
+import { ActivityLoggerService } from '../../services/activityLogger.service';
 
 export class UserController {
   /**
@@ -1157,6 +1158,129 @@ export class UserController {
 
       logger.info('Profile picture uploaded', { userId });
       sendSuccess(res, { profilePicture: profilePictureUrl }, 'Profile picture uploaded successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user activity history
+   * @route GET /v2/users/activity
+   */
+  static async getUserActivity(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id!;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const activities = await ActivityLoggerService.getUserActivityHistory(userId, limit, offset);
+      
+      const total = await prisma.userActivity.count({
+        where: { userId },
+      });
+
+      sendSuccess(res, {
+        activities,
+        pagination: {
+          limit,
+          offset,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      }, 'User activity retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user security events
+   * @route GET /v2/users/security-events
+   */
+  static async getUserSecurityEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id!;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const events = await ActivityLoggerService.getUserSecurityEvents(userId, limit, offset);
+      
+      const total = await prisma.securityEvent.count({
+        where: { userId },
+      });
+
+      sendSuccess(res, {
+        events,
+        pagination: {
+          limit,
+          offset,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      }, 'Security events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user active sessions
+   * @route GET /v2/users/sessions
+   */
+  static async getUserSessions(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id!;
+
+      const sessions = await ActivityLoggerService.getUserActiveSessions(userId);
+
+      sendSuccess(res, { sessions }, 'Active sessions retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user login history
+   * @route GET /v2/users/login-history
+   */
+  static async getUserLoginHistory(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id!;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const attempts = await ActivityLoggerService.getUserLoginHistory(userId, limit, offset);
+      
+      const total = await prisma.loginAttempt.count({
+        where: { userId },
+      });
+
+      sendSuccess(res, {
+        loginHistory: attempts,
+        pagination: {
+          limit,
+          offset,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      }, 'Login history retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Terminate a specific session
+   * @route DELETE /v2/users/sessions/:sessionToken
+   */
+  static async terminateSession(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id!;
+      const { sessionToken } = req.params;
+
+      await ActivityLoggerService.terminateSession(sessionToken, userId);
+
+      sendSuccess(res, null, 'Session terminated successfully');
     } catch (error) {
       next(error);
     }

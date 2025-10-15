@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { emailQueue } from '../../services/emailQueue.service';
 import { EmailTemplate } from '../../types/email.types';
 import { RegisterRequest, LoginRequest, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest } from './auth.types';
+import { ActivityLoggerService, ActivityType, SecuritySeverity } from '../../services/activityLogger.service';
 
 /**
  * Generate a 7-character alphanumeric referral code
@@ -253,6 +254,36 @@ export class AuthController {
         maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days
       });
 
+      // Get request metadata
+      const requestMeta = ActivityLoggerService.getRequestMetadata(req);
+
+      // Log registration activity
+      await ActivityLoggerService.logActivity({
+        userId: user.id,
+        activityType: ActivityType.AUTH_REGISTER,
+        entityType: 'user',
+        entityId: user.id,
+      });
+
+      // Create session
+      await ActivityLoggerService.createSession({
+        userId: user.id,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+        deviceInfo: requestMeta.deviceInfo,
+      });
+
+      // Register device
+      const deviceId = req.get('x-device-id');
+      if (deviceId) {
+        await ActivityLoggerService.registerDevice(
+          user.id,
+          deviceId,
+          req.get('x-device-name') || null,
+          requestMeta.deviceInfo
+        );
+      }
+
       // Log successful registration
       logger.info('User registered successfully', {
         userId: user.id,
@@ -282,23 +313,53 @@ export class AuthController {
     try {
       const { email, password }: LoginRequest = req.body;
 
+      const requestMeta = ActivityLoggerService.getRequestMetadata(req);
+      
       const user = await prisma.user.findUnique({
         where: { email },
       });
 
       if (!user) {
+        // Log failed login attempt
+        await ActivityLoggerService.logLoginAttempt({
+          identifier: email,
+          success: false,
+          failureReason: 'User not found',
+          ipAddress: requestMeta.ipAddress,
+          userAgent: requestMeta.userAgent,
+        });
+        
         logger.warn('Login attempt with non-existent email', { email });
         throw new AppError('Invalid credentials', 401);
       }
 
       const isValidPassword = await comparePassword(password, user.password);
       if (!isValidPassword) {
+        // Log failed login attempt
+        await ActivityLoggerService.logLoginAttempt({
+          userId: user.id,
+          identifier: email,
+          success: false,
+          failureReason: 'Invalid password',
+          ipAddress: requestMeta.ipAddress,
+          userAgent: requestMeta.userAgent,
+        });
+        
         logger.warn('Login attempt with invalid password', { 
           userId: user.id, 
           email 
         });
         throw new AppError('Invalid credentials', 401);
       }
+
+      // Log successful login attempt
+      await ActivityLoggerService.logLoginAttempt({
+        userId: user.id,
+        identifier: email,
+        success: true,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+      });
 
       // Generate token pair
       const tokenPair = await JwtManager.generateTokenPair(user);
@@ -312,6 +373,39 @@ export class AuthController {
       });
 
       const { password: _, ...userWithoutPassword } = user;
+
+      // Log login activity
+      await ActivityLoggerService.logActivity({
+        userId: user.id,
+        activityType: ActivityType.AUTH_LOGIN,
+        entityType: 'user',
+        entityId: user.id,
+      });
+
+      // Create session
+      await ActivityLoggerService.createSession({
+        userId: user.id,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+        deviceInfo: requestMeta.deviceInfo,
+      });
+
+      // Update last login
+      await ActivityLoggerService.updateLastLogin(
+        user.id,
+        requestMeta.ipAddress
+      );
+
+      // Register device if provided
+      const deviceId = req.get('x-device-id');
+      if (deviceId) {
+        await ActivityLoggerService.registerDevice(
+          user.id,
+          deviceId,
+          req.get('x-device-name') || null,
+          requestMeta.deviceInfo
+        );
+      }
 
       // Log successful login
       logger.info('User logged in successfully', {
@@ -386,8 +480,15 @@ export class AuthController {
       // Clear refresh token cookie
       res.clearCookie('refreshToken');
 
-      // Log successful logout
+      // Log logout activity
       if (userId) {
+        await ActivityLoggerService.logActivity({
+          userId,
+          activityType: ActivityType.AUTH_LOGOUT,
+          entityType: 'user',
+          entityId: userId,
+        });
+        
         logger.info('User logged out successfully', { userId });
       }
 
@@ -415,6 +516,26 @@ export class AuthController {
 
       // Clear refresh token cookie
       res.clearCookie('refreshToken');
+
+      // Terminate all sessions
+      await ActivityLoggerService.terminateAllUserSessions(userId);
+
+      // Log logout all activity
+      await ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.AUTH_LOGOUT_ALL,
+        entityType: 'user',
+        entityId: userId,
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId,
+        eventType: 'LOGOUT_ALL_DEVICES',
+        severity: SecuritySeverity.MEDIUM,
+        description: 'User logged out from all devices',
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
 
       // Log logout from all devices
       logger.info('User logged out from all devices', { userId });
@@ -542,6 +663,26 @@ export class AuthController {
       // Clear refresh token cookie
       res.clearCookie('refreshToken');
 
+      // Terminate all sessions
+      await ActivityLoggerService.terminateAllUserSessions(userId);
+
+      // Log password change activity
+      await ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.AUTH_PASSWORD_CHANGE,
+        entityType: 'user',
+        entityId: userId,
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId,
+        eventType: 'PASSWORD_CHANGED',
+        severity: SecuritySeverity.MEDIUM,
+        description: 'User changed their password',
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
+
       // Log password change
       logger.info('User changed password', { userId });
 
@@ -610,6 +751,23 @@ export class AuthController {
           expiresIn: '1 hour',
         }
       );
+
+      // Log password reset request activity
+      await ActivityLoggerService.logActivity({
+        userId: user.id,
+        activityType: ActivityType.AUTH_PASSWORD_RESET_REQUEST,
+        entityType: 'user',
+        entityId: user.id,
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId: user.id,
+        eventType: 'PASSWORD_RESET_REQUESTED',
+        severity: SecuritySeverity.MEDIUM,
+        description: 'Password reset requested',
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
 
       logger.info('Password reset email queued', { 
         userId: user.id, 
@@ -688,6 +846,26 @@ export class AuthController {
 
       // Revoke all refresh tokens for security
       await JwtManager.revokeAllUserTokens(user.id);
+
+      // Terminate all sessions
+      await ActivityLoggerService.terminateAllUserSessions(user.id);
+
+      // Log password reset complete activity
+      await ActivityLoggerService.logActivity({
+        userId: user.id,
+        activityType: ActivityType.AUTH_PASSWORD_RESET_COMPLETE,
+        entityType: 'user',
+        entityId: user.id,
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId: user.id,
+        eventType: 'PASSWORD_RESET_COMPLETED',
+        severity: SecuritySeverity.HIGH,
+        description: 'Password was reset using reset token',
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
 
       // Log password reset
       logger.info('Password reset successful', { userId: user.id, email: user.email });
