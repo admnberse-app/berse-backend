@@ -33,6 +33,52 @@ function generateReferralCode(): string {
   return code;
 }
 
+/**
+ * Generate a unique username from full name
+ * Format: firstname_lastname_randomnumber (e.g., john_doe_1234)
+ */
+async function generateUsername(fullName: string): Promise<string> {
+  // Clean and format the full name
+  const nameParts = fullName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z\s]/g, '') // Remove non-alphabetic characters
+    .split(/\s+/)
+    .filter(part => part.length > 0);
+  
+  // Create base username from first and last name
+  let baseUsername = nameParts.join('_');
+  
+  // If username is too long, truncate it
+  if (baseUsername.length > 20) {
+    baseUsername = baseUsername.substring(0, 20);
+  }
+  
+  // Try to find a unique username
+  let username = baseUsername;
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (attempts < maxAttempts) {
+    // Check if username is available
+    const existingUser = await prisma.user.findFirst({
+      where: { username },
+    });
+    
+    if (!existingUser) {
+      return username;
+    }
+    
+    // Add random number suffix if username is taken
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    username = `${baseUsername}_${randomNum}`;
+    attempts++;
+  }
+  
+  // Fallback: add timestamp if still not unique
+  return `${baseUsername}_${Date.now().toString().slice(-6)}`;
+}
+
 export class AuthController {
   /**
    * Register a new user
@@ -41,10 +87,13 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { 
-        email, phone, password, fullName, username, 
+        email, phone, password, fullName, username: providedUsername, 
         nationality, countryOfResidence, city, gender, 
         dateOfBirth, referralCode 
       }: RegisterRequest = req.body;
+
+      // Auto-generate username if not provided
+      const username = providedUsername || await generateUsername(fullName);
 
       // Check if user already exists
       const existingUser = await prisma.user.findFirst({
@@ -52,7 +101,7 @@ export class AuthController {
           OR: [
             { email },
             { phone: phone || undefined },
-            { username: username || undefined },
+            { username },
           ],
         },
       });

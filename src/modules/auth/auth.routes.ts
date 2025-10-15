@@ -49,6 +49,7 @@ const router = Router();
  *                 example: John Doe
  *               username:
  *                 type: string
+ *                 description: Optional - will be auto-generated if not provided
  *                 example: johndoe
  *               phone:
  *                 type: string
