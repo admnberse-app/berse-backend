@@ -104,7 +104,7 @@ export class JwtManager {
           tokenHash: hashedToken,
           tokenFamily,
           expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
-        },
+        } as any,
       });
     } catch (error) {
       console.error('Error storing refresh token:', error);

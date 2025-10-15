@@ -74,12 +74,13 @@ export class MembershipService {
           // Upsert the metadata with membership ID
           await prisma.userMetadata.upsert({
             where: { userId: user.id },
-            update: { membershipId },
+            update: { membershipId, updatedAt: new Date() },
             create: {
               userId: user.id,
               membershipId,
-              referralCode: `REF-${user.id.substring(0, 8).toUpperCase()}`
-            }
+              referralCode: `REF-${user.id.substring(0, 8).toUpperCase()}`,
+              updatedAt: new Date()
+            } as any
           });
           
           logger.info('Generated membership ID for user', {
@@ -126,12 +127,13 @@ export class MembershipService {
       // Upsert the metadata
       await prisma.userMetadata.upsert({
         where: { userId },
-        update: { membershipId },
+        update: { membershipId, updatedAt: new Date() },
         create: {
           userId,
           membershipId,
-          referralCode: `REF-${userId.substring(0, 8).toUpperCase()}`
-        }
+          referralCode: `REF-${userId.substring(0, 8).toUpperCase()}`,
+          updatedAt: new Date()
+        } as any
       });
       
       logger.info('Generated membership ID for user', { userId, membershipId });

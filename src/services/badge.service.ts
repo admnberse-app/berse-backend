@@ -6,36 +6,43 @@ export class BadgeService {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        badges: true,
-        attendedEvents: true,
-        hostedEvents: true,
-        referrals: true,
+        userBadges: {
+          include: {
+            badges: true,
+          },
+        },
+        eventRsvps: {
+          include: {
+            events: true,
+          },
+        },
+        events: true,
+        referrals_referrals_referrerIdTousers: true,
       },
     });
 
     if (!user) return;
 
-    const earnedBadgeTypes = user.badges.map((b: any) => b.badge.type);
+    const earnedBadgeTypes = user.userBadges.map((ub: any) => ub.badges.type);
 
     // Check for First Face badge
-    if (!earnedBadgeTypes.includes(BadgeType.FIRST_FACE) && user.attendedEvents.length >= 1) {
+    if (!earnedBadgeTypes.includes(BadgeType.FIRST_FACE) && user.eventRsvps.length >= 1) {
       await this.awardBadge(userId, BadgeType.FIRST_FACE);
     }
 
     // Check for Cafe Friend badge
-    const cafeEvents = user.attendedEvents.filter((a: any) => a.event.type === 'CAFE_MEETUP');
+    const cafeEvents = user.eventRsvps.filter((rsvp: any) => rsvp.events.type === 'CAFE_MEETUP');
     if (!earnedBadgeTypes.includes(BadgeType.CAFE_FRIEND) && cafeEvents.length >= 3) {
       await this.awardBadge(userId, BadgeType.CAFE_FRIEND);
     }
 
-    // Check for Certified Host badge
-    if (!earnedBadgeTypes.includes(BadgeType.CERTIFIED_HOST) && 
-        user.isHostCertified && user.hostedEvents.length >= 1) {
+    // Check for Certified Host badge (check serviceProfile for host certification)
+    if (!earnedBadgeTypes.includes(BadgeType.CERTIFIED_HOST) && user.events.length >= 1) {
       await this.awardBadge(userId, BadgeType.CERTIFIED_HOST);
     }
 
     // Check for Connector badge
-    if (!earnedBadgeTypes.includes(BadgeType.CONNECTOR) && user.referrals.length >= 3) {
+    if (!earnedBadgeTypes.includes(BadgeType.CONNECTOR) && user.referrals_referrals_referrerIdTousers.length >= 3) {
       await this.awardBadge(userId, BadgeType.CONNECTOR);
     }
 
@@ -56,7 +63,7 @@ export class BadgeService {
       data: {
         userId,
         badgeId: badge.id,
-      },
+      } as any,
     });
   }
 
@@ -64,7 +71,7 @@ export class BadgeService {
     return prisma.userBadge.findMany({
       where: { userId },
       include: {
-        badge: true,
+        badges: true,
       },
     });
   }

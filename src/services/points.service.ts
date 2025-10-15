@@ -71,7 +71,7 @@ export class PointsService {
       where: { id: userId },
       select: {
         totalPoints: true,
-        pointsHistory: {
+        pointHistories: {
           orderBy: { createdAt: 'desc' },
           take: 50,
         },
