@@ -6,6 +6,7 @@ import { AppError } from '../../middleware/error';
 import { UpdateProfileRequest, UserSearchQuery } from './user.types';
 import logger from '../../utils/logger';
 import { createId } from '@paralleldrive/cuid2';
+import crypto from 'crypto';
 
 export class UserController {
   /**
@@ -151,14 +152,27 @@ export class UserController {
       if (data.nationality !== undefined) locationUpdate.nationality = data.nationality;
       if (data.originallyFrom !== undefined) locationUpdate.originallyFrom = data.originallyFrom;
       
-      // Geospatial coordinates
-      if (data.latitude !== undefined) {
-        locationUpdate.latitude = data.latitude;
-        locationUpdate.lastLocationUpdate = new Date();
-      }
-      if (data.longitude !== undefined) {
-        locationUpdate.longitude = data.longitude;
-        locationUpdate.lastLocationUpdate = new Date();
+      // Geospatial coordinates with validation
+      if (data.latitude !== undefined || data.longitude !== undefined) {
+        const lat = data.latitude;
+        const lon = data.longitude;
+        
+        // Validate coordinates if provided
+        if (lat !== undefined && (lat < -90 || lat > 90)) {
+          throw new AppError('Latitude must be between -90 and 90', 400);
+        }
+        if (lon !== undefined && (lon < -180 || lon > 180)) {
+          throw new AppError('Longitude must be between -180 and 180', 400);
+        }
+        
+        if (lat !== undefined) {
+          locationUpdate.latitude = lat;
+          locationUpdate.lastLocationUpdate = new Date();
+        }
+        if (lon !== undefined) {
+          locationUpdate.longitude = lon;
+          locationUpdate.lastLocationUpdate = new Date();
+        }
       }
 
       // Perform updates in transaction
@@ -759,6 +773,7 @@ export class UserController {
         // Create notification
         await tx.notification.create({
           data: {
+            id: crypto.randomUUID(),
             userId: receiverId,
             type: 'MESSAGE',
             title: 'New Connection Request',
@@ -847,6 +862,7 @@ export class UserController {
         // Notify the initiator
         await tx.notification.create({
           data: {
+            id: crypto.randomUUID(),
             userId: connection.initiatorId,
             type: 'MESSAGE',
             title: 'Connection Accepted',
@@ -966,10 +982,12 @@ export class UserController {
         throw new AppError('Connection not found', 404);
       }
 
+      // Check if user is part of the connection
       if (connection.initiatorId !== userId && connection.receiverId !== userId) {
         throw new AppError('You can only remove your own connections', 403);
       }
 
+      // Check if connection is in a removable state
       if (connection.status !== 'ACCEPTED') {
         throw new AppError('Can only remove accepted connections', 400);
       }

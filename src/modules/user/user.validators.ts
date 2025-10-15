@@ -74,8 +74,8 @@ export const updateProfileValidators = [
   body('website')
     .optional()
     .trim()
-    .isURL({ require_protocol: true })
-    .withMessage('Website must be a valid URL with http:// or https://'),
+    .isLength({ min: 3, max: 200 })
+    .withMessage('Website must be 3-200 characters'),
   
   // Personal
   body('personalityType')
