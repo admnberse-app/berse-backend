@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authRoutes } from '../../modules/auth';
 import { userRoutes } from '../../modules/user';
 import { countriesRoutes } from '../../modules/metadata';
+import { onboardingRoutes } from '../../modules/onboarding';
 
 const router = Router();
 
@@ -26,6 +27,12 @@ router.use('/users', userRoutes);
  * Base path: /v2/metadata
  */
 router.use('/metadata', countriesRoutes);
+
+/**
+ * Onboarding routes
+ * Base path: /v2/onboarding
+ */
+router.use('/onboarding', onboardingRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION

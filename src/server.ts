@@ -122,6 +122,11 @@ const startServer = async () => {
         logger.info(`   GET  http://localhost:${config.port}/v2/users/login-history`);
         logger.info(`   DEL  http://localhost:${config.port}/v2/users/sessions/:sessionToken`);
         
+        logger.info('\n🎯 Onboarding:');
+        logger.info(`   GET  http://localhost:${config.port}/v2/onboarding/screens`);
+        logger.info(`   POST http://localhost:${config.port}/v2/onboarding/track`);
+        logger.info(`   POST http://localhost:${config.port}/v2/onboarding/complete`);
+        
         logger.info('\n📋 Legacy V1 Endpoints (Backward Compatibility):');
         logger.info(`   POST http://localhost:${config.port}/api/v1/auth/register`);
         logger.info(`   POST http://localhost:${config.port}/api/v1/auth/login`);
