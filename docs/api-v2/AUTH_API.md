@@ -66,7 +66,7 @@ Create a new user account.
 - `longitude` - GPS longitude (-180 to 180)
 - `gender` - "male" or "female"
 - `dateOfBirth` - ISO 8601 date format
-- `referralCode` - 6-10 characters
+- `referralCode` - 7 characters (referral code from existing user)
 
 **Success Response (201):**
 ```json
@@ -80,7 +80,7 @@ Create a new user account.
       "fullName": "John Doe",
       "username": "johndoe",
       "role": "GENERAL_USER",
-      "totalPoints": 100,
+      "totalPoints": 30,
       "profile": {
         "dateOfBirth": "1990-01-15T00:00:00.000Z",
         "gender": "male",
@@ -97,8 +97,8 @@ Create a new user account.
         "lastLocationUpdate": null
       },
       "metadata": {
-        "referralCode": "GENERATED_CODE",
-        "membershipId": "BM-123456"
+        "referralCode": "ABC1234",
+        "membershipId": "BSE123456"
       }
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -108,9 +108,11 @@ Create a new user account.
 ```
 
 **Error Responses:**
-- `400` - User already exists (email, phone, or username taken)
+- `400` - Email already registered
+- `400` - Username already taken
+- `400` - Phone number already registered
 - `400` - Invalid referral code
-- `400` - Validation errors
+- `400` - Validation errors (email format, password strength, username format)
 
 ---
 
@@ -142,7 +144,7 @@ Authenticate a user and receive access tokens.
       "status": "ACTIVE",
       "trustScore": 0.0,
       "trustLevel": "starter",
-      "totalPoints": 100
+      "totalPoints": 30
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -300,7 +302,7 @@ Get the currently authenticated user's profile.
         "currency": "MYR"
       },
       "metadata": {
-        "membershipId": "BM-123456",
+        "membershipId": "BSE123456",
         "referralCode": "GENERATED_CODE"
       }
     }
@@ -398,10 +400,7 @@ Change the password for the authenticated user.
 ```json
 {
   "success": false,
-  "error": {
-    "message": "Error description",
-    "statusCode": 400
-  }
+  "error": "Error description"
 }
 ```
 
@@ -417,22 +416,11 @@ Change the password for the authenticated user.
 ```json
 {
   "success": false,
-  "error": {
-    "message": "Validation failed",
-    "statusCode": 400,
-    "errors": [
-      {
-        "field": "email",
-        "message": "Valid email is required"
-      },
-      {
-        "field": "password",
-        "message": "Password must be at least 8 characters..."
-      }
-    ]
-  }
+  "error": "email: Valid email is required, password: Password must be at least 8 characters with uppercase, lowercase, number, and special character"
 }
 ```
+
+**Note:** Multiple validation errors are concatenated into a single error string, separated by commas.
 
 ---
 
@@ -449,10 +437,7 @@ When rate limited, you'll receive a `429` response:
 ```json
 {
   "success": false,
-  "error": {
-    "message": "Too many requests, please try again later",
-    "statusCode": 429
-  }
+  "error": "Too many requests from this IP, please try again later."
 }
 ```
 
@@ -582,6 +567,14 @@ const refreshToken = async () => {
 ---
 
 ## Changelog
+
+### v1.0.1 (2025-10-15)
+- Verified all endpoints working correctly
+- Updated points system: registration awards 30 points (not 100)
+- Updated membership ID format: BSE prefix (not BM)
+- Clarified error response format (simplified structure)
+- Updated validation error format (concatenated string)
+- All endpoints tested and operational
 
 ### v1.0.0 (2024-01-15)
 - Initial authentication API

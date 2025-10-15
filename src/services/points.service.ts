@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { prisma } from '../config/database';
 import { POINT_VALUES } from '../types';
 
@@ -23,6 +24,7 @@ export class PointsService {
       // Create point history entry
       await tx.pointHistory.create({
         data: {
+          id: crypto.randomUUID(),
           userId,
           points,
           action,
@@ -57,6 +59,7 @@ export class PointsService {
 
       await tx.pointHistory.create({
         data: {
+          id: crypto.randomUUID(),
           userId,
           points: -points,
           action: 'REDEMPTION',

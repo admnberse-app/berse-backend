@@ -50,8 +50,9 @@ export const registerValidators = [
   body('referralCode')
     .optional()
     .trim()
-    .isLength({ min: 6, max: 10 })
-    .withMessage('Invalid referral code format'),
+    .isLength({ min: 7, max: 7 })
+    .matches(/^[A-Z]{3}\d{4}$/)
+    .withMessage('Referral code must be 7 characters (3 letters + 4 numbers, e.g., ABC1234)'),
 ];
 
 export const loginValidators = [

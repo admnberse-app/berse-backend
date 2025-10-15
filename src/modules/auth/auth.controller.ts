@@ -12,6 +12,27 @@ import { emailQueue } from '../../services/emailQueue.service';
 import { EmailTemplate } from '../../types/email.types';
 import { RegisterRequest, LoginRequest, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest } from './auth.types';
 
+/**
+ * Generate a 7-character alphanumeric referral code
+ * Format: 3 letters + 4 numbers (e.g., ABC1234)
+ */
+function generateReferralCode(): string {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  
+  let code = '';
+  // Generate 3 random letters
+  for (let i = 0; i < 3; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  // Generate 4 random numbers
+  for (let i = 0; i < 4; i++) {
+    code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+  
+  return code;
+}
+
 export class AuthController {
   /**
    * Register a new user
@@ -77,14 +98,17 @@ export class AuthController {
       
       // Create user with related profile data
       const hashedPassword = await hashPassword(password);
+      const userId = crypto.randomUUID();
       const user = await prisma.user.create({
         data: {
+          id: userId,
           email,
           phone,
           password: hashedPassword,
           fullName,
           username,
           referredById: referredBy?.id,
+          updatedAt: new Date(),
           profile: {
             create: {
               dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
@@ -103,7 +127,14 @@ export class AuthController {
           metadata: {
             create: {
               membershipId: membershipId || undefined,
-              referralCode: crypto.randomBytes(4).toString('hex').toUpperCase(),
+              referralCode: generateReferralCode(),
+              referralSource: referralCode ? 'referral' : 'direct',
+              ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
+              userAgent: req.get('user-agent') || 'unknown',
+              utmSource: (req.query.utm_source as string) || null,
+              utmMedium: (req.query.utm_medium as string) || null,
+              utmCampaign: (req.query.utm_campaign as string) || null,
+              tags: [],
               updatedAt: new Date(),
             } as any,
           },
@@ -504,6 +535,7 @@ export class AuthController {
       // Save hashed token to database
       await prisma.passwordResetToken.create({
         data: {
+          id: crypto.randomUUID(),
           userId: user.id,
           token: resetTokenHash,
           expiresAt: resetTokenExpires,

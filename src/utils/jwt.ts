@@ -100,6 +100,7 @@ export class JwtManager {
       // Store new refresh token
       await prisma.refreshToken.create({
         data: {
+          id: crypto.randomUUID(),
           userId,
           tokenHash: hashedToken,
           tokenFamily,
