@@ -5,6 +5,7 @@ import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
 import { UpdateProfileRequest, UserSearchQuery } from './user.types';
 import logger from '../../utils/logger';
+import { createId } from '@paralleldrive/cuid2';
 
 export class UserController {
   /**
@@ -178,6 +179,7 @@ export class UserController {
             create: {
               userId,
               ...profileUpdate,
+              updatedAt: new Date(),
             },
           });
         }
@@ -190,6 +192,7 @@ export class UserController {
             create: {
               userId,
               ...locationUpdate,
+              updatedAt: new Date(),
             },
           });
         }
@@ -267,7 +270,10 @@ export class UserController {
       const currentUserId = req.user?.id;
       const { page = 1, limit = 20 } = req.query;
 
-      const skip = (Number(page) - 1) * Number(limit);
+      // Sanitize pagination parameters
+      const pageNum = Math.max(1, Number(page));
+      const limitNum = Math.min(100, Math.max(1, Number(limit)));
+      const skip = (pageNum - 1) * limitNum;
 
       // Get all users except the current user
       const [users, total] = await Promise.all([
@@ -720,6 +726,7 @@ export class UserController {
         // Create new connection request
         const connection = await tx.userConnection.create({
           data: {
+            id: createId(),
             initiatorId,
             receiverId,
             status: 'PENDING',

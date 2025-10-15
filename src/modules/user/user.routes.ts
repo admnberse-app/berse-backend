@@ -432,43 +432,6 @@ router.get(
  */
 router.get('/nearby', UserController.findNearbyUsers);
 
-/**
- * @swagger
- * /v2/users/{id}:
- *   get:
- *     summary: Get user by ID
- *     description: Get detailed profile information for a specific user
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: User ID
- *     responses:
- *       200:
- *         description: User profile retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/User'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- */
-router.get('/:id', UserController.getUserById);
-
 // ============================================================================
 // CONNECTIONS ROUTES
 // ============================================================================
@@ -727,6 +690,47 @@ router.post('/connections/:id/cancel', UserController.cancelConnectionRequest);
  *         description: Connection not found
  */
 router.delete('/connections/:id', UserController.removeConnection);
+
+// ============================================================================
+// GET USER BY ID (Must be after all specific routes)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     description: Get detailed profile information for a specific user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User profile retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ */
+router.get('/:id', UserController.getUserById);
 
 // ============================================================================
 // ADMIN ROUTES
