@@ -90,7 +90,7 @@ export class AuthController {
       const { 
         email, phone, password, fullName, username: providedUsername, 
         nationality, countryOfResidence, city, gender, 
-        dateOfBirth, referralCode 
+        dateOfBirth, referralCode, deviceInfo, locationInfo
       }: RegisterRequest = req.body;
 
       // Auto-generate username if not provided
@@ -257,6 +257,16 @@ export class AuthController {
       // Get request metadata
       const requestMeta = ActivityLoggerService.getRequestMetadata(req);
 
+      // Merge device info from body with auto-detected info
+      const mergedDeviceInfo = {
+        ...requestMeta.deviceInfo,
+        ...(deviceInfo && {
+          deviceType: deviceInfo.deviceType,
+          osVersion: deviceInfo.osVersion,
+          appVersion: deviceInfo.appVersion,
+        }),
+      };
+
       // Log registration activity
       await ActivityLoggerService.logActivity({
         userId: user.id,
@@ -265,22 +275,31 @@ export class AuthController {
         entityId: user.id,
       });
 
-      // Create session
+      // Create session with location data if provided
       await ActivityLoggerService.createSession({
         userId: user.id,
         ipAddress: requestMeta.ipAddress,
         userAgent: requestMeta.userAgent,
-        deviceInfo: requestMeta.deviceInfo,
+        deviceInfo: mergedDeviceInfo,
+        locationData: locationInfo || null,
       });
 
-      // Register device
-      const deviceId = req.get('x-device-id');
+      // Register device - prefer body deviceInfo over headers
+      const deviceId = deviceInfo?.deviceId || req.get('x-device-id');
+      const deviceName = deviceInfo?.deviceName || req.get('x-device-name');
+      
       if (deviceId) {
+        // Include push token in device info
+        const deviceInfoWithToken = {
+          ...mergedDeviceInfo,
+          ...(deviceInfo?.pushToken && { pushToken: deviceInfo.pushToken }),
+        };
+        
         await ActivityLoggerService.registerDevice(
           user.id,
           deviceId,
-          req.get('x-device-name') || null,
-          requestMeta.deviceInfo
+          deviceName || null,
+          deviceInfoWithToken
         );
       }
 
@@ -311,7 +330,7 @@ export class AuthController {
    */
   static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password }: LoginRequest = req.body;
+      const { email, password, deviceInfo, locationInfo }: LoginRequest = req.body;
 
       const requestMeta = ActivityLoggerService.getRequestMetadata(req);
       
@@ -374,6 +393,16 @@ export class AuthController {
 
       const { password: _, ...userWithoutPassword } = user;
 
+      // Merge device info from body with auto-detected info
+      const mergedDeviceInfo = {
+        ...requestMeta.deviceInfo,
+        ...(deviceInfo && {
+          deviceType: deviceInfo.deviceType,
+          osVersion: deviceInfo.osVersion,
+          appVersion: deviceInfo.appVersion,
+        }),
+      };
+
       // Log login activity
       await ActivityLoggerService.logActivity({
         userId: user.id,
@@ -382,12 +411,13 @@ export class AuthController {
         entityId: user.id,
       });
 
-      // Create session
+      // Create session with location data if provided
       await ActivityLoggerService.createSession({
         userId: user.id,
         ipAddress: requestMeta.ipAddress,
         userAgent: requestMeta.userAgent,
-        deviceInfo: requestMeta.deviceInfo,
+        deviceInfo: mergedDeviceInfo,
+        locationData: locationInfo || null,
       });
 
       // Update last login
@@ -396,15 +426,35 @@ export class AuthController {
         requestMeta.ipAddress
       );
 
-      // Register device if provided
-      const deviceId = req.get('x-device-id');
+      // Register device - prefer body deviceInfo over headers
+      const deviceId = deviceInfo?.deviceId || req.get('x-device-id');
+      const deviceName = deviceInfo?.deviceName || req.get('x-device-name');
+      
       if (deviceId) {
+        // Include push token in device info
+        const deviceInfoWithToken = {
+          ...mergedDeviceInfo,
+          ...(deviceInfo?.pushToken && { pushToken: deviceInfo.pushToken }),
+        };
+        
         await ActivityLoggerService.registerDevice(
           user.id,
           deviceId,
-          req.get('x-device-name') || null,
-          requestMeta.deviceInfo
+          deviceName || null,
+          deviceInfoWithToken
         );
+        
+        // Update last seen time
+        await prisma.deviceRegistration.updateMany({
+          where: {
+            userId: user.id,
+            deviceFingerprint: deviceId,
+          },
+          data: {
+            lastSeenAt: new Date(),
+            deviceInfo: deviceInfoWithToken,
+          },
+        });
       }
 
       // Log successful login

@@ -34,6 +34,13 @@ Create a new user account.
 
 **Endpoint:** `POST /v2/auth/register`
 
+**Headers (Optional):**
+```
+x-device-id: abc-123-xyz-789        // Unique device identifier
+x-device-name: John's iPhone         // User-friendly device name
+x-app-version: 1.2.3                 // Application version
+```
+
 **Request Body:**
 ```json
 {
@@ -47,7 +54,22 @@ Create a new user account.
   "currentCity": "Kuala Lumpur",
   "gender": "male",
   "dateOfBirth": "1990-01-15",
-  "referralCode": "ABC123XYZ"
+  "referralCode": "ABC123XYZ",
+  "deviceInfo": {
+    "deviceId": "abc-123-xyz-789",
+    "deviceName": "John's iPhone",
+    "deviceType": "ios",
+    "osVersion": "iOS 17.0",
+    "appVersion": "1.2.3",
+    "pushToken": "fcm-token-here"
+  },
+  "locationInfo": {
+    "latitude": 1.3521,
+    "longitude": 103.8198,
+    "city": "Singapore",
+    "country": "Singapore",
+    "timezone": "Asia/Singapore"
+  }
 }
 ```
 
@@ -55,18 +77,31 @@ Create a new user account.
 - `email` - Valid email address
 - `password` - Minimum 8 characters, must include uppercase, lowercase, number, and special character
 - `fullName` - 2-100 characters, letters only
-- `username` - 2-30 characters, alphanumeric with underscores and hyphens
 
 **Optional Fields:**
+- `username` - 2-30 characters, alphanumeric with underscores and hyphens (auto-generated if not provided)
 - `phone` - Valid phone number
 - `nationality` - 2-50 characters
 - `countryOfResidence` - 2-50 characters
 - `currentCity` - 2-50 characters
-- `latitude` - GPS latitude (-90 to 90)
-- `longitude` - GPS longitude (-180 to 180)
 - `gender` - "male" or "female"
 - `dateOfBirth` - ISO 8601 date format
 - `referralCode` - 7 characters (referral code from existing user)
+
+**Device Information (Optional):**
+- `deviceInfo.deviceId` - Unique device identifier (UUID recommended)
+- `deviceInfo.deviceName` - User-friendly name (e.g., "John's iPhone")
+- `deviceInfo.deviceType` - Platform: "ios", "android", "web", or "desktop"
+- `deviceInfo.osVersion` - Operating system version (e.g., "iOS 17.0")
+- `deviceInfo.appVersion` - Your app version (e.g., "1.2.3")
+- `deviceInfo.pushToken` - FCM/APNs token for push notifications
+
+**Location Information (Optional):**
+- `locationInfo.latitude` - GPS latitude (-90 to 90)
+- `locationInfo.longitude` - GPS longitude (-180 to 180)
+- `locationInfo.city` - City name
+- `locationInfo.country` - Country name
+- `locationInfo.timezone` - IANA timezone (e.g., "Asia/Singapore")
 
 **Success Response (201):**
 ```json
@@ -121,13 +156,46 @@ Authenticate a user and receive access tokens.
 
 **Endpoint:** `POST /v2/auth/login`
 
+**Headers (Optional):**
+```
+x-device-id: abc-123-xyz-789        // Unique device identifier for session tracking
+x-device-name: John's iPhone         // Device name shown in active sessions
+x-app-version: 1.2.3                 // Application version
+```
+
 **Request Body:**
 ```json
 {
   "email": "user@example.com",
-  "password": "SecurePass123!"
+  "password": "SecurePass123!",
+  "deviceInfo": {
+    "deviceId": "abc-123-xyz-789",
+    "deviceName": "John's iPhone",
+    "deviceType": "ios",
+    "osVersion": "iOS 17.0",
+    "appVersion": "1.2.3",
+    "pushToken": "fcm-token-here"
+  },
+  "locationInfo": {
+    "latitude": 1.3521,
+    "longitude": 103.8198,
+    "city": "Singapore",
+    "country": "Singapore",
+    "timezone": "Asia/Singapore"
+  }
 }
 ```
+
+**Required Fields:**
+- `email` - User's email address
+- `password` - User's password
+
+**Optional Fields (Device Tracking):**
+All device and location fields are optional but recommended for:
+- **Security:** Track login locations and unusual device access
+- **Session Management:** View and manage active sessions per device
+- **Push Notifications:** Enable notification delivery
+- **Analytics:** Understand user behavior and app usage patterns
 
 **Success Response (200):**
 ```json
@@ -159,6 +227,15 @@ Authenticate a user and receive access tokens.
 - The `refreshToken` is also set as an HTTP-only cookie
 - Access token expires in 15 minutes
 - Refresh token expires in 365 days
+- Device and location data is stored for security and analytics
+- Each login creates a new session entry with device details
+- IP address and User-Agent are captured automatically
+
+**Security Features:**
+- Automatic detection of suspicious login attempts
+- Track multiple devices and sessions
+- View login history and active sessions
+- Ability to terminate specific device sessions
 
 ---
 
@@ -567,6 +644,32 @@ const refreshToken = async () => {
 ---
 
 ## Changelog
+
+### v2.1.0 (2025-10-15)
+**Device & Location Tracking**
+- ✅ Added device information capture during registration and login
+- ✅ Support for push notification tokens (FCM/APNs)
+- ✅ Location data storage for security and analytics
+- ✅ Hybrid approach: Accept data in request body OR headers
+- ✅ Automatic IP address and User-Agent detection
+- ✅ Enhanced session management with device details
+- ✅ Updated Swagger documentation with device fields
+- ✅ Backward compatible - all device fields optional
+
+**What's New:**
+- `deviceInfo` object in register/login request body
+- `locationInfo` object for GPS coordinates and timezone
+- Push token storage for notifications
+- Device fingerprinting for security
+- Location-based security alerts
+- Session tracking per device
+
+**Security Enhancements:**
+- Track login locations and detect anomalies
+- View active sessions by device
+- Terminate specific device sessions
+- Alert on new device logins
+- Store device fingerprints for trusted devices
 
 ### v1.0.1 (2025-10-15)
 - Verified all endpoints working correctly

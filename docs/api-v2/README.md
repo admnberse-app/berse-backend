@@ -4,8 +4,9 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 
 ## Quick Links
 
-- 🔐 [Authentication API](./AUTH_API.md) - User registration, login, and session management
-- 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, and social connections
+- 🔐 [Authentication API](./AUTH_API.md) - User registration, login, session management, and device tracking
+- 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
+- 🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 
 ## Base URL
@@ -391,7 +392,40 @@ See [CHANGELOG.md](../../CHANGELOG.md) for API version history and breaking chan
 
 ## Recent Changes (October 2025)
 
-### ✅ What's New in V2
+### ✅ What's New in V2.1 (October 15, 2025)
+
+**🔐 Enhanced Authentication & Security**
+- **Device Tracking:** Capture device information during registration and login
+- **Location Data:** Store GPS coordinates, city, country, and timezone
+- **Push Notifications:** Support for FCM/APNs token storage
+- **Session Management:** Track active sessions per device with full device details
+- **Security Features:** Detect unusual login locations and new devices
+- **Flexible API:** Accept device data in request body OR headers
+
+**📱 Device Information Support**
+Clients can now send:
+- Device ID (unique identifier)
+- Device name (user-friendly name)
+- Device type (iOS, Android, web, desktop)
+- OS version
+- App version
+- Push notification token
+
+**🌍 Location Information Support**
+Clients can now send:
+- GPS coordinates (latitude/longitude)
+- City and country
+- Timezone
+
+**📊 What Gets Captured Automatically**
+- IP address
+- User-Agent
+- Browser details
+- Operating system
+- Device type
+- Platform information
+
+### ✅ What's New in V2.0
 
 - **Modular Architecture:** Clean separation of concerns with dedicated modules
 - **UserConnection System:** New connection system replacing old follow/follower model
@@ -399,6 +433,7 @@ See [CHANGELOG.md](../../CHANGELOG.md) for API version history and breaking chan
 - **Better Token Security:** Refresh tokens stored in HTTP-only cookies
 - **Improved Error Handling:** More descriptive error messages and validation
 - **Geospatial Features:** Nearby user search with radius-based filtering
+- **Onboarding API:** Complete onboarding screen management with analytics tracking
 
 ### 🔄 Migration from V1 to V2
 
@@ -409,12 +444,15 @@ Key changes when migrating:
 3. **Profile Structure:** Profile data now includes separate relations (profile, location, metadata)
 4. **Token Refresh:** Endpoint changed to `/refresh-token` and uses cookies
 5. **Response Format:** Consistent success/error structure across all endpoints
+6. **Device Tracking (NEW):** Optionally send device info during login/register for enhanced security
+7. **Location Data (NEW):** Optionally send location info for security and analytics
 
 ### 🗂️ Active Modules
 
 The API is currently focused on core functionality:
-- ✅ **Authentication** - Full user auth lifecycle
-- ✅ **User Management** - Profiles, connections, discovery
+- ✅ **Authentication** - Full user auth lifecycle with device tracking and security features
+- ✅ **User Management** - Profiles, connections, discovery, activity tracking, security events
+- ✅ **Onboarding** - User onboarding flow with screen management and analytics
 - ✅ **Metadata** - Countries, regions, timezones
 
 ### 🚧 Coming Soon
@@ -430,5 +468,75 @@ The API is currently focused on core functionality:
 ---
 
 **Last Updated:** October 15, 2025  
-**API Version:** v2.0.0  
+**API Version:** v2.1.0  
 **Status:** Active Development
+
+---
+
+## 🆕 Latest Features (v2.1.0)
+
+### Device & Location Tracking
+
+**Why Track Device Data?**
+- 🔒 **Security:** Detect suspicious logins from unusual locations or devices
+- 📊 **Analytics:** Understand user behavior, app version adoption, and platform distribution
+- 🔔 **Notifications:** Store push tokens for targeted notifications
+- 👤 **User Experience:** Show "trusted devices" and enable device management
+
+**What You Should Send:**
+
+**iOS Apps:**
+```json
+{
+  "deviceInfo": {
+    "deviceId": "UUID().uuidString",
+    "deviceName": "UIDevice.current.name",
+    "deviceType": "ios",
+    "osVersion": "iOS 17.0",
+    "appVersion": "1.2.3",
+    "pushToken": "APNs-token"
+  }
+}
+```
+
+**Android Apps:**
+```json
+{
+  "deviceInfo": {
+    "deviceId": "Settings.Secure.ANDROID_ID",
+    "deviceName": "Build.MODEL",
+    "deviceType": "android",
+    "osVersion": "Android 14",
+    "appVersion": "1.2.3",
+    "pushToken": "FCM-token"
+  }
+}
+```
+
+**Web Apps:**
+```json
+{
+  "deviceInfo": {
+    "deviceId": "localStorage-uuid",
+    "deviceName": "Chrome on Windows",
+    "deviceType": "web",
+    "osVersion": "Windows 11",
+    "appVersion": "1.2.3"
+  }
+}
+```
+
+**Location Data (Optional but Recommended):**
+```json
+{
+  "locationInfo": {
+    "latitude": 1.3521,
+    "longitude": 103.8198,
+    "city": "Singapore",
+    "country": "Singapore",
+    "timezone": "Asia/Singapore"
+  }
+}
+```
+
+See [Authentication API](./AUTH_API.md) for full details and examples.

@@ -22,8 +22,27 @@ const router = Router();
  * /v2/auth/register:
  *   post:
  *     summary: Register a new user
- *     description: Create a new user account with email, password, and basic information
+ *     description: Create a new user account with email, password, and basic information. Optionally include device and location data for enhanced tracking and security.
  *     tags: [Authentication]
+ *     parameters:
+ *       - in: header
+ *         name: x-device-id
+ *         schema:
+ *           type: string
+ *         description: Unique device identifier (alternative to deviceInfo.deviceId in body)
+ *         example: abc-123-xyz-789
+ *       - in: header
+ *         name: x-device-name
+ *         schema:
+ *           type: string
+ *         description: Device name (alternative to deviceInfo.deviceName in body)
+ *         example: John's iPhone
+ *       - in: header
+ *         name: x-app-version
+ *         schema:
+ *           type: string
+ *         description: App version
+ *         example: 1.2.3
  *     requestBody:
  *       required: true
  *       content:
@@ -54,6 +73,51 @@ const router = Router();
  *               phone:
  *                 type: string
  *                 example: +1234567890
+ *               deviceInfo:
+ *                 type: object
+ *                 description: Optional device information for tracking and security
+ *                 properties:
+ *                   deviceId:
+ *                     type: string
+ *                     description: Unique device identifier
+ *                     example: abc-123-xyz-789
+ *                   deviceName:
+ *                     type: string
+ *                     description: User-friendly device name
+ *                     example: John's iPhone
+ *                   deviceType:
+ *                     type: string
+ *                     enum: [ios, android, web, desktop]
+ *                     example: ios
+ *                   osVersion:
+ *                     type: string
+ *                     example: iOS 17.0
+ *                   appVersion:
+ *                     type: string
+ *                     example: 1.2.3
+ *                   pushToken:
+ *                     type: string
+ *                     description: FCM/APNs token for push notifications
+ *                     example: fcm-token-here
+ *               locationInfo:
+ *                 type: object
+ *                 description: Optional location information
+ *                 properties:
+ *                   latitude:
+ *                     type: number
+ *                     example: 1.3521
+ *                   longitude:
+ *                     type: number
+ *                     example: 103.8198
+ *                   city:
+ *                     type: string
+ *                     example: Singapore
+ *                   country:
+ *                     type: string
+ *                     example: Singapore
+ *                   timezone:
+ *                     type: string
+ *                     example: Asia/Singapore
  *     responses:
  *       201:
  *         description: User successfully registered
@@ -95,8 +159,27 @@ router.post(
  * /v2/auth/login:
  *   post:
  *     summary: User login
- *     description: Authenticate user with email/username and password
+ *     description: Authenticate user with email/username and password. Include device information to track sessions and enable security features.
  *     tags: [Authentication]
+ *     parameters:
+ *       - in: header
+ *         name: x-device-id
+ *         schema:
+ *           type: string
+ *         description: Unique device identifier for session tracking
+ *         example: abc-123-xyz-789
+ *       - in: header
+ *         name: x-device-name
+ *         schema:
+ *           type: string
+ *         description: Device name for session identification
+ *         example: John's iPhone
+ *       - in: header
+ *         name: x-app-version
+ *         schema:
+ *           type: string
+ *         description: App version
+ *         example: 1.2.3
  *     requestBody:
  *       required: true
  *       content:
@@ -115,6 +198,51 @@ router.post(
  *                 type: string
  *                 format: password
  *                 example: SecurePass123!
+ *               deviceInfo:
+ *                 type: object
+ *                 description: Optional device information for session tracking
+ *                 properties:
+ *                   deviceId:
+ *                     type: string
+ *                     description: Unique device identifier
+ *                     example: abc-123-xyz-789
+ *                   deviceName:
+ *                     type: string
+ *                     description: User-friendly device name
+ *                     example: John's iPhone
+ *                   deviceType:
+ *                     type: string
+ *                     enum: [ios, android, web, desktop]
+ *                     example: ios
+ *                   osVersion:
+ *                     type: string
+ *                     example: iOS 17.0
+ *                   appVersion:
+ *                     type: string
+ *                     example: 1.2.3
+ *                   pushToken:
+ *                     type: string
+ *                     description: FCM/APNs token for push notifications
+ *                     example: fcm-token-here
+ *               locationInfo:
+ *                 type: object
+ *                 description: Optional location information
+ *                 properties:
+ *                   latitude:
+ *                     type: number
+ *                     example: 1.3521
+ *                   longitude:
+ *                     type: number
+ *                     example: 103.8198
+ *                   city:
+ *                     type: string
+ *                     example: Singapore
+ *                   country:
+ *                     type: string
+ *                     example: Singapore
+ *                   timezone:
+ *                     type: string
+ *                     example: Asia/Singapore
  *     responses:
  *       200:
  *         description: Successfully authenticated
