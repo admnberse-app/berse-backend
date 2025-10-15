@@ -40,6 +40,9 @@ export interface UpdateProfileRequest {
   latitude?: number;
   longitude?: number;
   
+  // Privacy Settings
+  locationPrivacy?: 'public' | 'friends' | 'private';
+  
   // Social Handles
   instagramHandle?: string;
   linkedinHandle?: string;
@@ -95,6 +98,7 @@ export interface UserProfileResponse {
     travelStyle?: string;
     bucketList: string[];
     travelBio?: string;
+    locationPrivacy?: string;
   };
   location?: {
     currentCity?: string;

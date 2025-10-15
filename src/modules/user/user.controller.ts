@@ -140,6 +140,7 @@ export class UserController {
       if (data.travelStyle !== undefined) profileUpdate.travelStyle = data.travelStyle;
       if (data.bucketList !== undefined) profileUpdate.bucketList = data.bucketList;
       if (data.travelBio !== undefined) profileUpdate.travelBio = data.travelBio;
+      if (data.locationPrivacy !== undefined) profileUpdate.locationPrivacy = data.locationPrivacy;
 
       // Location fields
       if (data.currentCity !== undefined) locationUpdate.currentCity = data.currentCity;
@@ -410,6 +411,180 @@ export class UserController {
         },
       });
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Find nearby users (geospatial search)
+   * @route GET /v2/users/nearby
+   */
+  static async findNearbyUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const currentUserId = req.user?.id;
+      const { latitude, longitude, radius = 10, page = 1, limit = 20 } = req.query;
+
+      // Validate required parameters
+      if (!latitude || !longitude) {
+        throw new AppError('Latitude and longitude are required', 400);
+      }
+
+      const lat = parseFloat(latitude as string);
+      const lon = parseFloat(longitude as string);
+      const radiusKm = parseFloat(radius as string);
+
+      // Validate coordinates
+      if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        throw new AppError('Invalid coordinates', 400);
+      }
+
+      if (isNaN(radiusKm) || radiusKm <= 0 || radiusKm > 500) {
+        throw new AppError('Radius must be between 1 and 500 km', 400);
+      }
+
+      // Import geospatial utilities
+      const { calculateDistance, calculateBoundingBox } = await import('../../utils/geospatial');
+
+      // Calculate bounding box for efficient filtering
+      const boundingBox = calculateBoundingBox(lat, lon, radiusKm);
+
+      const skip = (Number(page) - 1) * Number(limit);
+
+      // Query users within bounding box
+      const users = await prisma.user.findMany({
+        where: {
+          id: { not: currentUserId },
+          status: 'ACTIVE',
+          location: {
+            latitude: {
+              gte: boundingBox.minLat,
+              lte: boundingBox.maxLat,
+            },
+            longitude: {
+              gte: boundingBox.minLon,
+              lte: boundingBox.maxLon,
+            },
+          },
+        },
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          profile: {
+            select: {
+              profilePicture: true,
+              bio: true,
+              shortBio: true,
+              interests: true,
+              profession: true,
+              locationPrivacy: true,
+            },
+          },
+          location: {
+            select: {
+              currentCity: true,
+              currentLocation: true,
+              latitude: true,
+              longitude: true,
+              lastLocationUpdate: true,
+            },
+          },
+          connectionStats: {
+            select: {
+              totalConnections: true,
+              connectionQuality: true,
+            },
+          },
+        },
+      });
+
+      // Check if current user has accepted connections
+      const connections = await prisma.userConnection.findMany({
+        where: {
+          OR: [
+            { initiatorId: currentUserId, status: 'ACCEPTED' },
+            { receiverId: currentUserId, status: 'ACCEPTED' },
+          ],
+        },
+        select: {
+          initiatorId: true,
+          receiverId: true,
+        },
+      });
+
+      const connectedUserIds = new Set(
+        connections.map(c => c.initiatorId === currentUserId ? c.receiverId : c.initiatorId)
+      );
+
+      // Calculate distances and filter by privacy settings
+      const nearbyUsers = users
+        .map(user => {
+          const distance = calculateDistance(
+            lat,
+            lon,
+            user.location!.latitude!,
+            user.location!.longitude!
+          );
+
+          // Check privacy settings
+          const privacySetting = user.profile?.locationPrivacy || 'friends';
+          const isConnected = connectedUserIds.has(user.id);
+          const shouldShowLocation = 
+            privacySetting === 'public' ||
+            (privacySetting === 'friends' && isConnected);
+
+          return {
+            id: user.id,
+            fullName: user.fullName,
+            username: user.username,
+            distance,
+            distanceFormatted: distance < 1 
+              ? `${Math.round(distance * 1000)}m` 
+              : distance < 10 
+                ? `${distance.toFixed(1)}km`
+                : `${Math.round(distance)}km`,
+            profile: {
+              profilePicture: user.profile?.profilePicture,
+              bio: user.profile?.bio,
+              shortBio: user.profile?.shortBio,
+              interests: user.profile?.interests,
+              profession: user.profile?.profession,
+            },
+            location: shouldShowLocation ? {
+              currentCity: user.location?.currentCity,
+              currentLocation: user.location?.currentLocation,
+              lastLocationUpdate: user.location?.lastLocationUpdate,
+            } : {
+              currentCity: user.location?.currentCity, // Only show city
+            },
+            connectionStats: user.connectionStats,
+            isConnected,
+          };
+        })
+        .filter(user => user.distance <= radiusKm)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(skip, skip + Number(limit));
+
+      const total = nearbyUsers.length;
+
+      sendSuccess(res, {
+        users: nearbyUsers,
+        center: { latitude: lat, longitude: lon },
+        radius: radiusKm,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit)),
+        },
+      });
+
+      logger.info('Nearby users search', { userId: currentUserId, radius: radiusKm, found: total });
+    } catch (error) {
+      logger.error('Nearby users search failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: req.user?.id 
+      });
       next(error);
     }
   }

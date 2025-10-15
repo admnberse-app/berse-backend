@@ -335,6 +335,105 @@ router.get(
 
 /**
  * @swagger
+ * /v2/users/nearby:
+ *   get:
+ *     summary: Find nearby users
+ *     description: Find users within a specific radius using geospatial search (respects location privacy settings)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: latitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Your current latitude
+ *         example: 3.1390
+ *       - in: query
+ *         name: longitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Your current longitude
+ *         example: 101.6869
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: number
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 500
+ *         description: Search radius in kilometers
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Nearby users found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           distance:
+ *                             type: number
+ *                             description: Distance in kilometers
+ *                           distanceFormatted:
+ *                             type: string
+ *                             example: 2.5km
+ *                           profile:
+ *                             type: object
+ *                           location:
+ *                             type: object
+ *                             description: Location data (filtered by privacy settings)
+ *                           isConnected:
+ *                             type: boolean
+ *                     center:
+ *                       type: object
+ *                       properties:
+ *                         latitude:
+ *                           type: number
+ *                         longitude:
+ *                           type: number
+ *                     radius:
+ *                       type: number
+ *                     pagination:
+ *                       type: object
+ *       400:
+ *         description: Invalid parameters
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/nearby', UserController.findNearbyUsers);
+
+/**
+ * @swagger
  * /v2/users/{id}:
  *   get:
  *     summary: Get user by ID

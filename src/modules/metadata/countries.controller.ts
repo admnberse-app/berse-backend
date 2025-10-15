@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getCountries, getCountryByCode } from '@yusifaliyevpro/countries';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
+import { cache, CacheTTL } from '../../config/cache';
 
 export class CountriesController {
   /**
@@ -10,6 +11,15 @@ export class CountriesController {
    */
   static async getAllCountries(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Use cache-aside pattern with 1 day TTL
+      const cacheKey = 'metadata:countries:all';
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
       // Fetch all countries with required fields
       const countries = await getCountries({
         fields: ['name', 'cca2', 'cca3', 'capital', 'region', 'subregion', 'currencies', 'languages', 'flag', 'idd']
@@ -35,10 +45,15 @@ export class CountriesController {
           `${country.idd.root}${country.idd.suffixes[0] || ''}` : '',
       }));
 
-      sendSuccess(res, {
+      const responseData = {
         countries: transformedCountries,
         total: transformedCountries.length,
-      });
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
     } catch (error) {
       next(error);
     }
@@ -52,6 +67,15 @@ export class CountriesController {
     try {
       const { code } = req.params;
       
+      // Check cache first
+      const cacheKey = `metadata:country:${code.toUpperCase()}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
       const country = await getCountryByCode({
         code: code.toUpperCase() as any,
         fields: ['name', 'cca2', 'cca3', 'capital', 'region', 'subregion', 'currencies', 'languages', 'flag', 'idd', 'timezones', 'latlng', 'demonyms']
@@ -80,6 +104,9 @@ export class CountriesController {
         nationality: country.demonyms?.eng?.m || country.demonyms?.eng?.f || '',
       };
 
+      // Cache for 1 day
+      await cache.set(cacheKey, transformedCountry, CacheTTL.DAY);
+
       sendSuccess(res, transformedCountry);
     } catch (error) {
       next(error);
@@ -94,6 +121,15 @@ export class CountriesController {
     try {
       const { q, region } = req.query;
       
+      // Check cache for search results
+      const cacheKey = `metadata:countries:search:${q || 'all'}:${region || 'all'}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
       // Fetch all countries first
       let countries = await getCountries({
         fields: ['name', 'cca2', 'cca3', 'capital', 'region', 'subregion', 'flag', 'idd']
@@ -149,6 +185,15 @@ export class CountriesController {
    */
   static async getRegions(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Check cache
+      const cacheKey = 'metadata:regions:all';
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
       const countries = await getCountries({
         fields: ['region']
       });
@@ -160,10 +205,15 @@ export class CountriesController {
       // Get unique regions
       const regions = [...new Set(countries.map(c => c.region))].filter(Boolean).sort();
 
-      sendSuccess(res, {
+      const responseData = {
         regions,
         total: regions.length,
-      });
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
     } catch (error) {
       next(error);
     }

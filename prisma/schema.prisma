@@ -1874,28 +1874,29 @@ model user_privacy {
 }
 
 model user_profiles {
-  userId          String    @id
-  displayName     String?
-  profilePicture  String?
-  bio             String?
-  shortBio        String?
-  dateOfBirth     DateTime?
-  gender          String?
-  age             Int?
-  profession      String?
-  occupation      String?
-  website         String?
-  personalityType String?
-  interests       String[]  @default([])
-  languages       String[]  @default([])
-  instagramHandle String?
-  linkedinHandle  String?
-  travelStyle     String?
-  bucketList      String[]  @default([])
-  travelBio       String?
-  customFields    Json?
-  updatedAt       DateTime
-  users           users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String    @id
+  displayName      String?
+  profilePicture   String?
+  bio              String?
+  shortBio         String?
+  dateOfBirth      DateTime?
+  gender           String?
+  age              Int?
+  profession       String?
+  occupation       String?
+  website          String?
+  personalityType  String?
+  interests        String[]  @default([])
+  languages        String[]  @default([])
+  instagramHandle  String?
+  linkedinHandle   String?
+  travelStyle      String?
+  bucketList       String[]  @default([])
+  travelBio        String?
+  customFields     Json?
+  locationPrivacy  String    @default("friends") // "public", "friends", "private"
+  updatedAt        DateTime
+  users            users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([displayName])
 }
