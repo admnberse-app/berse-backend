@@ -120,25 +120,25 @@ router.get('/health', (req, res) => {
  *                       example: Bearer Token
  *                     header:
  *                       type: string
- *                       example: Authorization: Bearer <token>
+ *                       example: "Authorization: Bearer <token>"
  *                     refreshToken:
  *                       type: string
- *                       example: Stored in httpOnly cookie or sent in request body
+ *                       example: "Stored in httpOnly cookie or sent in request body"
  *                 rateLimit:
  *                   type: object
  *                   properties:
  *                     general:
  *                       type: string
- *                       example: 100 requests per 15 minutes
+ *                       example: "100 requests per 15 minutes"
  *                     auth:
  *                       type: string
- *                       example: 20 requests per 15 minutes
+ *                       example: "20 requests per 15 minutes"
  *                     login:
  *                       type: string
- *                       example: 5 attempts per 15 minutes
+ *                       example: "5 attempts per 15 minutes"
  *                     register:
  *                       type: string
- *                       example: 3 attempts per hour
+ *                       example: "3 attempts per hour"
  */
 router.get('/docs', (req, res) => {
   res.json({
