@@ -272,4 +272,256 @@ router.get('/regions/:region/countries', CountriesController.getCountriesByRegio
  */
 router.get('/timezones', CountriesController.getTimezones);
 
+/**
+ * @swagger
+ * /v2/metadata/cities:
+ *   get:
+ *     summary: Get cities
+ *     description: Get a list of cities. Can be filtered by country and/or state
+ *     tags: [Metadata]
+ *     parameters:
+ *       - in: query
+ *         name: countryCode
+ *         schema:
+ *           type: string
+ *         description: ISO 3166-1 alpha-2 country code
+ *         example: "US"
+ *       - in: query
+ *         name: stateCode
+ *         schema:
+ *           type: string
+ *         description: State code (requires countryCode)
+ *         example: "CA"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *         description: Maximum number of results (default 100)
+ *         example: "100"
+ *     responses:
+ *       200:
+ *         description: List of cities
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Los Angeles"
+ *                           countryCode:
+ *                             type: string
+ *                             example: "US"
+ *                           stateCode:
+ *                             type: string
+ *                             example: "CA"
+ *                           latitude:
+ *                             type: string
+ *                             example: "34.05223"
+ *                           longitude:
+ *                             type: string
+ *                             example: "-118.24368"
+ *                     total:
+ *                       type: integer
+ */
+router.get('/cities', CountriesController.getAllCities);
+
+/**
+ * @swagger
+ * /v2/metadata/countries/{countryCode}/states:
+ *   get:
+ *     summary: Get states by country
+ *     description: Get all states/provinces for a specific country
+ *     tags: [Metadata]
+ *     parameters:
+ *       - in: path
+ *         name: countryCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ISO 3166-1 alpha-2 country code
+ *         example: "US"
+ *     responses:
+ *       200:
+ *         description: States retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     countryCode:
+ *                       type: string
+ *                       example: "US"
+ *                     states:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           code:
+ *                             type: string
+ *                             example: "CA"
+ *                           name:
+ *                             type: string
+ *                             example: "California"
+ *                           latitude:
+ *                             type: string
+ *                           longitude:
+ *                             type: string
+ *                     total:
+ *                       type: integer
+ *       404:
+ *         description: No states found
+ */
+router.get('/countries/:countryCode/states', CountriesController.getStatesByCountry);
+
+/**
+ * @swagger
+ * /v2/metadata/countries/{countryCode}/cities:
+ *   get:
+ *     summary: Get cities by country
+ *     description: Get all cities for a specific country
+ *     tags: [Metadata]
+ *     parameters:
+ *       - in: path
+ *         name: countryCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ISO 3166-1 alpha-2 country code
+ *         example: "MY"
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search cities by name
+ *         example: "Kuala"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *         description: Maximum number of results (default 1000)
+ *         example: "100"
+ *     responses:
+ *       200:
+ *         description: Cities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     countryCode:
+ *                       type: string
+ *                       example: "MY"
+ *                     cities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Kuala Lumpur"
+ *                           stateCode:
+ *                             type: string
+ *                             example: "14"
+ *                           latitude:
+ *                             type: string
+ *                           longitude:
+ *                             type: string
+ *                     total:
+ *                       type: integer
+ *       404:
+ *         description: No cities found
+ */
+router.get('/countries/:countryCode/cities', CountriesController.getCitiesByCountry);
+
+/**
+ * @swagger
+ * /v2/metadata/countries/{countryCode}/states/{stateCode}/cities:
+ *   get:
+ *     summary: Get cities by state
+ *     description: Get all cities for a specific state/province in a country
+ *     tags: [Metadata]
+ *     parameters:
+ *       - in: path
+ *         name: countryCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ISO 3166-1 alpha-2 country code
+ *         example: "US"
+ *       - in: path
+ *         name: stateCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: State code
+ *         example: "CA"
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search cities by name
+ *         example: "Los"
+ *     responses:
+ *       200:
+ *         description: Cities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     countryCode:
+ *                       type: string
+ *                       example: "US"
+ *                     stateCode:
+ *                       type: string
+ *                       example: "CA"
+ *                     cities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Los Angeles"
+ *                           latitude:
+ *                             type: string
+ *                           longitude:
+ *                             type: string
+ *                     total:
+ *                       type: integer
+ *       404:
+ *         description: No cities found
+ */
+router.get('/countries/:countryCode/states/:stateCode/cities', CountriesController.getCitiesByState);
+
 export default router;

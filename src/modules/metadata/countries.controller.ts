@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getCountries, getCountryByCode } from '@yusifaliyevpro/countries';
+import { City, Country as CSCCountry, State } from 'country-state-city';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
 import { cache, CacheTTL } from '../../config/cache';
@@ -283,6 +284,219 @@ export class CountriesController {
         countries: transformedCountries,
         total: transformedCountries.length,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all cities
+   * @route GET /v2/metadata/cities
+   */
+  static async getAllCities(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { countryCode, stateCode, limit = '100' } = req.query;
+
+      // Check cache
+      const cacheKey = `metadata:cities:${countryCode || 'all'}:${stateCode || 'all'}:${limit}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
+      let cities;
+
+      if (countryCode && stateCode) {
+        // Get cities for specific country and state
+        cities = City.getCitiesOfState(countryCode as string, stateCode as string);
+      } else if (countryCode) {
+        // Get cities for specific country
+        cities = City.getCitiesOfCountry(countryCode as string);
+      } else {
+        // Get all cities (this will be large, so we limit it)
+        cities = City.getAllCities().slice(0, parseInt(limit as string));
+      }
+
+      if (!cities) {
+        throw new AppError('Failed to fetch cities data', 500);
+      }
+
+      const transformedCities = cities.map(city => ({
+        name: city.name,
+        countryCode: city.countryCode,
+        stateCode: city.stateCode,
+        latitude: city.latitude,
+        longitude: city.longitude,
+      }));
+
+      const responseData = {
+        cities: transformedCities,
+        total: transformedCities.length,
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get cities by country
+   * @route GET /v2/metadata/countries/:countryCode/cities
+   */
+  static async getCitiesByCountry(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { countryCode } = req.params;
+      const { limit = '1000', search } = req.query;
+
+      // Check cache
+      const cacheKey = `metadata:cities:country:${countryCode.toUpperCase()}:${search || 'all'}:${limit}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
+      let cities = City.getCitiesOfCountry(countryCode.toUpperCase());
+
+      if (!cities || cities.length === 0) {
+        throw new AppError(`No cities found for country code '${countryCode}'`, 404);
+      }
+
+      // Apply search filter if provided
+      if (search && typeof search === 'string') {
+        const searchLower = search.toLowerCase();
+        cities = cities.filter(city => 
+          city.name.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Limit results
+      const limitNum = parseInt(limit as string);
+      cities = cities.slice(0, limitNum);
+
+      const transformedCities = cities.map(city => ({
+        name: city.name,
+        stateCode: city.stateCode,
+        latitude: city.latitude,
+        longitude: city.longitude,
+      }));
+
+      const responseData = {
+        countryCode: countryCode.toUpperCase(),
+        cities: transformedCities,
+        total: transformedCities.length,
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get cities by state
+   * @route GET /v2/metadata/countries/:countryCode/states/:stateCode/cities
+   */
+  static async getCitiesByState(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { countryCode, stateCode } = req.params;
+      const { search } = req.query;
+
+      // Check cache
+      const cacheKey = `metadata:cities:state:${countryCode.toUpperCase()}:${stateCode.toUpperCase()}:${search || 'all'}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
+      let cities = City.getCitiesOfState(countryCode.toUpperCase(), stateCode.toUpperCase());
+
+      if (!cities || cities.length === 0) {
+        throw new AppError(`No cities found for state '${stateCode}' in country '${countryCode}'`, 404);
+      }
+
+      // Apply search filter if provided
+      if (search && typeof search === 'string') {
+        const searchLower = search.toLowerCase();
+        cities = cities.filter(city => 
+          city.name.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const transformedCities = cities.map(city => ({
+        name: city.name,
+        latitude: city.latitude,
+        longitude: city.longitude,
+      }));
+
+      const responseData = {
+        countryCode: countryCode.toUpperCase(),
+        stateCode: stateCode.toUpperCase(),
+        cities: transformedCities,
+        total: transformedCities.length,
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get states by country
+   * @route GET /v2/metadata/countries/:countryCode/states
+   */
+  static async getStatesByCountry(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { countryCode } = req.params;
+
+      // Check cache
+      const cacheKey = `metadata:states:country:${countryCode.toUpperCase()}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
+      const states = State.getStatesOfCountry(countryCode.toUpperCase());
+
+      if (!states || states.length === 0) {
+        throw new AppError(`No states found for country code '${countryCode}'`, 404);
+      }
+
+      const transformedStates = states.map(state => ({
+        code: state.isoCode,
+        name: state.name,
+        latitude: state.latitude,
+        longitude: state.longitude,
+      }));
+
+      const responseData = {
+        countryCode: countryCode.toUpperCase(),
+        states: transformedStates,
+        total: transformedStates.length,
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
     } catch (error) {
       next(error);
     }

@@ -42,7 +42,7 @@ const swaggerDefinition = {
     },
     {
       name: 'Metadata',
-      description: 'Country, region, timezone, and other metadata endpoints',
+      description: 'Country, state, city, region, timezone, and location metadata endpoints. Provides comprehensive geographical data including countries, states/provinces, cities with coordinates, regions, and timezones for global coverage.',
     },
     {
       name: 'Health',
