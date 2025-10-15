@@ -331,6 +331,108 @@ router.post(
 
 /**
  * @swagger
+ * /v2/auth/send-verification:
+ *   post:
+ *     summary: Send email verification
+ *     description: Send verification email to user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john.doe@example.com
+ *     responses:
+ *       200:
+ *         description: Verification email sent
+ *       400:
+ *         description: Email already verified
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/send-verification',
+  authLimiter,
+  handleValidationErrors,
+  AuthController.sendVerificationEmail
+);
+
+/**
+ * @swagger
+ * /v2/auth/verify-email:
+ *   post:
+ *     summary: Verify email address
+ *     description: Verify user's email address using token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: abc123def456...
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired token
+ */
+router.post(
+  '/verify-email',
+  authLimiter,
+  handleValidationErrors,
+  AuthController.verifyEmail
+);
+
+/**
+ * @swagger
+ * /v2/auth/resend-verification:
+ *   post:
+ *     summary: Resend verification email
+ *     description: Resend verification email to user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john.doe@example.com
+ *     responses:
+ *       200:
+ *         description: Verification email resent
+ *       400:
+ *         description: Email already verified
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/resend-verification',
+  authLimiter,
+  handleValidationErrors,
+  AuthController.resendVerificationEmail
+);
+
+/**
+ * @swagger
  * /v2/auth/forgot-password:
  *   post:
  *     summary: Request password reset

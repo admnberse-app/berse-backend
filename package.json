@@ -38,7 +38,9 @@
     "db:restore": "node scripts/restore-db.js",
     "migrate:make": "knex migrate:make",
     "migrate:latest": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback"
+    "migrate:rollback": "knex migrate:rollback",
+    "test:email": "ts-node scripts/test-email.ts",
+    "setup:email-logo": "bash scripts/setup-email-logo.sh"
   },
   "keywords": [],
   "author": "",

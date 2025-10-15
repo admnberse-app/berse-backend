@@ -303,6 +303,54 @@ export class AuthController {
         );
       }
 
+      // Send verification email if email verification is enabled
+      const emailVerificationEnabled = process.env.ENABLE_EMAIL_VERIFICATION === 'true';
+      if (emailVerificationEnabled) {
+        try {
+          // Generate verification token
+          const verificationToken = crypto.randomBytes(32).toString('hex');
+          const verificationTokenHash = crypto
+            .createHash('sha256')
+            .update(verificationToken)
+            .digest('hex');
+
+          // Store verification token (expires in 24 hours)
+          await prisma.emailVerificationToken.create({
+            data: {
+              id: crypto.randomUUID(),
+              userId: user.id,
+              email: user.email,
+              token: verificationTokenHash,
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            },
+          });
+
+          // Send verification email
+          const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+          
+          await emailQueue.add(
+            user.email,
+            EmailTemplate.VERIFICATION,
+            {
+              userName: user.fullName,
+              verificationUrl,
+              expiresIn: '24 hours',
+            }
+          );
+
+          logger.info('Verification email sent to new user', { 
+            userId: user.id, 
+            email: user.email 
+          });
+        } catch (error) {
+          logger.error('Failed to send verification email after registration', { 
+            userId: user.id,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          // Don't fail registration if email sending fails
+        }
+      }
+
       // Log successful registration
       logger.info('User registered successfully', {
         userId: user.id,
@@ -310,11 +358,16 @@ export class AuthController {
         referredBy: referredBy?.id,
       });
 
+      const responseMessage = emailVerificationEnabled 
+        ? 'User registered successfully. Please check your email to verify your account.' 
+        : 'User registered successfully';
+
       sendSuccess(res, { 
         user, 
         token: tokenPair.accessToken,
-        refreshToken: tokenPair.refreshToken 
-      }, 'User registered successfully', 201);
+        refreshToken: tokenPair.refreshToken,
+        requiresEmailVerification: emailVerificationEnabled
+      }, responseMessage, 201);
     } catch (error) {
       logger.error('Registration failed', { 
         error: error instanceof Error ? error.message : 'Unknown error', 
@@ -336,6 +389,9 @@ export class AuthController {
       
       const user = await prisma.user.findUnique({
         where: { email },
+        include: {
+          security: true,
+        },
       });
 
       if (!user) {
@@ -369,6 +425,26 @@ export class AuthController {
           email 
         });
         throw new AppError('Invalid credentials', 401);
+      }
+
+      // Check if email verification is enabled and required
+      const emailVerificationEnabled = process.env.ENABLE_EMAIL_VERIFICATION === 'true';
+      if (emailVerificationEnabled && !user.security?.emailVerifiedAt) {
+        // Log failed login attempt due to unverified email
+        await ActivityLoggerService.logLoginAttempt({
+          userId: user.id,
+          identifier: email,
+          success: false,
+          failureReason: 'Email not verified',
+          ipAddress: requestMeta.ipAddress,
+          userAgent: requestMeta.userAgent,
+        });
+        
+        logger.warn('Login attempt with unverified email', { 
+          userId: user.id, 
+          email 
+        });
+        throw new AppError('Please verify your email address before logging in. Check your inbox for the verification email.', 403);
       }
 
       // Log successful login attempt
@@ -733,6 +809,28 @@ export class AuthController {
         ...ActivityLoggerService.getRequestMetadata(req),
       });
 
+      // Send password changed confirmation email
+      try {
+        const requestMeta = ActivityLoggerService.getRequestMetadata(req);
+        await emailQueue.add(
+          user.email,
+          EmailTemplate.PASSWORD_CHANGED,
+          {
+            userName: user.fullName,
+            changeDate: new Date(),
+            ipAddress: requestMeta.ipAddress,
+          }
+        );
+        
+        logger.info('Password changed confirmation email sent', { userId });
+      } catch (error) {
+        logger.error('Failed to send password changed email', { 
+          userId,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        // Don't fail the password change if email fails
+      }
+
       // Log password change
       logger.info('User changed password', { userId });
 
@@ -924,6 +1022,245 @@ export class AuthController {
     } catch (error) {
       logger.error('Password reset failed', { 
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Send verification email
+   * @route POST /v2/auth/send-verification
+   */
+  static async sendVerificationEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          security: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check if already verified
+      if (user.security?.emailVerifiedAt) {
+        throw new AppError('Email already verified', 400);
+      }
+
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenHash = crypto
+        .createHash('sha256')
+        .update(verificationToken)
+        .digest('hex');
+
+      // Store verification token (expires in 24 hours)
+      await prisma.emailVerificationToken.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: user.id,
+          email: user.email,
+          token: verificationTokenHash,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Send verification email
+      const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+      
+      await emailQueue.add(
+        user.email,
+        EmailTemplate.VERIFICATION,
+        {
+          userName: user.fullName,
+          verificationUrl,
+          expiresIn: '24 hours',
+        }
+      );
+
+      logger.info('Verification email sent', { 
+        userId: user.id, 
+        email: user.email 
+      });
+
+      sendSuccess(res, null, 'Verification email sent. Please check your inbox.');
+    } catch (error) {
+      logger.error('Failed to send verification email', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        email: req.body.email
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Verify email with token
+   * @route POST /v2/auth/verify-email
+   */
+  static async verifyEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        throw new AppError('Verification token is required', 400);
+      }
+
+      // Hash the token to match stored hash
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
+
+      // Find valid verification token
+      const verificationToken = await prisma.emailVerificationToken.findFirst({
+        where: {
+          token: tokenHash,
+          expiresAt: {
+            gt: new Date(),
+          },
+          verifiedAt: null,
+        },
+        include: {
+          users: true,
+        },
+      });
+
+      if (!verificationToken) {
+        throw new AppError('Invalid or expired verification token', 400);
+      }
+
+      const user = verificationToken.users;
+
+      // Update user security record to mark email as verified
+      await prisma.$transaction([
+        prisma.userSecurity.upsert({
+          where: { userId: user.id },
+          update: {
+            emailVerifiedAt: new Date(),
+          },
+          create: {
+            userId: user.id,
+            emailVerifiedAt: new Date(),
+            updatedAt: new Date(),
+          } as any,
+        }),
+        prisma.emailVerificationToken.update({
+          where: { id: verificationToken.id },
+          data: {
+            verifiedAt: new Date(),
+          },
+        }),
+      ]);
+
+      // Send welcome email
+      await emailQueue.add(
+        user.email,
+        EmailTemplate.WELCOME,
+        {
+          userName: user.fullName,
+          exploreUrl: `${process.env.APP_URL}/explore`,
+        }
+      );
+
+      // Log verification activity
+      await ActivityLoggerService.logActivity({
+        userId: user.id,
+        activityType: ActivityType.AUTH_EMAIL_VERIFY_COMPLETE,
+        entityType: 'user',
+        entityId: user.id,
+      });
+
+      logger.info('Email verified successfully', { 
+        userId: user.id, 
+        email: user.email 
+      });
+
+      sendSuccess(res, null, 'Email verified successfully! You can now log in.');
+    } catch (error) {
+      logger.error('Email verification failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Resend verification email
+   * @route POST /v2/auth/resend-verification
+   */
+  static async resendVerificationEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          security: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check if already verified
+      if (user.security?.emailVerifiedAt) {
+        throw new AppError('Email already verified', 400);
+      }
+
+      // Delete any existing unused tokens
+      await prisma.emailVerificationToken.deleteMany({
+        where: {
+          userId: user.id,
+          verifiedAt: null,
+        },
+      });
+
+      // Generate new verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenHash = crypto
+        .createHash('sha256')
+        .update(verificationToken)
+        .digest('hex');
+
+      // Store verification token (expires in 24 hours)
+      await prisma.emailVerificationToken.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId: user.id,
+          email: user.email,
+          token: verificationTokenHash,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Send verification email
+      const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+      
+      await emailQueue.add(
+        user.email,
+        EmailTemplate.VERIFICATION,
+        {
+          userName: user.fullName,
+          verificationUrl,
+          expiresIn: '24 hours',
+        }
+      );
+
+      logger.info('Verification email resent', { 
+        userId: user.id, 
+        email: user.email 
+      });
+
+      sendSuccess(res, null, 'Verification email resent. Please check your inbox.');
+    } catch (error) {
+      logger.error('Failed to resend verification email', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        email: req.body.email
       });
       next(error);
     }

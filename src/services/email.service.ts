@@ -7,6 +7,7 @@ import {
   VerificationEmailData,
   WelcomeEmailData,
   PasswordResetEmailData,
+  PasswordChangedEmailData,
   EventEmailData,
   CampaignEmailData
 } from '../types/email.types';
@@ -119,6 +120,20 @@ export class EmailService {
     return this.sendEmail({
       to,
       subject: 'Reset Your Password - Berse',
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  /**
+   * Send password changed confirmation email
+   */
+  async sendPasswordChangedEmail(to: string, data: PasswordChangedEmailData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.PASSWORD_CHANGED, data);
+    
+    return this.sendEmail({
+      to,
+      subject: 'Password Changed - Berse',
       html: template.html,
       text: template.text,
     });
