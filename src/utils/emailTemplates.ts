@@ -271,7 +271,7 @@ const baseTemplate = (content: string, preheader?: string): string => `
  */
 const verificationTemplate = (data: VerificationEmailData): TemplateRenderResult => {
   const html = baseTemplate(`
-    <h2>🎉 Welcome! Verify Your Email</h2>
+    <h2>Verify Your Email</h2>
     <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
     <p>Thank you for joining ${APP_NAME}! We're excited to have you on board. To get started and unlock all features, please verify your email address.</p>
     
@@ -283,7 +283,7 @@ const verificationTemplate = (data: VerificationEmailData): TemplateRenderResult
     ` : ''}
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${data.verificationUrl}" class="button">✓ Verify Email Address</a>
+      <a href="${data.verificationUrl}" class="button">Verify Email Address</a>
     </div>
     
     <div style="background-color: #f8f9fa; border-radius: 8px; padding: 16px; margin: 20px 0;">
@@ -296,7 +296,7 @@ const verificationTemplate = (data: VerificationEmailData): TemplateRenderResult
     
     ${data.expiresIn ? `
       <div class="info-box">
-        <p style="margin: 0;"><strong>⏰ Important:</strong> This verification link will expire in <strong>${data.expiresIn}</strong> for security reasons.</p>
+        <p style="margin: 0;"><strong>Important:</strong> This verification link will expire in <strong>${data.expiresIn}</strong> for security reasons.</p>
       </div>
     ` : ''}
     
@@ -336,34 +336,34 @@ ${APP_URL}
  */
 const welcomeTemplate = (data: WelcomeEmailData): TemplateRenderResult => {
   const html = baseTemplate(`
-    <h2>🎊 Welcome to ${APP_NAME}!</h2>
+    <h2>Welcome to ${APP_NAME}!</h2>
     <p>Hi <strong>${data.userName}</strong>,</p>
-    <p>We're absolutely thrilled to have you join our community! You're now part of something special – a platform designed to bring people together through meaningful connections and exciting experiences.</p>
+    <p>We're thrilled to have you join our community! You're now part of something special – a platform designed to bring people together through meaningful connections and exciting experiences.</p>
     
     <div style="background: linear-gradient(135deg, #f0fdf4 0%, #e6f9ef 100%); border-radius: 12px; padding: 24px; margin: 24px 0; border: 2px solid ${PRIMARY_LIGHT};">
-      <h3 style="margin: 0 0 16px 0; color: ${PRIMARY_DARK}; font-size: 18px;">🚀 Here's what you can do:</h3>
+      <h3 style="margin: 0 0 16px 0; color: ${PRIMARY_DARK}; font-size: 18px;">Here's what you can do:</h3>
       <ul style="margin: 0; padding-left: 20px; line-height: 2;">
-        <li><strong>🤝 Connect</strong> with like-minded people</li>
-        <li><strong>📅 Join</strong> exciting events and activities</li>
-        <li><strong>⚡ Earn</strong> points and unlock rewards</li>
-        <li><strong>🎯 Discover</strong> new experiences</li>
-        <li><strong>💬 Build</strong> lasting friendships</li>
+        <li><strong>Connect</strong> with like-minded people</li>
+        <li><strong>Join</strong> exciting events and activities</li>
+        <li><strong>Earn</strong> points and unlock rewards</li>
+        <li><strong>Discover</strong> new experiences</li>
+        <li><strong>Build</strong> lasting friendships</li>
       </ul>
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${data.exploreUrl || APP_URL}" class="button">🌟 Start Exploring Now</a>
+      <a href="${data.exploreUrl || APP_URL}" class="button">Start Exploring</a>
     </div>
     
     <div class="info-box">
-      <p style="margin: 0;"><strong>💡 Pro Tip:</strong> Complete your profile to increase your chances of making great connections and getting more event recommendations!</p>
+      <p style="margin: 0;"><strong>Pro Tip:</strong> Complete your profile to increase your chances of making great connections and getting more event recommendations!</p>
     </div>
     
     <hr class="divider" />
     
     <p style="font-size: 14px;">Need help getting started? Our support team is always here for you at <a href="mailto:${SUPPORT_EMAIL}" class="link">${SUPPORT_EMAIL}</a>.</p>
     
-    <p style="margin-top: 24px; font-size: 15px;"><strong>Cheers,</strong><br>The ${APP_NAME} Team 🎉</p>
+    <p style="margin-top: 24px; font-size: 15px;"><strong>Best regards,</strong><br>The ${APP_NAME} Team</p>
   `, `Welcome to ${APP_NAME}!`);
 
   const text = `
@@ -398,7 +398,7 @@ The ${APP_NAME} Team
  */
 const passwordResetTemplate = (data: PasswordResetEmailData): TemplateRenderResult => {
   const html = baseTemplate(`
-    <h2>🔑 Reset Your Password</h2>
+    <h2>Reset Your Password</h2>
     <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
     <p>We received a request to reset your password for your ${APP_NAME} account. Don't worry – it happens to the best of us!</p>
     
@@ -410,7 +410,7 @@ const passwordResetTemplate = (data: PasswordResetEmailData): TemplateRenderResu
     ` : ''}
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${data.resetUrl}" class="button">🔒 Reset Password</a>
+      <a href="${data.resetUrl}" class="button">Reset Password</a>
     </div>
     
     <div style="background-color: #f8f9fa; border-radius: 8px; padding: 16px; margin: 20px 0;">
@@ -423,12 +423,12 @@ const passwordResetTemplate = (data: PasswordResetEmailData): TemplateRenderResu
     
     ${data.expiresIn ? `
       <div class="info-box">
-        <p style="margin: 0;"><strong>⏰ Important:</strong> This reset link will expire in <strong>${data.expiresIn}</strong> for security reasons.</p>
+        <p style="margin: 0;"><strong>Important:</strong> This reset link will expire in <strong>${data.expiresIn}</strong> for security reasons.</p>
       </div>
     ` : ''}
     
     <div class="alert-box">
-      <p style="margin: 0;"><strong>⚠️ Security Alert:</strong> If you didn't request a password reset, please ignore this email. Your account is still secure. If you're concerned, please contact our support team.</p>
+      <p style="margin: 0;"><strong>Security Alert:</strong> If you didn't request a password reset, please ignore this email. Your account is still secure. If you're concerned, please contact our support team.</p>
     </div>
   `, 'Reset your password');
 
@@ -460,13 +460,13 @@ ${APP_URL}
  */
 const passwordChangedTemplate = (data: PasswordChangedEmailData): TemplateRenderResult => {
   const html = baseTemplate(`
-    <h2>✅ Password Changed Successfully</h2>
+    <h2>Password Changed Successfully</h2>
     <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
     <p>This is a confirmation that your password was successfully changed on your ${APP_NAME} account.</p>
     
     <div style="background: linear-gradient(to right, #f0fdf4 0%, #e6f9ef 100%); border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid ${PRIMARY_LIGHT};">
-      <h3 style="margin: 0 0 12px 0; color: ${PRIMARY_DARK}; font-size: 16px;">📋 Change Details:</h3>
-      <p style="margin: 8px 0;"><strong>🕐 Changed at:</strong> ${new Date(data.changeDate).toLocaleString('en-US', { 
+      <h3 style="margin: 0 0 12px 0; color: ${PRIMARY_DARK}; font-size: 16px;">Change Details:</h3>
+      <p style="margin: 8px 0;"><strong>Changed at:</strong> ${new Date(data.changeDate).toLocaleString('en-US', { 
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
@@ -474,21 +474,21 @@ const passwordChangedTemplate = (data: PasswordChangedEmailData): TemplateRender
         hour: '2-digit',
         minute: '2-digit'
       })}</p>
-      ${data.ipAddress ? `<p style="margin: 8px 0;"><strong>🌐 IP Address:</strong> ${data.ipAddress}</p>` : ''}
-      ${data.location ? `<p style="margin: 8px 0;"><strong>📍 Location:</strong> ${data.location}</p>` : ''}
+      ${data.ipAddress ? `<p style="margin: 8px 0;"><strong>IP Address:</strong> ${data.ipAddress}</p>` : ''}
+      ${data.location ? `<p style="margin: 8px 0;"><strong>Location:</strong> ${data.location}</p>` : ''}
     </div>
     
     <div class="alert-box">
-      <p style="margin: 0;"><strong>⚠️ Security Alert:</strong> If you didn't make this change, your account may be compromised. Please contact our support team immediately at <a href="mailto:${SUPPORT_EMAIL}" style="color: #f57c00; font-weight: 600;">${SUPPORT_EMAIL}</a></p>
+      <p style="margin: 0;"><strong>Security Alert:</strong> If you didn't make this change, your account may be compromised. Please contact our support team immediately at <a href="mailto:${SUPPORT_EMAIL}" style="color: #f57c00; font-weight: 600;">${SUPPORT_EMAIL}</a></p>
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${APP_URL}/settings/security" class="button">🔒 Review Security Settings</a>
+      <a href="${APP_URL}/settings/security" class="button">Review Security Settings</a>
     </div>
     
     <hr class="divider" />
     
-    <p style="margin-top: 24px; font-size: 14px;"><strong>Stay safe,</strong><br>The ${APP_NAME} Team 🛡️</p>
+    <p style="margin-top: 24px; font-size: 14px;"><strong>Stay safe,</strong><br>The ${APP_NAME} Team</p>
   `, 'Your password was changed');
 
   const text = `
@@ -522,7 +522,7 @@ ${APP_URL}
  */
 const eventInvitationTemplate = (data: EventEmailData): TemplateRenderResult => {
   const html = baseTemplate(`
-    <h2>🎉 You're Invited to an Event!</h2>
+    <h2>You're Invited to an Event!</h2>
     <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
     <p>Great news! You've been invited to join an exciting event. We'd love to see you there!</p>
     
@@ -530,27 +530,27 @@ const eventInvitationTemplate = (data: EventEmailData): TemplateRenderResult => 
       <h3 style="margin: 0 0 16px 0; color: ${PRIMARY_DARK}; font-size: 22px;">${data.eventTitle}</h3>
       ${data.eventDescription ? `<p style="margin: 0 0 16px 0; color: #4a4a4a; font-style: italic;">${data.eventDescription}</p>` : ''}
       <div style="background-color: white; border-radius: 8px; padding: 16px; margin-top: 16px;">
-        <p style="margin: 8px 0;"><strong>📅 Date:</strong> ${new Date(data.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        ${data.eventTime ? `<p style="margin: 8px 0;"><strong>🕐 Time:</strong> ${data.eventTime}</p>` : ''}
-        <p style="margin: 8px 0;"><strong>📍 Location:</strong> ${data.eventLocation}</p>
-        ${data.hostName ? `<p style="margin: 8px 0;"><strong>👤 Host:</strong> ${data.hostName}</p>` : ''}
-        ${data.maxAttendees ? `<p style="margin: 8px 0;"><strong>👥 Max Attendees:</strong> ${data.maxAttendees}</p>` : ''}
+        <p style="margin: 8px 0;"><strong>Date:</strong> ${new Date(data.eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        ${data.eventTime ? `<p style="margin: 8px 0;"><strong>Time:</strong> ${data.eventTime}</p>` : ''}
+        <p style="margin: 8px 0;"><strong>Location:</strong> ${data.eventLocation}</p>
+        ${data.hostName ? `<p style="margin: 8px 0;"><strong>Host:</strong> ${data.hostName}</p>` : ''}
+        ${data.maxAttendees ? `<p style="margin: 8px 0;"><strong>Max Attendees:</strong> ${data.maxAttendees}</p>` : ''}
       </div>
     </div>
     
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${data.rsvpUrl || data.eventUrl || '#'}" class="button">✓ RSVP Now</a>
+      <a href="${data.rsvpUrl || data.eventUrl || '#'}" class="button">RSVP Now</a>
     </div>
     
     ${data.mapLink ? `
       <div style="text-align: center; margin: 20px 0;">
-        <a href="${data.mapLink}" class="link" style="font-size: 15px;">📍 View Location on Map →</a>
+        <a href="${data.mapLink}" class="link" style="font-size: 15px;">View Location on Map →</a>
       </div>
     ` : ''}
     
     <hr class="divider" />
     
-    <p style="margin-top: 24px; font-size: 15px;">We look forward to seeing you there! 🎊</p>
+    <p style="margin-top: 24px; font-size: 15px;">We look forward to seeing you there!</p>
   `, `You're invited: ${data.eventTitle}`);
 
   const text = `
@@ -784,7 +784,7 @@ ${APP_NAME}
  */
 const notificationTemplate = (data: NotificationEmailData): TemplateRenderResult => {
   const html = baseTemplate(`
-    <h2>📬 ${data.subject}</h2>
+    <h2>${data.subject}</h2>
     <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
     
     <div style="background-color: #f8f9fa; border-radius: 12px; padding: 24px; margin: 24px 0; line-height: 1.8;">

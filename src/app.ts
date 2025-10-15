@@ -142,6 +142,34 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   maxAge: '30d',
   etag: true,
   lastModified: true,
+  dotfiles: 'ignore', // Ignore dotfiles for security
+  index: false, // Disable directory indexing
+}));
+
+// Serve public assets (logos, images, etc.) - Read-only static content
+app.use('/assets', express.static(path.join(__dirname, '../public/assets'), {
+  maxAge: '30d', // Cache for 30 days in production
+  etag: true,
+  lastModified: true,
+  dotfiles: 'ignore', // Never serve hidden files
+  index: false, // Disable directory listing
+  redirect: false, // Don't redirect to trailing slash
+  setHeaders: (res, filePath) => {
+    // Only serve specific file types for security
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.css', '.woff', '.woff2', '.ttf'];
+    const ext = path.extname(filePath).toLowerCase();
+    
+    if (!allowedExtensions.includes(ext)) {
+      res.status(403).end(); // Forbidden for non-allowed file types
+      return;
+    }
+    
+    // Set proper MIME types and security headers
+    if (ext === '.svg') {
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    }
+  }
 }));
 
 // ============================================================================
