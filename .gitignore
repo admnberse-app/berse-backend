@@ -109,7 +109,10 @@ temp/
 *.tar.gz
 *.rar
 
-# Docker volumes
+# Docker (not used - Railway deployment)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
 docker-volumes/
 
 # Misc
