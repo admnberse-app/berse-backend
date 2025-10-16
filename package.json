@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/server.ts",
+    "dev": "dotenv -e .env.development.local -- nodemon --exec ts-node src/server.ts",
+    "dev:local": "nodemon --exec ts-node src/server.ts",
     "build": "rimraf dist && tsc && npm run copy-files",
     "build:backend": "rimraf dist && tsc && npm run copy-files",
     "build:check": "tsc --noEmit",
@@ -105,6 +106,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/web-push": "^3.6.4",
     "copyfiles": "^2.4.1",
+    "dotenv-cli": "^10.0.0",
     "jest": "^30.0.5",
     "nodemon": "^3.1.10",
     "rimraf": "^6.0.1",

@@ -10,6 +10,7 @@ bower_components/
 .env.test.local
 .env.production.local
 .env.production
+.env.railway
 
 # Build output
 dist/

@@ -22,6 +22,24 @@ export const prisma = global.prisma || new PrismaClient({
   errorFormat: 'minimal',
 });
 
+// Check if connecting to Railway staging database and show warning
+if (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('railway') || process.env.DATABASE_URL.includes('rlwy'))) {
+  let host = 'unknown';
+  try {
+    // Extract host from DATABASE_URL without exposing password
+    const url = new URL(process.env.DATABASE_URL);
+    host = `${url.hostname}${url.port ? ':' + url.port : ''}`;
+  } catch (e) {
+    // If URL parsing fails, try to extract host manually
+    const match = process.env.DATABASE_URL.match(/@([^/]+)/);
+    if (match) host = match[1];
+  }
+  
+  console.warn('\n⚠️  WARNING: Connecting to RAILWAY STAGING DATABASE');
+  console.warn(`⚠️  Host: ${host}`);
+  console.warn('⚠️  This affects production/staging data. Use \'npm run dev:local\' for local database.\n');
+}
+
 // Ensure connection is established on startup
 prisma.$connect()
   .then(() => console.log('✅ Database connection pool established'))
