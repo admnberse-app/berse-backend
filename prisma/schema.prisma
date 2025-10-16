@@ -171,7 +171,7 @@ model AuthIdentity {
   providerUid String
   email       String?
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUid])
   @@index([userId])
@@ -201,7 +201,7 @@ model CardGameFeedback {
   comment           String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
   cardGameReplies CardGameReply[]
   cardGameUpvotes CardGameUpvote[]
 
@@ -220,7 +220,7 @@ model CardGameReply {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime
   cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([feedbackId])
   @@index([userId])
@@ -248,7 +248,7 @@ model CardGameUpvote {
   feedbackId          String
   createdAt           DateTime            @default(now())
   cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, feedbackId])
   @@index([feedbackId])
@@ -267,7 +267,7 @@ model Community {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
   createdById       String
-  users             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
   communityMembers CommunityMember[]
   events            Event[]
 
@@ -286,7 +286,7 @@ model CommunityMember {
   userId      String
   communityId String
   communities Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, communityId])
   @@index([communityId])
@@ -365,7 +365,7 @@ model DeviceRegistration {
   isTrusted         Boolean  @default(false)
   lastSeenAt        DateTime @default(now())
   createdAt         DateTime @default(now())
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceFingerprint])
   @@index([userId])
@@ -381,7 +381,7 @@ model EmailVerificationToken {
   expiresAt  DateTime
   verifiedAt DateTime?
   createdAt  DateTime  @default(now())
-  users      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
@@ -395,7 +395,7 @@ model EventAttendance {
   userId      String
   eventId     String
   events      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
   @@index([checkedInAt])
@@ -412,7 +412,7 @@ model EventRsvp {
   userId    String
   eventId   String
   events    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
   @@index([createdAt])
@@ -471,7 +471,7 @@ model EventTicket {
   events               Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
   tier   EventTicketTier? @relation(fields: [ticketTierId], references: [id])
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, ticketNumber])
   @@index([eventId])
@@ -515,7 +515,7 @@ model Event {
   tier EventTicketTier[]
   eventTickets      EventTicket[]
   communities        Community? @relation(fields: [communityId], references: [id])
-  users              User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  user              User @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   @@index([communityId, date])
   @@index([communityId])
@@ -660,7 +660,7 @@ model FeatureUsage {
   periodStart    DateTime
   periodEnd      DateTime
   metadata       Json?
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([periodStart, periodEnd])
   @@index([subscriptionId, featureCode])
@@ -860,7 +860,7 @@ model MarketplaceCartItem {
   quantity             Int
   addedAt              DateTime             @default(now())
   marketplaceListings MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, listingId])
   @@index([userId])
@@ -877,7 +877,7 @@ model MarketplaceDispute {
   resolution         Json?
   createdAt          DateTime           @default(now())
   resolvedAt         DateTime?
-  users              User @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
+  user              User @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
   marketplace_orders MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
@@ -902,7 +902,7 @@ model MarketplaceListing {
   updatedAt              DateTime
   priceHistory  ListingPriceHistory[]
   marketplaceCartItems MarketplaceCartItem[]
-  users                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
   marketplace_orders     MarketplaceOrder[]
 
   @@index([category])
@@ -1057,7 +1057,7 @@ model Notification {
   relatedEntityId   String?
   relatedEntityType String?
   scheduledFor      DateTime?
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([priority])
@@ -1128,7 +1128,7 @@ model PasswordResetToken {
   usedAt    DateTime?
   ipAddress String
   createdAt DateTime  @default(now())
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
@@ -1207,7 +1207,7 @@ model PaymentTransaction {
   eventTickets          EventTicket[]
   marketplace_orders     MarketplaceOrder[]
   provider      PaymentProvider @relation(fields: [providerId], references: [id])
-  users                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
   payoutDistributions   PayoutDistribution[]
   bookings       ServiceBooking[]
   subscriptionPayments  SubscriptionPayment[]
@@ -1238,7 +1238,7 @@ model PayoutDistribution {
   createdAt            DateTime             @default(now())
   releasedAt           DateTime?
   paymentTransactions PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  user                User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([paymentTransactionId])
   @@index([recipientId, status])
@@ -1282,7 +1282,7 @@ model PointHistory {
   description String?
   createdAt   DateTime @default(now())
   userId      String
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([action])
   @@index([createdAt])
@@ -1320,7 +1320,7 @@ model ProfileCompletionStatus {
   firstCompleteAt     DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([completionLevel])
   @@index([completionScore])
@@ -1337,7 +1337,7 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 
@@ -1353,7 +1353,7 @@ model Redemption {
   userId      String
   rewardId    String
   rewards     Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([rewardId])
   @@index([status])
@@ -1414,7 +1414,7 @@ model ReferralReward {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime
   referrals         Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([awardedAt])
   @@index([isMilestoneReward])
@@ -1507,7 +1507,7 @@ model RefreshToken {
   isRevoked   Boolean  @default(false)
   expiresAt   DateTime
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([tokenHash])
@@ -1546,7 +1546,7 @@ model SecurityEvent {
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventType])
   @@index([severity])
@@ -1643,7 +1643,7 @@ model SubscriptionPayment {
   createdAt            DateTime              @default(now())
   paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
   subscriptions   UserSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([dueDate])
   @@index([paymentTransactionId])
@@ -1845,7 +1845,7 @@ model TravelTrip {
   travelCompanions TravelCompanion[]
   travel_highlights TravelHighlight[]
   travel_locations  TravelLocation[]
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countries])
   @@index([startDate])
@@ -1955,7 +1955,7 @@ model UserLocation {
   lastLocationUpdate DateTime?
   latitude           Float?
   longitude          Float?
-  users              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countryOfResidence])
   @@index([currentCity])
@@ -1981,7 +1981,7 @@ model UserMetadata {
   notes          String?
   internalNotes  String?
   updatedAt      DateTime
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([affiliateId])
   @@index([referralSource])
@@ -2091,7 +2091,7 @@ model UserSecurity {
   suspendedUntil       DateTime?
   suspensionReason     String?
   updatedAt            DateTime
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([emailVerifiedAt])
   @@index([lastLoginAt])
@@ -2131,7 +2131,7 @@ model UserSession {
   lastActivityAt DateTime @default(now())
   expiresAt      DateTime
   createdAt      DateTime @default(now())
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([sessionToken])
@@ -2151,7 +2151,7 @@ model UserStat {
   communitiesJoined Int      @default(0)
   totalPoints       Int      @default(0)
   lastCalculatedAt  DateTime @default(now())
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventsAttended])
   @@index([totalPoints])

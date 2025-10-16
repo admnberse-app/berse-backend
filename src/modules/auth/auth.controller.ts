@@ -954,11 +954,11 @@ export class AuthController {
           usedAt: null, // Token not used
         },
         include: {
-          users: true,
+          user: true,
         },
       });
 
-      const user = resetTokenRecord?.users;      if (!user) {
+      const user = resetTokenRecord?.user;      if (!user) {
         throw new AppError('Invalid or expired reset token', 400);
       }
 
@@ -1125,7 +1125,7 @@ export class AuthController {
           verifiedAt: null,
         },
         include: {
-          users: true,
+          user: true,
         },
       });
 
@@ -1133,7 +1133,7 @@ export class AuthController {
         throw new AppError('Invalid or expired verification token', 400);
       }
 
-      const user = verificationToken.users;
+      const user = verificationToken.user;
 
       // Update user security record to mark email as verified
       await prisma.$transaction([
