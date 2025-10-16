@@ -8,8 +8,23 @@ const router = Router();
  * /v2/metadata/countries:
  *   get:
  *     summary: Get all countries
- *     description: Retrieve a list of all countries with their details
+ *     description: Retrieve a list of all countries with their details (paginated)
  *     tags: [Metadata]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (1-based)
+ *         example: "1"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *           default: "250"
+ *         description: Number of countries per page (max 250)
+ *         example: "50"
  *     responses:
  *       200:
  *         description: List of countries retrieved successfully
@@ -56,9 +71,27 @@ const router = Router();
  *                           dialCode:
  *                             type: string
  *                             example: "+60"
- *                     total:
- *                       type: integer
- *                       example: 250
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 5
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 250
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 50
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPreviousPage:
+ *                           type: boolean
+ *                           example: false
  */
 router.get('/countries', CountriesController.getAllCountries);
 
@@ -277,7 +310,7 @@ router.get('/timezones', CountriesController.getTimezones);
  * /v2/metadata/cities:
  *   get:
  *     summary: Get cities
- *     description: Get a list of cities. Can be filtered by country and/or state
+ *     description: Get a paginated list of cities. Can be filtered by country and/or state
  *     tags: [Metadata]
  *     parameters:
  *       - in: query
@@ -293,14 +326,22 @@ router.get('/timezones', CountriesController.getTimezones);
  *         description: State code (requires countryCode)
  *         example: "CA"
  *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (1-based)
+ *         example: "1"
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: string
- *         description: Maximum number of results (default 100)
+ *           default: "100"
+ *         description: Number of cities per page (max 500)
  *         example: "100"
  *     responses:
  *       200:
- *         description: List of cities
+ *         description: Paginated list of cities
  *         content:
  *           application/json:
  *             schema:
@@ -332,8 +373,27 @@ router.get('/timezones', CountriesController.getTimezones);
  *                           longitude:
  *                             type: string
  *                             example: "-118.24368"
- *                     total:
- *                       type: integer
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 10
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 1000
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 100
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPreviousPage:
+ *                           type: boolean
+ *                           example: false
  */
 router.get('/cities', CountriesController.getAllCities);
 
@@ -396,7 +456,7 @@ router.get('/countries/:countryCode/states', CountriesController.getStatesByCoun
  * /v2/metadata/countries/{countryCode}/cities:
  *   get:
  *     summary: Get cities by country
- *     description: Get all cities for a specific country
+ *     description: Get paginated cities for a specific country with optional search
  *     tags: [Metadata]
  *     parameters:
  *       - in: path
@@ -413,10 +473,18 @@ router.get('/countries/:countryCode/states', CountriesController.getStatesByCoun
  *         description: Search cities by name
  *         example: "Kuala"
  *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (1-based)
+ *         example: "1"
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: string
- *         description: Maximum number of results (default 1000)
+ *           default: "100"
+ *         description: Number of cities per page (max 500)
  *         example: "100"
  *     responses:
  *       200:
@@ -450,8 +518,27 @@ router.get('/countries/:countryCode/states', CountriesController.getStatesByCoun
  *                             type: string
  *                           longitude:
  *                             type: string
- *                     total:
- *                       type: integer
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 5
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 450
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 100
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPreviousPage:
+ *                           type: boolean
+ *                           example: false
  *       404:
  *         description: No cities found
  */
@@ -462,7 +549,7 @@ router.get('/countries/:countryCode/cities', CountriesController.getCitiesByCoun
  * /v2/metadata/countries/{countryCode}/states/{stateCode}/cities:
  *   get:
  *     summary: Get cities by state
- *     description: Get all cities for a specific state/province in a country
+ *     description: Get paginated cities for a specific state/province in a country with optional search
  *     tags: [Metadata]
  *     parameters:
  *       - in: path
@@ -485,6 +572,20 @@ router.get('/countries/:countryCode/cities', CountriesController.getCitiesByCoun
  *           type: string
  *         description: Search cities by name
  *         example: "Los"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (1-based)
+ *         example: "1"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *           default: "100"
+ *         description: Number of cities per page (max 500)
+ *         example: "100"
  *     responses:
  *       200:
  *         description: Cities retrieved successfully
@@ -517,8 +618,27 @@ router.get('/countries/:countryCode/cities', CountriesController.getCitiesByCoun
  *                             type: string
  *                           longitude:
  *                             type: string
- *                     total:
- *                       type: integer
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 3
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 250
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 100
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPreviousPage:
+ *                           type: boolean
+ *                           example: false
  *       404:
  *         description: No cities found
  */

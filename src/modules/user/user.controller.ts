@@ -8,6 +8,7 @@ import logger from '../../utils/logger';
 import { createId } from '@paralleldrive/cuid2';
 import crypto from 'crypto';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
+import { RecommendationsService } from '../../services/recommendations.service';
 
 export class UserController {
   /**
@@ -117,7 +118,7 @@ export class UserController {
       }
 
       // Transform response to have cleaner count names
-      const transformedUser = this.transformUserResponse(user);
+      const transformedUser = UserController.transformUserResponse(user);
 
       sendSuccess(res, transformedUser);
     } catch (error) {
@@ -462,7 +463,77 @@ export class UserController {
   }
 
   /**
-   * Find nearby users (geospatial search)
+   * Get trending interests in the community
+   * @route GET /v2/users/trending-interests
+   */
+  static async getTrendingInterests(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { limit = 10 } = req.query;
+
+      const trendingInterests = await RecommendationsService.getTrendingInterests(Number(limit));
+
+      sendSuccess(res, {
+        interests: trendingInterests,
+        total: trendingInterests.length,
+      });
+
+      logger.info('Trending interests retrieved', { count: trendingInterests.length });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get personalized user recommendations
+   * @route GET /v2/users/recommendations
+   */
+  static async getUserRecommendations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const currentUserId = req.user?.id!;
+      const { limit = 10 } = req.query;
+
+      const recommendations = await RecommendationsService.getRecommendations(
+        currentUserId,
+        Number(limit)
+      );
+
+      // Transform recommendations for response
+      const transformedRecommendations = recommendations.map(rec => ({
+        id: rec.userId,
+        fullName: rec.user.fullName,
+        username: rec.user.username,
+        score: rec.score,
+        reasons: rec.reasons,
+        profile: {
+          profilePicture: rec.user.profile?.profilePicture,
+          bio: rec.user.profile?.bio,
+          shortBio: rec.user.profile?.shortBio,
+          interests: rec.user.profile?.interests || [],
+          profession: rec.user.profile?.profession,
+        },
+        location: {
+          currentCity: rec.user.location?.currentCity,
+          originallyFrom: rec.user.location?.originallyFrom,
+        },
+        connectionStats: rec.user.connectionStats,
+      }));
+
+      sendSuccess(res, {
+        recommendations: transformedRecommendations,
+        total: transformedRecommendations.length,
+      });
+
+      logger.info('User recommendations retrieved', { 
+        userId: currentUserId, 
+        count: transformedRecommendations.length 
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Find nearby users within a specified radius
    * @route GET /v2/users/nearby
    */
   static async findNearbyUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -691,7 +762,7 @@ export class UserController {
       }
 
       // Transform response to have cleaner count names
-      const transformedUser = this.transformUserResponse(user);
+      const transformedUser = UserController.transformUserResponse(user);
 
       sendSuccess(res, transformedUser);
     } catch (error) {

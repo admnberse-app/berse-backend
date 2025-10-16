@@ -5,13 +5,48 @@ The User API provides endpoints for managing user profiles, searching users, and
 
 **Base URL:**
 - **Production:** `https://api.berse-app.com/v2/users`
-- **Development:** `http://localhost:3000/v2/users`
+- **Development:** `http://localhost:3001/v2/users`
 
 **Authentication:** All endpoints require a valid JWT access token.
 
-**Version:** v2.0.1 (Updated: October 15, 2025)
+**Version:** v2.0.3 (Updated: October 16, 2025)
 
 > **Note:** v2 endpoints do not include the `/api/` prefix. Legacy v1 endpoints are still available at `/api/v1/users` for backward compatibility.
+
+## 🚀 Quick Start
+
+**1. Get User Profile:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3001/v2/users/profile
+```
+
+**2. Find Users:**
+```bash
+# Get all users (discovery)
+curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3001/v2/users/all?limit=10"
+
+# Search by interest
+curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3001/v2/users/search?interest=travel"
+
+# Search by city  
+curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3001/v2/users/search?city=kuala%20lumpur"
+```
+
+**3. Send Connection Request:**
+```bash
+curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hi! Lets connect!", "relationshipType": "Travel Buddy"}' \
+  "http://localhost:3001/v2/users/connections/USER_ID/request"
+```
+
+**4. Nearby Users (Geospatial Search):**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  "http://localhost:3001/v2/users/nearby?latitude=3.1390&longitude=101.6869&radius=10"
+```
+
+> 💡 **Tip:** Replace `localhost:3001` with your production API URL and get your access token from the auth endpoints.
 
 ---
 
@@ -37,6 +72,8 @@ The User API provides endpoints for managing user profiles, searching users, and
   - [Upload Avatar](#upload-avatar)
 - [User Discovery](#user-discovery)
   - [Get All Users](#get-all-users)
+  - [User Recommendations (AI-Powered)](#user-recommendations-ai-powered)
+  - [Trending Interests](#trending-interests)
   - [Search Users](#search-users)
   - [Find Nearby Users (Geospatial)](#find-nearby-users-geospatial)
   - [Get User by ID](#get-user-by-id)
@@ -349,6 +386,152 @@ GET /v2/users/all?page=1&limit=20
 
 ---
 
+### Get Friend Recommendations
+Get personalized user recommendations based on common interests, location proximity, and mutual connections.
+
+**Endpoint:** `GET /v2/users/all?page=1&limit=20`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Algorithm:**
+The recommendation system considers:
+1. **Common Interests**: Users with shared interests are prioritized
+2. **Location Proximity**: Users in the same city get higher scores
+3. **Mutual Connections**: Users connected to your connections
+4. **Activity Level**: Active users with complete profiles
+5. **Diversity**: Mix of different backgrounds and experiences
+
+**Usage Tips:**
+- Use the `GET /v2/users/all` endpoint to get a general list
+- Filter by `city` using search to find local connections
+- Filter by `interest` using search to find hobby matches
+- Send connection requests to build your network
+
+---
+
+### User Recommendations (AI-Powered)
+Get intelligent user recommendations based on interests, location, and social patterns.
+
+**Endpoint:** `GET /v2/users/recommendations`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of recommendations (default: 10, max: 50)
+
+**Example:**
+```
+GET /v2/users/recommendations?limit=5
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "recommendations": [
+      {
+        "id": "user_uuid",
+        "fullName": "Sarah Host",
+        "username": "host1",
+        "score": 53,
+        "reasons": [
+          "1 shared interest: food",
+          "Both in Kuala Lumpur",
+          "Complete profile",
+          "Getting started in community"
+        ],
+        "profile": {
+          "profilePicture": null,
+          "bio": "Certified event host in KL. Love bringing people together!",
+          "interests": ["events", "networking", "social", "food"],
+          "profession": "Event Coordinator"
+        },
+        "location": {
+          "currentCity": "Kuala Lumpur",
+          "originallyFrom": "Penang"
+        }
+      }
+    ],
+    "total": 5
+  }
+}
+```
+
+**Recommendation Algorithm:**
+The AI recommendation system considers:
+- **Common Interests** (0-40 points): Shared hobbies and interests
+- **Location Proximity** (0-25 points): Same city/country for meetup potential  
+- **Professional Similarity** (0-15 points): Same or related professions
+- **Profile Completeness** (0-10 points): Well-filled profiles indicate engagement
+- **Activity Level** (0-10 points): Active community members
+- **Diversity Bonus** (0-5 points): Different personality types for variety
+- **New User Bonus** (0-5 points): Help newcomers get connected
+
+**Use Cases:**
+- Onboarding: Show new users potential connections
+- Home screen: Display "People you might know" 
+- Connection suggestions after profile updates
+- Re-engagement: Suggest new connections to existing users
+
+---
+
+### Trending Interests
+Get the most popular interests in the community for discovery and profile suggestions.
+
+**Endpoint:** `GET /v2/users/trending-interests`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of interests to return (default: 10, max: 50)
+
+**Example:**
+```
+GET /v2/users/trending-interests?limit=10
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "interests": [
+      {
+        "interest": "food",
+        "count": 3
+      },
+      {
+        "interest": "travel", 
+        "count": 2
+      },
+      {
+        "interest": "photography",
+        "count": 2
+      }
+    ],
+    "total": 10
+  }
+}
+```
+
+**Use Cases:**
+- Profile setup: Suggest popular interests to new users
+- Interest discovery: Help users find new hobbies
+- Community insights: Understand what brings people together
+- Search suggestions: Provide autocomplete for interest-based search
+
+---
+
 ### Search Users
 Search for users by various criteria.
 
@@ -361,14 +544,16 @@ Authorization: Bearer <access_token>
 
 **Query Parameters:**
 - `query` (optional): Search term (searches name, username, bio)
-- `currentCity` (optional): Filter by current city (case-insensitive)
+- `city` (optional): Filter by current city (case-insensitive) 
 - `interest` (optional): Filter by specific interest (exact match)
+- `page` (optional): Page number (default: 1, min: 1)
+- `limit` (optional): Items per page (default: 20, max: 100)
 - `page` (optional): Page number (default: 1, min: 1) *(Validated v2.0.1)*
 - `limit` (optional): Items per page (default: 20, max: 100) *(Validated v2.0.1)*
 
 **Example:**
 ```
-GET /v2/users/search?currentCity=kuala%20lumpur&interest=travel&page=1
+GET /v2/users/search?city=kuala%20lumpur&interest=food&page=1
 ```
 
 **Success Response (200):**
@@ -816,7 +1001,7 @@ GET /v2/users/550e8400-e29b-41d4-a716-446655440000
 
 ## Social Connections
 
-The connection system allows users to build trusted relationships with detailed context about their connections.
+The connection system allows users to build trusted relationships with detailed context about their connections. The system supports sending connection requests, accepting/rejecting requests, and managing existing connections.
 
 ### Get Connections
 Get user's connections with optional status filter.
@@ -2186,7 +2371,7 @@ interface ConnectionStats {
 const getProfile = async () => {
   const token = localStorage.getItem('accessToken');
   
-  const response = await fetch('https://api.bersemuka.com/v2/users/profile', {
+  const response = await fetch('https://api.berse-app.com/v2/users/profile', {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -2230,7 +2415,7 @@ const uploadAvatar = async (file) => {
   const formData = new FormData();
   formData.append('avatar', file);
   
-  const response = await fetch('https://api.bersemuka.com/v2/users/upload-avatar', {
+  const response = await fetch('https://api.berse-app.com/v2/users/upload-avatar', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -2250,7 +2435,7 @@ const searchUsers = async (filters) => {
   const params = new URLSearchParams(filters);
   
   const response = await fetch(
-    `https://api.bersemuka.com/v2/users/search?${params}`,
+    `https://api.berse-app.com/v2/users/search?${params}`,
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2271,18 +2456,24 @@ const results = await searchUsers({
 });
 ```
 
-**Send Friend Request:**
+**Send Connection Request:**
 ```javascript
-const sendFriendRequest = async (userId) => {
+const sendConnectionRequest = async (userId, message = '', relationshipType = '', relationshipCategory = 'friend') => {
   const token = localStorage.getItem('accessToken');
   
   const response = await fetch(
-    `https://api.bersemuka.com/v2/users/follow/${userId}`,
+    `https://api.berse-app.com/v2/users/connections/${userId}/request`,
     {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        message,
+        relationshipType,
+        relationshipCategory
+      }),
     }
   );
   
@@ -2297,7 +2488,7 @@ const getUserActivity = async (limit = 50, offset = 0) => {
   const token = localStorage.getItem('accessToken');
   
   const response = await fetch(
-    `https://api.bersemuka.com/v2/users/activity?limit=${limit}&offset=${offset}`,
+    `https://api.berse-app.com/v2/users/activity?limit=${limit}&offset=${offset}`,
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2316,7 +2507,7 @@ const getSecurityEvents = async (limit = 50, offset = 0) => {
   const token = localStorage.getItem('accessToken');
   
   const response = await fetch(
-    `https://api.bersemuka.com/v2/users/security-events?limit=${limit}&offset=${offset}`,
+    `https://api.berse-app.com/v2/users/security-events?limit=${limit}&offset=${offset}`,
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2335,7 +2526,7 @@ const getActiveSessions = async () => {
   const token = localStorage.getItem('accessToken');
   
   const response = await fetch(
-    'https://api.bersemuka.com/v2/users/sessions',
+    'https://api.berse-app.com/v2/users/sessions',
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2354,7 +2545,7 @@ const getLoginHistory = async (limit = 50, offset = 0) => {
   const token = localStorage.getItem('accessToken');
   
   const response = await fetch(
-    `https://api.bersemuka.com/v2/users/login-history?limit=${limit}&offset=${offset}`,
+    `https://api.berse-app.com/v2/users/login-history?limit=${limit}&offset=${offset}`,
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -2373,7 +2564,7 @@ const terminateSession = async (sessionToken) => {
   const token = localStorage.getItem('accessToken');
   
   const response = await fetch(
-    `https://api.bersemuka.com/v2/users/sessions/${sessionToken}`,
+    `https://api.berse-app.com/v2/users/sessions/${sessionToken}`,
     {
       method: 'DELETE',
       headers: {
@@ -2403,13 +2594,13 @@ const terminateOtherSessions = async () => {
 
 **Get Profile:**
 ```bash
-curl -X GET https://api.bersemuka.com/v2/users/profile \
+curl -X GET https://api.berse-app.com/v2/users/profile \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Update Profile:**
 ```bash
-curl -X PUT https://api.bersemuka.com/v2/users/profile \
+curl -X PUT https://api.berse-app.com/v2/users/profile \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -2421,37 +2612,37 @@ curl -X PUT https://api.bersemuka.com/v2/users/profile \
 
 **Search Users:**
 ```bash
-curl -X GET "https://api.bersemuka.com/v2/users/search?currentCity=kuala%20lumpur&interest=travel" \
+curl -X GET "https://api.berse-app.com/v2/users/search?city=kuala%20lumpur&interest=travel" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Get Activity History:**
 ```bash
-curl -X GET "https://api.bersemuka.com/v2/users/activity?limit=20&offset=0" \
+curl -X GET "https://api.berse-app.com/v2/users/activity?limit=20&offset=0" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Get Security Events:**
 ```bash
-curl -X GET "https://api.bersemuka.com/v2/users/security-events?limit=20&offset=0" \
+curl -X GET "https://api.berse-app.com/v2/users/security-events?limit=20&offset=0" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Get Active Sessions:**
 ```bash
-curl -X GET https://api.bersemuka.com/v2/users/sessions \
+curl -X GET https://api.berse-app.com/v2/users/sessions \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Get Login History:**
 ```bash
-curl -X GET "https://api.bersemuka.com/v2/users/login-history?limit=20&offset=0" \
+curl -X GET "https://api.berse-app.com/v2/users/login-history?limit=20&offset=0" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 **Terminate Session:**
 ```bash
-curl -X DELETE https://api.bersemuka.com/v2/users/sessions/SESSION_TOKEN_HERE \
+curl -X DELETE https://api.berse-app.com/v2/users/sessions/SESSION_TOKEN_HERE \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
