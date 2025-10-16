@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model AnnouncementAnalytic {
+model announcement_analytics {
   id             String        @id
   announcementId String
   userId         String?
@@ -20,15 +20,13 @@ model AnnouncementAnalytic {
   viewedFrom     String?
   deviceInfo     Json?
   createdAt      DateTime      @default(now())
-  announcements  Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcements  announcements @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
   @@index([announcementId, viewed])
   @@index([userId])
-
-  @@map("announcement_analytics")
 }
 
-model Announcement {
+model announcements {
   id                     String                   @id
   title                  String
   content                String
@@ -56,17 +54,15 @@ model Announcement {
   tags                   String[]                 @default([])
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime
-  analytics AnnouncementAnalytic[]
+  announcement_analytics announcement_analytics[]
 
   @@index([expiresAt])
   @@index([isActive, publishedAt])
   @@index([isPinned, isActive])
   @@index([priority, isActive])
-
-  @@map("announcements")
 }
 
-model AppConfig {
+model app_configs {
   id          String   @id
   configKey   String   @unique
   configValue String
@@ -81,24 +77,20 @@ model AppConfig {
 
   @@index([category, isPublic])
   @@index([configKey])
-
-  @@map("app_configs")
 }
 
-model AppNoticeDismissal {
+model app_notice_dismissals {
   id          String      @id
   noticeId    String
   userId      String
   dismissedAt DateTime    @default(now())
-  app_notices AppNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  app_notices app_notices @relation(fields: [noticeId], references: [id], onDelete: Cascade)
 
   @@unique([noticeId, userId])
   @@index([userId])
-
-  @@map("app_notice_dismissals")
 }
 
-model AppNotice {
+model app_notices {
   id                    String                  @id
   noticeType            AppNoticeType
   title                 String
@@ -126,16 +118,14 @@ model AppNotice {
   clickCount            Int                     @default(0)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime
-  dismissals AppNoticeDismissal[]
+  app_notice_dismissals app_notice_dismissals[]
 
   @@index([isActive, startDate, endDate])
   @@index([noticeType, isActive])
   @@index([priority, isActive])
-
-  @@map("app_notices")
 }
 
-model AppVersion {
+model app_versions {
   id                  String      @id
   versionNumber       String
   versionCode         Int
@@ -160,38 +150,32 @@ model AppVersion {
   @@index([platform, isActive])
   @@index([platform, isCurrent])
   @@index([releaseDate])
-
-  @@map("app_versions")
 }
 
-model AuthIdentity {
+model auth_identities {
   id          String   @id
   userId      String
   provider    String
   providerUid String
   email       String?
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUid])
   @@index([userId])
-
-  @@map("auth_identities")
 }
 
-model Badge {
+model badges {
   id          String        @id
   type        BadgeType     @unique
   name        String
   description String
   criteria    String
   imageUrl    String?
-  userBadges UserBadge[]
-
-  @@map("badges")
+  user_badges user_badges[]
 }
 
-model CardGameFeedback {
+model card_game_feedbacks {
   id                String              @id
   userId            String
   topicId           String
@@ -201,34 +185,30 @@ model CardGameFeedback {
   comment           String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cardGameReplies CardGameReply[]
-  cardGameUpvotes CardGameUpvote[]
+  users             users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card_game_replies card_game_replies[]
+  card_game_upvotes card_game_upvotes[]
 
   @@index([questionId])
   @@index([topicId])
   @@index([userId])
-
-  @@map("card_game_feedbacks")
 }
 
-model CardGameReply {
+model card_game_replies {
   id                  String              @id
   userId              String
   feedbackId          String
   text                String
   createdAt           DateTime            @default(now())
   updatedAt           DateTime
-  cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card_game_feedbacks card_game_feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  users               users               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([feedbackId])
   @@index([userId])
-
-  @@map("card_game_replies")
 }
 
-model CardGameStat {
+model card_game_stats {
   id            String   @id
   topicId       String   @unique
   totalSessions Int      @default(0)
@@ -238,26 +218,22 @@ model CardGameStat {
   updatedAt     DateTime
 
   @@index([topicId])
-
-  @@map("card_game_stats")
 }
 
-model CardGameUpvote {
+model card_game_upvotes {
   id                  String              @id
   userId              String
   feedbackId          String
   createdAt           DateTime            @default(now())
-  cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card_game_feedbacks card_game_feedbacks @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  users               users               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, feedbackId])
   @@index([feedbackId])
   @@index([userId])
-
-  @@map("card_game_upvotes")
 }
 
-model Community {
+model communities {
   id                String              @id
   name              String              @unique
   description       String?
@@ -267,36 +243,32 @@ model Community {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
   createdById       String
-  users             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  communityMembers CommunityMember[]
-  events            Event[]
+  users             users               @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  community_members community_members[]
+  events            events[]
 
   @@index([category])
   @@index([createdAt])
   @@index([name])
-
-  @@map("communities")
 }
 
-model CommunityMember {
+model community_members {
   id          String        @id
   role        CommunityRole @default(MEMBER)
   joinedAt    DateTime      @default(now())
   isApproved  Boolean       @default(false)
   userId      String
   communityId String
-  communities Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communities communities   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, communityId])
   @@index([communityId])
   @@index([role])
   @@index([userId])
-
-  @@map("community_members")
 }
 
-model ConnectionReview {
+model connection_reviews {
   id                                         String           @id
   connectionId                               String
   reviewerId                                 String
@@ -311,9 +283,9 @@ model ConnectionReview {
   helpfulCount                               Int              @default(0)
   createdAt                                  DateTime         @default(now())
   updatedAt                                  DateTime
-  user_connections                           UserConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  users_connection_reviews_revieweeIdTousers User @relation("connection_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
-  users_connection_reviews_reviewerIdTousers User @relation("connection_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+  user_connections                           user_connections @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  users_connection_reviews_revieweeIdTousers users            @relation("connection_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_connection_reviews_reviewerIdTousers users            @relation("connection_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, reviewerId])
   @@index([connectionId])
@@ -322,11 +294,9 @@ model ConnectionReview {
   @@index([rating])
   @@index([revieweeId])
   @@index([reviewerId])
-
-  @@map("connection_reviews")
 }
 
-model ConnectionStat {
+model connection_stats {
   userId                  String   @id
   totalConnections        Int      @default(0)
   pendingRequests         Int      @default(0)
@@ -347,16 +317,14 @@ model ConnectionStat {
   lastCalculatedAt        DateTime @default(now())
   createdAt               DateTime @default(now())
   updatedAt               DateTime
-  users                   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users                   users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([averageRating])
   @@index([connectionQuality])
   @@index([totalConnections])
-
-  @@map("connection_stats")
 }
 
-model DeviceRegistration {
+model device_registrations {
   id                String   @id
   userId            String
   deviceFingerprint String
@@ -365,15 +333,13 @@ model DeviceRegistration {
   isTrusted         Boolean  @default(false)
   lastSeenAt        DateTime @default(now())
   createdAt         DateTime @default(now())
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users             users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceFingerprint])
   @@index([userId])
-
-  @@map("device_registrations")
 }
 
-model EmailVerificationToken {
+model email_verification_tokens {
   id         String    @id
   userId     String
   email      String
@@ -381,48 +347,42 @@ model EmailVerificationToken {
   expiresAt  DateTime
   verifiedAt DateTime?
   createdAt  DateTime  @default(now())
-  users      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users      users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
-
-  @@map("email_verification_tokens")
 }
 
-model EventAttendance {
+model event_attendances {
   id          String   @id
   checkedInAt DateTime @default(now())
   userId      String
   eventId     String
-  events      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events      events   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
   @@index([checkedInAt])
   @@index([eventId])
   @@index([userId])
-
-  @@map("event_attendances")
 }
 
-model EventRsvp {
+model event_rsvps {
   id        String   @id
   qrCode    String   @unique
   createdAt DateTime @default(now())
   userId    String
   eventId   String
-  events    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events    events   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
   @@index([createdAt])
   @@index([eventId])
   @@index([userId])
-
-  @@map("event_rsvps")
 }
 
-model EventTicketTier {
+model event_ticket_tiers {
   id             String          @id
   eventId        String
   tierName       String
@@ -439,16 +399,14 @@ model EventTicketTier {
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime
-  events         Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventTickets  EventTicket[]
+  events         events          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event_tickets  event_tickets[]
 
   @@index([availableFrom, availableUntil])
   @@index([eventId, isActive])
-
-  @@map("event_ticket_tiers")
 }
 
-model EventTicket {
+model event_tickets {
   id                   String                @id
   eventId              String
   userId               String
@@ -468,10 +426,10 @@ model EventTicket {
   attendeeName         String?
   attendeeEmail        String?
   attendeePhone        String?
-  events               Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  tier   EventTicketTier? @relation(fields: [ticketTierId], references: [id])
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events               events                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  payment_transactions payment_transactions? @relation(fields: [paymentTransactionId], references: [id])
+  event_ticket_tiers   event_ticket_tiers?   @relation(fields: [ticketTierId], references: [id])
+  users                users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, ticketNumber])
   @@index([eventId])
@@ -482,11 +440,9 @@ model EventTicket {
   @@index([ticketTierId])
   @@index([userId])
   @@index([userId, status])
-
-  @@map("event_tickets")
 }
 
-model Event {
+model events {
   id                 String               @id
   title              String
   description        String?
@@ -510,12 +466,12 @@ model Event {
   status             EventStatus          @default(DRAFT)
   ticketsSold        Int                  @default(0)
   totalRevenue       Float?               @default(0.0)
-  eventAttendances  EventAttendance[]
-  eventRsvps        EventRsvp[]
-  tier EventTicketTier[]
-  eventTickets      EventTicket[]
-  communities        Community? @relation(fields: [communityId], references: [id])
-  users              User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  event_attendances  event_attendances[]
+  event_rsvps        event_rsvps[]
+  event_ticket_tiers event_ticket_tiers[]
+  event_tickets      event_tickets[]
+  communities        communities?         @relation(fields: [communityId], references: [id])
+  users              users                @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   @@index([communityId, date])
   @@index([communityId])
@@ -529,11 +485,9 @@ model Event {
   @@index([status])
   @@index([type, date])
   @@index([type])
-
-  @@map("events")
 }
 
-model FaqAnalytic {
+model faq_analytics {
   id            String    @id
   faqId         String
   userId        String?
@@ -544,29 +498,25 @@ model FaqAnalytic {
   searchQuery   String?
   viewedFrom    String?
   createdAt     DateTime  @default(now())
-  faqs          Faq @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  faqs          faqs      @relation(fields: [faqId], references: [id], onDelete: Cascade)
 
   @@index([faqId, viewed])
   @@index([userId])
-
-  @@map("faq_analytics")
 }
 
-model FaqCategory {
+model faq_categories {
   id           String  @id
   name         String
   description  String?
   icon         String?
   displayOrder Int     @default(0)
   isActive     Boolean @default(true)
-  faqs         Faq[]
+  faqs         faqs[]
 
   @@index([displayOrder, isActive])
-
-  @@map("faq_categories")
 }
 
-model Faq {
+model faqs {
   id                String          @id
   categoryId        String?
   question          String
@@ -582,17 +532,15 @@ model Faq {
   relatedArticleIds String[]        @default([])
   createdAt         DateTime        @default(now())
   updatedAt         DateTime
-  analytics     FaqAnalytic[]
-  category    FaqCategory? @relation(fields: [categoryId], references: [id])
+  faq_analytics     faq_analytics[]
+  faq_categories    faq_categories? @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId, isActive])
   @@index([displayOrder])
   @@index([isFeatured, isActive])
-
-  @@map("faqs")
 }
 
-model FeatureFlagAnalytic {
+model feature_flag_analytics {
   id            String        @id
   featureFlagId String
   userId        String?
@@ -605,16 +553,14 @@ model FeatureFlagAnalytic {
   featureUsed   Boolean       @default(false)
   usedAt        DateTime?
   usageCount    Int           @default(0)
-  feature_flags FeatureFlag @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
+  feature_flags feature_flags @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
 
   @@index([evaluatedAt])
   @@index([featureFlagId, wasEnabled])
   @@index([userId])
-
-  @@map("feature_flag_analytics")
 }
 
-model FeatureFlag {
+model feature_flags {
   id                     String                   @id
   featureKey             String                   @unique
   featureName            String
@@ -641,15 +587,13 @@ model FeatureFlag {
   dependencies           String[]                 @default([])
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime
-  analytics FeatureFlagAnalytic[]
+  feature_flag_analytics feature_flag_analytics[]
 
   @@index([featureKey, isEnabled])
   @@index([isEnabled, isGlobal])
-
-  @@map("feature_flags")
 }
 
-model FeatureUsage {
+model feature_usage {
   id             String   @id
   userId         String
   subscriptionId String?
@@ -660,17 +604,15 @@ model FeatureUsage {
   periodStart    DateTime
   periodEnd      DateTime
   metadata       Json?
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([periodStart, periodEnd])
   @@index([subscriptionId, featureCode])
   @@index([usedAt])
   @@index([userId, featureCode])
-
-  @@map("feature_usage")
 }
 
-model HelpArticleAnalytic {
+model help_article_analytics {
   id               String        @id
   articleId        String
   userId           String?
@@ -683,15 +625,13 @@ model HelpArticleAnalytic {
   viewedFrom       String?
   searchQuery      String?
   createdAt        DateTime      @default(now())
-  help_articles    HelpArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  help_articles    help_articles @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@index([articleId, viewed])
   @@index([userId])
-
-  @@map("help_article_analytics")
 }
 
-model HelpArticleCategory {
+model help_article_categories {
   id            String          @id
   name          String
   slug          String          @unique
@@ -699,14 +639,12 @@ model HelpArticleCategory {
   icon          String?
   displayOrder  Int             @default(0)
   isActive      Boolean         @default(true)
-  help_articles HelpArticle[]
+  help_articles help_articles[]
 
   @@index([displayOrder, isActive])
-
-  @@map("help_article_categories")
 }
 
-model HelpArticle {
+model help_articles {
   id                      String                   @id
   categoryId              String?
   title                   String
@@ -733,18 +671,16 @@ model HelpArticle {
   publishedAt             DateTime?
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime
-  analytics  HelpArticleAnalytic[]
-  category HelpArticleCategory? @relation(fields: [categoryId], references: [id])
+  help_article_analytics  help_article_analytics[]
+  help_article_categories help_article_categories? @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId, isActive])
   @@index([isFeatured, isActive])
   @@index([publishedAt])
   @@index([slug])
-
-  @@map("help_articles")
 }
 
-model LegalDocumentAcceptance {
+model legal_document_acceptances {
   id              String            @id
   documentId      String
   userId          String
@@ -754,16 +690,14 @@ model LegalDocumentAcceptance {
   deviceInfo      Json?
   documentVersion String
   documentType    LegalDocumentType
-  legal_documents LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  legal_documents legal_documents   @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, documentId])
   @@index([documentId])
   @@index([userId, documentType])
-
-  @@map("legal_document_acceptances")
 }
 
-model LegalDocument {
+model legal_documents {
   id                         String                       @id
   documentType               LegalDocumentType
   version                    String
@@ -782,30 +716,26 @@ model LegalDocument {
   approvedAt                 DateTime?
   createdAt                  DateTime                     @default(now())
   updatedAt                  DateTime
-  acceptances LegalDocumentAcceptance[]
+  legal_document_acceptances legal_document_acceptances[]
 
   @@unique([documentType, version])
   @@index([documentType, isCurrent])
   @@index([effectiveDate])
-
-  @@map("legal_documents")
 }
 
-model ListingPriceHistory {
+model listing_price_history {
   id                   String               @id
   listingId            String
   price                Float
   currency             String               @default("MYR")
   reason               String?
   changedAt            DateTime             @default(now())
-  marketplaceListings MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  marketplace_listings marketplace_listings @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId, changedAt])
-
-  @@map("listing_price_history")
 }
 
-model LoginAttempt {
+model login_attempts {
   id            String   @id
   userId        String?
   identifier    String
@@ -814,16 +744,14 @@ model LoginAttempt {
   success       Boolean
   failureReason String?
   attemptedAt   DateTime @default(now())
-  users         User? @relation(fields: [userId], references: [id])
+  users         users?   @relation(fields: [userId], references: [id])
 
   @@index([identifier, attemptedAt])
   @@index([ipAddress, attemptedAt])
   @@index([userId, attemptedAt])
-
-  @@map("login_attempts")
 }
 
-model MaintenanceSchedule {
+model maintenance_schedules {
   id                String            @id
   title             String
   description       String
@@ -849,26 +777,22 @@ model MaintenanceSchedule {
 
   @@index([startTime, endTime])
   @@index([status, startTime])
-
-  @@map("maintenance_schedules")
 }
 
-model MarketplaceCartItem {
+model marketplace_cart_items {
   id                   String               @id
   userId               String
   listingId            String
   quantity             Int
   addedAt              DateTime             @default(now())
-  marketplaceListings MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketplace_listings marketplace_listings @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  users                users                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, listingId])
   @@index([userId])
-
-  @@map("marketplace_cart_items")
 }
 
-model MarketplaceDispute {
+model marketplace_disputes {
   id                 String             @id
   orderId            String
   initiatedBy        String
@@ -877,16 +801,14 @@ model MarketplaceDispute {
   resolution         Json?
   createdAt          DateTime           @default(now())
   resolvedAt         DateTime?
-  users              User @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
-  marketplace_orders MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  users              users              @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
+  marketplace_orders marketplace_orders @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([status])
-
-  @@map("marketplace_disputes")
 }
 
-model MarketplaceListing {
+model marketplace_listings {
   id                     String                   @id
   userId                 String
   title                  String
@@ -900,20 +822,18 @@ model MarketplaceListing {
   status                 ListingStatus            @default(DRAFT)
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime
-  priceHistory  ListingPriceHistory[]
-  marketplaceCartItems MarketplaceCartItem[]
-  users                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  marketplace_orders     MarketplaceOrder[]
+  listing_price_history  listing_price_history[]
+  marketplace_cart_items marketplace_cart_items[]
+  users                  users                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketplace_orders     marketplace_orders[]
 
   @@index([category])
   @@index([createdAt])
   @@index([status])
   @@index([userId, status])
-
-  @@map("marketplace_listings")
 }
 
-model MarketplaceOrder {
+model marketplace_orders {
   id                                       String                 @id
   listingId                                String
   buyerId                                  String
@@ -938,12 +858,12 @@ model MarketplaceOrder {
   shippedAt                                DateTime?
   deliveredAt                              DateTime?
   canceledAt                               DateTime?
-  marketplaceDisputes                     MarketplaceDispute[]
-  users_marketplace_orders_buyerIdTousers  User @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
-  marketplaceListings                     MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  paymentTransactions                     PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  users_marketplace_orders_sellerIdTousers User @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
-  reviews                      MarketplaceReview[]
+  marketplace_disputes                     marketplace_disputes[]
+  users_marketplace_orders_buyerIdTousers  users                  @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
+  marketplace_listings                     marketplace_listings   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  payment_transactions                     payment_transactions?  @relation(fields: [paymentTransactionId], references: [id])
+  users_marketplace_orders_sellerIdTousers users                  @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
+  marketplace_reviews                      marketplace_reviews[]
 
   @@index([buyerId, status])
   @@index([createdAt])
@@ -952,11 +872,9 @@ model MarketplaceOrder {
   @@index([paymentTransactionId])
   @@index([sellerId, status])
   @@index([status])
-
-  @@map("marketplace_orders")
 }
 
-model MarketplaceReview {
+model marketplace_reviews {
   id                                          String             @id
   orderId                                     String
   reviewerId                                  String
@@ -964,17 +882,15 @@ model MarketplaceReview {
   rating                                      Int
   comment                                     String?
   createdAt                                   DateTime           @default(now())
-  marketplace_orders                          MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  users_marketplace_reviews_revieweeIdTousers User @relation("marketplace_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
-  users_marketplace_reviews_reviewerIdTousers User @relation("marketplace_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+  marketplace_orders                          marketplace_orders @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  users_marketplace_reviews_revieweeIdTousers users              @relation("marketplace_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_marketplace_reviews_reviewerIdTousers users              @relation("marketplace_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
 
   @@unique([orderId, reviewerId])
   @@index([revieweeId, rating])
-
-  @@map("marketplace_reviews")
 }
 
-model Match {
+model matches {
   id                              String      @id
   type                            MatchType
   status                          MatchStatus @default(PENDING)
@@ -989,8 +905,8 @@ model Match {
   expiresAt                       DateTime
   senderId                        String
   receiverId                      String
-  users_matches_receiverIdTousers User @relation("matches_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
-  users_matches_senderIdTousers   User @relation("matches_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+  users_matches_receiverIdTousers users       @relation("matches_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  users_matches_senderIdTousers   users       @relation("matches_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId, type])
   @@index([createdAt])
@@ -1001,19 +917,17 @@ model Match {
   @@index([senderId, status])
   @@index([status])
   @@index([type])
-
-  @@map("matches")
 }
 
-model Message {
+model messages {
   id                               String   @id
   content                          String
   isRead                           Boolean  @default(false)
   createdAt                        DateTime @default(now())
   senderId                         String
   receiverId                       String
-  users_messages_receiverIdTousers User @relation("messages_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
-  users_messages_senderIdTousers   User @relation("messages_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+  users_messages_receiverIdTousers users    @relation("messages_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  users_messages_senderIdTousers   users    @relation("messages_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([isRead])
@@ -1021,11 +935,9 @@ model Message {
   @@index([receiverId, isRead])
   @@index([senderId])
   @@index([senderId, receiverId])
-
-  @@map("messages")
 }
 
-model NotificationPreference {
+model notification_preferences {
   userId       String   @id
   emailEnabled Boolean  @default(true)
   pushEnabled  Boolean  @default(true)
@@ -1035,12 +947,10 @@ model NotificationPreference {
   quietHours   Json?
   timezone     String   @default("Asia/Kuala_Lumpur")
   updatedAt    DateTime
-  users        User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notification_preferences")
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Notification {
+model notifications {
   id                String           @id
   type              NotificationType
   title             String
@@ -1057,7 +967,7 @@ model Notification {
   relatedEntityId   String?
   relatedEntityType String?
   scheduledFor      DateTime?
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users             users            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([priority])
@@ -1066,11 +976,9 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId])
   @@index([userId, readAt])
-
-  @@map("notifications")
 }
 
-model OnboardingAnalytic {
+model onboarding_analytics {
   id                 String             @id
   screenId           String
   userId             String?
@@ -1084,16 +992,14 @@ model OnboardingAnalytic {
   deviceInfo         Json?
   appVersion         String?
   createdAt          DateTime           @default(now())
-  onboarding_screens OnboardingScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  onboarding_screens onboarding_screens @relation(fields: [screenId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([screenId, viewed])
   @@index([userId])
-
-  @@map("onboarding_analytics")
 }
 
-model OnboardingScreen {
+model onboarding_screens {
   id                   String                 @id
   screenOrder          Int
   title                String
@@ -1112,15 +1018,13 @@ model OnboardingScreen {
   metadata             Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime
-  analytics OnboardingAnalytic[]
+  onboarding_analytics onboarding_analytics[]
 
   @@index([isActive])
   @@index([screenOrder, isActive])
-
-  @@map("onboarding_screens")
 }
 
-model PasswordResetToken {
+model password_reset_tokens {
   id        String    @id
   userId    String
   token     String    @unique
@@ -1128,15 +1032,13 @@ model PasswordResetToken {
   usedAt    DateTime?
   ipAddress String
   createdAt DateTime  @default(now())
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
-
-  @@map("password_reset_tokens")
 }
 
-model PaymentProviderRouting {
+model payment_provider_routing {
   id                String            @id
   ruleName          String
   providerId        String
@@ -1145,15 +1047,13 @@ model PaymentProviderRouting {
   isActive          Boolean           @default(true)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime
-  provider PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  payment_providers payment_providers @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@index([priority, isActive])
   @@index([providerId, isActive])
-
-  @@map("payment_provider_routing")
 }
 
-model PaymentProvider {
+model payment_providers {
   id                       String                     @id
   providerCode             String                     @unique
   providerName             String
@@ -1169,16 +1069,14 @@ model PaymentProvider {
   webhookConfig            Json?
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime
-  routing PaymentProviderRouting[]
-  paymentTransactions     PaymentTransaction[]
+  payment_provider_routing payment_provider_routing[]
+  payment_transactions     payment_transactions[]
 
   @@index([isActive, priorityOrder])
   @@index([providerCode])
-
-  @@map("payment_providers")
 }
 
-model PaymentTransaction {
+model payment_transactions {
   id                     String                  @id
   userId                 String
   transactionType        TransactionType
@@ -1204,14 +1102,14 @@ model PaymentTransaction {
   metadata               Json?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime
-  eventTickets          EventTicket[]
-  marketplace_orders     MarketplaceOrder[]
-  provider      PaymentProvider @relation(fields: [providerId], references: [id])
-  users                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payoutDistributions   PayoutDistribution[]
-  bookings       ServiceBooking[]
-  subscriptionPayments  SubscriptionPayment[]
-  fees       TransactionFee[]
+  event_tickets          event_tickets[]
+  marketplace_orders     marketplace_orders[]
+  payment_providers      payment_providers       @relation(fields: [providerId], references: [id])
+  users                  users                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payout_distributions   payout_distributions[]
+  service_bookings       service_bookings[]
+  subscription_payments  subscription_payments[]
+  transaction_fees       transaction_fees[]
 
   @@index([createdAt])
   @@index([gatewayTransactionId])
@@ -1221,11 +1119,9 @@ model PaymentTransaction {
   @@index([transactionType])
   @@index([transactionType, status])
   @@index([userId, status])
-
-  @@map("payment_transactions")
 }
 
-model PayoutDistribution {
+model payout_distributions {
   id                   String               @id
   paymentTransactionId String
   recipientId          String
@@ -1237,17 +1133,15 @@ model PayoutDistribution {
   gatewayPayoutId      String?
   createdAt            DateTime             @default(now())
   releasedAt           DateTime?
-  paymentTransactions PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  payment_transactions payment_transactions @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
+  users                users                @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([paymentTransactionId])
   @@index([recipientId, status])
   @@index([releaseDate, status])
-
-  @@map("payout_distributions")
 }
 
-model PlatformFeeConfig {
+model platform_fee_configs {
   id               String             @id
   configName       String
   transactionType  TransactionType
@@ -1266,33 +1160,29 @@ model PlatformFeeConfig {
   description      String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
-  fees TransactionFee[]
+  transaction_fees transaction_fees[]
 
   @@index([effectiveFrom, effectiveUntil])
   @@index([priority, isActive])
   @@index([transactionType, isActive])
-
-  @@map("platform_fee_configs")
 }
 
-model PointHistory {
+model point_histories {
   id          String   @id
   points      Int
   action      String
   description String?
   createdAt   DateTime @default(now())
   userId      String
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([action])
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([userId])
-
-  @@map("point_histories")
 }
 
-model ProfileCompletionStatus {
+model profile_completion_status {
   userId              String    @id
   completionScore     Float     @default(0.0)
   completionLevel     String    @default("starter")
@@ -1320,16 +1210,14 @@ model ProfileCompletionStatus {
   firstCompleteAt     DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users               users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([completionLevel])
   @@index([completionScore])
   @@index([lastCalculatedAt])
-
-  @@map("profile_completion_status")
 }
 
-model PushSubscription {
+model push_subscriptions {
   id        String   @id
   userId    String   @unique
   endpoint  String
@@ -1337,14 +1225,12 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-
-  @@map("push_subscriptions")
 }
 
-model Redemption {
+model redemptions {
   id          String           @id
   status      RedemptionStatus @default(PENDING)
   notes       String?
@@ -1352,17 +1238,15 @@ model Redemption {
   processedAt DateTime?
   userId      String
   rewardId    String
-  rewards     Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewards     rewards          @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  users       users            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([rewardId])
   @@index([status])
   @@index([userId])
-
-  @@map("redemptions")
 }
 
-model ReferralCampaign {
+model referral_campaigns {
   id                   String      @id
   campaignCode         String      @unique
   campaignName         String
@@ -1387,16 +1271,14 @@ model ReferralCampaign {
   totalRewardsGiven    Float       @default(0.0)
   createdAt            DateTime    @default(now())
   updatedAt            DateTime
-  referrals            Referral[]
+  referrals            referrals[]
 
   @@index([campaignCode, isActive])
   @@index([isActive, isPaused])
   @@index([startDate, endDate])
-
-  @@map("referral_campaigns")
 }
 
-model ReferralReward {
+model referral_rewards {
   id                String               @id
   referralId        String
   userId            String
@@ -1413,19 +1295,17 @@ model ReferralReward {
   metadata          Json?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime
-  referrals         Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals         referrals            @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  users             users                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([awardedAt])
   @@index([isMilestoneReward])
   @@index([referralId])
   @@index([status])
   @@index([userId, status])
-
-  @@map("referral_rewards")
 }
 
-model ReferralStat {
+model referral_stats {
   userId                String    @id
   totalReferrals        Int       @default(0)
   totalClicks           Int       @default(0)
@@ -1449,17 +1329,15 @@ model ReferralStat {
   lastCalculatedAt      DateTime  @default(now())
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
-  users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users                 users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leaderboardRank])
   @@index([topReferrerBadge])
   @@index([totalActivated])
   @@index([totalPointsEarned])
-
-  @@map("referral_stats")
 }
 
-model Referral {
+model referrals {
   id                                String              @id
   referrerId                        String
   refereeId                         String?
@@ -1482,10 +1360,10 @@ model Referral {
   notes                             String?
   createdAt                         DateTime            @default(now())
   updatedAt                         DateTime
-  referralRewards                  ReferralReward[]
-  campaign                ReferralCampaign? @relation(fields: [campaignId], references: [id])
-  users_referrals_refereeIdTousers  User? @relation("referrals_refereeIdTousers", fields: [refereeId], references: [id])
-  users_referrals_referrerIdTousers User @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
+  referral_rewards                  referral_rewards[]
+  referral_campaigns                referral_campaigns? @relation(fields: [campaignId], references: [id])
+  users_referrals_refereeIdTousers  users?              @relation("referrals_refereeIdTousers", fields: [refereeId], references: [id])
+  users_referrals_referrerIdTousers users               @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
 
   @@index([activatedAt])
   @@index([campaignId])
@@ -1495,11 +1373,9 @@ model Referral {
   @@index([referralCode])
   @@index([referrerId, isActivated])
   @@index([signedUpAt])
-
-  @@map("referrals")
 }
 
-model RefreshToken {
+model refresh_tokens {
   id          String   @id
   tokenHash   String   @unique
   tokenFamily String
@@ -1507,16 +1383,14 @@ model RefreshToken {
   isRevoked   Boolean  @default(false)
   expiresAt   DateTime
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([tokenHash])
   @@index([userId])
-
-  @@map("refresh_tokens")
 }
 
-model Reward {
+model rewards {
   id             String        @id
   title          String
   description    String
@@ -1528,15 +1402,13 @@ model Reward {
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime
-  redemptions    Redemption[]
+  redemptions    redemptions[]
 
   @@index([category])
   @@index([isActive])
-
-  @@map("rewards")
 }
 
-model SecurityEvent {
+model security_events {
   id          String   @id
   userId      String
   eventType   String
@@ -1546,16 +1418,14 @@ model SecurityEvent {
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventType])
   @@index([severity])
   @@index([userId, createdAt])
-
-  @@map("security_events")
 }
 
-model ServiceBooking {
+model service_bookings {
   id                                       String                @id
   serviceId                                String
   customerId                               String
@@ -1580,10 +1450,10 @@ model ServiceBooking {
   confirmedAt                              DateTime?
   completedAt                              DateTime?
   canceledAt                               DateTime?
-  users_service_bookings_customerIdTousers User @relation("service_bookings_customerIdTousers", fields: [customerId], references: [id], onDelete: Cascade)
-  paymentTransactions                     PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  users_service_bookings_providerIdTousers User @relation("service_bookings_providerIdTousers", fields: [providerId], references: [id], onDelete: Cascade)
-  services                                 Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  users_service_bookings_customerIdTousers users                 @relation("service_bookings_customerIdTousers", fields: [customerId], references: [id], onDelete: Cascade)
+  payment_transactions                     payment_transactions? @relation(fields: [paymentTransactionId], references: [id])
+  users_service_bookings_providerIdTousers users                 @relation("service_bookings_providerIdTousers", fields: [providerId], references: [id], onDelete: Cascade)
+  services                                 services              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([customerId, status])
   @@index([paymentStatus])
@@ -1592,11 +1462,9 @@ model ServiceBooking {
   @@index([serviceId])
   @@index([startDate, endDate])
   @@index([status])
-
-  @@map("service_bookings")
 }
 
-model Service {
+model services {
   id               String             @id
   providerId       String
   title            String
@@ -1614,17 +1482,15 @@ model Service {
   status           ServiceStatus      @default(DRAFT)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
-  bookings ServiceBooking[]
-  users            User @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  service_bookings service_bookings[]
+  users            users              @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@index([providerId, status])
   @@index([serviceType, status])
   @@index([status])
-
-  @@map("services")
 }
 
-model SubscriptionPayment {
+model subscription_payments {
   id                   String                @id
   subscriptionId       String
   userId               String
@@ -1641,20 +1507,18 @@ model SubscriptionPayment {
   failedAt             DateTime?
   failureReason        String?
   createdAt            DateTime              @default(now())
-  paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  subscriptions   UserSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment_transactions payment_transactions? @relation(fields: [paymentTransactionId], references: [id])
+  user_subscriptions   user_subscriptions    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  users                users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([dueDate])
   @@index([paymentTransactionId])
   @@index([status])
   @@index([subscriptionId, status])
   @@index([userId, status])
-
-  @@map("subscription_payments")
 }
 
-model SubscriptionTier {
+model subscription_tiers {
   id                 String               @id
   tierCode           String               @unique
   tierName           String
@@ -1669,16 +1533,14 @@ model SubscriptionTier {
   trialDays          Int?                 @default(0)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime
-  subscriptions UserSubscription[]
+  user_subscriptions user_subscriptions[]
 
   @@index([displayOrder])
   @@index([isActive, isPublic])
   @@index([tierCode, isActive])
-
-  @@map("subscription_tiers")
 }
 
-model TransactionFee {
+model transaction_fees {
   id                   String                @id
   transactionId        String
   feeConfigId          String?
@@ -1691,17 +1553,15 @@ model TransactionFee {
   currency             String                @default("MYR")
   description          String?
   appliedAt            DateTime              @default(now())
-  feeConfig PlatformFeeConfig? @relation(fields: [feeConfigId], references: [id])
-  paymentTransactions PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  platform_fee_configs platform_fee_configs? @relation(fields: [feeConfigId], references: [id])
+  payment_transactions payment_transactions  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
   @@index([feeConfigId])
   @@index([recipientType, recipientId])
   @@index([transactionId, feeType])
-
-  @@map("transaction_fees")
 }
 
-model TravelBucketList {
+model travel_bucket_list {
   id                String    @id
   userId            String
   country           String
@@ -1721,11 +1581,9 @@ model TravelBucketList {
   @@index([country])
   @@index([seekingCompanions])
   @@index([userId, status])
-
-  @@map("travel_bucket_list")
 }
 
-model TravelCompanion {
+model travel_companions {
   id                                         String       @id
   tripId                                     String
   userId                                     String
@@ -1741,19 +1599,17 @@ model TravelCompanion {
   vouchId                                    String?
   addedAt                                    DateTime     @default(now())
   verifiedAt                                 DateTime?
-  users_travel_companions_companionIdTousers User? @relation("travel_companions_companionIdTousers", fields: [companionId], references: [id])
-  travelTrips                               TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  users_travel_companions_userIdTousers      User @relation("travel_companions_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+  users_travel_companions_companionIdTousers users?       @relation("travel_companions_companionIdTousers", fields: [companionId], references: [id])
+  travel_trips                               travel_trips @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  users_travel_companions_userIdTousers      users        @relation("travel_companions_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([companionId])
   @@index([invitationStatus])
   @@index([tripId])
   @@index([userId])
-
-  @@map("travel_companions")
 }
 
-model TravelHighlight {
+model travel_highlights {
   id            String       @id
   tripId        String
   title         String
@@ -1763,15 +1619,13 @@ model TravelHighlight {
   date          DateTime?
   location      String?
   createdAt     DateTime     @default(now())
-  travelTrips  TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  travel_trips  travel_trips @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([highlightType])
   @@index([tripId])
-
-  @@map("travel_highlights")
 }
 
-model TravelLocation {
+model travel_locations {
   id             String       @id
   tripId         String
   country        String
@@ -1788,16 +1642,14 @@ model TravelLocation {
   latitude       Float?
   longitude      Float?
   createdAt      DateTime     @default(now())
-  travelTrips   TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  travel_trips   travel_trips @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([country, city])
   @@index([placeType])
   @@index([tripId])
-
-  @@map("travel_locations")
 }
 
-model TravelStat {
+model travel_stats {
   userId                String    @id
   totalTrips            Int       @default(0)
   countriesVisited      Int       @default(0)
@@ -1816,15 +1668,13 @@ model TravelStat {
   lastCalculatedAt      DateTime  @default(now())
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
-  users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users                 users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countriesVisited])
   @@index([totalTrips])
-
-  @@map("travel_stats")
 }
 
-model TravelTrip {
+model travel_trips {
   id                String              @id
   userId            String
   title             String
@@ -1842,20 +1692,18 @@ model TravelTrip {
   tags              String[]            @default([])
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
-  travelCompanions TravelCompanion[]
-  travel_highlights TravelHighlight[]
-  travel_locations  TravelLocation[]
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  travel_companions travel_companions[]
+  travel_highlights travel_highlights[]
+  travel_locations  travel_locations[]
+  users             users               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countries])
   @@index([startDate])
   @@index([userId, isPublic])
   @@index([userId, startDate])
-
-  @@map("travel_trips")
 }
 
-model UserActivity {
+model user_activities {
   id           String   @id
   userId       String
   activityType String
@@ -1863,45 +1711,39 @@ model UserActivity {
   entityId     String
   visibility   String   @default("public")
   createdAt    DateTime @default(now())
-  users        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([activityType])
   @@index([userId, createdAt])
-
-  @@map("user_activities")
 }
 
-model UserBadge {
+model user_badges {
   id       String   @id
   earnedAt DateTime @default(now())
   userId   String
   badgeId  String
-  badges   Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  users    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badges   badges   @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  users    users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
   @@index([userId])
-
-  @@map("user_badges")
 }
 
-model UserBlock {
+model user_blocks {
   id                                 String   @id
   blockerId                          String
   blockedId                          String
   reason                             String?
   blockedAt                          DateTime @default(now())
-  users_user_blocks_blockedIdTousers User @relation("user_blocks_blockedIdTousers", fields: [blockedId], references: [id], onDelete: Cascade)
-  users_user_blocks_blockerIdTousers User @relation("user_blocks_blockerIdTousers", fields: [blockerId], references: [id], onDelete: Cascade)
+  users_user_blocks_blockedIdTousers users    @relation("user_blocks_blockedIdTousers", fields: [blockedId], references: [id], onDelete: Cascade)
+  users_user_blocks_blockerIdTousers users    @relation("user_blocks_blockerIdTousers", fields: [blockerId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
   @@index([blockedId])
   @@index([blockerId])
-
-  @@map("user_blocks")
 }
 
-model UserConnection {
+model user_connections {
   id                                        String               @id
   initiatorId                               String
   receiverId                                String
@@ -1923,9 +1765,9 @@ model UserConnection {
   removedAt                                 DateTime?
   removedBy                                 String?
   canReconnectAt                            DateTime?
-  connection_reviews                        ConnectionReview[]
-  users_user_connections_initiatorIdTousers User @relation("user_connections_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
-  users_user_connections_receiverIdTousers  User @relation("user_connections_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  connection_reviews                        connection_reviews[]
+  users_user_connections_initiatorIdTousers users                @relation("user_connections_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
+  users_user_connections_receiverIdTousers  users                @relation("user_connections_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([initiatorId, receiverId])
   @@index([badges])
@@ -1937,11 +1779,9 @@ model UserConnection {
   @@index([relationshipCategory])
   @@index([status])
   @@index([trustStrength])
-
-  @@map("user_connections")
 }
 
-model UserLocation {
+model user_locations {
   userId             String    @id
   currentCity        String?
   countryOfResidence String?
@@ -1955,17 +1795,15 @@ model UserLocation {
   lastLocationUpdate DateTime?
   latitude           Float?
   longitude          Float?
-  users              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users              users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countryOfResidence])
   @@index([currentCity])
   @@index([latitude, longitude])
   @@index([timezone])
-
-  @@map("user_locations")
 }
 
-model UserMetadata {
+model user_metadata {
   userId         String   @id
   referralCode   String   @unique
   membershipId   String?  @unique
@@ -1981,15 +1819,13 @@ model UserMetadata {
   notes          String?
   internalNotes  String?
   updatedAt      DateTime
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([affiliateId])
   @@index([referralSource])
-
-  @@map("user_metadata")
 }
 
-model UserPaymentMethod {
+model user_payment_methods {
   id              String    @id
   userId          String
   provider        String
@@ -2001,15 +1837,13 @@ model UserPaymentMethod {
   isDefault       Boolean   @default(false)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
-  users           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users           users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, isDefault])
-
-  @@map("user_payment_methods")
 }
 
-model UserPreference {
+model user_preferences {
   userId                     String   @id
   darkMode                   Boolean  @default(false)
   googleCalendarConnected    Boolean  @default(false)
@@ -2017,12 +1851,10 @@ model UserPreference {
   pushToken                  String?
   preferences                Json     @default("{}")
   updatedAt                  DateTime
-  users                      User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_preferences")
+  users                      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model UserPrivacy {
+model user_privacy {
   userId                  String    @id
   profileVisibility       String    @default("public")
   searchableByPhone       Boolean   @default(true)
@@ -2035,45 +1867,41 @@ model UserPrivacy {
   deletionScheduledFor    DateTime?
   dataExportRequestedAt   DateTime?
   updatedAt               DateTime
-  users                   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users                   users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([deletionRequestedAt])
   @@index([profileVisibility])
-
-  @@map("user_privacy")
 }
 
-model UserProfile {
-  userId           String    @id
-  displayName      String?
-  profilePicture   String?
-  bio              String?
-  shortBio         String?
-  dateOfBirth      DateTime?
-  gender           String?
-  age              Int?
-  profession       String?
-  occupation       String?
-  website          String?
-  personalityType  String?
-  interests        String[]  @default([])
-  languages        String[]  @default([])
-  instagramHandle  String?
-  linkedinHandle   String?
-  travelStyle      String?
-  bucketList       String[]  @default([])
-  travelBio        String?
-  customFields     Json?
-  locationPrivacy  String    @default("friends") // "public", "friends", "private"
-  updatedAt        DateTime
-  users            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model user_profiles {
+  userId          String    @id
+  displayName     String?
+  profilePicture  String?
+  bio             String?
+  shortBio        String?
+  dateOfBirth     DateTime?
+  gender          String?
+  age             Int?
+  profession      String?
+  occupation      String?
+  website         String?
+  personalityType String?
+  interests       String[]  @default([])
+  languages       String[]  @default([])
+  instagramHandle String?
+  linkedinHandle  String?
+  travelStyle     String?
+  bucketList      String[]  @default([])
+  travelBio       String?
+  customFields    Json?
+  locationPrivacy String    @default("friends")
+  updatedAt       DateTime
+  users           users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([displayName])
-
-  @@map("user_profiles")
 }
 
-model UserSecurity {
+model user_security {
   userId               String    @id
   emailVerifiedAt      DateTime?
   phoneVerifiedAt      DateTime?
@@ -2091,17 +1919,15 @@ model UserSecurity {
   suspendedUntil       DateTime?
   suspensionReason     String?
   updatedAt            DateTime
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users                users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([emailVerifiedAt])
   @@index([lastLoginAt])
   @@index([mfaEnabled])
   @@index([phoneVerifiedAt])
-
-  @@map("user_security")
 }
 
-model UserServiceProfile {
+model user_service_profiles {
   userId           String   @id
   isHostAvailable  Boolean  @default(false)
   isGuideAvailable Boolean  @default(false)
@@ -2110,16 +1936,14 @@ model UserServiceProfile {
   guideDescription String?
   servicesOffered  Json?
   updatedAt        DateTime
-  users            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users            users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isGuideAvailable])
   @@index([isHostAvailable])
   @@index([isHostCertified])
-
-  @@map("user_service_profiles")
 }
 
-model UserSession {
+model user_sessions {
   id             String   @id
   userId         String
   sessionToken   String   @unique
@@ -2131,16 +1955,14 @@ model UserSession {
   lastActivityAt DateTime @default(now())
   expiresAt      DateTime
   createdAt      DateTime @default(now())
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([sessionToken])
   @@index([userId, isActive])
-
-  @@map("user_sessions")
 }
 
-model UserStat {
+model user_stats {
   userId            String   @id
   eventsAttended    Int      @default(0)
   eventsHosted      Int      @default(0)
@@ -2151,15 +1973,13 @@ model UserStat {
   communitiesJoined Int      @default(0)
   totalPoints       Int      @default(0)
   lastCalculatedAt  DateTime @default(now())
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users             users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventsAttended])
   @@index([totalPoints])
-
-  @@map("user_stats")
 }
 
-model UserSubscription {
+model user_subscriptions {
   id                    String                  @id
   userId                String
   tierId                String
@@ -2175,20 +1995,18 @@ model UserSubscription {
   usageData             Json                    @default("{}")
   createdAt             DateTime                @default(now())
   updatedAt             DateTime
-  subscriptionPayments SubscriptionPayment[]
-  tiers    SubscriptionTier @relation(fields: [tierId], references: [id])
-  users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription_payments subscription_payments[]
+  subscription_tiers    subscription_tiers      @relation(fields: [tierId], references: [id])
+  users                 users                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([currentPeriodEnd])
   @@index([gatewaySubscriptionId])
   @@index([status])
   @@index([tierId, status])
   @@index([userId, status])
-
-  @@map("user_subscriptions")
 }
 
-model User {
+model users {
   id                                                        String                      @id
   email                                                     String?                     @unique
   phone                                                     String?                     @unique
@@ -2204,78 +2022,78 @@ model User {
   status                                                    UserStatus                  @default(ACTIVE)
   trustLevel                                                String                      @default("starter")
   trustScore                                                Float                       @default(0.0)
-  authIdentities                                           AuthIdentity[]
-  cardGameFeedbacks                                       CardGameFeedback[]
-  cardGameReplies                                         CardGameReply[]
-  cardGameUpvotes                                         CardGameUpvote[]
-  communities                                               Community[]
-  communityMembers                                         CommunityMember[]
-  connection_reviews_connection_reviews_revieweeIdTousers   ConnectionReview[]        @relation("connection_reviews_revieweeIdTousers")
-  connection_reviews_connection_reviews_reviewerIdTousers   ConnectionReview[]        @relation("connection_reviews_reviewerIdTousers")
-  connectionStats                                          ConnectionStat?
-  deviceRegistrations                                      DeviceRegistration[]
-  emailVerificationTokens                                 EmailVerificationToken[]
-  eventAttendances                                         EventAttendance[]
-  eventRsvps                                               EventRsvp[]
-  eventTickets                                             EventTicket[]
-  events                                                    Event[]
-  featureUsage                                             FeatureUsage[]
-  loginAttempts                                            LoginAttempt[]
-  marketplaceCartItems                                    MarketplaceCartItem[]
-  marketplaceDisputes                                      MarketplaceDispute[]
-  marketplaceListings                                      MarketplaceListing[]
-  marketplace_orders_marketplace_orders_buyerIdTousers      MarketplaceOrder[]        @relation("marketplace_orders_buyerIdTousers")
-  marketplace_orders_marketplace_orders_sellerIdTousers     MarketplaceOrder[]        @relation("marketplace_orders_sellerIdTousers")
-  marketplace_reviews_marketplace_reviews_revieweeIdTousers MarketplaceReview[]       @relation("marketplace_reviews_revieweeIdTousers")
-  marketplace_reviews_marketplace_reviews_reviewerIdTousers MarketplaceReview[]       @relation("marketplace_reviews_reviewerIdTousers")
-  matches_matches_receiverIdTousers                         Match[]                   @relation("matches_receiverIdTousers")
-  matches_matches_senderIdTousers                           Match[]                   @relation("matches_senderIdTousers")
-  messages_messages_receiverIdTousers                       Message[]                  @relation("messages_receiverIdTousers")
-  messages_messages_senderIdTousers                         Message[]                  @relation("messages_senderIdTousers")
-  notificationPreferences                                  NotificationPreference?
-  notifications                                             Notification[]
-  passwordResetTokens                                     PasswordResetToken[]
-  paymentTransactions                                      PaymentTransaction[]
-  payoutDistributions                                      PayoutDistribution[]
-  pointHistories                                           PointHistory[]
-  profileCompletionStatus                                 ProfileCompletionStatus?
-  pushSubscription                                        PushSubscription?
-  redemptions                                               Redemption[]
-  referralRewards                                          ReferralReward[]
-  referralStats                                            ReferralStat?
-  referrals_referrals_refereeIdTousers                      Referral[]                 @relation("referrals_refereeIdTousers")
-  referrals_referrals_referrerIdTousers                     Referral[]                 @relation("referrals_referrerIdTousers")
-  refreshTokens                                            RefreshToken[]
-  securityEvents                                           SecurityEvent[]
-  service_bookings_service_bookings_customerIdTousers       ServiceBooking[]          @relation("service_bookings_customerIdTousers")
-  service_bookings_service_bookings_providerIdTousers       ServiceBooking[]          @relation("service_bookings_providerIdTousers")
-  services                                                  Service[]
-  subscriptionPayments                                     SubscriptionPayment[]
-  travel_companions_travel_companions_companionIdTousers    TravelCompanion[]         @relation("travel_companions_companionIdTousers")
-  travel_companions_travel_companions_userIdTousers         TravelCompanion[]         @relation("travel_companions_userIdTousers")
-  travelStats                                              TravelStat?
-  travelTrips                                              TravelTrip[]
-  userActivities                                           UserActivity[]
-  userBadges                                               UserBadge[]
-  user_blocks_user_blocks_blockedIdTousers                  UserBlock[]               @relation("user_blocks_blockedIdTousers")
-  user_blocks_user_blocks_blockerIdTousers                  UserBlock[]               @relation("user_blocks_blockerIdTousers")
-  user_connections_user_connections_initiatorIdTousers      UserConnection[]          @relation("user_connections_initiatorIdTousers")
-  user_connections_user_connections_receiverIdTousers       UserConnection[]          @relation("user_connections_receiverIdTousers")
-  location                                            UserLocation?
-  metadata                                             UserMetadata?
-  paymentMethods                                      UserPaymentMethod[]
-  preferences                                          UserPreference?
-  privacy                                              UserPrivacy?
-  profile                                             UserProfile?
-  security                                             UserSecurity?
-  serviceProfile                                     UserServiceProfile?
-  sessions                                             UserSession[]
-  stats                                                UserStat?
-  subscriptions                                        UserSubscription[]
-  users                                                     User? @relation("usersTousers", fields: [referredById], references: [id])
-  other_users                                               User[]                     @relation("usersTousers")
-  vouches_vouches_voucheeIdTousers                          Vouch[]                   @relation("vouches_voucheeIdTousers")
-  vouches_vouches_voucherIdTousers                          Vouch[]                   @relation("vouches_voucherIdTousers")
+  auth_identities                                           auth_identities[]
+  card_game_feedbacks                                       card_game_feedbacks[]
+  card_game_replies                                         card_game_replies[]
+  card_game_upvotes                                         card_game_upvotes[]
+  communities                                               communities[]
+  community_members                                         community_members[]
+  connection_reviews_connection_reviews_revieweeIdTousers   connection_reviews[]        @relation("connection_reviews_revieweeIdTousers")
+  connection_reviews_connection_reviews_reviewerIdTousers   connection_reviews[]        @relation("connection_reviews_reviewerIdTousers")
+  connection_stats                                          connection_stats?
+  device_registrations                                      device_registrations[]
+  email_verification_tokens                                 email_verification_tokens[]
+  event_attendances                                         event_attendances[]
+  event_rsvps                                               event_rsvps[]
+  event_tickets                                             event_tickets[]
+  events                                                    events[]
+  feature_usage                                             feature_usage[]
+  login_attempts                                            login_attempts[]
+  marketplace_cart_items                                    marketplace_cart_items[]
+  marketplace_disputes                                      marketplace_disputes[]
+  marketplace_listings                                      marketplace_listings[]
+  marketplace_orders_marketplace_orders_buyerIdTousers      marketplace_orders[]        @relation("marketplace_orders_buyerIdTousers")
+  marketplace_orders_marketplace_orders_sellerIdTousers     marketplace_orders[]        @relation("marketplace_orders_sellerIdTousers")
+  marketplace_reviews_marketplace_reviews_revieweeIdTousers marketplace_reviews[]       @relation("marketplace_reviews_revieweeIdTousers")
+  marketplace_reviews_marketplace_reviews_reviewerIdTousers marketplace_reviews[]       @relation("marketplace_reviews_reviewerIdTousers")
+  matches_matches_receiverIdTousers                         matches[]                   @relation("matches_receiverIdTousers")
+  matches_matches_senderIdTousers                           matches[]                   @relation("matches_senderIdTousers")
+  messages_messages_receiverIdTousers                       messages[]                  @relation("messages_receiverIdTousers")
+  messages_messages_senderIdTousers                         messages[]                  @relation("messages_senderIdTousers")
+  notification_preferences                                  notification_preferences?
+  notifications                                             notifications[]
+  password_reset_tokens                                     password_reset_tokens[]
+  payment_transactions                                      payment_transactions[]
+  payout_distributions                                      payout_distributions[]
+  point_histories                                           point_histories[]
+  profile_completion_status                                 profile_completion_status?
+  push_subscriptions                                        push_subscriptions?
+  redemptions                                               redemptions[]
+  referral_rewards                                          referral_rewards[]
+  referral_stats                                            referral_stats?
+  referrals_referrals_refereeIdTousers                      referrals[]                 @relation("referrals_refereeIdTousers")
+  referrals_referrals_referrerIdTousers                     referrals[]                 @relation("referrals_referrerIdTousers")
+  refresh_tokens                                            refresh_tokens[]
+  security_events                                           security_events[]
+  service_bookings_service_bookings_customerIdTousers       service_bookings[]          @relation("service_bookings_customerIdTousers")
+  service_bookings_service_bookings_providerIdTousers       service_bookings[]          @relation("service_bookings_providerIdTousers")
+  services                                                  services[]
+  subscription_payments                                     subscription_payments[]
+  travel_companions_travel_companions_companionIdTousers    travel_companions[]         @relation("travel_companions_companionIdTousers")
+  travel_companions_travel_companions_userIdTousers         travel_companions[]         @relation("travel_companions_userIdTousers")
+  travel_stats                                              travel_stats?
+  travel_trips                                              travel_trips[]
+  user_activities                                           user_activities[]
+  user_badges                                               user_badges[]
+  user_blocks_user_blocks_blockedIdTousers                  user_blocks[]               @relation("user_blocks_blockedIdTousers")
+  user_blocks_user_blocks_blockerIdTousers                  user_blocks[]               @relation("user_blocks_blockerIdTousers")
+  user_connections_user_connections_initiatorIdTousers      user_connections[]          @relation("user_connections_initiatorIdTousers")
+  user_connections_user_connections_receiverIdTousers       user_connections[]          @relation("user_connections_receiverIdTousers")
+  user_locations                                            user_locations?
+  user_metadata                                             user_metadata?
+  user_payment_methods                                      user_payment_methods[]
+  user_preferences                                          user_preferences?
+  user_privacy                                              user_privacy?
+  user_profiles                                             user_profiles?
+  user_security                                             user_security?
+  user_service_profiles                                     user_service_profiles?
+  user_sessions                                             user_sessions[]
+  user_stats                                                user_stats?
+  user_subscriptions                                        user_subscriptions[]
+  users                                                     users?                      @relation("usersTousers", fields: [referredById], references: [id])
+  other_users                                               users[]                     @relation("usersTousers")
+  vouches_vouches_voucheeIdTousers                          vouches[]                   @relation("vouches_voucheeIdTousers")
+  vouches_vouches_voucherIdTousers                          vouches[]                   @relation("vouches_voucherIdTousers")
 
   @@index([createdAt])
   @@index([deletedAt])
@@ -2288,11 +2106,9 @@ model User {
   @@index([trustLevel])
   @@index([trustScore])
   @@index([username])
-
-  @@map("users")
 }
 
-model VouchConfig {
+model vouch_configs {
   id                             String    @id
   maxPrimaryVouches              Int       @default(1)
   maxSecondaryVouches            Int       @default(3)
@@ -2314,11 +2130,9 @@ model VouchConfig {
   updatedAt                      DateTime
 
   @@index([effectiveFrom])
-
-  @@map("vouch_configs")
 }
 
-model Vouch {
+model vouches {
   id                             String      @id
   voucherId                      String
   voucheeId                      String
@@ -2340,8 +2154,8 @@ model Vouch {
   trustImpact                    Float?
   createdAt                      DateTime    @default(now())
   updatedAt                      DateTime
-  users_vouches_voucheeIdTousers User @relation("vouches_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
-  users_vouches_voucherIdTousers User @relation("vouches_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
+  users_vouches_voucheeIdTousers users       @relation("vouches_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
+  users_vouches_voucherIdTousers users       @relation("vouches_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
 
   @@unique([voucherId, voucheeId, vouchType])
   @@index([communityId, status])
@@ -2349,8 +2163,6 @@ model Vouch {
   @@index([isCommunityVouch])
   @@index([voucheeId, status])
   @@index([voucherId, status])
-
-  @@map("vouches")
 }
 
 enum AnnouncementPriority {
