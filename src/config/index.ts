@@ -12,7 +12,7 @@ const envSchema = z.object({
   
   // Server
   PORT: z.string().default('3001').transform((val) => parseInt(val, 10)),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
   API_URL: z.string().url().default('http://localhost:3001'),
   
   // JWT
@@ -128,6 +128,7 @@ export const config = {
   // Environment
   env: env.NODE_ENV,
   isDevelopment: env.NODE_ENV === 'development',
+  isStaging: env.NODE_ENV === 'staging',
   isProduction: env.NODE_ENV === 'production',
   isTest: env.NODE_ENV === 'test',
   
