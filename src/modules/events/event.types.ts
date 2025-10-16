@@ -125,10 +125,14 @@ export interface CreateRsvpRequest {
 export interface RsvpResponse {
   id: string;
   eventId: string;
-  userId: string;
-  qrCode: string;
-  createdAt: Date;
-  event?: any;
+  event: {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    type: EventType;
+  };
+  createdAt: string;
 }
 
 // ============================================================================

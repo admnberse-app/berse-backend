@@ -368,3 +368,71 @@ export const checkInValidators = [
     .optional()
     .isString().withMessage('QR code must be a valid string'),
 ];
+
+// ============================================================================
+// DISCOVERY VALIDATORS
+// ============================================================================
+
+export const getTrendingEventsValidators = [
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+];
+
+export const getNearbyEventsValidators = [
+  query('latitude')
+    .notEmpty().withMessage('Latitude is required')
+    .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+  
+  query('longitude')
+    .notEmpty().withMessage('Longitude is required')
+    .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
+  
+  query('radius')
+    .optional()
+    .isFloat({ min: 1, max: 500 }).withMessage('Radius must be between 1 and 500 km'),
+  
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+];
+
+export const getRecommendedEventsValidators = [
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+];
+
+export const getEventsByHostValidators = [
+  param('hostId')
+    .notEmpty().withMessage('Host ID is required')
+    .isString().withMessage('Host ID must be a valid string'),
+  
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+];
+
+export const getCommunityEventsValidators = [
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+];
+
+export const getUserAttendedEventsValidators = [
+  param('userId')
+    .notEmpty().withMessage('User ID is required')
+    .isString().withMessage('User ID must be a valid string'),
+  
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+  
+  query('startDate')
+    .optional()
+    .isISO8601().withMessage('Start date must be a valid ISO 8601 date'),
+  
+  query('endDate')
+    .optional()
+    .isISO8601().withMessage('End date must be a valid ISO 8601 date'),
+];

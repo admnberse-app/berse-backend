@@ -5,9 +5,23 @@ const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
     title: 'Berse Platform API',
-    version: '2.0.2',
+    version: '2.1.0',
     description: `Modern, modular API for the Berse social platform with event management, user connections, and community features.
     
+**Version 2.1.0 Updates (October 16, 2025):**
+- **Events Module**: Complete event management system with 15 endpoints
+  - Create and manage events (free and paid)
+  - Multi-tier ticket pricing with capacity management
+  - RSVP system for free events with secure QR codes
+  - QR code-based check-in system with JWT security
+  - Real-time attendee tracking and reporting
+- **Secure QR Codes**: JWT-based QR codes with cryptographic signatures
+  - No storage required - generated on-demand
+  - Time-limited tokens (30 days or event date + 24h)
+  - Double validation (JWT + database token)
+  - Event-specific binding
+- **Enhanced Documentation**: Comprehensive API docs in /docs/api-v2/EVENTS_API.md
+
 **Version 2.0.2 Updates (October 15, 2025):**
 - **Connection Count Names**: Simplified Prisma-generated relation names in _count responses
   - user_connections_user_connections_initiatorIdTousers → connectionsInitiated
@@ -59,6 +73,26 @@ const swaggerDefinition = {
     {
       name: 'Connections',
       description: 'User connection and relationship management',
+    },
+    {
+      name: 'Events',
+      description: 'Event creation, management, and discovery. Support for both free and paid events with comprehensive features.',
+    },
+    {
+      name: 'Events - Tickets',
+      description: 'Ticket tier management and purchase. Multi-tier pricing, capacity management, and payment integration.',
+    },
+    {
+      name: 'Events - RSVP',
+      description: 'RSVP management for free events. Includes secure QR code generation for check-ins.',
+    },
+    {
+      name: 'Events - Attendance',
+      description: 'Attendee check-in and attendance tracking. QR code-based check-in system with JWT security.',
+    },
+    {
+      name: 'Events - Discovery',
+      description: 'Event discovery features including trending events, nearby events, personalized recommendations, and community events.',
     },
     {
       name: 'Metadata',
@@ -292,6 +326,203 @@ const swaggerDefinition = {
           accessToken: { type: 'string' },
           refreshToken: { type: 'string' },
           expiresIn: { type: 'number', description: 'Access token expiry in seconds' },
+        },
+      },
+      Event: {
+        type: 'object',
+        required: ['id', 'title', 'type', 'date', 'location', 'isFree', 'status', 'hostType', 'hostId'],
+        properties: {
+          id: { type: 'string', description: 'Event ID' },
+          title: { type: 'string', minLength: 3, maxLength: 200, description: 'Event title' },
+          description: { type: 'string', maxLength: 5000, description: 'Event description' },
+          type: {
+            type: 'string',
+            enum: ['MEETUP', 'WORKSHOP', 'CONFERENCE', 'NETWORKING', 'OUTDOOR', 'SOCIAL', 'CULTURAL', 'OTHER'],
+            description: 'Event type',
+          },
+          date: { type: 'string', format: 'date-time', description: 'Event date and time' },
+          location: { type: 'string', minLength: 3, maxLength: 500, description: 'Event location' },
+          mapLink: { type: 'string', format: 'uri', description: 'Google Maps or location link' },
+          maxAttendees: { type: 'integer', minimum: 1, description: 'Maximum attendee capacity' },
+          notes: { type: 'string', description: 'Additional notes for attendees' },
+          images: {
+            type: 'array',
+            items: { type: 'string', format: 'uri' },
+            description: 'Event images',
+          },
+          isFree: { type: 'boolean', description: 'Whether event is free' },
+          price: { type: 'number', minimum: 0, description: 'Base ticket price (if not free)' },
+          currency: { type: 'string', default: 'MYR', description: 'Currency code' },
+          status: {
+            type: 'string',
+            enum: ['DRAFT', 'PUBLISHED', 'CANCELED', 'COMPLETED'],
+            description: 'Event status',
+          },
+          hostType: {
+            type: 'string',
+            enum: ['PERSONAL', 'COMMUNITY'],
+            description: 'Type of host (personal or community)',
+          },
+          hostId: { type: 'string', description: 'Host user ID' },
+          communityId: { type: 'string', description: 'Community ID (if community-hosted)' },
+          attendeeCount: { type: 'integer', description: 'Number of attendees checked in' },
+          ticketsSold: { type: 'integer', description: 'Number of tickets sold' },
+          totalRevenue: { type: 'number', description: 'Total revenue from ticket sales' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          host: {
+            type: 'object',
+            description: 'Host user details',
+            properties: {
+              id: { type: 'string' },
+              displayName: { type: 'string' },
+              profilePicture: { type: 'string', format: 'uri' },
+            },
+          },
+          community: {
+            type: 'object',
+            description: 'Community details (if community-hosted)',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              imageUrl: { type: 'string', format: 'uri' },
+              isVerified: { type: 'boolean' },
+            },
+          },
+          ticketTiers: {
+            type: 'array',
+            description: 'Available ticket tiers',
+            items: { $ref: '#/components/schemas/TicketTier' },
+          },
+          userRsvp: {
+            type: 'object',
+            description: 'Current user\'s RSVP (if authenticated)',
+            properties: {
+              id: { type: 'string' },
+              createdAt: { type: 'string', format: 'date-time' },
+            },
+          },
+          userTicket: {
+            type: 'object',
+            description: 'Current user\'s ticket (if authenticated)',
+            properties: {
+              id: { type: 'string' },
+              ticketNumber: { type: 'string' },
+              status: { type: 'string' },
+              quantity: { type: 'integer' },
+              purchasedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+      TicketTier: {
+        type: 'object',
+        required: ['id', 'eventId', 'tierName', 'price', 'currency', 'isActive'],
+        properties: {
+          id: { type: 'string', description: 'Ticket tier ID' },
+          eventId: { type: 'string', description: 'Event ID' },
+          tierName: { type: 'string', minLength: 2, maxLength: 100, description: 'Tier name (e.g., Early Bird, VIP)' },
+          description: { type: 'string', maxLength: 500, description: 'Tier description' },
+          price: { type: 'number', minimum: 0, description: 'Ticket price' },
+          currency: { type: 'string', default: 'MYR', description: 'Currency code' },
+          totalQuantity: { type: 'integer', minimum: 0, description: 'Total available tickets (null = unlimited)' },
+          soldQuantity: { type: 'integer', minimum: 0, description: 'Number of tickets sold' },
+          availableQuantity: { type: 'integer', minimum: 0, description: 'Remaining tickets' },
+          minPurchase: { type: 'integer', minimum: 1, default: 1, description: 'Minimum tickets per purchase' },
+          maxPurchase: { type: 'integer', minimum: 1, default: 10, description: 'Maximum tickets per purchase' },
+          availableFrom: { type: 'string', format: 'date-time', description: 'Tier available from date' },
+          availableUntil: { type: 'string', format: 'date-time', description: 'Tier available until date' },
+          displayOrder: { type: 'integer', default: 0, description: 'Display order' },
+          isActive: { type: 'boolean', description: 'Whether tier is active' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      EventTicket: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Ticket ID' },
+          eventId: { type: 'string', description: 'Event ID' },
+          userId: { type: 'string', description: 'User ID' },
+          ticketTierId: { type: 'string', description: 'Ticket tier ID' },
+          ticketType: { type: 'string', default: 'GENERAL', description: 'Ticket type' },
+          price: { type: 'number', description: 'Ticket price' },
+          currency: { type: 'string', default: 'MYR', description: 'Currency code' },
+          status: {
+            type: 'string',
+            enum: ['PENDING', 'ACTIVE', 'USED', 'CANCELED', 'REFUNDED'],
+            description: 'Ticket status',
+          },
+          paymentStatus: {
+            type: 'string',
+            enum: ['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED', 'PROCESSING', 'CANCELED'],
+            description: 'Payment status',
+          },
+          ticketNumber: { type: 'string', description: 'Unique ticket number (TKT-timestamp-random)' },
+          quantity: { type: 'integer', minimum: 1, description: 'Number of tickets' },
+          purchasedAt: { type: 'string', format: 'date-time', description: 'Purchase timestamp' },
+          checkedInAt: { type: 'string', format: 'date-time', description: 'Check-in timestamp' },
+          attendeeName: { type: 'string', description: 'Attendee name' },
+          attendeeEmail: { type: 'string', format: 'email', description: 'Attendee email' },
+          attendeePhone: { type: 'string', description: 'Attendee phone' },
+          event: {
+            type: 'object',
+            description: 'Event details',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              date: { type: 'string', format: 'date-time' },
+              location: { type: 'string' },
+              images: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+      },
+      EventRSVP: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'RSVP ID' },
+          eventId: { type: 'string', description: 'Event ID' },
+          event: {
+            type: 'object',
+            description: 'Event details',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              date: { type: 'string', format: 'date-time' },
+              location: { type: 'string' },
+              type: { type: 'string' },
+            },
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      EventAttendance: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Attendance record ID' },
+          eventId: { type: 'string', description: 'Event ID' },
+          userId: { type: 'string', description: 'User ID' },
+          user: {
+            type: 'object',
+            description: 'User details',
+            properties: {
+              id: { type: 'string' },
+              displayName: { type: 'string' },
+              profilePicture: { type: 'string', format: 'uri' },
+            },
+          },
+          checkedInAt: { type: 'string', format: 'date-time', description: 'Check-in timestamp' },
+        },
+      },
+      QRCodeResponse: {
+        type: 'object',
+        properties: {
+          qrCode: {
+            type: 'string',
+            description: 'Base64-encoded PNG QR code image (Data URL format). Contains signed JWT token with RSVP details. Valid for 30 days or until 24 hours after event.',
+            example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
+          },
         },
       },
       Error: {

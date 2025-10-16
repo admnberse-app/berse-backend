@@ -279,6 +279,20 @@ export class EventController {
     }
   }
 
+  /**
+   * Generate QR code for RSVP
+   * @route GET /v2/events/rsvps/:rsvpId/qr-code
+   */
+  static async getRsvpQrCode(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { rsvpId } = req.params;
+      const qrCodeDataUrl = await EventService.generateRsvpQrCode(rsvpId, req.user!.id);
+      sendSuccess(res, { qrCode: qrCodeDataUrl }, 'QR code generated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ============================================================================
   // ATTENDANCE ENDPOINTS
   // ============================================================================
@@ -316,6 +330,117 @@ export class EventController {
       const attendees = await EventService.getEventAttendees(id);
 
       sendSuccess(res, attendees, 'Attendees retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get trending events
+   * @route GET /v2/events/discovery/trending
+   */
+  static async getTrendingEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      const events = await EventService.getTrendingEvents(limit, userId);
+
+      sendSuccess(res, events, 'Trending events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get nearby events
+   * @route GET /v2/events/discovery/nearby
+   */
+  static async getNearbyEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      const { latitude, longitude } = req.query;
+      const radiusKm = req.query.radius ? parseFloat(req.query.radius as string) : 50;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      const lat = parseFloat(latitude as string);
+      const lng = parseFloat(longitude as string);
+
+      const events = await EventService.getNearbyEvents(lat, lng, radiusKm, limit, userId);
+
+      sendSuccess(res, events, 'Nearby events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get recommended events for user
+   * @route GET /v2/events/discovery/recommended
+   */
+  static async getRecommendedEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      const events = await EventService.getRecommendedEvents(userId, limit);
+
+      sendSuccess(res, events, 'Recommended events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get events by host
+   * @route GET /v2/events/discovery/host/:hostId
+   */
+  static async getEventsByHost(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { hostId } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      const events = await EventService.getEventsByHost(hostId, limit);
+
+      sendSuccess(res, events, 'Host events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get events from user's communities
+   * @route GET /v2/events/discovery/my-communities
+   */
+  static async getCommunityEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      const events = await EventService.getCommunityEvents(userId, limit);
+
+      sendSuccess(res, events, 'Community events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get events a user has attended (for profile viewing)
+   * @route GET /v2/events/discovery/user/:userId/attended
+   */
+  static async getUserAttendedEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      
+      // Optional date range filters
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+      const events = await EventService.getUserAttendedEvents(userId, limit, startDate, endDate);
+
+      sendSuccess(res, events, 'User attended events retrieved successfully');
     } catch (error) {
       next(error);
     }

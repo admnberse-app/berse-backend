@@ -1,5 +1,7 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
+import jwt from 'jsonwebtoken';
+import { config } from '../../config';
 import { 
   CreateEventRequest, 
   UpdateEventRequest, 
@@ -681,15 +683,18 @@ export class EventService {
         }
       }
 
-      // Generate QR code
-      const qrData = `${eventId}:${userId}:${Date.now()}`;
-      const qrCodeImage = await QRCode.toDataURL(qrData);
+      // Generate secure token for RSVP (valid for 30 days or until event date)
+      const eventDate = new Date(event.date);
+      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const tokenExpiry = eventDate > thirtyDaysFromNow ? eventDate : thirtyDaysFromNow;
+      
+      const rsvpToken = crypto.randomBytes(32).toString('hex');
 
       const rsvp = await prisma.eventRsvp.create({
         data: {
           eventId,
           userId,
-          qrCode: qrCodeImage,
+          qrCode: rsvpToken, // Store secure token, not QR image
         },
         include: {
           events: {
@@ -728,6 +733,72 @@ export class EventService {
       });
     } catch (error: any) {
       logger.error('Error canceling RSVP:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate QR code for RSVP (on-demand)
+   */
+  static async generateRsvpQrCode(rsvpId: string, userId: string): Promise<string> {
+    try {
+      const rsvp = await prisma.eventRsvp.findUnique({
+        where: { id: rsvpId },
+        include: {
+          events: {
+            select: {
+              id: true,
+              date: true,
+            },
+          },
+        },
+      });
+
+      if (!rsvp) {
+        throw new AppError('RSVP not found', 404);
+      }
+
+      if (rsvp.userId !== userId) {
+        throw new AppError('Not authorized to access this RSVP', 403);
+      }
+
+      // Generate signed JWT token for QR code
+      const eventDate = new Date(rsvp.events.date);
+      const expiryDate = new Date(Math.max(
+        eventDate.getTime() + (24 * 60 * 60 * 1000), // 24 hours after event
+        Date.now() + (30 * 24 * 60 * 60 * 1000) // or 30 days from now
+      ));
+
+      const qrPayload = {
+        rsvpId: rsvp.id,
+        userId: rsvp.userId,
+        eventId: rsvp.eventId,
+        token: rsvp.qrCode, // Include stored token for extra validation
+        type: 'EVENT_RSVP',
+      };
+
+      // Generate JWT token with expiry
+      const qrToken = jwt.sign(
+        qrPayload,
+        config.jwt.secret,
+        {
+          expiresIn: Math.floor((expiryDate.getTime() - Date.now()) / 1000),
+          issuer: 'bersemuka-api',
+          audience: 'bersemuka-checkin',
+        }
+      );
+      
+      // Generate QR code image from JWT token
+      const qrCodeDataUrl = await QRCode.toDataURL(qrToken, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        width: 300,
+        margin: 2,
+      });
+
+      return qrCodeDataUrl;
+    } catch (error: any) {
+      logger.error('Error generating RSVP QR code:', error);
       throw error;
     }
   }
@@ -778,21 +849,53 @@ export class EventService {
       }
 
       let targetUserId: string;
+      let rsvpId: string | undefined;
 
       // Verify user has RSVP or ticket
       if (data.userId) {
         targetUserId = data.userId;
       } else if (data.qrCode) {
-        // Parse QR code to get user ID
-        const rsvp = await prisma.eventRsvp.findFirst({
-          where: { eventId, qrCode: data.qrCode },
-        });
+        // Verify and decode JWT token from QR code
+        try {
+          const decoded = jwt.verify(
+            data.qrCode,
+            config.jwt.secret,
+            {
+              issuer: 'bersemuka-api',
+              audience: 'bersemuka-checkin',
+            }
+          ) as any;
+          
+          // Validate token type and event match
+          if (decoded.type !== 'EVENT_RSVP') {
+            throw new AppError('Invalid QR code type', 400);
+          }
+          
+          if (decoded.eventId !== eventId) {
+            throw new AppError('QR code is not for this event', 400);
+          }
 
-        if (!rsvp) {
-          throw new AppError('Invalid QR code or RSVP not found', 404);
+          // Verify RSVP exists and token matches
+          const rsvp = await prisma.eventRsvp.findFirst({
+            where: {
+              id: decoded.rsvpId,
+              userId: decoded.userId,
+              eventId: eventId,
+              qrCode: decoded.token, // Verify stored token matches
+            },
+          });
+
+          if (!rsvp) {
+            throw new AppError('Invalid or expired RSVP', 404);
+          }
+
+          targetUserId = rsvp.userId;
+          rsvpId = rsvp.id;
+        } catch (error: any) {
+          if (error instanceof AppError) throw error;
+          logger.error('QR code verification failed:', error);
+          throw new AppError('Invalid or expired QR code', 400);
         }
-
-        targetUserId = rsvp.userId;
       } else {
         throw new AppError('User ID or QR code is required', 400);
       }
@@ -914,5 +1017,471 @@ export class EventService {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = crypto.randomBytes(3).toString('hex').toUpperCase();
     return `TKT-${timestamp}-${random}`;
+  }
+
+  // ============================================================================
+  // DISCOVERY & RECOMMENDATION OPERATIONS
+  // ============================================================================
+
+  /**
+   * Get trending events (most popular based on RSVPs, tickets, and recency)
+   */
+  static async getTrendingEvents(limit: number = 10, userId?: string): Promise<EventResponse[]> {
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const events = await prisma.event.findMany({
+        where: {
+          status: EventStatus.PUBLISHED,
+          date: { gte: new Date() }, // Future events only
+        },
+        take: limit * 2, // Get more to filter and rank
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      // Calculate trending score
+      const scoredEvents = events.map(event => {
+        const rsvpCount = event._count?.eventRsvps || 0;
+        const ticketCount = event._count?.eventTickets || 0;
+        const totalEngagement = rsvpCount + ticketCount;
+
+        // Recency bonus (events created in last 7 days get boost)
+        const recencyBonus = event.createdAt > sevenDaysAgo ? 1.5 : 1;
+
+        // Capacity fill rate bonus
+        const capacityBonus = event.maxAttendees 
+          ? (totalEngagement / event.maxAttendees) * 0.5 
+          : 0.5;
+
+        // Trending score formula
+        const trendingScore = (totalEngagement * recencyBonus) + (capacityBonus * 10);
+
+        return {
+          event,
+          score: trendingScore,
+        };
+      });
+
+      // Sort by score and take top N
+      const topEvents = scoredEvents
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map(item => this.transformEventResponse(item.event));
+
+      return topEvents;
+    } catch (error: any) {
+      logger.error('Error fetching trending events:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get nearby events based on user location
+   * PERFORMANCE NOTE: Current implementation uses text matching
+   * TODO: Implement PostGIS for true geospatial queries with distance calculations
+   * Recommended: Add latitude/longitude columns + GiST index for ST_DWithin queries
+   */
+  static async getNearbyEvents(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 50,
+    limit: number = 20,
+    userId?: string
+  ): Promise<EventResponse[]> {
+    try {
+      // Optimized: Limit initial query size
+      // Index hint: Composite index on (status, date)
+      const events = await prisma.event.findMany({
+        where: {
+          status: EventStatus.PUBLISHED,
+          date: { gte: new Date() },
+        },
+        take: limit * 2, // Fetch 2x for filtering buffer
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      // Filter by location matching (simple text search for now)
+      // TODO: Implement proper geospatial search with coordinates
+      const nearbyEvents = events
+        .map(event => {
+          // Calculate simple relevance score based on location text match
+          const locationLower = event.location.toLowerCase();
+          const searchTerms = [
+            'kuala lumpur', 'kl', 'selangor', 'penang', 'johor', 
+            'malaysia', 'singapore', 'petaling jaya', 'pj'
+          ];
+          
+          const hasLocationMatch = searchTerms.some(term => locationLower.includes(term));
+          
+          return {
+            event,
+            isNearby: hasLocationMatch,
+          };
+        })
+        .filter(item => item.isNearby)
+        .slice(0, limit)
+        .map(item => this.transformEventResponse(item.event));
+
+      return nearbyEvents;
+    } catch (error: any) {
+      logger.error('Error fetching nearby events:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get recommended events based on user preferences and history
+   * Optimized: Parallel queries, select only needed fields
+   */
+  static async getRecommendedEvents(userId: string, limit: number = 10): Promise<EventResponse[]> {
+    try {
+      // Optimized: Fetch only event types, not full events
+      const [userRsvps, userTickets, userCommunities] = await Promise.all([
+        prisma.eventRsvp.findMany({
+          where: { userId },
+          select: { events: { select: { type: true } } },
+          take: 20,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.eventTicket.findMany({
+          where: { userId },
+          select: { events: { select: { type: true } } },
+          take: 20,
+          orderBy: { purchasedAt: 'desc' },
+        }),
+        prisma.communityMember.findMany({
+          where: { userId },
+          select: { communityId: true },
+        }),
+      ]);
+
+      // Extract event types user has attended
+      const attendedEventTypes = [
+        ...userRsvps.map(r => r.events.type),
+        ...userTickets.map(t => t.events.type),
+      ];
+
+      const preferredTypes = [...new Set(attendedEventTypes)];
+      const communityIds = userCommunities.map(m => m.communityId);
+
+      // Build recommendation query
+      const where: any = {
+        status: EventStatus.PUBLISHED,
+        date: { gte: new Date() },
+        hostId: { not: userId }, // Don't recommend own events
+        OR: [
+          // Events of preferred types
+          ...(preferredTypes.length > 0 ? [{ type: { in: preferredTypes } }] : []),
+          // Events in user's communities
+          ...(communityIds.length > 0 ? [{ communityId: { in: communityIds } }] : []),
+          // Free events (always relevant)
+          { isFree: true },
+        ],
+      };
+
+      const recommendedEvents = await prisma.event.findMany({
+        where,
+        take: limit,
+        orderBy: [
+          { date: 'asc' }, // Prioritize upcoming events
+          { createdAt: 'desc' }, // Then newer events
+        ],
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      return recommendedEvents.map(event => this.transformEventResponse(event));
+    } catch (error: any) {
+      logger.error('Error fetching recommended events:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get events by host (user's created events)
+   */
+  static async getEventsByHost(hostId: string, limit: number = 20): Promise<EventResponse[]> {
+    try {
+      const events = await prisma.event.findMany({
+        where: { hostId },
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      return events.map(event => this.transformEventResponse(event));
+    } catch (error: any) {
+      logger.error('Error fetching events by host:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get popular events in user's communities
+   * Optimized: Single query with community check
+   */
+  static async getCommunityEvents(userId: string, limit: number = 20): Promise<EventResponse[]> {
+    try {
+      // Optimized: Single query with community membership check
+      const events = await prisma.event.findMany({
+        where: {
+          communities: {
+            communityMembers: {
+              some: { userId },
+            },
+          },
+          status: EventStatus.PUBLISHED,
+          date: { gte: new Date() },
+        },
+        take: limit,
+        orderBy: { date: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          date: true,
+          location: true,
+          mapLink: true,
+          maxAttendees: true,
+          notes: true,
+          images: true,
+          isFree: true,
+          price: true,
+          currency: true,
+          status: true,
+          hostType: true,
+          hostId: true,
+          communityId: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      return events.map(event => this.transformEventResponse(event));
+    } catch (error: any) {
+      logger.error('Error fetching community events:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get events a user has attended (for profile viewing)
+   * Optimized with single query and date range filter
+   */
+  static async getUserAttendedEvents(
+    userId: string,
+    limit: number = 20,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<EventResponse[]> {
+    try {
+      // Default to last 6 months if no range specified
+      const defaultStartDate = new Date();
+      defaultStartDate.setMonth(defaultStartDate.getMonth() - 6);
+
+      const dateFilter: any = {};
+      if (startDate || endDate) {
+        if (startDate) dateFilter.gte = startDate;
+        if (endDate) dateFilter.lte = endDate;
+      } else {
+        // Default: show events from last 6 months
+        dateFilter.gte = defaultStartDate;
+      }
+
+      // Optimized: Single query joining attendances
+      const events = await prisma.event.findMany({
+        where: {
+          eventAttendances: {
+            some: { userId },
+          },
+          ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
+        },
+        take: limit,
+        orderBy: { date: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          date: true,
+          location: true,
+          mapLink: true,
+          maxAttendees: true,
+          notes: true,
+          images: true,
+          isFree: true,
+          price: true,
+          currency: true,
+          status: true,
+          hostType: true,
+          hostId: true,
+          communityId: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+          eventAttendances: {
+            where: { userId },
+            select: {
+              checkedInAt: true,
+            },
+            take: 1,
+          },
+        },
+      });
+
+      return events.map(event => {
+        const transformed = this.transformEventResponse(event);
+        // Add check-in timestamp to response
+        if (event.eventAttendances.length > 0) {
+          (transformed as any).checkedInAt = event.eventAttendances[0].checkedInAt;
+        }
+        return transformed;
+      });
+    } catch (error: any) {
+      logger.error('Error fetching user attended events:', error);
+      throw error;
+    }
   }
 }

@@ -8,6 +8,7 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
 - 🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
+- 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
 
 ## Base URL
 
@@ -80,6 +81,23 @@ Provides access to geographical and timezone data for the platform.
 - `GET /timezones` - Get available timezones
 
 📖 [Full Metadata Documentation](./METADATA_API.md)
+
+### Events Module (`/v2/events`)
+Comprehensive event management system with ticket sales, RSVPs, and QR code-based check-ins.
+
+**Key Endpoints:**
+- `POST /events` - Create event
+- `GET /events` - List/search events
+- `GET /events/:id` - Get event details
+- `PUT /events/:id` - Update event
+- `DELETE /events/:id` - Delete event
+- `POST /ticket-tiers` - Create ticket tier
+- `POST /tickets/purchase` - Purchase ticket
+- `POST /events/:id/rsvp` - RSVP to free event
+- `GET /rsvps/:id/qr-code` - Generate check-in QR code
+- `POST /events/:id/check-in` - Check in attendee
+
+📖 [Full Events Documentation](./EVENTS_API.md)
 
 ## Response Format
 
@@ -454,10 +472,10 @@ The API is currently focused on core functionality:
 - ✅ **User Management** - Profiles, connections, discovery, activity tracking, security events
 - ✅ **Onboarding** - User onboarding flow with screen management and analytics
 - ✅ **Metadata** - Countries, regions, timezones
+- ✅ **Events** - Event management, ticket sales, RSVPs, QR code check-ins
 
 ### 🚧 Coming Soon
 
-- 🎫 Events API (V2)
 - 💬 Messaging API (V2)
 - 🔔 Notifications API (V2)
 - 🎯 Matching API (V2)

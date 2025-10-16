@@ -11,7 +11,13 @@ import {
   updateTicketTierValidators,
   purchaseTicketValidators,
   createRsvpValidators,
-  checkInValidators
+  checkInValidators,
+  getTrendingEventsValidators,
+  getNearbyEventsValidators,
+  getRecommendedEventsValidators,
+  getEventsByHostValidators,
+  getCommunityEventsValidators,
+  getUserAttendedEventsValidators
 } from './event.validators';
 
 const router = Router();
@@ -616,6 +622,44 @@ router.get(
   EventController.getMyRsvps
 );
 
+/**
+ * @swagger
+ * /v2/events/rsvps/{rsvpId}/qr-code:
+ *   get:
+ *     summary: Generate QR code for RSVP
+ *     description: Generate a secure, time-limited QR code for event check-in. QR codes are generated on-demand with JWT tokens.
+ *     tags: [Events - RSVP]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: rsvpId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: RSVP ID
+ *     responses:
+ *       200:
+ *         description: QR code generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 qrCode:
+ *                   type: string
+ *                   description: Base64 encoded QR code image (Data URL)
+ *       403:
+ *         description: Not authorized to access this RSVP
+ *       404:
+ *         description: RSVP not found
+ */
+router.get(
+  '/rsvps/:rsvpId/qr-code',
+  authenticateToken,
+  EventController.getRsvpQrCode
+);
+
 // ============================================================================
 // ATTENDANCE ROUTES
 // ============================================================================
@@ -685,6 +729,323 @@ router.get(
   eventIdValidator,
   handleValidationErrors,
   EventController.getEventAttendees
+);
+
+// ============================================================================
+// DISCOVERY ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/events/discovery/trending:
+ *   get:
+ *     summary: Get trending events
+ *     description: Retrieve trending events based on engagement, recency, and capacity
+ *     tags: [Events - Discovery]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *     responses:
+ *       200:
+ *         description: Trending events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Trending events retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Event'
+ */
+router.get(
+  '/discovery/trending',
+  getTrendingEventsValidators,
+  handleValidationErrors,
+  EventController.getTrendingEvents
+);
+
+/**
+ * @swagger
+ * /v2/events/discovery/nearby:
+ *   get:
+ *     summary: Get nearby events
+ *     description: Retrieve events near a specific location
+ *     tags: [Events - Discovery]
+ *     parameters:
+ *       - in: query
+ *         name: latitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -90
+ *           maximum: 90
+ *         description: Latitude coordinate
+ *       - in: query
+ *         name: longitude
+ *         required: true
+ *         schema:
+ *           type: number
+ *           minimum: -180
+ *           maximum: 180
+ *         description: Longitude coordinate
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: number
+ *           minimum: 1
+ *           maximum: 500
+ *           default: 50
+ *         description: Search radius in kilometers
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *     responses:
+ *       200:
+ *         description: Nearby events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Nearby events retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Event'
+ */
+router.get(
+  '/discovery/nearby',
+  getNearbyEventsValidators,
+  handleValidationErrors,
+  EventController.getNearbyEvents
+);
+
+/**
+ * @swagger
+ * /v2/events/discovery/recommended:
+ *   get:
+ *     summary: Get recommended events
+ *     description: Retrieve personalized event recommendations based on user history and preferences
+ *     tags: [Events - Discovery]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *     responses:
+ *       200:
+ *         description: Recommended events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Recommended events retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Event'
+ */
+router.get(
+  '/discovery/recommended',
+  authenticateToken,
+  getRecommendedEventsValidators,
+  handleValidationErrors,
+  EventController.getRecommendedEvents
+);
+
+/**
+ * @swagger
+ * /v2/events/discovery/host/{hostId}:
+ *   get:
+ *     summary: Get events by host
+ *     description: Retrieve all events created by a specific host
+ *     tags: [Events - Discovery]
+ *     parameters:
+ *       - in: path
+ *         name: hostId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the host/organizer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *     responses:
+ *       200:
+ *         description: Host events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Host events retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Event'
+ */
+router.get(
+  '/discovery/host/:hostId',
+  getEventsByHostValidators,
+  handleValidationErrors,
+  EventController.getEventsByHost
+);
+
+/**
+ * @swagger
+ * /v2/events/discovery/my-communities:
+ *   get:
+ *     summary: Get events from user's communities
+ *     description: Retrieve events from all communities the authenticated user belongs to
+ *     tags: [Events - Discovery]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *     responses:
+ *       200:
+ *         description: Community events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Community events retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Event'
+ */
+router.get(
+  '/discovery/my-communities',
+  authenticateToken,
+  getCommunityEventsValidators,
+  handleValidationErrors,
+  EventController.getCommunityEvents
+);
+
+/**
+ * @swagger
+ * /v2/events/discovery/user/{userId}/attended:
+ *   get:
+ *     summary: Get events a user has attended
+ *     description: Retrieve events that a specific user has checked in to (for profile viewing). Defaults to last 6 months if no date range specified.
+ *     tags: [Events - Discovery]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of events to return
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter events from this date (ISO 8601 format)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter events until this date (ISO 8601 format)
+ *     responses:
+ *       200:
+ *         description: User attended events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: User attended events retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     allOf:
+ *                       - $ref: '#/components/schemas/Event'
+ *                       - type: object
+ *                         properties:
+ *                           checkedInAt:
+ *                             type: string
+ *                             format: date-time
+ *                             description: When the user checked in to this event
+ */
+router.get(
+  '/discovery/user/:userId/attended',
+  getUserAttendedEventsValidators,
+  handleValidationErrors,
+  EventController.getUserAttendedEvents
 );
 
 export default router;
