@@ -72,6 +72,18 @@ Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - `GET /connections` - My connections
 - `POST /upload-avatar` - Upload photo
 
+### 🌍 Metadata (`/v2/metadata`)
+- `GET /countries` - All countries
+- `GET /countries/:code` - Country details
+- `GET /countries/search` - Search countries
+- `GET /regions` - All regions
+- `GET /regions/:region/countries` - Countries by region
+- `GET /timezones` - All timezones
+- `GET /countries/:countryCode/states` - States by country
+- `GET /countries/:countryCode/cities` - Cities by country
+- `GET /countries/:countryCode/states/:stateCode/cities` - Cities by state
+- `GET /cities` - All cities (with filters)
+
 ### ❤️ Health
 - `GET /health` - Server status
 - `GET /v2/health` - API v2 status
