@@ -1,14 +1,14 @@
+# Nixpacks configuration for Railway deployment
+# Builds both backend and frontend
+
 [phases.setup]
-nixPkgs = ['nodejs-20_x', 'npm-9_x']
+nixPkgs = ['nodejs-18_x', 'openssl']
 
 [phases.install]
-# Use npm install instead of ci for better compatibility
-cmds = ['npm install --production=false']
+cmds = ['npm ci']
 
 [phases.build]
-# Generate Prisma client and build TypeScript
-cmds = ['npx prisma generate', 'npm run build']
+cmds = ['npm run railway:build']
 
 [start]
-# Run migrations and start production server
-cmd = 'npx prisma migrate deploy && npm run start:prod'
+cmd = 'npm run railway:start'
