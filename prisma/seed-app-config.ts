@@ -151,7 +151,7 @@ async function seedAppConfiguration() {
       title: 'Welcome to Berse',
       subtitle: 'Connect with verified, trusted people',
       description: 'Join a community where every connection is built on trust and real relationships.',
-      imageUrl: 'https://example.com/onboarding/welcome.png',
+      imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=600&fit=crop&crop=center',
       ctaText: 'Next',
       ctaAction: 'next',
       backgroundColor: '#4F46E5',
@@ -164,7 +164,7 @@ async function seedAppConfiguration() {
       title: 'Build Your Trust Network',
       subtitle: 'Get vouched by trusted members',
       description: 'Our unique vouch system ensures you connect with genuine people. Get vouched and increase your trust score!',
-      imageUrl: 'https://example.com/onboarding/trust.png',
+      imageUrl: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=600&fit=crop&crop=center',
       ctaText: 'Next',
       ctaAction: 'next',
       backgroundColor: '#10B981',
@@ -177,7 +177,7 @@ async function seedAppConfiguration() {
       title: 'Discover Amazing Events',
       subtitle: 'Join events that matter',
       description: 'From sports to cultural gatherings, find events that match your interests and meet like-minded people.',
-      imageUrl: 'https://example.com/onboarding/events.png',
+      imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop&crop=center',
       ctaText: 'Next',
       ctaAction: 'next',
       backgroundColor: '#F59E0B',
@@ -190,7 +190,7 @@ async function seedAppConfiguration() {
       title: 'Join Communities',
       subtitle: 'Find your tribe',
       description: 'Connect with communities that share your passions - from foodies to tech enthusiasts!',
-      imageUrl: 'https://example.com/onboarding/communities.png',
+      imageUrl: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&h=600&fit=crop&crop=center',
       ctaText: 'Next',
       ctaAction: 'next',
       backgroundColor: '#8B5CF6',
@@ -203,7 +203,7 @@ async function seedAppConfiguration() {
       title: "Let's Get Started!",
       subtitle: 'Complete your profile',
       description: 'Set up your profile to start connecting with amazing people near you.',
-      imageUrl: 'https://example.com/onboarding/start.png',
+      imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=600&fit=crop&crop=center',
       ctaText: 'Get Started',
       ctaAction: 'complete',
       backgroundColor: '#EC4899',
@@ -694,7 +694,7 @@ Document your travels, share experiences, and connect with fellow travelers.
 
 Start building your travel story today!`,
       excerpt: 'Document your travels and connect with fellow adventurers',
-      imageUrl: 'https://example.com/announcements/travel-logbook.png',
+      imageUrl: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=400&fit=crop&crop=center',
       priority: AnnouncementPriority.NORMAL,
       displayType: 'banner',
       targetAudience: 'all',
@@ -725,7 +725,7 @@ Unlock exclusive features with Berse Premium.
 
 Use code: PREMIUM50`,
       excerpt: 'Limited time: 50% off Premium subscription',
-      imageUrl: 'https://example.com/announcements/premium.png',
+      imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop&crop=center',
       priority: AnnouncementPriority.HIGH,
       displayType: 'banner',
       targetAudience: 'all',
@@ -759,7 +759,7 @@ Join hundreds of Berse members for our biggest event yet!
 
 RSVP now - limited spots available!`,
       excerpt: 'Join us for the biggest Berse community gathering',
-      imageUrl: 'https://example.com/announcements/mega-meetup.png',
+      imageUrl: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&h=400&fit=crop&crop=center',
       priority: AnnouncementPriority.URGENT,
       displayType: 'banner',
       targetAudience: 'all',
@@ -786,7 +786,7 @@ RSVP now - limited spots available!`,
   // ===================================
   console.log('\n❓ Seeding FAQs...');
   
-  await prisma.fAQCategory.deleteMany({});
+  await prisma.faqCategory.deleteMany({});
   
   const faqCategories = [
     {
@@ -828,7 +828,7 @@ RSVP now - limited spots available!`,
 
   const createdCategories = [];
   for (const category of faqCategories) {
-    const created = await prisma.fAQCategory.create({ data: category });
+    const created = await prisma.faqCategory.create({ data: category });
     createdCategories.push(created);
   }
   console.log(`✅ Created ${faqCategories.length} FAQ categories`);
@@ -1087,7 +1087,7 @@ We have zero tolerance for abuse.`,
   ];
 
   for (const faq of faqs) {
-    await prisma.fAQ.create({ data: faq });
+    await prisma.faq.create({ data: faq });
   }
   console.log(`✅ Created ${faqs.length} FAQs`);
 
@@ -1770,8 +1770,8 @@ Thank you for your patience!`,
     appVersions: await prisma.appVersion.count(),
     legalDocuments: await prisma.legalDocument.count(),
     announcements: await prisma.announcement.count(),
-    faqCategories: await prisma.fAQCategory.count(),
-    faqs: await prisma.fAQ.count(),
+    faqCategories: await prisma.faqCategory.count(),
+    faqs: await prisma.faq.count(),
     helpCategories: await prisma.helpArticleCategory.count(),
     helpArticles: await prisma.helpArticle.count(),
     maintenanceSchedules: await prisma.maintenanceSchedule.count(),

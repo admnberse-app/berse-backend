@@ -8,7 +8,7 @@ datasource db {
 }
 
 model AnnouncementAnalytic {
-  id             String        @id
+  id             String        @id @default(cuid())
   announcementId String
   userId         String?
   viewed         Boolean       @default(false)
@@ -29,7 +29,7 @@ model AnnouncementAnalytic {
 }
 
 model Announcement {
-  id                     String                   @id
+  id                     String                   @id @default(cuid())
   title                  String
   content                String
   excerpt                String?
@@ -55,7 +55,7 @@ model Announcement {
   createdBy              String?
   tags                   String[]                 @default([])
   createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
+  updatedAt              DateTime @updatedAt
   analytics AnnouncementAnalytic[]
 
   @@index([expiresAt])
@@ -67,7 +67,7 @@ model Announcement {
 }
 
 model AppConfig {
-  id          String   @id
+  id          String   @id @default(cuid())
   configKey   String   @unique
   configValue String
   dataType    String   @default("string")
@@ -77,7 +77,7 @@ model AppConfig {
   isEditable  Boolean  @default(true)
   updatedBy   String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 
   @@index([category, isPublic])
   @@index([configKey])
@@ -86,7 +86,7 @@ model AppConfig {
 }
 
 model AppNoticeDismissal {
-  id          String      @id
+  id          String      @id @default(cuid())
   noticeId    String
   userId      String
   dismissedAt DateTime    @default(now())
@@ -99,7 +99,7 @@ model AppNoticeDismissal {
 }
 
 model AppNotice {
-  id                    String                  @id
+  id                    String                  @id @default(cuid())
   noticeType            AppNoticeType
   title                 String
   message               String
@@ -125,7 +125,7 @@ model AppNotice {
   dismissCount          Int                     @default(0)
   clickCount            Int                     @default(0)
   createdAt             DateTime                @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime @updatedAt
   dismissals AppNoticeDismissal[]
 
   @@index([isActive, startDate, endDate])
@@ -136,7 +136,7 @@ model AppNotice {
 }
 
 model AppVersion {
-  id                  String      @id
+  id                  String      @id @default(cuid())
   versionNumber       String
   versionCode         Int
   platform            AppPlatform
@@ -154,7 +154,7 @@ model AppVersion {
   improvements        Json?
   deprecations        Json?
   createdAt           DateTime    @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime @updatedAt
 
   @@unique([versionNumber, platform])
   @@index([platform, isActive])
@@ -165,7 +165,7 @@ model AppVersion {
 }
 
 model AuthIdentity {
-  id          String   @id
+  id          String   @id @default(cuid())
   userId      String
   provider    String
   providerUid String
@@ -180,7 +180,7 @@ model AuthIdentity {
 }
 
 model Badge {
-  id          String        @id
+  id          String        @id @default(cuid())
   type        BadgeType     @unique
   name        String
   description String
@@ -192,7 +192,7 @@ model Badge {
 }
 
 model CardGameFeedback {
-  id                String              @id
+  id                String              @id @default(cuid())
   userId            String
   topicId           String
   sessionNumber     Int
@@ -200,7 +200,7 @@ model CardGameFeedback {
   rating            Int
   comment           String?
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
   cardGameReplies CardGameReply[]
   cardGameUpvotes CardGameUpvote[]
@@ -213,12 +213,12 @@ model CardGameFeedback {
 }
 
 model CardGameReply {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   userId              String
   feedbackId          String
   text                String
   createdAt           DateTime            @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime @updatedAt
   cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
   user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -229,13 +229,13 @@ model CardGameReply {
 }
 
 model CardGameStat {
-  id            String   @id
+  id            String   @id @default(cuid())
   topicId       String   @unique
   totalSessions Int      @default(0)
   averageRating Float    @default(0)
   totalFeedback Int      @default(0)
   createdAt     DateTime @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
 
   @@index([topicId])
 
@@ -243,7 +243,7 @@ model CardGameStat {
 }
 
 model CardGameUpvote {
-  id                  String              @id
+  id                  String              @id @default(cuid())
   userId              String
   feedbackId          String
   createdAt           DateTime            @default(now())
@@ -258,14 +258,14 @@ model CardGameUpvote {
 }
 
 model Community {
-  id                String              @id
+  id                String              @id @default(cuid())
   name              String              @unique
   description       String?
   imageUrl          String?
   category          String?
   isVerified        Boolean             @default(false)
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   createdById       String
   user             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
   communityMembers CommunityMember[]
@@ -279,7 +279,7 @@ model Community {
 }
 
 model CommunityMember {
-  id          String        @id
+  id          String        @id @default(cuid())
   role        CommunityRole @default(MEMBER)
   joinedAt    DateTime      @default(now())
   isApproved  Boolean       @default(false)
@@ -297,7 +297,7 @@ model CommunityMember {
 }
 
 model ConnectionReview {
-  id                                         String           @id
+  id                                         String           @id @default(cuid())
   connectionId                               String
   reviewerId                                 String
   revieweeId                                 String
@@ -310,7 +310,7 @@ model ConnectionReview {
   verificationSource                         String?
   helpfulCount                               Int              @default(0)
   createdAt                                  DateTime         @default(now())
-  updatedAt                                  DateTime
+  updatedAt                                  DateTime @updatedAt
   user_connections                           UserConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   users_connection_reviews_revieweeIdTousers User @relation("connection_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
   users_connection_reviews_reviewerIdTousers User @relation("connection_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
@@ -346,7 +346,7 @@ model ConnectionStat {
   connectionQuality       Float    @default(0.0)
   lastCalculatedAt        DateTime @default(now())
   createdAt               DateTime @default(now())
-  updatedAt               DateTime
+  updatedAt               DateTime @updatedAt
   users                   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([averageRating])
@@ -357,7 +357,7 @@ model ConnectionStat {
 }
 
 model DeviceRegistration {
-  id                String   @id
+  id                String   @id @default(cuid())
   userId            String
   deviceFingerprint String
   deviceName        String?
@@ -374,7 +374,7 @@ model DeviceRegistration {
 }
 
 model EmailVerificationToken {
-  id         String    @id
+  id         String    @id @default(cuid())
   userId     String
   email      String
   token      String    @unique
@@ -390,7 +390,7 @@ model EmailVerificationToken {
 }
 
 model EventAttendance {
-  id          String   @id
+  id          String   @id @default(cuid())
   checkedInAt DateTime @default(now())
   userId      String
   eventId     String
@@ -406,7 +406,7 @@ model EventAttendance {
 }
 
 model EventRsvp {
-  id        String   @id
+  id        String   @id @default(cuid())
   qrCode    String   @unique
   createdAt DateTime @default(now())
   userId    String
@@ -423,7 +423,7 @@ model EventRsvp {
 }
 
 model EventTicketTier {
-  id             String          @id
+  id             String          @id @default(cuid())
   eventId        String
   tierName       String
   description    String?
@@ -438,7 +438,7 @@ model EventTicketTier {
   displayOrder   Int             @default(0)
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime @updatedAt
   events         Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventTickets  EventTicket[]
 
@@ -449,7 +449,7 @@ model EventTicketTier {
 }
 
 model EventTicket {
-  id                   String                @id
+  id                   String                @id @default(cuid())
   eventId              String
   userId               String
   ticketTierId         String?
@@ -487,7 +487,7 @@ model EventTicket {
 }
 
 model Event {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   title              String
   description        String?
   type               EventType
@@ -497,7 +497,7 @@ model Event {
   maxAttendees       Int?
   notes              String?
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime @updatedAt
   hostId             String
   communityId        String?
   currency           String               @default("MYR")
@@ -534,7 +534,7 @@ model Event {
 }
 
 model FaqAnalytic {
-  id            String    @id
+  id            String    @id @default(cuid())
   faqId         String
   userId        String?
   viewed        Boolean   @default(false)
@@ -553,7 +553,7 @@ model FaqAnalytic {
 }
 
 model FaqCategory {
-  id           String  @id
+  id           String  @id @default(cuid())
   name         String
   description  String?
   icon         String?
@@ -567,7 +567,7 @@ model FaqCategory {
 }
 
 model Faq {
-  id                String          @id
+  id                String          @id @default(cuid())
   categoryId        String?
   question          String
   answer            String
@@ -581,7 +581,7 @@ model Faq {
   relatedFaqIds     String[]        @default([])
   relatedArticleIds String[]        @default([])
   createdAt         DateTime        @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   analytics     FaqAnalytic[]
   category    FaqCategory? @relation(fields: [categoryId], references: [id])
 
@@ -593,7 +593,7 @@ model Faq {
 }
 
 model FeatureFlagAnalytic {
-  id            String        @id
+  id            String        @id @default(cuid())
   featureFlagId String
   userId        String?
   wasEnabled    Boolean
@@ -615,7 +615,7 @@ model FeatureFlagAnalytic {
 }
 
 model FeatureFlag {
-  id                     String                   @id
+  id                     String                   @id @default(cuid())
   featureKey             String                   @unique
   featureName            String
   description            String?
@@ -640,7 +640,7 @@ model FeatureFlag {
   tags                   String[]                 @default([])
   dependencies           String[]                 @default([])
   createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
+  updatedAt              DateTime @updatedAt
   analytics FeatureFlagAnalytic[]
 
   @@index([featureKey, isEnabled])
@@ -650,7 +650,7 @@ model FeatureFlag {
 }
 
 model FeatureUsage {
-  id             String   @id
+  id             String   @id @default(cuid())
   userId         String
   subscriptionId String?
   featureCode    String
@@ -671,7 +671,7 @@ model FeatureUsage {
 }
 
 model HelpArticleAnalytic {
-  id               String        @id
+  id               String        @id @default(cuid())
   articleId        String
   userId           String?
   viewed           Boolean       @default(false)
@@ -692,7 +692,7 @@ model HelpArticleAnalytic {
 }
 
 model HelpArticleCategory {
-  id            String          @id
+  id            String          @id @default(cuid())
   name          String
   slug          String          @unique
   description   String?
@@ -707,7 +707,7 @@ model HelpArticleCategory {
 }
 
 model HelpArticle {
-  id                      String                   @id
+  id                      String                   @id @default(cuid())
   categoryId              String?
   title                   String
   slug                    String                   @unique
@@ -732,7 +732,7 @@ model HelpArticle {
   createdBy               String?
   publishedAt             DateTime?
   createdAt               DateTime                 @default(now())
-  updatedAt               DateTime
+  updatedAt               DateTime @updatedAt
   analytics  HelpArticleAnalytic[]
   category HelpArticleCategory? @relation(fields: [categoryId], references: [id])
 
@@ -745,7 +745,7 @@ model HelpArticle {
 }
 
 model LegalDocumentAcceptance {
-  id              String            @id
+  id              String            @id @default(cuid())
   documentId      String
   userId          String
   acceptedAt      DateTime          @default(now())
@@ -764,7 +764,7 @@ model LegalDocumentAcceptance {
 }
 
 model LegalDocument {
-  id                         String                       @id
+  id                         String                       @id @default(cuid())
   documentType               LegalDocumentType
   version                    String
   title                      String
@@ -781,7 +781,7 @@ model LegalDocument {
   approvedBy                 String?
   approvedAt                 DateTime?
   createdAt                  DateTime                     @default(now())
-  updatedAt                  DateTime
+  updatedAt                  DateTime @updatedAt
   acceptances LegalDocumentAcceptance[]
 
   @@unique([documentType, version])
@@ -792,7 +792,7 @@ model LegalDocument {
 }
 
 model ListingPriceHistory {
-  id                   String               @id
+  id                   String               @id @default(cuid())
   listingId            String
   price                Float
   currency             String               @default("MYR")
@@ -806,7 +806,7 @@ model ListingPriceHistory {
 }
 
 model LoginAttempt {
-  id            String   @id
+  id            String   @id @default(cuid())
   userId        String?
   identifier    String
   ipAddress     String
@@ -824,7 +824,7 @@ model LoginAttempt {
 }
 
 model MaintenanceSchedule {
-  id                String            @id
+  id                String            @id @default(cuid())
   title             String
   description       String
   startTime         DateTime
@@ -845,7 +845,7 @@ model MaintenanceSchedule {
   completionNotes   String?
   createdBy         String?
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
 
   @@index([startTime, endTime])
   @@index([status, startTime])
@@ -854,7 +854,7 @@ model MaintenanceSchedule {
 }
 
 model MarketplaceCartItem {
-  id                   String               @id
+  id                   String               @id @default(cuid())
   userId               String
   listingId            String
   quantity             Int
@@ -869,7 +869,7 @@ model MarketplaceCartItem {
 }
 
 model MarketplaceDispute {
-  id                 String             @id
+  id                 String             @id @default(cuid())
   orderId            String
   initiatedBy        String
   reason             String
@@ -887,7 +887,7 @@ model MarketplaceDispute {
 }
 
 model MarketplaceListing {
-  id                     String                   @id
+  id                     String                   @id @default(cuid())
   userId                 String
   title                  String
   description            String?
@@ -899,7 +899,7 @@ model MarketplaceListing {
   images                 String[]                 @default([])
   status                 ListingStatus            @default(DRAFT)
   createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
+  updatedAt              DateTime @updatedAt
   priceHistory  ListingPriceHistory[]
   marketplaceCartItems MarketplaceCartItem[]
   user                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -914,7 +914,7 @@ model MarketplaceListing {
 }
 
 model MarketplaceOrder {
-  id                                       String                 @id
+  id                                       String                 @id @default(cuid())
   listingId                                String
   buyerId                                  String
   sellerId                                 String
@@ -933,7 +933,7 @@ model MarketplaceOrder {
   trackingNumber                           String?
   notes                                    String?
   createdAt                                DateTime               @default(now())
-  updatedAt                                DateTime
+  updatedAt                                DateTime @updatedAt
   confirmedAt                              DateTime?
   shippedAt                                DateTime?
   deliveredAt                              DateTime?
@@ -957,7 +957,7 @@ model MarketplaceOrder {
 }
 
 model MarketplaceReview {
-  id                                          String             @id
+  id                                          String             @id @default(cuid())
   orderId                                     String
   reviewerId                                  String
   revieweeId                                  String
@@ -975,7 +975,7 @@ model MarketplaceReview {
 }
 
 model Match {
-  id                              String      @id
+  id                              String      @id @default(cuid())
   type                            MatchType
   status                          MatchStatus @default(PENDING)
   compatibility                   Float
@@ -985,7 +985,7 @@ model Match {
   location                        String?
   message                         String?
   createdAt                       DateTime    @default(now())
-  updatedAt                       DateTime
+  updatedAt                       DateTime @updatedAt
   expiresAt                       DateTime
   senderId                        String
   receiverId                      String
@@ -1006,7 +1006,7 @@ model Match {
 }
 
 model Message {
-  id                               String   @id
+  id                               String   @id @default(cuid())
   content                          String
   isRead                           Boolean  @default(false)
   createdAt                        DateTime @default(now())
@@ -1034,14 +1034,14 @@ model NotificationPreference {
   preferences  Json     @default("{}")
   quietHours   Json?
   timezone     String   @default("Asia/Kuala_Lumpur")
-  updatedAt    DateTime
+  updatedAt    DateTime @updatedAt
   users        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
 }
 
 model Notification {
-  id                String           @id
+  id                String           @id @default(cuid())
   type              NotificationType
   title             String
   message           String
@@ -1071,7 +1071,7 @@ model Notification {
 }
 
 model OnboardingAnalytic {
-  id                 String             @id
+  id                 String             @id @default(cuid())
   screenId           String
   userId             String?
   viewed             Boolean            @default(false)
@@ -1094,7 +1094,7 @@ model OnboardingAnalytic {
 }
 
 model OnboardingScreen {
-  id                   String                 @id
+  id                   String                 @id @default(cuid())
   screenOrder          Int
   title                String
   subtitle             String?
@@ -1111,7 +1111,7 @@ model OnboardingScreen {
   minAppVersion        String?
   metadata             Json?
   createdAt            DateTime               @default(now())
-  updatedAt            DateTime
+  updatedAt            DateTime @updatedAt
   analytics OnboardingAnalytic[]
 
   @@index([isActive])
@@ -1121,7 +1121,7 @@ model OnboardingScreen {
 }
 
 model PasswordResetToken {
-  id        String    @id
+  id        String    @id @default(cuid())
   userId    String
   token     String    @unique
   expiresAt DateTime
@@ -1137,14 +1137,14 @@ model PasswordResetToken {
 }
 
 model PaymentProviderRouting {
-  id                String            @id
+  id                String            @id @default(cuid())
   ruleName          String
   providerId        String
   conditions        Json
   priority          Int               @default(0)
   isActive          Boolean           @default(true)
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   provider PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@index([priority, isActive])
@@ -1154,7 +1154,7 @@ model PaymentProviderRouting {
 }
 
 model PaymentProvider {
-  id                       String                     @id
+  id                       String                     @id @default(cuid())
   providerCode             String                     @unique
   providerName             String
   providerType             String
@@ -1168,7 +1168,7 @@ model PaymentProvider {
   capabilities             Json                       @default("{}")
   webhookConfig            Json?
   createdAt                DateTime                   @default(now())
-  updatedAt                DateTime
+  updatedAt                DateTime @updatedAt
   routing PaymentProviderRouting[]
   paymentTransactions     PaymentTransaction[]
 
@@ -1179,7 +1179,7 @@ model PaymentProvider {
 }
 
 model PaymentTransaction {
-  id                     String                  @id
+  id                     String                  @id @default(cuid())
   userId                 String
   transactionType        TransactionType
   referenceType          String
@@ -1203,7 +1203,7 @@ model PaymentTransaction {
   description            String?
   metadata               Json?
   createdAt              DateTime                @default(now())
-  updatedAt              DateTime
+  updatedAt              DateTime @updatedAt
   eventTickets          EventTicket[]
   marketplace_orders     MarketplaceOrder[]
   provider      PaymentProvider @relation(fields: [providerId], references: [id])
@@ -1226,7 +1226,7 @@ model PaymentTransaction {
 }
 
 model PayoutDistribution {
-  id                   String               @id
+  id                   String               @id @default(cuid())
   paymentTransactionId String
   recipientId          String
   recipientType        String
@@ -1248,7 +1248,7 @@ model PayoutDistribution {
 }
 
 model PlatformFeeConfig {
-  id               String             @id
+  id               String             @id @default(cuid())
   configName       String
   transactionType  TransactionType
   feePercentage    Float?
@@ -1265,7 +1265,7 @@ model PlatformFeeConfig {
   effectiveUntil   DateTime?
   description      String?
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   fees TransactionFee[]
 
   @@index([effectiveFrom, effectiveUntil])
@@ -1276,7 +1276,7 @@ model PlatformFeeConfig {
 }
 
 model PointHistory {
-  id          String   @id
+  id          String   @id @default(cuid())
   points      Int
   action      String
   description String?
@@ -1319,7 +1319,7 @@ model ProfileCompletionStatus {
   lastCalculatedAt    DateTime  @default(now())
   firstCompleteAt     DateTime?
   createdAt           DateTime  @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime @updatedAt
   user               User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([completionLevel])
@@ -1330,13 +1330,13 @@ model ProfileCompletionStatus {
 }
 
 model PushSubscription {
-  id        String   @id
+  id        String   @id @default(cuid())
   userId    String   @unique
   endpoint  String
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -1345,7 +1345,7 @@ model PushSubscription {
 }
 
 model Redemption {
-  id          String           @id
+  id          String           @id @default(cuid())
   status      RedemptionStatus @default(PENDING)
   notes       String?
   redeemedAt  DateTime         @default(now())
@@ -1363,7 +1363,7 @@ model Redemption {
 }
 
 model ReferralCampaign {
-  id                   String      @id
+  id                   String      @id @default(cuid())
   campaignCode         String      @unique
   campaignName         String
   description          String?
@@ -1386,7 +1386,7 @@ model ReferralCampaign {
   totalActivated       Int         @default(0)
   totalRewardsGiven    Float       @default(0.0)
   createdAt            DateTime    @default(now())
-  updatedAt            DateTime
+  updatedAt            DateTime @updatedAt
   referrals            Referral[]
 
   @@index([campaignCode, isActive])
@@ -1397,7 +1397,7 @@ model ReferralCampaign {
 }
 
 model ReferralReward {
-  id                String               @id
+  id                String               @id @default(cuid())
   referralId        String
   userId            String
   rewardType        String
@@ -1412,7 +1412,7 @@ model ReferralReward {
   claimedAt         DateTime?
   metadata          Json?
   createdAt         DateTime             @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   referrals         Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
   user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1448,7 +1448,7 @@ model ReferralStat {
   lastActivationAt      DateTime?
   lastCalculatedAt      DateTime  @default(now())
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime @updatedAt
   users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leaderboardRank])
@@ -1460,7 +1460,7 @@ model ReferralStat {
 }
 
 model Referral {
-  id                                String              @id
+  id                                String              @id @default(cuid())
   referrerId                        String
   refereeId                         String?
   referralCode                      String              @unique
@@ -1481,7 +1481,7 @@ model Referral {
   metadata                          Json?
   notes                             String?
   createdAt                         DateTime            @default(now())
-  updatedAt                         DateTime
+  updatedAt                         DateTime @updatedAt
   referralRewards                  ReferralReward[]
   campaign                ReferralCampaign? @relation(fields: [campaignId], references: [id])
   users_referrals_refereeIdTousers  User? @relation("referrals_refereeIdTousers", fields: [refereeId], references: [id])
@@ -1500,7 +1500,7 @@ model Referral {
 }
 
 model RefreshToken {
-  id          String   @id
+  id          String   @id @default(cuid())
   tokenHash   String   @unique
   tokenFamily String
   userId      String
@@ -1517,7 +1517,7 @@ model RefreshToken {
 }
 
 model Reward {
-  id             String        @id
+  id             String        @id @default(cuid())
   title          String
   description    String
   pointsRequired Int
@@ -1527,7 +1527,7 @@ model Reward {
   imageUrl       String?
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime @updatedAt
   redemptions    Redemption[]
 
   @@index([category])
@@ -1537,7 +1537,7 @@ model Reward {
 }
 
 model SecurityEvent {
-  id          String   @id
+  id          String   @id @default(cuid())
   userId      String
   eventType   String
   severity    String   @default("medium")
@@ -1556,7 +1556,7 @@ model SecurityEvent {
 }
 
 model ServiceBooking {
-  id                                       String                @id
+  id                                       String                @id @default(cuid())
   serviceId                                String
   customerId                               String
   providerId                               String
@@ -1576,7 +1576,7 @@ model ServiceBooking {
   specialRequests                          String?
   bookingDetails                           Json?
   createdAt                                DateTime              @default(now())
-  updatedAt                                DateTime
+  updatedAt                                DateTime @updatedAt
   confirmedAt                              DateTime?
   completedAt                              DateTime?
   canceledAt                               DateTime?
@@ -1597,7 +1597,7 @@ model ServiceBooking {
 }
 
 model Service {
-  id               String             @id
+  id               String             @id @default(cuid())
   providerId       String
   title            String
   description      String?
@@ -1613,7 +1613,7 @@ model Service {
   images           String[]           @default([])
   status           ServiceStatus      @default(DRAFT)
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   bookings ServiceBooking[]
   users            User @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
@@ -1625,7 +1625,7 @@ model Service {
 }
 
 model SubscriptionPayment {
-  id                   String                @id
+  id                   String                @id @default(cuid())
   subscriptionId       String
   userId               String
   amount               Float
@@ -1655,7 +1655,7 @@ model SubscriptionPayment {
 }
 
 model SubscriptionTier {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   tierCode           String               @unique
   tierName           String
   description        String?
@@ -1668,7 +1668,7 @@ model SubscriptionTier {
   isPublic           Boolean              @default(true)
   trialDays          Int?                 @default(0)
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime @updatedAt
   subscriptions UserSubscription[]
 
   @@index([displayOrder])
@@ -1679,7 +1679,7 @@ model SubscriptionTier {
 }
 
 model TransactionFee {
-  id                   String                @id
+  id                   String                @id @default(cuid())
   transactionId        String
   feeConfigId          String?
   feeType              String
@@ -1702,7 +1702,7 @@ model TransactionFee {
 }
 
 model TravelBucketList {
-  id                String    @id
+  id                String    @id @default(cuid())
   userId            String
   country           String
   city              String?
@@ -1716,7 +1716,7 @@ model TravelBucketList {
   isPublic          Boolean   @default(true)
   seekingCompanions Boolean   @default(false)
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
 
   @@index([country])
   @@index([seekingCompanions])
@@ -1726,7 +1726,7 @@ model TravelBucketList {
 }
 
 model TravelCompanion {
-  id                                         String       @id
+  id                                         String       @id @default(cuid())
   tripId                                     String
   userId                                     String
   companionId                                String?
@@ -1754,7 +1754,7 @@ model TravelCompanion {
 }
 
 model TravelHighlight {
-  id            String       @id
+  id            String       @id @default(cuid())
   tripId        String
   title         String
   description   String?
@@ -1772,7 +1772,7 @@ model TravelHighlight {
 }
 
 model TravelLocation {
-  id             String       @id
+  id             String       @id @default(cuid())
   tripId         String
   country        String
   city           String
@@ -1815,7 +1815,7 @@ model TravelStat {
   averageTripDuration   Int?
   lastCalculatedAt      DateTime  @default(now())
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime @updatedAt
   users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countriesVisited])
@@ -1825,7 +1825,7 @@ model TravelStat {
 }
 
 model TravelTrip {
-  id                String              @id
+  id                String              @id @default(cuid())
   userId            String
   title             String
   description       String?
@@ -1841,7 +1841,7 @@ model TravelTrip {
   isFeatured        Boolean             @default(false)
   tags              String[]            @default([])
   createdAt         DateTime            @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   travelCompanions TravelCompanion[]
   travel_highlights TravelHighlight[]
   travel_locations  TravelLocation[]
@@ -1856,7 +1856,7 @@ model TravelTrip {
 }
 
 model UserActivity {
-  id           String   @id
+  id           String   @id @default(cuid())
   userId       String
   activityType String
   entityType   String
@@ -1872,7 +1872,7 @@ model UserActivity {
 }
 
 model UserBadge {
-  id       String   @id
+  id       String   @id @default(cuid())
   earnedAt DateTime @default(now())
   userId   String
   badgeId  String
@@ -1886,7 +1886,7 @@ model UserBadge {
 }
 
 model UserBlock {
-  id                                 String   @id
+  id                                 String   @id @default(cuid())
   blockerId                          String
   blockedId                          String
   reason                             String?
@@ -1902,7 +1902,7 @@ model UserBlock {
 }
 
 model UserConnection {
-  id                                        String               @id
+  id                                        String               @id @default(cuid())
   initiatorId                               String
   receiverId                                String
   status                                    ConnectionStatus     @default(PENDING)
@@ -1951,7 +1951,7 @@ model UserLocation {
   timezone           String    @default("Asia/Kuala_Lumpur")
   preferredLanguage  String    @default("en")
   currency           String    @default("MYR")
-  updatedAt          DateTime
+  updatedAt          DateTime @updatedAt
   lastLocationUpdate DateTime?
   latitude           Float?
   longitude          Float?
@@ -1980,7 +1980,7 @@ model UserMetadata {
   tags           String[] @default([])
   notes          String?
   internalNotes  String?
-  updatedAt      DateTime
+  updatedAt      DateTime @updatedAt
   user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([affiliateId])
@@ -1990,7 +1990,7 @@ model UserMetadata {
 }
 
 model UserPaymentMethod {
-  id              String    @id
+  id              String    @id @default(cuid())
   userId          String
   provider        String
   gatewayMethodId String
@@ -2016,7 +2016,7 @@ model UserPreference {
   googleCalendarRefreshToken String?
   pushToken                  String?
   preferences                Json     @default("{}")
-  updatedAt                  DateTime
+  updatedAt                  DateTime @updatedAt
   users                      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
@@ -2034,7 +2034,7 @@ model UserPrivacy {
   deletionRequestedAt     DateTime?
   deletionScheduledFor    DateTime?
   dataExportRequestedAt   DateTime?
-  updatedAt               DateTime
+  updatedAt               DateTime @updatedAt
   users                   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([deletionRequestedAt])
@@ -2065,7 +2065,7 @@ model UserProfile {
   travelBio        String?
   customFields     Json?
   locationPrivacy  String    @default("friends") // "public", "friends", "private"
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   users            User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([displayName])
@@ -2090,7 +2090,7 @@ model UserSecurity {
   lockoutUntil         DateTime?
   suspendedUntil       DateTime?
   suspensionReason     String?
-  updatedAt            DateTime
+  updatedAt            DateTime @updatedAt
   user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([emailVerifiedAt])
@@ -2109,7 +2109,7 @@ model UserServiceProfile {
   hostDescription  String?
   guideDescription String?
   servicesOffered  Json?
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   users            User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isGuideAvailable])
@@ -2120,7 +2120,7 @@ model UserServiceProfile {
 }
 
 model UserSession {
-  id             String   @id
+  id             String   @id @default(cuid())
   userId         String
   sessionToken   String   @unique
   deviceInfo     Json?
@@ -2160,7 +2160,7 @@ model UserStat {
 }
 
 model UserSubscription {
-  id                    String                  @id
+  id                    String                  @id @default(cuid())
   userId                String
   tierId                String
   status                SubscriptionStatus      @default(ACTIVE)
@@ -2174,7 +2174,7 @@ model UserSubscription {
   gatewaySubscriptionId String?
   usageData             Json                    @default("{}")
   createdAt             DateTime                @default(now())
-  updatedAt             DateTime
+  updatedAt             DateTime @updatedAt
   subscriptionPayments SubscriptionPayment[]
   tiers    SubscriptionTier @relation(fields: [tierId], references: [id])
   users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2189,7 +2189,7 @@ model UserSubscription {
 }
 
 model User {
-  id                                                        String                      @id
+  id                                                        String                      @id @default(cuid())
   email                                                     String?                     @unique
   phone                                                     String?                     @unique
   password                                                  String?
@@ -2197,7 +2197,7 @@ model User {
   role                                                      UserRole                    @default(GENERAL_USER)
   totalPoints                                               Int                         @default(0)
   createdAt                                                 DateTime                    @default(now())
-  updatedAt                                                 DateTime
+  updatedAt                                                 DateTime @updatedAt
   referredById                                              String?
   username                                                  String?                     @unique
   deletedAt                                                 DateTime?
@@ -2293,7 +2293,7 @@ model User {
 }
 
 model VouchConfig {
-  id                             String    @id
+  id                             String    @id @default(cuid())
   maxPrimaryVouches              Int       @default(1)
   maxSecondaryVouches            Int       @default(3)
   maxCommunityVouches            Int       @default(2)
@@ -2311,7 +2311,7 @@ model VouchConfig {
   perTier                        Json?
   effectiveFrom                  DateTime?
   createdAt                      DateTime  @default(now())
-  updatedAt                      DateTime
+  updatedAt                      DateTime @updatedAt
 
   @@index([effectiveFrom])
 
@@ -2319,7 +2319,7 @@ model VouchConfig {
 }
 
 model Vouch {
-  id                             String      @id
+  id                             String      @id @default(cuid())
   voucherId                      String
   voucheeId                      String
   vouchType                      VouchType   @default(PRIMARY)
@@ -2339,7 +2339,7 @@ model Vouch {
   revokeReason                   String?
   trustImpact                    Float?
   createdAt                      DateTime    @default(now())
-  updatedAt                      DateTime
+  updatedAt                      DateTime @updatedAt
   users_vouches_voucheeIdTousers User @relation("vouches_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
   users_vouches_voucherIdTousers User @relation("vouches_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
 
