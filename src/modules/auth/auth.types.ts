@@ -20,11 +20,10 @@ export interface RegisterRequest {
   phone?: string;
   password: string;
   fullName: string;
-  username?: string;
   nationality?: string;
   countryOfResidence?: string;
   city?: string;
-  gender?: 'male' | 'female';
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   dateOfBirth?: string;
   referralCode?: string;
   // Optional device and location data

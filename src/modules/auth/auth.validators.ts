@@ -22,7 +22,8 @@ export const registerValidators = [
     .withMessage('Username must be 2-30 characters, alphanumeric with underscores and hyphens'),
   body('phone')
     .optional()
-    .isMobilePhone('any')
+    .trim()
+    .notEmpty()
     .withMessage('Valid phone number is required'),
   body('nationality')
     .optional()
@@ -41,8 +42,10 @@ export const registerValidators = [
     .withMessage('City must be 2-50 characters'),
   body('gender')
     .optional()
-    .isIn(['male', 'female'])
-    .withMessage('Gender must be either male or female'),
+    .trim()
+    .customSanitizer((value) => value?.toLowerCase())
+    .isIn(['male', 'female', 'other', 'prefer_not_to_say'])
+    .withMessage('Gender must be male, female, other, or prefer_not_to_say'),
   body('dateOfBirth')
     .optional()
     .isISO8601()
