@@ -6,6 +6,7 @@ import { onboardingRoutes } from '../../modules/onboarding';
 import { eventRoutes } from '../../modules/events';
 import { connectionRoutes, vouchRoutes } from '../../modules/connections';
 import { cardGameRoutes } from '../../modules/cardgame';
+import { gamificationRoutes } from '../../modules/gamification';
 import notificationRoutes from '../../modules/user/notification.routes';
 
 const router = Router();
@@ -68,6 +69,12 @@ router.use('/notifications', notificationRoutes);
  */
 router.use('/cardgame', cardGameRoutes);
 
+/**
+ * Gamification routes
+ * Base path: /v2/gamification
+ */
+router.use('/gamification', gamificationRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -121,6 +128,7 @@ router.get('/health', (req, res) => {
       vouches: '/v2/vouches',
       notifications: '/v2/notifications',
       cardgame: '/v2/cardgame',
+      gamification: '/v2/gamification',
     },
   });
 });
@@ -201,8 +209,9 @@ router.get('/docs', (req, res) => {
     description: 'Modern, modular API for the Berse platform',
     baseUrl: 'https://api.berse-app.com',
     documentation: {
-      auth: 'See /docs/api/AUTH_API.md',
-      users: 'See /docs/api/USER_API.md',
+      auth: 'See /docs/api-v2/AUTH_API.md',
+      users: 'See /docs/api-v2/USER_API.md',
+      gamification: 'See /docs/api-v2/GAMIFICATION_API.md',
     },
     endpoints: {
       auth: {
@@ -292,6 +301,24 @@ router.get('/docs', (req, res) => {
         'GET /v2/cardgame/analytics/topics/:topicId': 'Get detailed topic analytics (auth required)',
         'GET /v2/cardgame/stats/me': 'Get current user statistics (auth required)',
         'GET /v2/cardgame/stats/users/:userId': 'Get user statistics (auth required)',
+      },
+      gamification: {
+        'GET /v2/gamification/dashboard': 'Get gamification dashboard (auth required)',
+        'GET /v2/gamification/badges': 'Get all badges (auth required)',
+        'GET /v2/gamification/badges/my': 'Get my badges (auth required)',
+        'GET /v2/gamification/badges/progress': 'Get badge progress (auth required)',
+        'GET /v2/gamification/points': 'Get my points balance (auth required)',
+        'GET /v2/gamification/points/history': 'Get points history (auth required)',
+        'GET /v2/gamification/points/actions': 'Get point actions list (auth required)',
+        'GET /v2/gamification/rewards': 'Get rewards catalog (auth required)',
+        'POST /v2/gamification/rewards/redeem': 'Redeem reward (auth required)',
+        'GET /v2/gamification/rewards/redemptions': 'Get my redemptions (auth required)',
+        'GET /v2/gamification/leaderboard/points': 'Get points leaderboard (auth required)',
+        'GET /v2/gamification/leaderboard/trust': 'Get trust score leaderboard (auth required)',
+        'GET /v2/gamification/leaderboard/badges': 'Get badges leaderboard (auth required)',
+        'GET /v2/gamification/leaderboard/events': 'Get events leaderboard (auth required)',
+        'GET /v2/gamification/leaderboard/connections': 'Get connections leaderboard (auth required)',
+        'GET /v2/gamification/leaderboard/referrals': 'Get referrals leaderboard (auth required)',
       },
     },
     authentication: {

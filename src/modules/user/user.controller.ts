@@ -12,24 +12,11 @@ import { RecommendationsService } from '../../services/recommendations.service';
 
 export class UserController {
   /**
-   * Helper function to transform ugly Prisma relation names to simple readable names
+   * Helper function to ensure consistent response format
+   * Note: Relation names are now clean, no transformation needed
    */
   private static transformUserResponse(user: any) {
-    if (user && user._count) {
-      const { 
-        user_connections_user_connections_initiatorIdTousers,
-        user_connections_user_connections_receiverIdTousers,
-        referrals_referrals_referrerIdTousers,
-        ...otherCounts 
-      } = user._count;
-
-      user._count = {
-        ...otherCounts,
-        connectionsInitiated: user_connections_user_connections_initiatorIdTousers || 0,
-        connectionsReceived: user_connections_user_connections_receiverIdTousers || 0,
-        referralsMade: referrals_referrals_referrerIdTousers || 0,
-      };
-    }
+    // No transformation needed anymore - relation names are already clean
     return user;
   }
 
@@ -108,10 +95,10 @@ export class UserController {
             select: {
               events: true,
               eventRsvps: true,
-              referrals_referrals_referrerIdTousers: true,
+              referralsAsReferrer: true,
               userBadges: true,
-              user_connections_user_connections_initiatorIdTousers: true,
-              user_connections_user_connections_receiverIdTousers: true,
+              connectionsInitiated: true,
+              connectionsReceived: true,
             },
           },
           connectionStats: {
@@ -754,8 +741,8 @@ export class UserController {
                 events: true,
                 eventRsvps: true,
                 userBadges: true,
-                user_connections_user_connections_initiatorIdTousers: true,
-                user_connections_user_connections_receiverIdTousers: true,
+                connectionsInitiated: true,
+                connectionsReceived: true,
               },
             },
           connectionStats: {

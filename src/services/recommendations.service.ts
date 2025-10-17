@@ -63,8 +63,8 @@ export class RecommendationsService {
         connectionStats: true,
         _count: {
           select: {
-            user_connections_user_connections_initiatorIdTousers: true,
-            user_connections_user_connections_receiverIdTousers: true,
+            connectionsInitiated: true,
+            connectionsReceived: true,
           },
         },
       },
@@ -152,8 +152,8 @@ export class RecommendationsService {
     }
 
     // 5. Activity Level Score (0-10 points)
-    const totalConnections = (targetUser._count?.user_connections_user_connections_initiatorIdTousers || 0) + 
-                           (targetUser._count?.user_connections_user_connections_receiverIdTousers || 0);
+    const totalConnections = (targetUser._count?.connectionsInitiated || 0) + 
+                           (targetUser._count?.connectionsReceived || 0);
     
     if (totalConnections > 5) {
       score += 10;
