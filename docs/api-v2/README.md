@@ -8,7 +8,7 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
 - 🤝 [Connections API](./CONNECTIONS_API.md) - Connection management, vouching system, and trust scores ([Quick Ref](./CONNECTIONS_QUICKREF.md))
 - �️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
-- �🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
+- 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
 - 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
@@ -150,6 +150,31 @@ In-app notification system for user actions including connections, vouches, even
 - `DELETE /notifications/:id` - Delete specific notification
 
 📖 [Full Notifications Documentation](./NOTIFICATIONS_API.md)
+
+### Onboarding Module V2 (`/v2/onboarding-v2`)
+Two-phase onboarding system: anonymous app preview before authentication, and personalized setup after registration.
+
+**Phase 1: App Preview (No Auth Required) - `/v2/onboarding-v2/app-preview`**
+- `GET /screens` - Get app introduction screens (title, description, image, order)
+- `POST /track` - Track anonymous user interactions (views, skips, completions)
+- `POST /link` - Link pre-auth session to newly registered user account
+- `GET /analytics` - Get app preview analytics and conversion metrics (admin)
+
+**Phase 2: User Setup (Auth Required) - `/v2/onboarding-v2/user-setup`**
+- `GET /screens` - Get personalized setup screens (profile, network, community, preferences)
+- `POST /track` - Track user progress through setup flow
+- `GET /status` - Get user's setup completion status and progress
+- `POST /complete` - Mark entire setup as complete
+- `GET /analytics` - Get user setup completion analytics (admin)
+
+**Key Features:**
+- **Anonymous Tracking:** Track app preview engagement before user signs up
+- **Session Linking:** Connect pre-auth activity to user account post-registration
+- **Screen Types:** Support for PROFILE, NETWORK, COMMUNITY, PREFERENCES, TUTORIAL, VERIFICATION
+- **Progress Tracking:** Required vs optional screens with completion status
+- **Analytics:** Comprehensive metrics for both phases (conversion rates, drop-off points, completion times)
+
+📖 [Full Onboarding V2 Documentation](./ONBOARDING_V2_API.md) | [Legacy V1 (Deprecated)](./ONBOARDING_API.md)
 
 ## Response Format
 
@@ -522,7 +547,7 @@ Key changes when migrating:
 The API is currently focused on core functionality:
 - ✅ **Authentication** - Full user auth lifecycle with device tracking and security features
 - ✅ **User Management** - Profiles, connections, discovery, activity tracking, security events
-- ✅ **Onboarding** - User onboarding flow with screen management and analytics
+- ✅ **Onboarding V2** - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth)
 - ✅ **Metadata** - Countries, regions, timezones
 - ✅ **Events** - Event management, ticket sales, RSVPs, QR code check-ins
 

@@ -1071,6 +1071,8 @@ model Notification {
   @@map("notifications")
 }
 
+// DEPRECATED: Old unified onboarding system - kept for backward compatibility
+// Use AppPreviewScreen and UserSetupScreen instead
 model OnboardingAnalytic {
   id                 String             @id @default(cuid())
   screenId           String
@@ -1094,6 +1096,8 @@ model OnboardingAnalytic {
   @@map("onboarding_analytics")
 }
 
+// DEPRECATED: Old unified onboarding system - kept for backward compatibility
+// Use AppPreviewScreen and UserSetupScreen instead
 model OnboardingScreen {
   id                   String                 @id @default(cuid())
   screenOrder          Int
@@ -1119,6 +1123,130 @@ model OnboardingScreen {
   @@index([screenOrder, isActive])
 
   @@map("onboarding_screens")
+}
+
+// NEW: App Preview Screens (Pre-Authentication)
+// Shown before login/registration to introduce the app
+model AppPreviewScreen {
+  id               String                    @id @default(cuid())
+  screenOrder      Int
+  title            String
+  subtitle         String?
+  description      String?
+  imageUrl         String?
+  videoUrl         String?
+  animationUrl     String?
+  iconName         String?
+  ctaText          String?
+  ctaAction        String?                   // "next", "skip", "get_started"
+  backgroundColor  String?                   @default("#FFFFFF")
+  textColor        String?                   @default("#000000")
+  isSkippable      Boolean                   @default(true)
+  isActive         Boolean                   @default(true)
+  minAppVersion    String?
+  metadata         Json?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  analytics        AppPreviewAnalytic[]
+
+  @@index([isActive, screenOrder])
+  @@map("app_preview_screens")
+}
+
+// Analytics for App Preview Screens (anonymous tracking)
+model AppPreviewAnalytic {
+  id               String            @id @default(cuid())
+  screenId         String
+  sessionId        String?           // Anonymous session identifier
+  userId           String?           // If user later registers/logs in
+  viewed           Boolean           @default(false)
+  viewedAt         DateTime?
+  completed        Boolean           @default(false)
+  completedAt      DateTime?
+  skipped          Boolean           @default(false)
+  skippedAt        DateTime?
+  timeSpentSeconds Int?
+  deviceInfo       Json?
+  appVersion       String?
+  createdAt        DateTime          @default(now())
+  screen           AppPreviewScreen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  @@index([screenId, viewed])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("app_preview_analytics")
+}
+
+// NEW: User Setup Screens (Post-Authentication)
+// Personalized onboarding after registration/verification
+model UserSetupScreen {
+  id               String                  @id @default(cuid())
+  screenOrder      Int
+  screenType       UserSetupScreenType     // "profile", "network", "community", "preferences", "tutorial"
+  title            String
+  subtitle         String?
+  description      String?
+  imageUrl         String?
+  videoUrl         String?
+  iconName         String?
+  ctaText          String?
+  ctaAction        String?                 // "complete_profile", "add_connections", "join_communities", etc.
+  ctaUrl           String?
+  backgroundColor  String?                 @default("#FFFFFF")
+  textColor        String?                 @default("#000000")
+  isRequired       Boolean                 @default(false)  // Cannot skip if true
+  isSkippable      Boolean                 @default(true)
+  isActive         Boolean                 @default(true)
+  targetAudience   String                  @default("all")  // "all", "new_users", "verified_users"
+  requiredFields   String[]                @default([])     // Required profile fields for this screen
+  minAppVersion    String?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  analytics        UserSetupAnalytic[]
+
+  @@index([isActive, screenOrder])
+  @@index([screenType])
+  @@index([isRequired])
+  @@map("user_setup_screens")
+}
+
+// Analytics for User Setup Screens (authenticated users only)
+model UserSetupAnalytic {
+  id               String           @id @default(cuid())
+  screenId         String
+  userId           String           // Always required (authenticated users only)
+  viewed           Boolean          @default(false)
+  viewedAt         DateTime?
+  completed        Boolean          @default(false)
+  completedAt      DateTime?
+  skipped          Boolean          @default(false)
+  skippedAt        DateTime?
+  timeSpentSeconds Int?
+  actionsTaken     Json?            // Track specific actions user took on this screen
+  deviceInfo       Json?
+  appVersion       String?
+  createdAt        DateTime         @default(now())
+  screen           UserSetupScreen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  user             User             @relation("UserSetupAnalytics", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([screenId, userId])
+  @@index([userId, completed])
+  @@index([screenId, viewed])
+  @@index([createdAt])
+  @@map("user_setup_analytics")
+}
+
+enum UserSetupScreenType {
+  PROFILE       // Complete profile information
+  NETWORK       // Set up trust network, add connections
+  COMMUNITY     // Join communities, follow interests
+  PREFERENCES   // Notification, privacy, app preferences
+  TUTORIAL      // Feature tours and walkthroughs
+  VERIFICATION  // Additional verification steps
+  
+  @@map("user_setup_screen_type")
 }
 
 model PasswordResetToken {
@@ -2265,6 +2393,7 @@ model User {
   blockingUsers                                            UserBlock[]               @relation("user_blocks_blockerIdTousers")
   connectionsInitiated                                     UserConnection[]          @relation("user_connections_initiatorIdTousers")
   connectionsReceived                                      UserConnection[]          @relation("user_connections_receiverIdTousers")
+  userSetupAnalytics                                       UserSetupAnalytic[]       @relation("UserSetupAnalytics")
   location                                            UserLocation?
   metadata                                             UserMetadata?
   paymentMethods                                      UserPaymentMethod[]

@@ -1,12 +1,25 @@
-# Onboarding API Documentation
+# Onboarding API Documentation (Legacy)
+
+> ⚠️ **DEPRECATED**: This documentation describes the legacy unified onboarding system.  
+> **NEW**: Please use the [Two-Phase Onboarding System V2](/docs/api-v2/ONBOARDING_V2_API.md) instead.
+>
+> **Migration Guide**: The new system separates:
+> - **App Preview** (pre-auth): `/v2/onboarding/app-preview/*`
+> - **User Setup** (post-auth): `/v2/onboarding/user-setup/*`
+>
+> See full documentation: [ONBOARDING_V2_API.md](/docs/api-v2/ONBOARDING_V2_API.md)
+
+---
 
 ## Overview
 
-The Onboarding API provides endpoints for managing user onboarding screens and tracking user interactions during the onboarding flow.
+The legacy Onboarding API provides endpoints for managing user onboarding screens and tracking user interactions during the onboarding flow.
 
 **Base URL:** `/v2/onboarding`
 
-**Version:** 2.0.0
+**Version:** 2.0.0 (Legacy)
+
+**Status:** ⚠️ Deprecated - Use [Onboarding V2](/docs/api-v2/ONBOARDING_V2_API.md)
 
 ---
 
@@ -17,10 +30,13 @@ The Onboarding API provides endpoints for managing user onboarding screens and t
   - [Get Onboarding Screens](#get-onboarding-screens)
   - [Track Onboarding Action](#track-onboarding-action)
   - [Complete Onboarding](#complete-onboarding)
+  - [Get Onboarding Status](#get-onboarding-status)
+  - [Get Onboarding Analytics](#get-onboarding-analytics)
 - [Data Models](#data-models)
 - [Action Types](#action-types)
 - [Error Handling](#error-handling)
 - [Usage Examples](#usage-examples)
+- [Migration to V2](#migration-to-v2)
 
 ---
 
@@ -30,6 +46,8 @@ Most onboarding endpoints are **public** to allow guest users to view onboarding
 
 **Authenticated Endpoints:**
 - `POST /v2/onboarding/complete` - Requires Bearer token
+- `GET /v2/onboarding/status` - Requires Bearer token
+- `GET /v2/onboarding/analytics` - Requires Bearer token (Admin)
 
 **Public Endpoints:**
 - `GET /v2/onboarding/screens` - No authentication required
@@ -157,6 +175,192 @@ Authorization: Bearer <access_token>
 - `200` - Success
 - `401` - Unauthorized (missing or invalid token)
 - `500` - Server error
+
+---
+
+### Get Onboarding Status
+
+Get the current user's onboarding progress and completion status.
+
+**Endpoint:** `GET /v2/onboarding/status`
+
+**Authentication:** Required (Bearer token)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:** None
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "fc86b834-d5c2-493a-8afc-945138832761",
+    "isCompleted": false,
+    "totalScreens": 5,
+    "viewedCount": 1,
+    "completedCount": 1,
+    "skippedCount": 0,
+    "progress": 20.0,
+    "screens": [
+      {
+        "screenId": "cmgub3zrn000ccpvubivzvmig",
+        "screenOrder": 1,
+        "title": "Welcome to Berse",
+        "viewed": true,
+        "viewedAt": "2025-10-17T10:30:00.000Z",
+        "completed": true,
+        "completedAt": "2025-10-17T10:30:45.000Z",
+        "skipped": false,
+        "skippedAt": null
+      },
+      {
+        "screenId": "cmgub3zro000dcpvup8s8ccsd",
+        "screenOrder": 2,
+        "title": "Build Your Trust Network",
+        "viewed": false,
+        "viewedAt": null,
+        "completed": false,
+        "completedAt": null,
+        "skipped": false,
+        "skippedAt": null
+      }
+    ]
+  },
+  "message": "Onboarding status retrieved successfully"
+}
+```
+
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | ID of the authenticated user |
+| `isCompleted` | boolean | Whether user completed all screens |
+| `totalScreens` | number | Total number of active screens |
+| `viewedCount` | number | Number of screens user has viewed |
+| `completedCount` | number | Number of screens user has completed |
+| `skippedCount` | number | Number of screens user has skipped |
+| `progress` | number | Completion percentage (0-100) |
+| `screens` | array | Detailed status for each screen |
+
+**Status Codes:**
+- `200` - Success
+- `401` - Unauthorized
+- `500` - Server error
+
+**Use Cases:**
+- Check if user needs to see onboarding on app launch
+- Display progress indicator during onboarding
+- Resume onboarding from last incomplete screen
+- Show completion badge/achievement
+
+---
+
+### Get Onboarding Analytics
+
+Get comprehensive analytics about onboarding performance (Admin only).
+
+**Endpoint:** `GET /v2/onboarding/analytics`
+
+**Authentication:** Required (Bearer token)
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startDate` | string (ISO 8601) | No | Filter analytics from this date |
+| `endDate` | string (ISO 8601) | No | Filter analytics until this date |
+| `screenId` | string (UUID) | No | Filter for specific screen |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "overallStats": {
+      "uniqueUsers": 1250,
+      "totalScreens": 5,
+      "usersWhoCompleted": 980,
+      "overallCompletionRate": 78.4
+    },
+    "screenStats": [
+      {
+        "screenId": "cmgub3zrn000ccpvubivzvmig",
+        "screenTitle": "Welcome to Berse",
+        "screenOrder": 1,
+        "totalInteractions": 1500,
+        "viewedCount": 1480,
+        "completedCount": 1200,
+        "skippedCount": 150,
+        "completionRate": 81.08,
+        "skipRate": 10.14,
+        "avgTimeSpentSeconds": 12.5
+      },
+      {
+        "screenId": "cmgub3zro000dcpvup8s8ccsd",
+        "screenTitle": "Build Your Trust Network",
+        "screenOrder": 2,
+        "totalInteractions": 1450,
+        "viewedCount": 1400,
+        "completedCount": 1100,
+        "skippedCount": 250,
+        "completionRate": 78.57,
+        "skipRate": 17.86,
+        "avgTimeSpentSeconds": 15.2
+      }
+    ]
+  },
+  "message": "Onboarding analytics retrieved successfully"
+}
+```
+
+**Overall Stats Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `uniqueUsers` | number | Total unique users who viewed onboarding |
+| `totalScreens` | number | Total number of active screens |
+| `usersWhoCompleted` | number | Users who completed all screens |
+| `overallCompletionRate` | number | Percentage of users who completed (0-100) |
+
+**Screen Stats Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `screenId` | string | Screen identifier |
+| `screenTitle` | string | Screen title |
+| `screenOrder` | number | Screen position in flow |
+| `totalInteractions` | number | Total user interactions with screen |
+| `viewedCount` | number | Number of views |
+| `completedCount` | number | Number of completions |
+| `skippedCount` | number | Number of skips |
+| `completionRate` | number | Completion percentage (0-100) |
+| `skipRate` | number | Skip percentage (0-100) |
+| `avgTimeSpentSeconds` | number | Average time users spent on screen |
+
+**Status Codes:**
+- `200` - Success
+- `401` - Unauthorized
+- `500` - Server error
+
+**Use Cases:**
+- Monitor onboarding funnel performance
+- Identify problematic screens with high skip rates
+- Optimize screen content based on time spent
+- A/B test different onboarding flows
+- Generate reports for stakeholders
+- Track improvements after UI changes
 
 ---
 
@@ -315,22 +519,81 @@ export async function completeOnboarding(token: string) {
   }
 }
 
-// Usage in component
+// Get onboarding status
+export async function getOnboardingStatus(token: string) {
+  try {
+    const response = await axios.get(`${API_BASE}/status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Failed to get onboarding status:', error);
+    throw error;
+  }
+}
+
+// Get onboarding analytics (Admin)
+export async function getOnboardingAnalytics(
+  token: string,
+  params?: { startDate?: string; endDate?: string; screenId?: string }
+) {
+  try {
+    const response = await axios.get(`${API_BASE}/analytics`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params,
+    });
+    return response.data.data;
+  } catch (error) {
+    console.error('Failed to get analytics:', error);
+    throw error;
+  }
+}
+
+// Usage in component with status check
 export function OnboardingFlow() {
   const [screens, setScreens] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [status, setStatus] = useState(null);
+  const { user, token } = useAuth();
 
   useEffect(() => {
-    loadScreens();
+    checkStatusAndLoadScreens();
   }, []);
 
-  const loadScreens = async () => {
+  const checkStatusAndLoadScreens = async () => {
+    // Check if user has already completed onboarding
+    if (token) {
+      const userStatus = await getOnboardingStatus(token);
+      setStatus(userStatus);
+      
+      if (userStatus.isCompleted) {
+        // User already completed, skip to main app
+        navigation.navigate('Home');
+        return;
+      }
+      
+      // Resume from last incomplete screen
+      const lastIncomplete = userStatus.screens.findIndex(s => !s.completed);
+      if (lastIncomplete > 0) {
+        setCurrentIndex(lastIncomplete);
+      }
+    }
+    
+    // Load screens
     const data = await fetchOnboardingScreens();
     setScreens(data);
     
-    // Track view of first screen
+    // Track view of current screen
     if (data.length > 0) {
-      await trackOnboardingAction(data[0].id, 'view');
+      await trackOnboardingAction(
+        data[currentIndex].id,
+        'view',
+        user?.id
+      );
     }
   };
 
@@ -417,6 +680,30 @@ curl -X POST http://localhost:3000/v2/onboarding/complete \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
+**Get onboarding status:**
+```bash
+curl -X GET http://localhost:3000/v2/onboarding/status \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get analytics (all screens):**
+```bash
+curl -X GET http://localhost:3000/v2/onboarding/analytics \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get analytics (filtered by date):**
+```bash
+curl -X GET "http://localhost:3000/v2/onboarding/analytics?startDate=2025-01-01&endDate=2025-10-17" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**Get analytics (specific screen):**
+```bash
+curl -X GET "http://localhost:3000/v2/onboarding/analytics?screenId=SCREEN_UUID" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
 ### Postman Collection
 
 **1. Get Onboarding Screens**
@@ -441,11 +728,52 @@ POST http://localhost:3000/v2/onboarding/complete
 Authorization: Bearer {{accessToken}}
 ```
 
+**4. Get Onboarding Status**
+```
+GET http://localhost:3000/v2/onboarding/status
+Authorization: Bearer {{accessToken}}
+```
+
+**5. Get Analytics**
+```
+GET http://localhost:3000/v2/onboarding/analytics
+Authorization: Bearer {{accessToken}}
+```
+
+**6. Get Analytics (with filters)**
+```
+GET http://localhost:3000/v2/onboarding/analytics?startDate=2025-01-01&endDate=2025-10-17&screenId={{screenId}}
+Authorization: Bearer {{accessToken}}
+```
+
 ---
 
 ## Best Practices
 
-### 1. Progressive Tracking
+### 1. Check Status Before Showing Onboarding
+
+Always check if user already completed onboarding:
+
+```javascript
+async function shouldShowOnboarding(token) {
+  try {
+    const status = await getOnboardingStatus(token);
+    return !status.isCompleted;
+  } catch (error) {
+    // If error, show onboarding to be safe
+    return true;
+  }
+}
+
+// In app initialization
+if (isAuthenticated && await shouldShowOnboarding(token)) {
+  navigation.navigate('Onboarding');
+} else {
+  navigation.navigate('Home');
+}
+```
+
+### 2. Progressive Tracking
 
 Track user actions progressively to understand user behavior:
 
@@ -466,7 +794,7 @@ onNextClick(() => {
 });
 ```
 
-### 2. Guest User Tracking
+### 3. Guest User Tracking
 
 Track guest users without authentication:
 
@@ -478,7 +806,7 @@ const guestId = await AsyncStorage.getItem('guestId') ||
 await trackAction(screenId, 'view', guestId);
 ```
 
-### 3. Error Handling
+### 4. Error Handling
 
 Always handle errors gracefully:
 
@@ -491,7 +819,7 @@ try {
 }
 ```
 
-### 4. Offline Support
+### 5. Offline Support
 
 Queue actions when offline:
 
@@ -518,7 +846,7 @@ NetInfo.addEventListener(state => {
 });
 ```
 
-### 5. Screen Order Management
+### 6. Screen Order Management
 
 Always respect the `screenOrder` field:
 
@@ -532,9 +860,60 @@ const screens = await fetchScreens();
 
 ## Analytics Insights
 
-Use the tracked data to optimize your onboarding:
+Use the analytics endpoint and tracked data to optimize your onboarding:
 
-### Funnel Analysis
+### Using the Analytics Endpoint
+
+```javascript
+// Fetch analytics for the last 30 days
+const thirtyDaysAgo = new Date();
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+const analytics = await getOnboardingAnalytics(adminToken, {
+  startDate: thirtyDaysAgo.toISOString(),
+  endDate: new Date().toISOString(),
+});
+
+// Identify problematic screens
+const problematicScreens = analytics.screenStats.filter(
+  screen => screen.skipRate > 20 || screen.completionRate < 70
+);
+
+console.log('Screens needing improvement:', problematicScreens);
+
+// Find best performing screens
+const bestScreens = analytics.screenStats.filter(
+  screen => screen.completionRate > 90 && screen.skipRate < 5
+);
+
+console.log('High-performing screens:', bestScreens);
+
+// Overall funnel health
+const { overallStats } = analytics;
+if (overallStats.overallCompletionRate < 60) {
+  console.warn('Onboarding completion rate is below 60%!');
+}
+```
+
+### Key Metrics to Monitor
+
+1. **Overall Completion Rate**: Should be > 70%
+   - If lower, review the entire flow
+   - Consider reducing number of screens
+   
+2. **Per-Screen Completion Rate**: Should be > 80%
+   - Screens below 70% need content review
+   - High skip rates indicate unclear value proposition
+
+3. **Average Time Spent**: 
+   - Too low (< 5s): Users not reading content
+   - Too high (> 30s): Content might be confusing
+
+4. **Drop-off Points**:
+   - Identify which screen has highest drop-off
+   - A/B test different content/designs
+
+### Funnel Analysis (SQL)
 ```sql
 -- View to completion rate per screen
 SELECT 
@@ -545,22 +924,103 @@ SELECT
   (COUNT(CASE WHEN a.completed THEN 1 END)::float / 
    NULLIF(COUNT(CASE WHEN a.viewed THEN 1 END), 0) * 100) as completion_rate
 FROM onboarding_screens s
-LEFT JOIN onboarding_analytics a ON s.id = a.screen_id
+LEFT JOIN onboarding_analytics a ON s.id = a."screenId"
 GROUP BY s.id, s.title
-ORDER BY s.screen_order;
+ORDER BY s."screenOrder";
 ```
 
-### Drop-off Analysis
+### Drop-off Analysis (SQL)
 ```sql
 -- Identify where users drop off
 SELECT 
-  screen_order,
+  s."screenOrder",
+  s.title,
   COUNT(*) as drop_offs
 FROM onboarding_analytics a
-JOIN onboarding_screens s ON a.screen_id = s.id
+JOIN onboarding_screens s ON a."screenId" = s.id
 WHERE a.viewed = true AND a.completed = false
-GROUP BY screen_order
+GROUP BY s."screenOrder", s.title
 ORDER BY drop_offs DESC;
+```
+
+### Admin Dashboard Example
+
+```typescript
+export function OnboardingDashboard() {
+  const [analytics, setAnalytics] = useState(null);
+  const [dateRange, setDateRange] = useState({
+    startDate: getLastMonthDate(),
+    endDate: new Date().toISOString(),
+  });
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [dateRange]);
+
+  const loadAnalytics = async () => {
+    const data = await getOnboardingAnalytics(adminToken, dateRange);
+    setAnalytics(data);
+  };
+
+  return (
+    <div>
+      <h1>Onboarding Analytics</h1>
+      
+      <div className="overall-stats">
+        <StatCard 
+          title="Unique Users" 
+          value={analytics?.overallStats.uniqueUsers} 
+        />
+        <StatCard 
+          title="Completion Rate" 
+          value={`${analytics?.overallStats.overallCompletionRate.toFixed(1)}%`}
+          status={analytics?.overallStats.overallCompletionRate > 70 ? 'good' : 'warning'}
+        />
+        <StatCard 
+          title="Users Completed" 
+          value={analytics?.overallStats.usersWhoCompleted} 
+        />
+      </div>
+
+      <div className="screen-stats">
+        <h2>Screen Performance</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Screen</th>
+              <th>Views</th>
+              <th>Completions</th>
+              <th>Completion Rate</th>
+              <th>Skip Rate</th>
+              <th>Avg Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {analytics?.screenStats.map(screen => (
+              <tr key={screen.screenId}>
+                <td>{screen.screenTitle}</td>
+                <td>{screen.viewedCount}</td>
+                <td>{screen.completedCount}</td>
+                <td className={getStatusClass(screen.completionRate)}>
+                  {screen.completionRate.toFixed(1)}%
+                </td>
+                <td className={getStatusClass(screen.skipRate, true)}>
+                  {screen.skipRate.toFixed(1)}%
+                </td>
+                <td>{screen.avgTimeSpentSeconds.toFixed(1)}s</td>
+                <td>
+                  {screen.completionRate > 80 ? '✅' : 
+                   screen.completionRate > 60 ? '⚠️' : '❌'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 ```
 
 ---
@@ -575,7 +1035,95 @@ npx ts-node test-onboarding-endpoints.ts
 
 ---
 
+## Migration to V2
+
+### Why Migrate?
+
+The new **Two-Phase Onboarding System** provides:
+
+✅ **Better Conversion**: Show app preview before requiring registration  
+✅ **Personalized Experience**: Post-auth setup tailored to user needs  
+✅ **Flexible Progression**: Required + optional screens  
+✅ **Complete Analytics**: Track anonymous + authenticated users separately  
+✅ **Mobile-Optimized**: Designed specifically for native app flows
+
+### Migration Steps
+
+1. **Read New Documentation**: [ONBOARDING_V2_API.md](/docs/api-v2/ONBOARDING_V2_API.md)
+
+2. **Update Mobile App**:
+   ```typescript
+   // OLD (Deprecated)
+   GET /v2/onboarding/screens
+   POST /v2/onboarding/track
+   
+   // NEW (V2)
+   // Pre-auth:
+   GET /v2/onboarding/app-preview/screens
+   POST /v2/onboarding/app-preview/track
+   
+   // Post-auth:
+   GET /v2/onboarding/user-setup/screens
+   POST /v2/onboarding/user-setup/track
+   ```
+
+3. **Test New Flow**: Use Postman collection or test scripts
+
+4. **Monitor Analytics**: Compare conversion rates between old and new
+
+5. **Deprecate Old Endpoints**: Once all users migrated
+
+### Comparison
+
+| Feature | Legacy (This Doc) | V2 (New) |
+|---------|------------------|----------|
+| Pre-auth screens | ❌ Mixed with post-auth | ✅ Separate app preview |
+| Post-auth screens | ❌ Mixed with pre-auth | ✅ Personalized setup |
+| Anonymous tracking | ✅ Basic | ✅ Enhanced with session linking |
+| Required screens | ❌ Not supported | ✅ Supported |
+| Progress tracking | ✅ Basic | ✅ Required vs overall progress |
+| Screen types | ❌ Generic | ✅ Typed (PROFILE, NETWORK, etc.) |
+
+### Quick Start with V2
+
+```typescript
+// 1. Show app preview before registration
+const previewScreens = await fetch('/v2/onboarding/app-preview/screens');
+
+// 2. Track anonymous interactions
+await fetch('/v2/onboarding/app-preview/track', {
+  method: 'POST',
+  body: JSON.stringify({
+    screenId: screen.id,
+    action: 'view',
+    sessionId: generateSessionId(),
+  }),
+});
+
+// 3. After registration, link analytics
+await fetch('/v2/onboarding/app-preview/link-user', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: JSON.stringify({ sessionId }),
+});
+
+// 4. Show personalized setup after login
+const setupScreens = await fetch('/v2/onboarding/user-setup/screens', {
+  headers: { 'Authorization': `Bearer ${token}` },
+});
+```
+
+**Full Guide**: [ONBOARDING_V2_API.md](/docs/api-v2/ONBOARDING_V2_API.md)
+
+---
+
 ## Changelog
+
+### Version 2.1.0 (October 17, 2025)
+- ⚠️ **DEPRECATED**: Legacy onboarding system
+- ✅ **NEW**: Two-phase onboarding system (V2)
+- Added migration guide
+- Updated documentation with deprecation notice
 
 ### Version 2.0.0 (October 15, 2025)
 - Initial onboarding API implementation

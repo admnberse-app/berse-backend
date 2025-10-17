@@ -261,4 +261,196 @@ router.post('/track', OnboardingController.trackOnboardingView);
  */
 router.post('/complete', authenticateToken, OnboardingController.completeOnboarding);
 
+/**
+ * @swagger
+ * /v2/onboarding/status:
+ *   get:
+ *     summary: Get onboarding completion status
+ *     description: Get the current user's onboarding progress and completion status
+ *     tags: [Onboarding]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Onboarding status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       format: uuid
+ *                     isCompleted:
+ *                       type: boolean
+ *                       example: false
+ *                     totalScreens:
+ *                       type: integer
+ *                       example: 5
+ *                     viewedCount:
+ *                       type: integer
+ *                       example: 3
+ *                     completedCount:
+ *                       type: integer
+ *                       example: 2
+ *                     skippedCount:
+ *                       type: integer
+ *                       example: 0
+ *                     progress:
+ *                       type: number
+ *                       format: float
+ *                       example: 40.0
+ *                       description: Completion percentage
+ *                     screens:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           screenId:
+ *                             type: string
+ *                             format: uuid
+ *                           screenOrder:
+ *                             type: integer
+ *                           title:
+ *                             type: string
+ *                           viewed:
+ *                             type: boolean
+ *                           viewedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                           completed:
+ *                             type: boolean
+ *                           completedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                           skipped:
+ *                             type: boolean
+ *                           skippedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             nullable: true
+ *                 message:
+ *                   type: string
+ *                   example: "Onboarding status retrieved successfully"
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/status', authenticateToken, OnboardingController.getOnboardingStatus);
+
+/**
+ * @swagger
+ * /v2/onboarding/analytics:
+ *   get:
+ *     summary: Get onboarding analytics (Admin)
+ *     description: Get comprehensive analytics about onboarding screen performance and user completion rates. Admin only endpoint.
+ *     tags: [Onboarding]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter analytics from this date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter analytics until this date
+ *       - in: query
+ *         name: screenId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter analytics for specific screen
+ *     responses:
+ *       200:
+ *         description: Onboarding analytics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     overallStats:
+ *                       type: object
+ *                       properties:
+ *                         uniqueUsers:
+ *                           type: integer
+ *                           example: 1250
+ *                         totalScreens:
+ *                           type: integer
+ *                           example: 5
+ *                         usersWhoCompleted:
+ *                           type: integer
+ *                           example: 980
+ *                         overallCompletionRate:
+ *                           type: number
+ *                           format: float
+ *                           example: 78.4
+ *                     screenStats:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           screenId:
+ *                             type: string
+ *                             format: uuid
+ *                           screenTitle:
+ *                             type: string
+ *                             example: "Welcome to Berse"
+ *                           screenOrder:
+ *                             type: integer
+ *                             example: 1
+ *                           totalInteractions:
+ *                             type: integer
+ *                             example: 1500
+ *                           viewedCount:
+ *                             type: integer
+ *                             example: 1480
+ *                           completedCount:
+ *                             type: integer
+ *                             example: 1200
+ *                           skippedCount:
+ *                             type: integer
+ *                             example: 150
+ *                           completionRate:
+ *                             type: number
+ *                             format: float
+ *                             example: 81.08
+ *                           skipRate:
+ *                             type: number
+ *                             format: float
+ *                             example: 10.14
+ *                           avgTimeSpentSeconds:
+ *                             type: number
+ *                             format: float
+ *                             example: 12.5
+ *                 message:
+ *                   type: string
+ *                   example: "Onboarding analytics retrieved successfully"
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/analytics', authenticateToken, OnboardingController.getOnboardingAnalytics);
+
 export default router;

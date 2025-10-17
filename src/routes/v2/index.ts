@@ -3,6 +3,7 @@ import { authRoutes } from '../../modules/auth';
 import { userRoutes } from '../../modules/user';
 import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
+import onboardingV2Routes from '../../modules/onboarding/onboarding-v2.routes';
 import { eventRoutes } from '../../modules/events';
 import { connectionRoutes, vouchRoutes, trustMomentRoutes } from '../../modules/connections';
 import { cardGameRoutes } from '../../modules/cardgame';
@@ -36,10 +37,17 @@ router.use('/users', userRoutes);
 router.use('/metadata', countriesRoutes);
 
 /**
- * Onboarding routes
+ * Onboarding routes (Legacy - deprecated)
  * Base path: /v2/onboarding
+ * @deprecated Use onboarding-v2 routes instead
  */
 router.use('/onboarding', onboardingRoutes);
+
+/**
+ * Onboarding V2 routes (Two-Phase: App Preview + User Setup)
+ * Base paths: /v2/onboarding/app-preview, /v2/onboarding/user-setup
+ */
+router.use('/onboarding', onboardingV2Routes);
 
 /**
  * Event routes

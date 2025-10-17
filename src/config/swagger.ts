@@ -220,6 +220,22 @@ const swaggerDefinition = {
       description: 'Card game feedback and rating system. Submit feedback, rate topics, engage in discussions, and view statistics for the Berse card game experience.',
     },
     {
+      name: 'Onboarding',
+      description: '⚠️ DEPRECATED: Legacy unified onboarding system. Use "Onboarding V2" instead for new implementations.',
+    },
+    {
+      name: 'Onboarding V2',
+      description: 'Two-phase onboarding system: App Preview (pre-auth) introduces the app to visitors, User Setup (post-auth) provides personalized onboarding after registration. Includes anonymous tracking, session linking, required screens, and comprehensive analytics.',
+    },
+    {
+      name: 'Gamification',
+      description: 'Points, badges, rewards, and leaderboard system. Earn points through activities, unlock badges, redeem rewards, and compete on leaderboards.',
+    },
+    {
+      name: 'Marketplace',
+      description: 'Peer-to-peer marketplace for goods and services. Create listings, manage cart, process orders, leave reviews, and handle disputes.',
+    },
+    {
       name: 'Health',
       description: 'API health and status checks',
     },
