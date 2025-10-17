@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthRequest } from '../../types';
 import { PaymentService } from './payment.service';
 import { sendSuccess } from '../../utils/response';
 import type {
@@ -26,7 +27,7 @@ export class PaymentController {
    * @desc Create a payment intent
    * @access Private
    */
-  async createPaymentIntent(req: Request, res: Response): Promise<void> {
+  async createPaymentIntent(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const input: CreatePaymentIntentInput = req.body;
 
@@ -39,7 +40,7 @@ export class PaymentController {
    * @desc Confirm a payment
    * @access Private
    */
-  async confirmPayment(req: Request, res: Response): Promise<void> {
+  async confirmPayment(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const input: ConfirmPaymentInput = req.body;
 
@@ -52,7 +53,7 @@ export class PaymentController {
    * @desc Capture an authorized payment
    * @access Private
    */
-  async capturePayment(req: Request, res: Response): Promise<void> {
+  async capturePayment(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const { transactionId } = req.params;
     const { amount } = req.body;
@@ -66,7 +67,7 @@ export class PaymentController {
    * @desc Refund a payment
    * @access Private
    */
-  async refundPayment(req: Request, res: Response): Promise<void> {
+  async refundPayment(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const { transactionId } = req.params;
     const input: RefundPaymentInput = { ...req.body, transactionId };
@@ -80,7 +81,7 @@ export class PaymentController {
    * @desc Get transaction details
    * @access Private
    */
-  async getTransaction(req: Request, res: Response): Promise<void> {
+  async getTransaction(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user?.id;
     const { transactionId } = req.params;
 
@@ -93,7 +94,7 @@ export class PaymentController {
    * @desc Get user's transactions with filters
    * @access Private
    */
-  async getUserTransactions(req: Request, res: Response): Promise<void> {
+  async getUserTransactions(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const query: PaymentTransactionQuery = req.query;
 
@@ -110,7 +111,7 @@ export class PaymentController {
    * @desc Add a payment method
    * @access Private
    */
-  async addPaymentMethod(req: Request, res: Response): Promise<void> {
+  async addPaymentMethod(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const input: AddPaymentMethodInput = req.body;
 
@@ -123,7 +124,7 @@ export class PaymentController {
    * @desc Update a payment method
    * @access Private
    */
-  async updatePaymentMethod(req: Request, res: Response): Promise<void> {
+  async updatePaymentMethod(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const { paymentMethodId } = req.params;
     const input: UpdatePaymentMethodInput = { ...req.body, paymentMethodId };
@@ -137,7 +138,7 @@ export class PaymentController {
    * @desc Delete a payment method
    * @access Private
    */
-  async deletePaymentMethod(req: Request, res: Response): Promise<void> {
+  async deletePaymentMethod(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const { paymentMethodId } = req.params;
 
@@ -150,7 +151,7 @@ export class PaymentController {
    * @desc Get user's payment methods
    * @access Private
    */
-  async getPaymentMethods(req: Request, res: Response): Promise<void> {
+  async getPaymentMethods(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
 
     const methods = await paymentService.getPaymentMethods(userId);
@@ -166,7 +167,7 @@ export class PaymentController {
    * @desc Get user's payouts
    * @access Private
    */
-  async getUserPayouts(req: Request, res: Response): Promise<void> {
+  async getUserPayouts(req: AuthRequest, res: Response): Promise<void> {
     const userId = req.user!.id;
     const query: PayoutQuery = req.query;
 
@@ -183,7 +184,7 @@ export class PaymentController {
    * @desc Calculate transaction fees
    * @access Public
    */
-  async calculateFees(req: Request, res: Response): Promise<void> {
+  async calculateFees(req: AuthRequest, res: Response): Promise<void> {
     const input: FeeCalculationInput = req.body;
 
     const fees = await paymentService.calculateFees(input);
@@ -199,7 +200,7 @@ export class PaymentController {
    * @desc Handle payment provider webhooks
    * @access Public (signature verified)
    */
-  async handleWebhook(req: Request, res: Response): Promise<void> {
+  async handleWebhook(req: AuthRequest, res: Response): Promise<void> {
     const { provider } = req.params;
     const event: WebhookEvent = {
       provider,

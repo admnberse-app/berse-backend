@@ -5,6 +5,7 @@ import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
 import { eventRoutes } from '../../modules/events';
 import { connectionRoutes, vouchRoutes } from '../../modules/connections';
+import { cardGameRoutes } from '../../modules/cardgame';
 import notificationRoutes from '../../modules/user/notification.routes';
 
 const router = Router();
@@ -61,6 +62,12 @@ router.use('/vouches', vouchRoutes);
  */
 router.use('/notifications', notificationRoutes);
 
+/**
+ * Card Game routes
+ * Base path: /v2/cardgame
+ */
+router.use('/cardgame', cardGameRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -113,6 +120,7 @@ router.get('/health', (req, res) => {
       connections: '/v2/connections',
       vouches: '/v2/vouches',
       notifications: '/v2/notifications',
+      cardgame: '/v2/cardgame',
     },
   });
 });
@@ -269,6 +277,21 @@ router.get('/docs', (req, res) => {
         'PUT /v2/notifications/:notificationId/read': 'Mark specific notification as read (auth required)',
         'DELETE /v2/notifications/read': 'Delete all read notifications (auth required)',
         'DELETE /v2/notifications/:notificationId': 'Delete specific notification (auth required)',
+      },
+      cardgame: {
+        'POST /v2/cardgame/feedback': 'Submit feedback for card game question (auth required)',
+        'GET /v2/cardgame/feedback': 'Get all feedback with filters (auth required)',
+        'GET /v2/cardgame/feedback/:id': 'Get feedback by ID (auth required)',
+        'PATCH /v2/cardgame/feedback/:id': 'Update feedback (auth required)',
+        'DELETE /v2/cardgame/feedback/:id': 'Delete feedback (auth required)',
+        'POST /v2/cardgame/feedback/:id/upvote': 'Toggle upvote on feedback (auth required)',
+        'POST /v2/cardgame/feedback/:id/replies': 'Add reply to feedback (auth required)',
+        'DELETE /v2/cardgame/replies/:id': 'Delete reply (auth required)',
+        'GET /v2/cardgame/stats/topics/:topicId': 'Get topic statistics (auth required)',
+        'GET /v2/cardgame/stats/topics': 'Get all topics statistics (auth required)',
+        'GET /v2/cardgame/analytics/topics/:topicId': 'Get detailed topic analytics (auth required)',
+        'GET /v2/cardgame/stats/me': 'Get current user statistics (auth required)',
+        'GET /v2/cardgame/stats/users/:userId': 'Get user statistics (auth required)',
       },
     },
     authentication: {
