@@ -514,6 +514,7 @@ model Event {
   eventRsvps        EventRsvp[]
   tier EventTicketTier[]
   eventTickets      EventTicket[]
+  trust_moments      TrustMoment[]
   communities        Community? @relation(fields: [communityId], references: [id])
   user              User @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
@@ -1924,6 +1925,7 @@ model UserConnection {
   removedBy                                 String?
   canReconnectAt                            DateTime?
   connection_reviews                        ConnectionReview[]
+  trust_moments                             TrustMoment[]
   users_user_connections_initiatorIdTousers User @relation("user_connections_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
   users_user_connections_receiverIdTousers  User @relation("user_connections_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
 
@@ -2255,6 +2257,8 @@ model User {
   travel_companions_travel_companions_userIdTousers         TravelCompanion[]         @relation("travel_companions_userIdTousers")
   travelStats                                              TravelStat?
   travelTrips                                              TravelTrip[]
+  trust_moments_trust_moments_giverIdTousers               TrustMoment[]             @relation("trust_moments_giverIdTousers")
+  trust_moments_trust_moments_receiverIdTousers            TrustMoment[]             @relation("trust_moments_receiverIdTousers")
   userActivities                                           UserActivity[]
   userBadges                                               UserBadge[]
   user_blocks_user_blocks_blockedIdTousers                  UserBlock[]               @relation("user_blocks_blockedIdTousers")
@@ -2351,6 +2355,40 @@ model Vouch {
   @@index([voucherId, status])
 
   @@map("vouches")
+}
+
+model TrustMoment {
+  id                                          String    @id @default(cuid())
+  connectionId                                String
+  giverId                                     String
+  receiverId                                  String
+  eventId                                     String?
+  momentType                                  String    @default("general")
+  rating                                      Int
+  feedback                                    String?
+  experienceDescription                       String?
+  tags                                        String[]  @default([])
+  isPublic                                    Boolean   @default(true)
+  isVerified                                  Boolean   @default(false)
+  verificationSource                          String?
+  trustImpact                                 Float     @default(0.0)
+  createdAt                                   DateTime  @default(now())
+  updatedAt                                   DateTime  @updatedAt
+  event                                       Event?    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  connection                                  UserConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  giver                                       User      @relation("trust_moments_giverIdTousers", fields: [giverId], references: [id], onDelete: Cascade)
+  receiver                                    User      @relation("trust_moments_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, giverId, eventId])
+  @@index([eventId])
+  @@index([giverId])
+  @@index([receiverId])
+  @@index([momentType])
+  @@index([rating])
+  @@index([isPublic])
+  @@index([createdAt])
+
+  @@map("trust_moments")
 }
 
 enum AnnouncementPriority {

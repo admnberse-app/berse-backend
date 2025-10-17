@@ -4,6 +4,7 @@ import { userRoutes } from '../../modules/user';
 import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
 import { eventRoutes } from '../../modules/events';
+import { connectionRoutes, vouchRoutes } from '../../modules/connections';
 
 const router = Router();
 
@@ -40,6 +41,18 @@ router.use('/onboarding', onboardingRoutes);
  * Base path: /v2/events
  */
 router.use('/events', eventRoutes);
+
+/**
+ * Connection routes
+ * Base path: /v2/connections
+ */
+router.use('/connections', connectionRoutes);
+
+/**
+ * Vouch routes
+ * Base path: /v2/vouches
+ */
+router.use('/vouches', vouchRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION
@@ -90,6 +103,8 @@ router.get('/health', (req, res) => {
       users: '/v2/users',
       metadata: '/v2/metadata',
       events: '/v2/events',
+      connections: '/v2/connections',
+      vouches: '/v2/vouches',
     },
   });
 });
@@ -212,6 +227,32 @@ router.get('/docs', (req, res) => {
         'GET /v2/events/rsvps/my-rsvps': 'Get my RSVPs (auth required)',
         'POST /v2/events/:id/check-in': 'Check-in attendee (auth required)',
         'GET /v2/events/:id/attendees': 'Get event attendees (auth required)',
+      },
+      connections: {
+        'POST /v2/connections/request': 'Send connection request (auth required)',
+        'POST /v2/connections/:connectionId/respond': 'Accept/reject connection request (auth required)',
+        'DELETE /v2/connections/:connectionId/withdraw': 'Withdraw connection request (auth required)',
+        'DELETE /v2/connections/:connectionId': 'Remove connection (auth required)',
+        'PUT /v2/connections/:connectionId': 'Update connection details (auth required)',
+        'GET /v2/connections': 'Get connections with filters (auth required)',
+        'GET /v2/connections/:connectionId': 'Get connection by ID (auth required)',
+        'GET /v2/connections/stats': 'Get connection statistics (auth required)',
+        'GET /v2/connections/mutual/:userId': 'Get mutual connections (auth required)',
+        'GET /v2/connections/suggestions': 'Get connection suggestions (auth required)',
+        'POST /v2/connections/block': 'Block a user (auth required)',
+        'DELETE /v2/connections/block/:userId': 'Unblock a user (auth required)',
+        'GET /v2/connections/blocked': 'Get blocked users list (auth required)',
+      },
+      vouches: {
+        'POST /v2/vouches/request': 'Request vouch from connection (auth required)',
+        'POST /v2/vouches/:vouchId/respond': 'Approve/decline vouch request (auth required)',
+        'POST /v2/vouches/:vouchId/revoke': 'Revoke vouch (auth required)',
+        'POST /v2/vouches/community': 'Community admin vouch (auth required)',
+        'GET /v2/vouches/auto-vouch/eligibility': 'Check auto-vouch eligibility (auth required)',
+        'GET /v2/vouches/received': 'Get vouches received (auth required)',
+        'GET /v2/vouches/given': 'Get vouches given (auth required)',
+        'GET /v2/vouches/limits': 'Get vouch limits (auth required)',
+        'GET /v2/vouches/summary': 'Get vouch summary (auth required)',
       },
     },
     authentication: {
