@@ -8,7 +8,21 @@ const swaggerDefinition = {
     version: '2.1.0',
     description: `Modern, modular API for the Berse social platform with event management, user connections, and community features.
     
-**Version 2.1.0 Updates (October 16, 2025):**
+**Version 2.1.0 Updates (October 17, 2025):**
+- **Connection & Vouching Module**: Complete trust-based connection system
+  - 13 connection endpoints (request, accept, remove, block, stats, mutual, suggestions)
+  - 9 vouching endpoints (request, approve, revoke, limits, summary)
+  - Trust score calculation (40% vouches, 30% activity, 30% trust moments)
+  - Symmetric connection model with 30-day reconnection cooldown
+  - Connection suggestions based on mutual friends, interests, communities
+  - Block/unblock functionality
+  - Vouch limits: 1 primary, 3 secondary, 2 community
+  - Auto-vouch eligibility checks
+- **Database Seeding**: Complete test data for all modules
+  - 5 test users with varying trust levels
+  - Sample connections, vouches, and community data
+  - 6 communities, 5 events, travel trips, services, marketplace items
+  - Full app configuration and content management data
 - **Events Module**: Complete event management system with 21 endpoints
   - Create and manage events (free and paid)
   - Multi-tier ticket pricing with capacity management
@@ -32,7 +46,10 @@ const swaggerDefinition = {
   - Time-limited tokens (30 days or event date + 24h)
   - Double validation (JWT + database token)
   - Event-specific binding
-- **Enhanced Documentation**: Comprehensive API docs in /docs/api-v2/EVENTS_API.md
+- **Enhanced Documentation**: Comprehensive API docs in /docs/api-v2/
+  - CONNECTIONS_API.md - Full connection & vouching documentation
+  - EVENTS_API.md - Complete events system guide
+  - Quick reference guides for rapid development
 
 **Version 2.0.2 Updates (October 15, 2025):**
 - **Connection Count Names**: Simplified Prisma-generated relation names in _count responses
@@ -84,7 +101,15 @@ const swaggerDefinition = {
     },
     {
       name: 'Connections',
-      description: 'User connection and relationship management',
+      description: 'User connection and relationship management. Symmetric connection system with trust-based vouching.',
+    },
+    {
+      name: 'Connections - Vouching',
+      description: 'Trust-based vouching system. Request, approve, and manage vouches with impact on trust scores.',
+    },
+    {
+      name: 'Connections - Trust',
+      description: 'Trust score calculation and management. Algorithm: 40% vouches + 30% activity + 30% trust moments.',
     },
     {
       name: 'Events',

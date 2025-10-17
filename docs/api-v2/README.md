@@ -6,6 +6,7 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 
 - 🔐 [Authentication API](./AUTH_API.md) - User registration, login, session management, and device tracking
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
+- 🤝 [Connections API](./CONNECTIONS_API.md) - Connection management, vouching system, and trust scores ([Quick Ref](./CONNECTIONS_QUICKREF.md))
 - 🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
@@ -53,7 +54,7 @@ Handles user authentication, registration, password management, and session cont
 📖 [Full Authentication Documentation](./AUTH_API.md)
 
 ### User & Profile Module (`/v2/users`)
-Manages user profiles, discovery, search, and social connections using the new UserConnection system.
+Manages user profiles, discovery, search, and basic user operations.
 
 **Key Endpoints:**
 - `GET /profile` - Get current user profile
@@ -63,14 +64,26 @@ Manages user profiles, discovery, search, and social connections using the new U
 - `GET /search` - Search users
 - `GET /nearby` - Find nearby users
 - `GET /:id` - Get user by ID
-- `POST /connections/:id/request` - Send connection request
-- `POST /connections/:id/accept` - Accept connection request
-- `POST /connections/:id/reject` - Reject connection request
-- `POST /connections/:id/cancel` - Cancel connection request
-- `DELETE /connections/:id` - Remove connection
-- `GET /connections` - Get all connections
 
 📖 [Full User API Documentation](./USER_API.md)
+
+### Connections & Vouching Module (`/v2/connections`, `/v2/vouches`)
+Comprehensive connection management with trust-based vouching system and intelligent suggestions.
+
+**Key Endpoints:**
+- `POST /connections/request` - Send connection request
+- `PUT /connections/:id/respond` - Accept/reject request
+- `DELETE /connections/:id/remove` - Remove connection
+- `GET /connections` - List connections with filters
+- `GET /connections/stats` - Connection statistics
+- `GET /connections/mutual/:userId` - Mutual connections
+- `GET /connections/suggestions` - AI-powered suggestions
+- `POST /connections/block/:userId` - Block user
+- `POST /vouches/request` - Request vouch
+- `PUT /vouches/:id/respond` - Approve/decline vouch
+- `GET /vouches/summary` - Vouch & trust score summary
+
+📖 [Full Connections API Documentation](./CONNECTIONS_API.md) | [Quick Reference](./CONNECTIONS_QUICKREF.md)
 
 ### Metadata Module (`/v2/metadata`)
 Provides access to geographical and timezone data for the platform.
