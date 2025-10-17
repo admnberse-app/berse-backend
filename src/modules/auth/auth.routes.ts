@@ -331,6 +331,77 @@ router.post(
 
 /**
  * @swagger
+ * /v2/auth/validate-referral/{code}:
+ *   get:
+ *     summary: Validate referral code
+ *     description: Check if a referral code is valid and get referrer information
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Referral code to validate (e.g., ABC1234)
+ *         example: ABC1234
+ *     responses:
+ *       200:
+ *         description: Referral code is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Referral code is valid
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       example: true
+ *                     referrer:
+ *                       type: object
+ *                       properties:
+ *                         fullName:
+ *                           type: string
+ *                           example: John Doe
+ *                         username:
+ *                           type: string
+ *                           example: johndoe
+ *                         profilePicture:
+ *                           type: string
+ *                           nullable: true
+ *                           example: https://cdn.example.com/profile.jpg
+ *                         referralCode:
+ *                           type: string
+ *                           example: ABC1234
+ *       404:
+ *         description: Invalid referral code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid referral code
+ */
+router.get(
+  '/validate-referral/:code',
+  authLimiter,
+  AuthController.validateReferralCode
+);
+
+/**
+ * @swagger
  * /v2/auth/send-verification:
  *   post:
  *     summary: Send email verification

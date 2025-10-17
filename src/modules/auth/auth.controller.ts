@@ -1203,6 +1203,65 @@ export class AuthController {
   }
 
   /**
+   * Validate referral code
+   * @route GET /v2/auth/validate-referral/:code
+   */
+  static async validateReferralCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { code } = req.params;
+
+      if (!code || code.trim() === '') {
+        throw new AppError('Referral code is required', 400);
+      }
+
+      // Find user by referral code
+      const referrer = await prisma.user.findFirst({
+        where: {
+          metadata: {
+            referralCode: code.toUpperCase()
+          }
+        },
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          profile: {
+            select: {
+              profilePicture: true,
+            }
+          },
+          metadata: {
+            select: {
+              referralCode: true,
+            }
+          }
+        }
+      });
+
+      if (!referrer) {
+        throw new AppError('Invalid referral code', 404);
+      }
+
+      // Return referrer information
+      sendSuccess(res, {
+        valid: true,
+        referrer: {
+          fullName: referrer.fullName,
+          username: referrer.username,
+          profilePicture: referrer.profile?.profilePicture || null,
+          referralCode: referrer.metadata?.referralCode,
+        }
+      }, 'Referral code is valid');
+    } catch (error) {
+      logger.error('Failed to validate referral code', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        code: req.params.code
+      });
+      next(error);
+    }
+  }
+
+  /**
    * Resend verification email
    * @route POST /v2/auth/resend-verification
    */
