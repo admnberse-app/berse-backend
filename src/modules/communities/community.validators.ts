@@ -70,7 +70,7 @@ export const communityIdValidator = [
 // ============================================================================
 
 export const joinCommunityValidators = [
-  body('communityId')
+  param('communityId')
     .trim()
     .notEmpty().withMessage('Community ID is required')
     .isString().withMessage('Community ID must be a string'),
