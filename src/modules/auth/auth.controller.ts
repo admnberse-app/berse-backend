@@ -1176,8 +1176,11 @@ export class AuthController {
         }
       );
 
-      // Send welcome notification
+      // Send email verified notification
       await NotificationService.notifyEmailVerified(user.id, user.fullName);
+      
+      // Send welcome notification
+      await NotificationService.notifyRegistrationSuccess(user.id, user.fullName);
 
       // Log verification activity
       await ActivityLoggerService.logActivity({
