@@ -2655,6 +2655,7 @@ enum VouchStatus {
   APPROVED
   ACTIVE
   REVOKED
+  DECLINED
 }
 
 enum VouchType {
