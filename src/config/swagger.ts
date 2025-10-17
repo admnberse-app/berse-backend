@@ -182,8 +182,16 @@ const swaggerDefinition = {
             type: 'string',
             enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED'],
           },
-          trustScore: { type: 'number' },
-          trustLevel: { type: 'string' },
+          trustScore: { 
+            type: 'number',
+            description: 'User trust score (0-100). Calculated from: 40% vouches + 30% activity + 30% trust moments',
+            example: 72.5,
+          },
+          trustLevel: { 
+            type: 'string',
+            description: 'Trust level based on score: NEW (0-20), BUILDING (20-40), ESTABLISHED (40-60), TRUSTED (60-80), VERIFIED (80+)',
+            example: 'TRUSTED',
+          },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
           _count: {

@@ -432,8 +432,26 @@ router.get(
  * /v2/vouches/summary:
  *   get:
  *     summary: Get vouch summary
- *     description: Get comprehensive vouch summary (received, given, trust contribution)
- *     tags: [Connections - Vouching]
+ *     description: |
+ *       Get comprehensive vouch summary including received vouches, given vouches, and trust contribution.
+ *       
+ *       **Note**: Trust score and trust level are available in the user profile endpoint (`GET /v2/users/profile`).
+ *       
+ *       **Trust Score Calculation** (0-100 points):
+ *       - **40% from Vouches:**
+ *         - Primary vouch: 30% of vouch score (12 points)
+ *         - Secondary vouches: 30% of vouch score (12 points total, ~4 per vouch)
+ *         - Community vouches: 40% of vouch score (16 points total, ~8 per vouch)
+ *       - **30% from Activity Participation** (events, contributions)
+ *       - **30% from Trust Moments** (feedback from connections)
+ *       
+ *       **Trust Levels:**
+ *       - NEW: 0-20 points
+ *       - BUILDING: 20-40 points
+ *       - ESTABLISHED: 40-60 points
+ *       - TRUSTED: 60-80 points
+ *       - VERIFIED: 80+ points
+ *     tags: [Connections - Trust]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -446,39 +464,65 @@ router.get(
  *               properties:
  *                 success:
  *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   example: Vouch summary retrieved successfully
  *                 data:
  *                   type: object
  *                   properties:
  *                     totalVouchesReceived:
  *                       type: integer
  *                       description: Total approved/active vouches received
+ *                       example: 4
  *                     totalVouchesGiven:
  *                       type: integer
+ *                       description: Total approved/active vouches given to others
+ *                       example: 3
  *                     primaryVouches:
  *                       type: integer
+ *                       description: Number of primary vouches received (max 1)
+ *                       example: 1
  *                     secondaryVouches:
  *                       type: integer
+ *                       description: Number of secondary vouches received (max 3)
+ *                       example: 2
  *                     communityVouches:
  *                       type: integer
+ *                       description: Number of community vouches received (max 2)
+ *                       example: 1
  *                     pendingRequests:
  *                       type: integer
- *                       description: Vouches awaiting response
+ *                       description: Vouch requests awaiting your response
+ *                       example: 1
  *                     activeVouches:
  *                       type: integer
+ *                       description: Currently active vouches
+ *                       example: 4
  *                     revokedVouches:
  *                       type: integer
+ *                       description: Vouches that were revoked
+ *                       example: 0
  *                     declinedVouches:
  *                       type: integer
  *                       description: Vouch requests that were declined
+ *                       example: 0
  *                     availableSlots:
  *                       type: object
+ *                       description: Remaining vouch slots you can receive
  *                       properties:
  *                         primary:
  *                           type: integer
+ *                           example: 0
  *                         secondary:
  *                           type: integer
+ *                           example: 1
  *                         community:
  *                           type: integer
+ *                           example: 1
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
  */
 router.get(
   '/summary',

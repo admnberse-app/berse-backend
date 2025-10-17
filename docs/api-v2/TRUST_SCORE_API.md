@@ -168,75 +168,99 @@ Event Occurs → Service Method Called → TrustScoreService.triggerTrustScoreUp
 
 ### Get User Trust Score
 
-Get the current trust score and breakdown for a user.
+The trust score and trust level are included in the user profile endpoint and vouch summary.
 
-**Endpoint:** `GET /v2/users/:userId/trust-score`
+#### 1. Get Trust Score via User Profile
 
-**Authentication:** Required
+**Endpoint:** `GET /v2/users/profile`
+
+**Authentication:** Required (Bearer token)
+
+**Description:** Returns the authenticated user's complete profile including `trustScore` and `trustLevel`.
 
 **Response:** `200 OK`
 ```json
 {
   "success": true,
+  "message": "Profile retrieved successfully",
   "data": {
-    "userId": "cm123abc456",
+    "id": "cm123abc456",
+    "email": "user@example.com",
+    "username": "johndoe",
+    "fullName": "John Doe",
     "trustScore": 72.5,
-    "trustLevel": "established",
-    "components": {
-      "vouches": {
-        "score": 28.0,
-        "maxScore": 40,
-        "breakdown": {
-          "primary": { "count": 1, "score": 12 },
-          "secondary": { "count": 2, "score": 8 },
-          "community": { "count": 1, "score": 8 }
-        }
-      },
-      "activity": {
-        "score": 22.5,
-        "maxScore": 30,
-        "breakdown": {
-          "eventsAttended": { "count": 7, "score": 10 },
-          "eventsHosted": { "count": 2, "score": 6 },
-          "communitiesJoined": { "count": 3, "score": 6 },
-          "servicesProvided": { "count": 1, "score": 0.5 }
-        }
-      },
-      "trustMoments": {
-        "score": 22.0,
-        "maxScore": 30,
-        "breakdown": {
-          "averageRating": 4.5,
-          "totalMoments": 8,
-          "ratingScore": 24.3,
-          "quantityBonus": 2.4
-        }
-      }
+    "trustLevel": "ESTABLISHED",
+    "totalPoints": 1500,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "profile": {
+      "profilePicture": "https://...",
+      "bio": "Adventure seeker and community builder"
     },
-    "lastUpdated": "2025-10-17T10:30:00.000Z",
-    "nextLevel": {
-      "level": "trusted",
-      "scoreNeeded": 2.5
+    "location": { ... },
+    "security": { ... }
+  }
+}
+```
+
+#### 2. Get Trust Contribution via Vouch Summary
+
+**Endpoint:** `GET /v2/vouches/summary`
+
+**Authentication:** Required (Bearer token)
+
+**Description:** Returns vouch statistics that contribute to your trust score.
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Vouch summary retrieved successfully",
+  "data": {
+    "totalVouchesReceived": 4,
+    "totalVouchesGiven": 3,
+    "primaryVouches": 1,
+    "secondaryVouches": 2,
+    "communityVouches": 1,
+    "pendingRequests": 1,
+    "activeVouches": 4,
+    "revokedVouches": 0,
+    "declinedVouches": 0,
+    "availableSlots": {
+      "primary": 0,
+      "secondary": 1,
+      "community": 1
     }
   }
 }
 ```
 
-### Trigger Manual Recalculation
+**Trust Score Calculation from Vouches:**
+- Primary vouch (1): 12 points
+- Secondary vouches (2): 8 points (4 each)
+- Community vouches (1): 8 points
 
-Force a trust score recalculation (admin only).
+**Total from vouches:** 28 points out of 40 possible
 
-**Endpoint:** `POST /v2/trust-score/:userId/recalculate`
+**Note:** The trust score is automatically calculated and updated when:
+- A vouch is approved or revoked
+- User checks into an event
+- Trust moments are created (future feature)
 
-**Authentication:** Required (Admin)
+- A vouch is approved or revoked
+- User checks into an event
+- Trust moments are created (future feature)
 
-**Response:** `200 OK`
-```json
-{
-  "success": true,
-  "data": {
-    "userId": "cm123abc456",
-    "previousScore": 70.0,
+There is no dedicated endpoint to view the detailed breakdown of trust score components. The score and level are calculated automatically by the `TrustScoreService` and stored on the user record.
+
+---
+
+## Examples
+
+### Example 1: Check Your Trust Score
+
+---
+
+## Examples
     "newScore": 72.5,
     "previousLevel": "established",
     "newLevel": "established",

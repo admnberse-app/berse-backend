@@ -51,6 +51,8 @@ export class UserController {
           username: true,
           role: true,
           totalPoints: true,
+          trustScore: true,
+          trustLevel: true,
           createdAt: true,
           updatedAt: true,
           profile: {
