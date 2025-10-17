@@ -77,7 +77,12 @@ export class CommunityController {
    * @access Public
    */
   async getCommunities(req: Request, res: Response): Promise<void> {
-    const query: CommunityQuery = req.query;
+    const query: CommunityQuery = {
+      ...req.query,
+      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+      isVerified: req.query.isVerified === 'true' ? true : req.query.isVerified === 'false' ? false : undefined,
+    };
 
     const result = await communityService.getCommunities(query);
     sendSuccess(res, result);
@@ -90,7 +95,12 @@ export class CommunityController {
    */
   async getMyCommunities(req: Request, res: Response): Promise<void> {
     const userId = req.user!.id;
-    const query: CommunityQuery = req.query;
+    const query: CommunityQuery = {
+      ...req.query,
+      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+      isVerified: req.query.isVerified === 'true' ? true : req.query.isVerified === 'false' ? false : undefined,
+    };
 
     const result = await communityService.getMyCommunities(userId, query);
     sendSuccess(res, result);
@@ -130,11 +140,16 @@ export class CommunityController {
   /**
    * @route GET /v2/communities/:communityId/members
    * @desc Get community members
-   * @access Public (or Private based on community settings)
+   * @access Public
    */
   async getCommunityMembers(req: Request, res: Response): Promise<void> {
     const { communityId } = req.params;
-    const query: CommunityMemberQuery = req.query;
+    const query: CommunityMemberQuery = {
+      ...req.query,
+      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+      isApproved: req.query.isApproved === 'true' ? true : req.query.isApproved === 'false' ? false : undefined,
+    };
 
     const result = await communityService.getCommunityMembers(communityId, query);
     sendSuccess(res, result);

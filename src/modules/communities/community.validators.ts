@@ -19,8 +19,7 @@ export const createCommunityValidators = [
   
   body('imageUrl')
     .optional()
-    .trim()
-    .isURL().withMessage('Invalid image URL'),
+    .trim(),
   
   body('category')
     .optional()
@@ -47,8 +46,7 @@ export const updateCommunityValidators = [
   
   body('imageUrl')
     .optional()
-    .trim()
-    .isURL().withMessage('Invalid image URL'),
+    .trim(),
   
   body('category')
     .optional()
