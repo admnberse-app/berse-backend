@@ -43,6 +43,7 @@ The Events API provides comprehensive endpoints for managing events, ticket sale
 7. [Calendar Views](#calendar-views)
    - [Get Today's Events](#get-todays-events)
    - [Get Week Schedule](#get-week-schedule)
+   - [Get Month Events](#get-month-events)
    - [Get Calendar Counts](#get-calendar-counts)
 8. [Enums & Types](#enums--types)
 9. [Error Codes](#error-codes)
@@ -1529,6 +1530,111 @@ Object.entries(weekSchedule).forEach(([date, dayData]) => {
   console.log(`${dayData.dayName}, ${date}: ${dayData.events.length} events`);
   dayData.events.forEach(event => {
     // Render event card
+  });
+});
+```
+
+---
+
+### Get Month Events
+
+Get all published events for a specific month, grouped by date. Returns complete event details with counts.
+
+**Endpoint:** `GET /v2/events/calendar/month`
+
+**Authentication:** Required (Bearer token)
+
+**Query Parameters:**
+- `year` (required): Year (e.g., 2025)
+- `month` (required): Month (1-12)
+- `type` (optional): Filter by event type (see [EventType enum](#eventtype))
+- `timezone` (optional): Timezone for date calculations (default: UTC)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Month events retrieved successfully",
+  "data": {
+    "events": [
+      {
+        "id": "evt123",
+        "title": "Community Badminton Session",
+        "description": "Weekly badminton for all levels",
+        "type": "BADMINTON",
+        "date": "2025-11-05T10:00:00.000Z",
+        "location": "Sports Complex",
+        "mapLink": "https://maps.google.com/...",
+        "images": ["https://..."],
+        "isFree": true,
+        "price": null,
+        "maxAttendees": 20,
+        "ticketsSold": 0,
+        "status": "PUBLISHED",
+        "hostId": "user123",
+        "communityId": "comm456",
+        "user": {
+          "id": "user123",
+          "fullName": "Sarah Ahmad",
+          "username": "sarah_a"
+        }
+      }
+    ],
+    "eventsByDate": {
+      "2025-11-01": [
+        { "id": "evt456", "title": "Workshop", ... }
+      ],
+      "2025-11-05": [
+        { "id": "evt123", "title": "Badminton", ... }
+      ],
+      "2025-11-15": [
+        { "id": "evt789", "title": "Networking", ... },
+        { "id": "evt790", "title": "Social", ... }
+      ]
+    },
+    "counts": {
+      "2025-11-01": 1,
+      "2025-11-05": 1,
+      "2025-11-15": 2
+    },
+    "month": 11,
+    "year": 2025,
+    "totalEvents": 4
+  }
+}
+```
+
+**Response Structure:**
+- `events`: Array of all events in the month (sorted by date)
+- `eventsByDate`: Events grouped by date (YYYY-MM-DD) for easy calendar rendering
+- `counts`: Event count per date
+- `month`, `year`: Requested month/year
+- `totalEvents`: Total number of events
+
+**Performance Features:**
+- ✅ Cached for 10 minutes (per month, type filter)
+- ✅ Complete event details in single query
+- ✅ Pre-grouped by date for immediate use
+- ✅ Optimized for calendar UI rendering
+
+**Use Cases:**
+- Monthly calendar view with full event details
+- Event list grouped by date
+- Mobile app month view
+- Calendar widgets with event previews
+
+**Frontend Integration Example:**
+```typescript
+// Render calendar grid
+Object.entries(eventsByDate).forEach(([date, events]) => {
+  const dayElement = calendar.querySelector(`[data-date="${date}"]`);
+  
+  // Show event count badge
+  dayElement.querySelector('.count').textContent = events.length;
+  
+  // Render event previews on hover/click
+  dayElement.addEventListener('click', () => {
+    showEventList(events);
   });
 });
 ```

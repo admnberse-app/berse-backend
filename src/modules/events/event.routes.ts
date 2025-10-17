@@ -20,6 +20,7 @@ import {
   getUserAttendedEventsValidators,
   getTodayEventsValidators,
   getWeekScheduleValidators,
+  getMonthEventsValidators,
   getCalendarCountsValidators
 } from './event.validators';
 
@@ -1196,6 +1197,90 @@ router.get(
   getWeekScheduleValidators,
   handleValidationErrors,
   EventController.getWeekSchedule
+);
+
+/**
+ * @swagger
+ * /v2/events/calendar/month:
+ *   get:
+ *     summary: Get events for a specific month
+ *     description: |
+ *       Retrieve all published events for a specific month, grouped by date.
+ *       Returns complete event details with counts per day.
+ *       Results are cached for 10 minutes.
+ *     tags: [Events - Calendar]
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Year (e.g., 2025)
+ *         example: 2025
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 12
+ *         description: Month (1-12)
+ *         example: 11
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *         description: Filter by event type
+ *       - in: query
+ *         name: timezone
+ *         schema:
+ *           type: string
+ *         description: Timezone for date calculations
+ *         example: UTC
+ *     responses:
+ *       200:
+ *         description: Month events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Event'
+ *                     eventsByDate:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: array
+ *                         items:
+ *                           $ref: '#/components/schemas/Event'
+ *                     counts:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: integer
+ *                     month:
+ *                       type: integer
+ *                     year:
+ *                       type: integer
+ *                     totalEvents:
+ *                       type: integer
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ */
+router.get(
+  '/calendar/month',
+  getMonthEventsValidators,
+  handleValidationErrors,
+  EventController.getMonthEvents
 );
 
 /**

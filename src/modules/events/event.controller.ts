@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../types';
 import { EventService } from './event.service';
 import { sendSuccess } from '../../utils/response';
+import { AppError } from '../../middleware/error';
 import { 
   CreateEventRequest, 
   UpdateEventRequest, 
@@ -481,6 +482,29 @@ export class EventController {
       const schedule = await EventService.getWeekSchedule(type, timezone);
 
       sendSuccess(res, schedule, 'Week schedule retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get events for a specific month
+   * @route GET /v2/events/calendar/month
+   */
+  static async getMonthEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const year = parseInt(req.query.year as string);
+      const month = parseInt(req.query.month as string);
+      const type = req.query.type as any;
+      const timezone = (req.query.timezone as string) || 'UTC';
+
+      if (!year || !month || month < 1 || month > 12) {
+        throw new AppError('Valid year and month (1-12) are required', 400);
+      }
+
+      const result = await EventService.getMonthEvents(year, month, type, timezone);
+
+      sendSuccess(res, result, 'Month events retrieved successfully');
     } catch (error) {
       next(error);
     }

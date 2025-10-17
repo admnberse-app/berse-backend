@@ -267,6 +267,10 @@ router.get('/docs', (req, res) => {
         'GET /v2/events/rsvps/my-rsvps': 'Get my RSVPs (auth required)',
         'POST /v2/events/:id/check-in': 'Check-in attendee (auth required)',
         'GET /v2/events/:id/attendees': 'Get event attendees (auth required)',
+        'GET /v2/events/calendar/today': 'Get today events',
+        'GET /v2/events/calendar/week': 'Get week schedule',
+        'GET /v2/events/calendar/month': 'Get month events with date grouping',
+        'GET /v2/events/calendar/counts': 'Get event counts for date range',
       },
       connections: {
         'POST /v2/connections/request': 'Send connection request (auth required)',

@@ -42,6 +42,15 @@ const swaggerDefinition = {
 - Contributes 30% to trust score (30 points maximum)
 - Zero negative feedback requirement for auto-vouch eligibility
 
+#### Calendar Endpoints 📅
+- 4 calendar view endpoints for event scheduling
+- GET /v2/events/calendar/today - Today's events
+- GET /v2/events/calendar/week - 7-day schedule grouped by date
+- GET /v2/events/calendar/month - Monthly events with date grouping
+- GET /v2/events/calendar/counts - Event counts per date for calendar UI
+- Redis caching for performance (10-15 minutes TTL)
+- Timezone support for accurate date calculations
+
 #### Notification System
 - 6 notification endpoints (get, unread count, mark as read, delete)
 - Real-time notifications for connections, vouches, events, security alerts

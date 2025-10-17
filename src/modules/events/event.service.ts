@@ -1842,6 +1842,103 @@ export class EventService {
   }
 
   /**
+   * Get events for a specific month, grouped by date
+   */
+  static async getMonthEvents(
+    year: number,
+    month: number,
+    type?: EventType,
+    timezone: string = 'UTC'
+  ): Promise<{ events: any[], eventsByDate: { [date: string]: any[] }, counts: { [date: string]: number }, month: number, year: number, totalEvents: number }> {
+    try {
+      // Create start and end dates for the month
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59);
+
+      const cacheKey = `calendar:month:${year}:${month}:${type || 'all'}`;
+
+      // Check cache first
+      const cached = await cacheService.get<any>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      const where: Prisma.EventWhereInput = {
+        status: EventStatus.PUBLISHED,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      };
+
+      if (type) {
+        where.type = type;
+      }
+
+      const events = await prisma.event.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          date: true,
+          location: true,
+          mapLink: true,
+          images: true,
+          isFree: true,
+          price: true,
+          maxAttendees: true,
+          ticketsSold: true,
+          status: true,
+          hostId: true,
+          communityId: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+            },
+          },
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      });
+
+      // Group events by date
+      const eventsByDate: { [date: string]: any[] } = {};
+      const counts: { [date: string]: number } = {};
+
+      events.forEach(event => {
+        const dateKey = new Date(event.date).toISOString().split('T')[0];
+        if (!eventsByDate[dateKey]) {
+          eventsByDate[dateKey] = [];
+        }
+        eventsByDate[dateKey].push(event);
+        counts[dateKey] = (counts[dateKey] || 0) + 1;
+      });
+
+      const result = {
+        events,
+        eventsByDate,
+        counts,
+        month: month,
+        year: year,
+        totalEvents: events.length,
+      };
+
+      // Cache for 10 minutes
+      await cacheService.set(cacheKey, result, { ttl: CacheTTL.MEDIUM });
+
+      return result;
+    } catch (error: any) {
+      logger.error('Error fetching month events:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get event counts for calendar view
    * Returns count of published events per date for performance
    * Results are cached for 15 minutes
