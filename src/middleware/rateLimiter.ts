@@ -2,7 +2,7 @@ import rateLimit from 'express-rate-limit';
 // import RedisStore from 'rate-limit-redis';
 // import Redis from 'ioredis';
 import { Request, Response } from 'express';
-// import { config } from '../config';
+import { config } from '../config';
 
 // NextFunction type for compatibility
 type NextFunction = () => void;
@@ -24,6 +24,13 @@ type NextFunction = () => void;
 
 // Fallback to memory store if Redis is not available
 const createRateLimiter = (options: any) => {
+  // Skip rate limiting if disabled in config
+  if (config.rateLimiting.disabled) {
+    return (_req: Request, _res: Response, next: NextFunction) => {
+      next();
+    };
+  }
+
   const baseOptions = {
     ...options,
     standardHeaders: true,

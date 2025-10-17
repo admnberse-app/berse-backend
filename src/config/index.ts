@@ -89,6 +89,7 @@ const envSchema = z.object({
   TEST_DATABASE_URL: z.string().optional(),
   ENABLE_DEBUG_LOGS: z.string().default('false').transform((val) => val === 'true'),
   MOCK_EXTERNAL_APIS: z.string().default('false').transform((val) => val === 'true'),
+  DISABLE_RATE_LIMIT: z.string().default('false').transform((val) => val === 'true'),
 });
 
 // Validate and parse environment variables
@@ -216,6 +217,7 @@ export const config = {
   
   // Rate Limiting
   rateLimiting: {
+    disabled: env.DISABLE_RATE_LIMIT,
     windowMs: env.RATE_LIMIT_WINDOW_MS,
     maxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     authMax: env.RATE_LIMIT_AUTH_MAX,
