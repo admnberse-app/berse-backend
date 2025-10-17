@@ -12,10 +12,23 @@ export class TrustMomentService {
   /**
    * Create a trust moment (feedback after shared experience)
    * TODO: Implement using TrustMoment model
+   * 
+   * Implementation steps:
+   * 1. Validate connection exists between giver and receiver
+   * 2. Validate event participation if eventId provided
+   * 3. Check for duplicate trust moment
+   * 4. Create trust moment record
+   * 5. Calculate trust impact based on rating
+   * 6. Trigger trust score update for receiver (see example below)
+   * 
+   * @example
+   * // After creating trust moment, trigger trust score update:
+   * await TrustScoreService.triggerTrustScoreUpdate(
+   *   data.receiverId,
+   *   `Trust moment received from ${giverName}`
+   * );
    */
   static async createTrustMoment(userId: string, data: any): Promise<any> {
-    // After creating trust moment:
-    // await TrustScoreService.triggerTrustScoreUpdate(data.receiverId, 'Trust moment added');
     throw new AppError('Trust moment creation coming soon', 501);
   }
 

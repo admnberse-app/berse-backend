@@ -936,6 +936,19 @@ export class EventService {
         },
       });
 
+      // Trigger trust score update after event check-in
+      try {
+        const { TrustScoreService } = await import('../connections/trust/trust-score.service');
+        await TrustScoreService.triggerTrustScoreUpdate(
+          targetUserId,
+          `Event attendance: ${event.title}`
+        );
+        logger.info(`Trust score update triggered for user ${targetUserId} after event check-in`);
+      } catch (error) {
+        // Non-critical error - log but don't fail the check-in
+        logger.error('Failed to trigger trust score update after event check-in:', error);
+      }
+
       return attendance as any;
     } catch (error: any) {
       logger.error('Error checking in attendee:', error);

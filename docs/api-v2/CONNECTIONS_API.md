@@ -589,6 +589,14 @@ Approve, decline, or downgrade a vouch request.
 }
 ```
 
+**Trust Score Impact:**
+When a vouch is approved, the vouchee's trust score is **automatically recalculated**:
+- **PRIMARY vouch**: +12 points (30% weight of 40% vouch component)
+- **SECONDARY vouch**: +12 points total (divided among up to 3 vouches)
+- **COMMUNITY vouch**: +16 points total (divided among up to 2 vouches)
+
+The trust score update happens asynchronously and does not block the approval response.
+
 **Response (Declined):** `200 OK`
 ```json
 {
@@ -936,11 +944,13 @@ Your trust score (0-100) is calculated from:
 
 ### Event-Driven Updates
 
-Trust scores update automatically when:
-- Vouch is approved or revoked
-- Event attendance is logged
-- Trust moment is created
-- Community membership changes
+Trust scores update **automatically** when:
+- ✅ Vouch is approved or revoked
+- ✅ Event attendance is logged (check-in)
+- 🚧 Trust moment is created (coming soon)
+- 🚧 Community membership changes (coming soon)
+
+For detailed trust score documentation, see [Trust Score API](./TRUST_SCORE_API.md).
 
 ---
 

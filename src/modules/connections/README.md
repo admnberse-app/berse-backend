@@ -262,20 +262,34 @@ Authorization: Bearer <token>
 
 ### Trust Score Updates
 
-Trust scores are automatically recalculated when:
-- Vouch is approved/revoked
-- Trust moment is created/updated
-- User attends/hosts an event
-- User joins a community
-- Activity stats are updated
+Trust scores are **automatically recalculated** when:
+- ✅ **Vouch is approved/revoked** - VouchService triggers update, adds/removes 12-16 points
+- ✅ **Event check-in** - EventService triggers update after attendance logged
+- 🚧 **Trust moment created/updated** - Will trigger update when implemented
+- 🚧 **User joins a community** - Will trigger update when community module implemented
+
+**Implementation Details:**
+- Trust score updates are non-blocking (logged if they fail, but don't break main operation)
+- Uses `TrustScoreService.triggerTrustScoreUpdate(userId, reason)` method
+- Calculates all three components (vouches, activity, trust moments) each time
+- Updates both `trustScore` and `trustLevel` fields on User model
+
+**Event-Driven Triggers Implemented:**
+1. `EventService.checkInAttendee()` - After successful event check-in
+2. `VouchService.respondToVouchRequest()` - After vouch approval
+3. `VouchService.revokeVouch()` - After vouch revocation
+4. `TrustMomentService.createTrustMoment()` - Placeholder added for future implementation
+
+For detailed trust score documentation, see [Trust Score API](../../docs/api-v2/TRUST_SCORE_API.md).
 
 ## 🚀 Next Steps / Future Enhancements
 
 ### Phase 1: Complete Skeleton Implementations
 1. ✅ **Vouching System** - Implemented all vouch request/approval/decline/revoke logic
-2. 🚧 **Travel Logbook** - Full CRUD for travel entries and connection linking
-3. 🚧 **Trust Moments** - Complete event-specific feedback system
-4. 🚧 **Auto-vouch Background Job** - processAutoVouches() cron job (non-critical)
+2. ✅ **Event-Driven Triggers** - Trust score auto-updates on vouch approval and event check-in
+3. 🚧 **Travel Logbook** - Full CRUD for travel entries and connection linking
+4. 🚧 **Trust Moments** - Complete event-specific feedback system
+5. 🚧 **Auto-vouch Background Job** - processAutoVouches() cron job (non-critical)
 
 ### Phase 2: Advanced Features 🔮
 4. **Connection Suggestions Algorithm** - ML-based recommendations:

@@ -669,7 +669,17 @@ router.get(
  * /v2/events/{id}/check-in:
  *   post:
  *     summary: Check-in attendee
- *     description: Check-in an attendee using user ID or QR code
+ *     description: |
+ *       Check-in an attendee using user ID or QR code.
+ *       
+ *       **Automatic Trust Score Update:**
+ *       After successful check-in, the attendee's trust score is automatically recalculated
+ *       to include their event attendance in the activity component (30% of total trust score).
+ *       
+ *       **Requirements:**
+ *       - User must have an active RSVP or valid ticket
+ *       - QR code must be valid JWT token (if using QR method)
+ *       - User cannot check in twice to the same event
  *     tags: [Events - Attendance]
  *     security:
  *       - bearerAuth: []
@@ -688,13 +698,14 @@ router.get(
  *             properties:
  *               userId:
  *                 type: string
+ *                 description: User ID (use this OR qrCode, not both)
  *               qrCode:
  *                 type: string
  *     responses:
  *       201:
- *         description: Check-in successful
+ *         description: Check-in successful, trust score updated
  *       400:
- *         description: Already checked in
+ *         description: Already checked in or invalid data
  */
 router.post(
   '/:id/check-in',
