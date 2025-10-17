@@ -9,7 +9,7 @@ The User API provides endpoints for managing user profiles, searching users, and
 
 **Authentication:** All endpoints require a valid JWT access token.
 
-**Version:** v2.0.3 (Updated: October 16, 2025)
+**Version:** v2.1.0 (Updated: October 17, 2025)
 
 > **Note:** v2 endpoints do not include the `/api/` prefix. Legacy v1 endpoints are still available at `/api/v1/users` for backward compatibility.
 
@@ -50,9 +50,22 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ---
 
-## ⚠️ Important Updates (v2.0.1)
+## ⚠️ Important Updates (v2.1.0)
 
-**Recent Fixes & Improvements:**
+**Latest Features (October 17, 2025):**
+- ✅ **Trust Score System**: `trustScore` and `trustLevel` now included in user profile (calculated from vouches, activity, trust moments)
+- ✅ **Security Fields**: New `security` object with `emailVerifiedAt`, `phoneVerifiedAt`, `mfaEnabled`, `lastLoginAt`
+- ✅ **Notification System**: Complete in-app notification system for user actions
+- ✅ **Email Verification**: Enhanced email verification flow with notifications
+
+**Trust Levels:**
+- `NEW` (0-20): Just joined, no vouches yet
+- `BUILDING` (20-40): Building trust, minimal vouches
+- `ESTABLISHED` (40-60): Good standing, active participant
+- `TRUSTED` (60-80): Well-established, strong vouches
+- `VERIFIED` (80+): Highly trusted, verified by community
+
+**Previous Fixes & Improvements (v2.0.1):**
 - ✅ **Database Operations**: Fixed Prisma upsert operations for UserProfile and UserLocation
 - ✅ **Connection IDs**: Properly generating unique IDs for all connections using cuid2
 - ✅ **Route Ordering**: Fixed route precedence to prevent path conflicts
@@ -119,6 +132,8 @@ Authorization: Bearer <access_token>
     "username": "johndoe",
     "role": "GENERAL_USER",
     "totalPoints": 150,
+    "trustScore": 72.5,
+    "trustLevel": "ESTABLISHED",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-15T10:30:00.000Z",
     "profile": {
@@ -155,9 +170,20 @@ Authorization: Bearer <access_token>
       "preferredLanguage": "en",
       "currency": "MYR"
     },
+    "security": {
+      "emailVerifiedAt": "2024-01-01T12:00:00.000Z",
+      "phoneVerifiedAt": null,
+      "mfaEnabled": false,
+      "lastLoginAt": "2024-01-15T10:00:00.000Z"
+    },
     "metadata": {
       "membershipId": "BM-123456",
       "referralCode": "JOHNDOE2024"
+    },
+    "connectionStats": {
+      "totalConnections": 18,
+      "pendingRequests": 2,
+      "averageRating": 4.8
     },
     "_count": {
       "events": 5,
@@ -2212,6 +2238,8 @@ interface UserProfile {
   role: 'GENERAL_USER' | 'ADMIN' | 'MODERATOR';
   status: 'ACTIVE' | 'DEACTIVATED' | 'BANNED' | 'PENDING';
   totalPoints: number;
+  trustScore: number;       // 0-100 trust score (40% vouches + 30% activity + 30% trust moments)
+  trustLevel: string;       // NEW, BUILDING, ESTABLISHED, TRUSTED, VERIFIED
   
   // Profile
   profile?: {
@@ -2253,10 +2281,25 @@ interface UserProfile {
   // Location Privacy
   locationPrivacy: 'public' | 'friends' | 'private'; // Default: 'friends'
   
+  // Security
+  security?: {
+    emailVerifiedAt?: Date;     // Null if email not verified
+    phoneVerifiedAt?: Date;     // Null if phone not verified
+    mfaEnabled: boolean;        // Multi-factor authentication status
+    lastLoginAt?: Date;         // Last successful login timestamp
+  };
+  
   // Metadata
   metadata?: {
     membershipId?: string;
     referralCode: string;
+  };
+  
+  // Connection Stats
+  connectionStats?: {
+    totalConnections: number;    // Total accepted connections
+    pendingRequests: number;     // Pending connection requests
+    averageRating?: number;      // Average rating from connections (1-5)
   };
   
   // Stats
@@ -2267,14 +2310,6 @@ interface UserProfile {
     connectionsInitiated: number;  // Connection requests sent by this user
     connectionsReceived: number;   // Connection requests received by this user
     referralsMade: number;         // Number of users referred by this user
-  };
-  
-  // Connection Stats
-  connectionStats?: {
-    totalConnections: number;
-    pendingRequests: number;
-    averageRating?: number;
-    connectionQuality: number;
   };
   
   // Timestamps
