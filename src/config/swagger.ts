@@ -7,65 +7,91 @@ const swaggerDefinition = {
     title: 'Berse Platform API',
     version: '2.1.0',
     description: `Modern, modular API for the Berse social platform with event management, user connections, and community features.
-    
-**Version 2.1.0 Updates (October 17, 2025):**
-- **Notification System**: Complete in-app notification system
-  - 6 notification endpoints (get, unread count, mark as read, delete)
-  - Real-time notifications for connections, vouches, events, security alerts
-  - Priority levels (low, normal, high, urgent) for UI differentiation
-  - Email verification status flag for mobile app banners
-  - Pagination and filtering support
-- **Connection & Vouching Module**: Complete trust-based connection system
-  - 13 connection endpoints (request, accept, remove, block, stats, mutual, suggestions)
-  - 9 vouching endpoints (request, approve, revoke, limits, summary)
-  - Trust score calculation (40% vouches, 30% activity, 30% trust moments)
-  - Symmetric connection model with 30-day reconnection cooldown
-  - Connection suggestions based on mutual friends, interests, communities
-  - Block/unblock functionality
-  - Vouch limits: 1 primary, 3 secondary, 2 community
-  - Auto-vouch eligibility checks
-- **Database Seeding**: Complete test data for all modules
-  - 5 test users with varying trust levels
-  - Sample connections, vouches, and community data
-  - 6 communities, 5 events, travel trips, services, marketplace items
-  - Full app configuration and content management data
-- **Events Module**: Complete event management system with 21 endpoints
-  - Create and manage events (free and paid)
-  - Multi-tier ticket pricing with capacity management
-  - RSVP system for free events with secure QR codes
-  - QR code-based check-in system with JWT security
-  - Real-time attendee tracking and reporting
-- **Event Discovery**: 6 intelligent discovery endpoints with caching
-  - Trending events (engagement-based ranking with Redis cache)
-  - Nearby events (location-based, PostGIS-ready)
-  - Personalized recommendations (ML-ready algorithm)
-  - Events by host/organizer
-  - Community events feed
-  - User attended events (for profiles)
-- **Performance Optimizations**: 47-78% faster queries
-  - Optimized database queries with proper indexing
-  - Redis caching for trending and recommendations
-  - Parallel query execution
-  - Query complexity reduced from O(n) to O(log n)
-- **Secure QR Codes**: JWT-based QR codes with cryptographic signatures
-  - No storage required - generated on-demand
-  - Time-limited tokens (30 days or event date + 24h)
-  - Double validation (JWT + database token)
-  - Event-specific binding
-- **Enhanced Documentation**: Comprehensive API docs in /docs/api-v2/
-  - CONNECTIONS_API.md - Full connection & vouching documentation
-  - EVENTS_API.md - Complete events system guide
-  - Quick reference guides for rapid development
 
-**Version 2.0.2 Updates (October 15, 2025):**
-- **Connection Count Names**: Simplified Prisma-generated relation names in _count responses
-  - user_connections_user_connections_initiatorIdTousers → connectionsInitiated
-  - user_connections_user_connections_receiverIdTousers → connectionsReceived
-  - referrals_referrals_referrerIdTousers → referralsMade
-- **Better DX**: More readable and self-documenting field names in API responses
-- **Activity Logging**: Complete security event tracking system with login attempts, device registration, and session management
+**🚀 Current Version: 2.1.0** | **📅 Updated: October 17, 2025** | **✅ Production Ready**
 
-**Version 2.0.1 Updates (October 15, 2025):**
+**Quick Links:**
+- 📖 [Full API Documentation](/docs/api-v2/)
+- 🔗 [Connections API](/docs/api-v2/CONNECTIONS_API.md)
+- 🎉 [Events API](/docs/api-v2/EVENTS_API.md)
+- 🔔 [Notifications API](/docs/api-v2/NOTIFICATIONS_API.md)
+
+<details>
+<summary><b>📋 Version 2.1.0 Release Notes (October 17, 2025)</b> - Click to expand</summary>
+
+### New Features
+
+#### Notification System
+- 6 notification endpoints (get, unread count, mark as read, delete)
+- Real-time notifications for connections, vouches, events, security alerts
+- Priority levels (low, normal, high, urgent) for UI differentiation
+- Email verification status flag for mobile app banners
+- Pagination and filtering support
+
+#### Trust Score System
+- Trust scores visible in user profiles (0-100 scale)
+- Trust levels: NEW, BUILDING, ESTABLISHED, TRUSTED, VERIFIED
+- Calculation: 40% vouches + 30% activity + 30% trust moments
+- Automatic updates on vouch approvals and event attendance
+
+#### Security Enhancements
+- Email verification status tracking
+- Security object in user profile with verification timestamps
+- Welcome notifications after email verification
+- Enhanced activity logging
+
+</details>
+
+<details>
+<summary><b>📋 Version 2.0.2 Release Notes (October 15, 2025)</b> - Click to expand</summary>
+
+### Connection & Vouching Module
+- 13 connection endpoints (request, accept, remove, block, stats, mutual, suggestions)
+- 9 vouching endpoints (request, approve, revoke, limits, summary)
+- Symmetric connection model with 30-day reconnection cooldown
+- Connection suggestions based on mutual friends, interests, communities
+- Block/unblock functionality
+- Vouch limits: 1 primary, 3 secondary, 2 community
+- Auto-vouch eligibility checks
+
+### Events Module
+- 21 event endpoints with complete CRUD operations
+- Multi-tier ticket pricing with capacity management
+- RSVP system for free events with secure QR codes
+- QR code-based check-in system with JWT security
+- Real-time attendee tracking and reporting
+
+### Event Discovery
+- 6 intelligent discovery endpoints with Redis caching
+- Trending events (engagement-based ranking)
+- Nearby events (location-based, PostGIS-ready)
+- Personalized recommendations (ML-ready algorithm)
+- Events by host/organizer
+- Community events feed
+
+### Performance Optimizations
+- 47-78% faster queries
+- Optimized database queries with proper indexing
+- Redis caching for trending and recommendations
+- Parallel query execution
+- Query complexity reduced from O(n) to O(log n)
+
+### Database Seeding
+- 5 test users with varying trust levels
+- Sample connections, vouches, and community data
+- 6 communities, 5 events, travel trips, services, marketplace items
+
+### DX Improvements
+- Simplified Prisma relation names in _count responses
+- Better field naming (connectionsInitiated, connectionsReceived, referralsMade)
+- Activity logging for security events
+
+</details>
+
+<details>
+<summary><b>📋 Version 2.0.1 Release Notes (October 15, 2025)</b> - Click to expand</summary>
+
+### Bug Fixes & Improvements
 - Fixed Prisma upsert operations for UserProfile and UserLocation
 - Proper ID generation for UserConnection using cuid2
 - Fixed route ordering to prevent path conflicts
@@ -74,6 +100,8 @@ const swaggerDefinition = {
 - Fixed connection removal authorization
 - All endpoints tested and verified (35+ tests passing)
 - Comprehensive documentation updates
+
+</details>
 
 **Stability:** All endpoints are production-ready with 100% test coverage.`,
     contact: {
