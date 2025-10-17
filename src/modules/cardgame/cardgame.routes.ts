@@ -24,8 +24,9 @@ const router = Router();
  *   post:
  *     tags: [Card Game]
  *     summary: Submit feedback for a card game question
+ *     description: Submit feedback with rating and optional comment for a card game question
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -34,24 +35,55 @@ const router = Router();
  *             type: object
  *             required:
  *               - topicId
+ *               - topicTitle
  *               - sessionNumber
  *               - questionId
+ *               - questionText
  *               - rating
  *             properties:
  *               topicId:
  *                 type: string
+ *                 description: Unique identifier for the topic
+ *                 example: communication-skills
+ *               topicTitle:
+ *                 type: string
+ *                 description: Display title of the topic
+ *                 example: Communication Skills
  *               sessionNumber:
  *                 type: integer
  *                 minimum: 1
+ *                 description: Session number (must be at least 1)
+ *                 example: 1
  *               questionId:
  *                 type: string
+ *                 description: Unique identifier for the question
+ *                 example: q-001
+ *               questionText:
+ *                 type: string
+ *                 description: The actual question text
+ *                 example: How do you handle difficult conversations?
  *               rating:
  *                 type: integer
  *                 minimum: 1
  *                 maximum: 5
+ *                 description: Rating from 1 to 5 stars
+ *                 example: 5
  *               comment:
  *                 type: string
  *                 maxLength: 1000
+ *                 description: Optional comment about the question
+ *                 example: This question really made me think!
+ *               isHelpful:
+ *                 type: boolean
+ *                 description: Whether the question was helpful
+ *                 example: true
+ *     responses:
+ *       201:
+ *         description: Feedback submitted successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
  */
 router.post(
   '/feedback',
@@ -193,14 +225,42 @@ router.delete(
  *   post:
  *     tags: [Card Game]
  *     summary: Toggle upvote on feedback
+ *     description: Upvote or remove upvote from feedback. Calling again toggles the upvote off.
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
+ *         description: Feedback ID
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Upvote toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   example: Upvote added
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasUpvoted:
+ *                       type: boolean
+ *                       example: true
+ *                     upvoteCount:
+ *                       type: integer
+ *                       example: 1
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Feedback not found
  */
 router.post(
   '/feedback/:id/upvote',
@@ -220,12 +280,40 @@ router.post(
  *   post:
  *     tags: [Card Game]
  *     summary: Add reply to feedback
+ *     description: Add a text reply to a feedback entry. Field name is 'text', not 'content'.
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
+ *         description: Feedback ID
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 500
+ *                 description: Reply text (NOT 'content')
+ *                 example: I totally agree with this feedback!
+ *     responses:
+ *       201:
+ *         description: Reply added successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Feedback not found
  *         schema:
  *           type: string
  */

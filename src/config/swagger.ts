@@ -174,6 +174,10 @@ const swaggerDefinition = {
       description: 'In-app notification system. Get, mark as read, and manage user notifications for connections, events, vouches, and system alerts.',
     },
     {
+      name: 'Card Game',
+      description: 'Card game feedback and rating system. Submit feedback, rate topics, engage in discussions, and view statistics for the Berse card game experience.',
+    },
+    {
       name: 'Health',
       description: 'API health and status checks',
     },
