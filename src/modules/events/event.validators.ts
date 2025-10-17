@@ -441,6 +441,28 @@ export const getUserAttendedEventsValidators = [
 // CALENDAR VALIDATORS
 // ============================================================================
 
+export const getDayEventsValidators = [
+  query('date')
+    .notEmpty().withMessage('Date is required')
+    .isISO8601().withMessage('Date must be in ISO 8601 format (YYYY-MM-DD)'),
+  
+  query('type')
+    .optional()
+    .isIn(Object.values(EventType)).withMessage('Invalid event type'),
+  
+  query('sortBy')
+    .optional()
+    .isIn(['date', 'title', 'popularity']).withMessage('Sort by must be date, title, or popularity'),
+  
+  query('sortOrder')
+    .optional()
+    .isIn(['asc', 'desc']).withMessage('Sort order must be asc or desc'),
+  
+  query('timezone')
+    .optional()
+    .isString().withMessage('Timezone must be a string'),
+];
+
 export const getTodayEventsValidators = [
   query('type')
     .optional()

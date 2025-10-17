@@ -18,6 +18,7 @@ import {
   getEventsByHostValidators,
   getCommunityEventsValidators,
   getUserAttendedEventsValidators,
+  getDayEventsValidators,
   getTodayEventsValidators,
   getWeekScheduleValidators,
   getMonthEventsValidators,
@@ -1126,6 +1127,87 @@ router.get(
  *                       type: integer
  *                       example: 5
  */
+/**
+ * @swagger
+ * /v2/events/calendar/day:
+ *   get:
+ *     summary: Get events for a specific date
+ *     description: Retrieve all published events for a specific date with sorting and filtering options
+ *     tags: [Events - Calendar]
+ *     parameters:
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2025-10-22"
+ *         description: Date in YYYY-MM-DD format
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *         description: Filter by event type
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [date, title, popularity]
+ *           default: date
+ *         description: Sort events by field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order
+ *       - in: query
+ *         name: timezone
+ *         schema:
+ *           type: string
+ *           default: UTC
+ *         description: Timezone for date calculation (e.g., Asia/Kuala_Lumpur)
+ *     responses:
+ *       200:
+ *         description: Events for the specified date retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Events for the specified date retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     date:
+ *                       type: string
+ *                       example: "2025-10-22"
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Event'
+ *                     count:
+ *                       type: integer
+ *                       example: 5
+ *       400:
+ *         description: Invalid date format
+ *       500:
+ *         description: Server error
+ */
+router.get(
+  '/calendar/day',
+  getDayEventsValidators,
+  handleValidationErrors,
+  EventController.getDayEvents
+);
+
 router.get(
   '/calendar/today',
   getTodayEventsValidators,

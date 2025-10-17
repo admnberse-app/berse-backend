@@ -1,0 +1,174 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../../../.env') });
+
+import { PrismaClient, EventType, EventStatus, EventHostType } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+const eventTemplates = [
+  { title: 'Morning Yoga Session', type: EventType.SPORTS, location: 'KLCC Park', isFree: true },
+  { title: 'Coffee & Code Meetup', type: EventType.CAFE_MEETUP, location: 'VCR Cafe, Pudu', isFree: false, price: 25 },
+  { title: 'Badminton Tournament', type: EventType.SPORTS, location: 'Sentul Sports Complex', isFree: false, price: 30 },
+  { title: 'Tech Talk: Web3 & Blockchain', type: EventType.ILM, location: 'Common Ground, Damansara Heights', isFree: true },
+  { title: 'Sunday Brunch Gathering', type: EventType.SOCIAL, location: 'Publika Shopping Gallery', isFree: false, price: 55 },
+  { title: 'Photography Workshop', type: EventType.ILM, location: 'The Kuala Lumpur Performing Arts Centre', isFree: false, price: 120 },
+  { title: 'Startup Networking Night', type: EventType.SOCIAL, location: 'CUB, Bangsar South', isFree: true },
+  { title: 'Charity Fun Run 5K', type: EventType.VOLUNTEER, location: 'Lake Gardens', isFree: false, price: 40 },
+  { title: 'Cultural Dance Performance', type: EventType.SOCIAL, location: 'Kuala Lumpur City Centre', isFree: true },
+  { title: 'Business Conference 2025', type: EventType.ILM, location: 'Sunway Convention Centre', isFree: false, price: 250 },
+  { title: 'Evening Basketball Game', type: EventType.SPORTS, location: 'Stadium Titiwangsa', isFree: true },
+  { title: 'Cooking Class: Malaysian Cuisine', type: EventType.ILM, location: 'Berjaya Times Square', isFree: false, price: 95 },
+  { title: 'Community Cleanup Drive', type: EventType.VOLUNTEER, location: 'Taman Tasik Permaisuri', isFree: true },
+  { title: 'Wine Tasting Evening', type: EventType.SOCIAL, location: 'The Wine Shop, Bangsar', isFree: false, price: 150 },
+  { title: 'Hackathon Weekend', type: EventType.ILM, location: 'Cyberjaya Innovation Hub', isFree: true },
+  { title: 'Meditation & Mindfulness', type: EventType.ILM, location: 'Brickfields Wellness Center', isFree: false, price: 35 },
+  { title: 'Friday Night Futsal', type: EventType.SPORTS, location: 'KL Sports City', isFree: false, price: 20 },
+  { title: 'Indie Music Night', type: EventType.SOCIAL, location: 'Live House KL', isFree: false, price: 45 },
+  { title: 'Board Games Cafe Meetup', type: EventType.CAFE_MEETUP, location: 'Meeples Cafe, Mid Valley', isFree: false, price: 30 },
+  { title: 'Career Development Workshop', type: EventType.ILM, location: 'WORQ Coworking, KL Sentral', isFree: true },
+  { title: 'Weekend Trip to Cameron Highlands', type: EventType.TRIP, location: 'Cameron Highlands', isFree: false, price: 180 },
+  { title: 'Putrajaya Day Trip', type: EventType.LOCAL_TRIP, location: 'Putrajaya', isFree: false, price: 50 },
+  { title: 'Monthly Community Gathering', type: EventType.MONTHLY_EVENT, location: 'Community Hall, Mont Kiara', isFree: true },
+  { title: 'Hiking Adventure - Bukit Tabur', type: EventType.SPORTS, location: 'Bukit Tabur West', isFree: true },
+  { title: 'Charity Donation Drive', type: EventType.VOLUNTEER, location: 'KL City Centre', isFree: true },
+];
+
+const descriptions = [
+  'Join us for an amazing experience! All are welcome.',
+  'Don\'t miss out on this exciting opportunity to connect with like-minded people.',
+  'A perfect event for beginners and experienced participants alike.',
+  'Come and discover something new in a friendly environment.',
+  'Limited spots available! Register early to secure your place.',
+  'An unforgettable experience awaits you.',
+  'Meet new friends and enjoy great activities.',
+  'Professional guidance and support provided throughout.',
+  'Bring your enthusiasm and get ready for a great time!',
+  'This event has been highly requested by our community.',
+];
+
+function getRandomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+export async function seed30DaysEvents() {
+  console.log('\n📅 Creating events for the next 30 days...');
+  
+  // Get users to use as hosts
+  const users = await prisma.user.findMany({
+    take: 10,
+    select: { id: true }
+  });
+  
+  if (users.length === 0) {
+    console.log('⚠️  No users found. Please seed users first.');
+    return [];
+  }
+
+  // Get communities
+  const communities = await prisma.community.findMany({
+    take: 5,
+    select: { id: true }
+  });
+
+  const createdEvents = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Generate events for each of the next 30 days
+  for (let day = 0; day < 30; day++) {
+    // Random number of events per day (0-5 events)
+    const eventsToday = getRandomInt(0, 5);
+    
+    for (let i = 0; i < eventsToday; i++) {
+      const template = getRandomElement(eventTemplates);
+      const eventDate = new Date(today);
+      eventDate.setDate(today.getDate() + day);
+      
+      // Random hour between 9 AM and 8 PM
+      eventDate.setHours(getRandomInt(9, 20), getRandomInt(0, 59), 0, 0);
+      
+      const hostUser = getRandomElement(users);
+      const useCommunity = communities.length > 0 && Math.random() > 0.5;
+      
+      const eventData: any = {
+        title: template.title,
+        description: getRandomElement(descriptions),
+        type: template.type,
+        date: eventDate,
+        location: template.location,
+        mapLink: `https://maps.google.com/?q=${encodeURIComponent(template.location)}`,
+        maxAttendees: getRandomInt(10, 100),
+        hostId: hostUser.id,
+        isFree: template.isFree,
+        status: EventStatus.PUBLISHED,
+        hostType: useCommunity && communities.length > 0 ? EventHostType.COMMUNITY : EventHostType.PERSONAL,
+      };
+
+      if (!template.isFree && template.price) {
+        eventData.price = template.price;
+        eventData.currency = 'MYR';
+      }
+
+      if (useCommunity && communities.length > 0) {
+        eventData.communityId = getRandomElement(communities).id;
+      }
+
+      // Add some random images
+      if (Math.random() > 0.7) {
+        eventData.images = [
+          `https://picsum.photos/seed/${Date.now()}-${i}/800/600`,
+        ];
+      }
+
+      // Add notes for some events
+      if (Math.random() > 0.6) {
+        eventData.notes = 'Please arrive 15 minutes early. Bring your own water bottle.';
+      }
+
+      try {
+        const created = await prisma.event.create({
+          data: eventData,
+        });
+        createdEvents.push(created);
+      } catch (error) {
+        console.error(`Failed to create event: ${template.title}`, error);
+      }
+    }
+  }
+  
+  console.log(`✅ ${createdEvents.length} events created for the next 30 days`);
+  
+  // Show distribution by day
+  const eventsByDay: { [key: string]: number } = {};
+  createdEvents.forEach(event => {
+    const dateKey = event.date.toISOString().split('T')[0];
+    eventsByDay[dateKey] = (eventsByDay[dateKey] || 0) + 1;
+  });
+  
+  console.log('\n📊 Events distribution:');
+  Object.entries(eventsByDay)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([date, count]) => {
+      console.log(`  ${date}: ${count} event${count !== 1 ? 's' : ''}`);
+    });
+  
+  return createdEvents;
+}
+
+async function main() {
+  await seed30DaysEvents();
+}
+
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error('❌ Event seed failed:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

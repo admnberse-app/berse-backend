@@ -455,6 +455,22 @@ export class EventController {
    * Get events happening today
    * @route GET /v2/events/calendar/today
    */
+  static async getDayEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const date = req.query.date as string;
+      const type = req.query.type as any;
+      const sortBy = (req.query.sortBy as any) || 'date';
+      const sortOrder = (req.query.sortOrder as any) || 'asc';
+      const timezone = (req.query.timezone as string) || 'UTC';
+
+      const events = await EventService.getDayEvents(date, type, sortBy, sortOrder, timezone);
+
+      sendSuccess(res, { events, count: events.length, date }, 'Events for the specified date retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getTodayEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const type = req.query.type as any;
