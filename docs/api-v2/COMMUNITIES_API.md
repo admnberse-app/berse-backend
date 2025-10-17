@@ -19,7 +19,14 @@ The Communities API provides comprehensive endpoints for managing communities, m
    - [Get Community Details](#get-community-details)
    - [Update Community](#update-community)
    - [Delete Community](#delete-community)
-2. [Membership Management](#membership-management)
+2. [Community Discovery](#community-discovery)
+   - [Get Trending Communities](#get-trending-communities)
+   - [Get New Communities](#get-new-communities)
+   - [Get Recommended Communities](#get-recommended-communities)
+   - [Get Communities by Interest](#get-communities-by-interest)
+   - [Get Suggested Communities](#get-suggested-communities)
+   - [Get Communities from Connections](#get-communities-from-connections)
+3. [Membership Management](#membership-management)
    - [Join Community](#join-community)
    - [Leave Community](#leave-community)
    - [Get Community Members](#get-community-members)
@@ -28,13 +35,13 @@ The Communities API provides comprehensive endpoints for managing communities, m
    - [Update Member Role](#update-member-role)
    - [Remove Member](#remove-member)
    - [Get Community Statistics](#get-community-statistics)
-3. [Community Vouching](#community-vouching)
+4. [Community Vouching](#community-vouching)
    - [Check Vouch Eligibility](#check-vouch-eligibility)
    - [Grant Community Vouch](#grant-community-vouch)
    - [Revoke Community Vouch](#revoke-community-vouch)
-4. [Enums & Types](#enums--types)
-5. [Error Codes](#error-codes)
-6. [Examples](#examples)
+5. [Enums & Types](#enums--types)
+6. [Error Codes](#error-codes)
+7. [Examples](#examples)
 
 ---
 
@@ -339,6 +346,291 @@ Delete a community. Requires ADMIN role. Cascading deletes handle members, event
 - `401 Unauthorized` - No authentication token
 - `403 Forbidden` - Not an admin
 - `404 Not Found` - Community not found
+
+---
+
+## Community Discovery
+
+### Get Trending Communities
+
+Get communities sorted by popularity (member count and verified status).
+
+**Endpoint:** `GET /v2/communities/discovery/trending`
+
+**Authentication:** Optional (shows user role if authenticated)
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cm123456789abcdef",
+      "name": "Tech Enthusiasts Malaysia",
+      "description": "A vibrant community for technology lovers...",
+      "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
+      "category": "Technology",
+      "isVerified": true,
+      "memberCount": 1250,
+      "eventCount": 42,
+      "creator": {
+        "id": "user123",
+        "displayName": "John Doe",
+        "profilePicture": "https://cdn.berse.com/users/john.jpg"
+      },
+      "userRole": null
+    }
+  ]
+}
+```
+
+---
+
+### Get New Communities
+
+Get recently created communities (last 30 days).
+
+**Endpoint:** `GET /v2/communities/discovery/new`
+
+**Authentication:** Optional (shows user role if authenticated)
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cm987654321zyxwvu",
+      "name": "Startup Founders KL",
+      "description": "Connect with fellow startup founders...",
+      "imageUrl": "https://cdn.berse.com/communities/startup-kl.jpg",
+      "category": "Business",
+      "isVerified": false,
+      "memberCount": 45,
+      "eventCount": 3,
+      "createdAt": "2025-10-10T08:00:00.000Z",
+      "creator": {
+        "id": "user456",
+        "displayName": "Jane Smith",
+        "profilePicture": "https://cdn.berse.com/users/jane.jpg"
+      },
+      "userRole": null
+    }
+  ]
+}
+```
+
+---
+
+### Get Recommended Communities
+
+Get personalized community recommendations based on user interests and connections.
+
+**Endpoint:** `GET /v2/communities/discovery/recommended`
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cm456789012345abc",
+      "name": "Photography Enthusiasts",
+      "description": "Share your passion for photography...",
+      "imageUrl": "https://cdn.berse.com/communities/photo.jpg",
+      "category": "Arts & Photography",
+      "isVerified": true,
+      "memberCount": 580,
+      "eventCount": 18,
+      "creator": {
+        "id": "user789",
+        "displayName": "Alex Chen",
+        "profilePicture": "https://cdn.berse.com/users/alex.jpg"
+      },
+      "userRole": null,
+      "matchReason": "Based on your interests"
+    }
+  ]
+}
+```
+
+**Recommendation Criteria:**
+- User's listed interests match community category
+- Communities that user's connections are members of
+- Similar communities to ones user already joined
+
+---
+
+### Get Communities by Interest
+
+Get communities filtered by a specific category/interest.
+
+**Endpoint:** `GET /v2/communities/discovery/by-interest`
+
+**Authentication:** Optional (shows user role if authenticated)
+
+**Query Parameters:**
+- `interest` (required): Category/interest to filter by (e.g., "Technology", "Sports", "Arts")
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Example Request:**
+```
+GET /v2/communities/discovery/by-interest?interest=Technology&limit=10
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cm123456789abcdef",
+      "name": "Tech Enthusiasts Malaysia",
+      "description": "A vibrant community for technology lovers...",
+      "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
+      "category": "Technology",
+      "isVerified": true,
+      "memberCount": 1250,
+      "eventCount": 42,
+      "creator": {
+        "id": "user123",
+        "displayName": "John Doe",
+        "profilePicture": "https://cdn.berse.com/users/john.jpg"
+      },
+      "userRole": null
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - Interest parameter is required
+
+---
+
+### Get Suggested Communities
+
+Get a curated mix of trending, new, and recommended communities.
+
+**Endpoint:** `GET /v2/communities/discovery/suggested`
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cm123456789abcdef",
+      "name": "Tech Enthusiasts Malaysia",
+      "description": "A vibrant community for technology lovers...",
+      "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
+      "category": "Technology",
+      "isVerified": true,
+      "memberCount": 1250,
+      "eventCount": 42,
+      "creator": {
+        "id": "user123",
+        "displayName": "John Doe",
+        "profilePicture": "https://cdn.berse.com/users/john.jpg"
+      },
+      "userRole": null,
+      "suggestionType": "trending"
+    },
+    {
+      "id": "cm987654321zyxwvu",
+      "name": "Startup Founders KL",
+      "description": "Connect with fellow startup founders...",
+      "imageUrl": "https://cdn.berse.com/communities/startup-kl.jpg",
+      "category": "Business",
+      "isVerified": false,
+      "memberCount": 45,
+      "eventCount": 3,
+      "createdAt": "2025-10-10T08:00:00.000Z",
+      "creator": {
+        "id": "user456",
+        "displayName": "Jane Smith",
+        "profilePicture": "https://cdn.berse.com/users/jane.jpg"
+      },
+      "userRole": null,
+      "suggestionType": "new"
+    }
+  ]
+}
+```
+
+**Suggestion Mix:**
+- 40% trending communities (by member count)
+- 30% personalized recommendations (based on interests)
+- 30% new communities (created in last 30 days)
+
+---
+
+### Get Communities from Connections
+
+Get communities that your connections (friends) are members of.
+
+**Endpoint:** `GET /v2/communities/discovery/from-connections`
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cm456789012345abc",
+      "name": "Hiking Adventures KL",
+      "description": "Join us for weekend hiking trips...",
+      "imageUrl": "https://cdn.berse.com/communities/hiking-kl.jpg",
+      "category": "Sports & Outdoors",
+      "isVerified": true,
+      "memberCount": 320,
+      "eventCount": 25,
+      "creator": {
+        "id": "user789",
+        "displayName": "Alex Chen",
+        "profilePicture": "https://cdn.berse.com/users/alex.jpg"
+      },
+      "userRole": null,
+      "connectionMembers": [
+        {
+          "id": "user456",
+          "displayName": "Jane Smith",
+          "profilePicture": "https://cdn.berse.com/users/jane.jpg"
+        },
+        {
+          "id": "user789",
+          "displayName": "Bob Wilson",
+          "profilePicture": "https://cdn.berse.com/users/bob.jpg"
+        }
+      ],
+      "connectionCount": 2
+    }
+  ]
+}
+```
+
+**Note:** Only shows communities where at least one of your accepted connections is an approved member.
 
 ---
 
@@ -1054,9 +1346,21 @@ X-RateLimit-Reset: 1634567890
 
 ## Changelog
 
+### Version 2.2.0 (October 17, 2025)
+- ✅ Added 6 Community Discovery endpoints
+  - Trending communities (by member count & verification)
+  - New communities (last 30 days)
+  - Recommended communities (personalized)
+  - Communities by interest/category
+  - Suggested communities (curated mix)
+  - Communities from connections (friends)
+- ✅ Personalized recommendations based on user interests
+- ✅ Social discovery through connection networks
+- ✅ Enhanced community filtering capabilities
+
 ### Version 2.1.0 (October 17, 2025)
 - ✅ Initial release of Communities module
-- ✅ 18 endpoints for community management
+- ✅ 17 core endpoints for community management
 - ✅ Role-based permission system (ADMIN, MODERATOR, MEMBER)
 - ✅ Community vouching system with trust score integration
 - ✅ Auto-vouch eligibility checking
@@ -1076,6 +1380,6 @@ For API support, please contact:
 
 ---
 
-**API Version:** 2.1.0  
+**API Version:** 2.2.0  
 **Last Updated:** October 17, 2025  
 **Status:** ✅ Production Ready

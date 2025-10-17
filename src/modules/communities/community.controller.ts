@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { CommunityService } from './community.service';
 import { sendSuccess } from '../../utils/response';
+import { AppError } from '../../middleware/error';
 import type {
   CreateCommunityInput,
   UpdateCommunityInput,
@@ -265,5 +266,96 @@ export class CommunityController {
 
     await communityService.revokeVouch(adminUserId, communityId, userId, reason);
     sendSuccess(res, null, 'Community vouch revoked');
+  }
+
+  // ============================================================================
+  // COMMUNITY DISCOVERY
+  // ============================================================================
+
+  /**
+   * @route GET /v2/communities/discovery/trending
+   * @desc Get trending communities
+   * @access Public
+   */
+  async getTrendingCommunities(req: Request, res: Response): Promise<void> {
+    const userId = req.user?.id;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+
+    const communities = await communityService.getTrendingCommunities(userId, limit);
+    sendSuccess(res, { communities });
+  }
+
+  /**
+   * @route GET /v2/communities/discovery/new
+   * @desc Get newly created communities
+   * @access Public
+   */
+  async getNewCommunities(req: Request, res: Response): Promise<void> {
+    const userId = req.user?.id;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+
+    const communities = await communityService.getNewCommunities(userId, limit);
+    sendSuccess(res, { communities });
+  }
+
+  /**
+   * @route GET /v2/communities/discovery/recommended
+   * @desc Get recommended communities based on user interests
+   * @access Private
+   */
+  async getRecommendedCommunities(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+
+    const communities = await communityService.getRecommendedCommunities(userId, limit);
+    sendSuccess(res, { communities });
+  }
+
+  /**
+   * @route GET /v2/communities/discovery/by-interest
+   * @desc Get communities by interest/category
+   * @access Public
+   */
+  async getCommunitiesByInterest(req: Request, res: Response): Promise<void> {
+    const userId = req.user?.id;
+    const { interest } = req.query;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+
+    if (!interest) {
+      throw new AppError('Interest parameter is required', 400);
+    }
+
+    const communities = await communityService.getCommunitiesByInterest(
+      interest as string,
+      userId,
+      limit
+    );
+    sendSuccess(res, { communities });
+  }
+
+  /**
+   * @route GET /v2/communities/discovery/suggested
+   * @desc Get personalized community suggestions
+   * @access Private
+   */
+  async getSuggestedCommunities(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+
+    const communities = await communityService.getSuggestedCommunities(userId, limit);
+    sendSuccess(res, { communities });
+  }
+
+  /**
+   * @route GET /v2/communities/discovery/from-connections
+   * @desc Get communities user's friends are in
+   * @access Private
+   */
+  async getCommunitiesFromConnections(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+
+    const communities = await communityService.getCommunitiesFromConnections(userId, limit);
+    sendSuccess(res, { communities });
   }
 }

@@ -130,6 +130,152 @@ router.get(
   asyncHandler(communityController.getMyCommunities.bind(communityController))
 );
 
+// ============================================================================
+// COMMUNITY DISCOVERY ROUTES (must come before /:communityId)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/communities/discovery/trending:
+ *   get:
+ *     summary: Get trending communities
+ *     description: Get communities sorted by member count and recent activity
+ *     tags: [Communities]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *     responses:
+ *       200:
+ *         description: Trending communities retrieved
+ */
+router.get(
+  '/discovery/trending',
+  asyncHandler(communityController.getTrendingCommunities.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/discovery/new:
+ *   get:
+ *     summary: Get newly created communities
+ *     tags: [Communities]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: New communities retrieved
+ */
+router.get(
+  '/discovery/new',
+  asyncHandler(communityController.getNewCommunities.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/discovery/recommended:
+ *   get:
+ *     summary: Get recommended communities
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Recommended communities retrieved
+ */
+router.get(
+  '/discovery/recommended',
+  authenticateToken,
+  asyncHandler(communityController.getRecommendedCommunities.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/discovery/by-interest:
+ *   get:
+ *     summary: Get communities by interest
+ *     tags: [Communities]
+ *     parameters:
+ *       - in: query
+ *         name: interest
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Communities by interest retrieved
+ */
+router.get(
+  '/discovery/by-interest',
+  asyncHandler(communityController.getCommunitiesByInterest.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/discovery/suggested:
+ *   get:
+ *     summary: Get personalized suggestions
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Suggested communities retrieved
+ */
+router.get(
+  '/discovery/suggested',
+  authenticateToken,
+  asyncHandler(communityController.getSuggestedCommunities.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/discovery/from-connections:
+ *   get:
+ *     summary: Get communities from connections
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Communities from connections retrieved
+ */
+router.get(
+  '/discovery/from-connections',
+  authenticateToken,
+  asyncHandler(communityController.getCommunitiesFromConnections.bind(communityController))
+);
+
 /**
  * @swagger
  * /v2/communities/{communityId}:

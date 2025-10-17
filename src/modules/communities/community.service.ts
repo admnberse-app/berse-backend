@@ -1203,4 +1203,426 @@ export class CommunityService {
       user: userBasic,
     };
   }
+
+  // ============================================================================
+  // COMMUNITY DISCOVERY
+  // ============================================================================
+
+  /**
+   * Get trending communities (by member count and recent activity)
+   */
+  async getTrendingCommunities(userId?: string, limit: number = 10): Promise<CommunityResponse[]> {
+    try {
+      const communities = await prisma.community.findMany({
+        where: {
+          isVerified: true, // Only show verified communities in trending
+        },
+        take: limit,
+        orderBy: [
+          { communityMembers: { _count: 'desc' } },
+          { createdAt: 'desc' },
+        ],
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          communityMembers: userId
+            ? {
+                where: { userId },
+                select: {
+                  role: true,
+                  isApproved: true,
+                },
+              }
+            : false,
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      return communities.map(c => this.formatCommunityResponse(c, userId));
+    } catch (error) {
+      logger.error('Failed to get trending communities', { error, userId, limit });
+      throw error;
+    }
+  }
+
+  /**
+   * Get newly created communities
+   */
+  async getNewCommunities(userId?: string, limit: number = 10): Promise<CommunityResponse[]> {
+    try {
+      // Get communities created in the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const communities = await prisma.community.findMany({
+        where: {
+          createdAt: {
+            gte: thirtyDaysAgo,
+          },
+        },
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          communityMembers: userId
+            ? {
+                where: { userId },
+                select: {
+                  role: true,
+                  isApproved: true,
+                },
+              }
+            : false,
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      return communities.map(c => this.formatCommunityResponse(c, userId));
+    } catch (error) {
+      logger.error('Failed to get new communities', { error, userId, limit });
+      throw error;
+    }
+  }
+
+  /**
+   * Get recommended communities based on user interests and connections
+   */
+  async getRecommendedCommunities(userId: string, limit: number = 10): Promise<CommunityResponse[]> {
+    try {
+      // Get user's profile to check interests
+      const userProfile = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { interests: true },
+      });
+
+      // Get communities user is already a member of
+      const existingMemberships = await prisma.communityMember.findMany({
+        where: { userId },
+        select: { communityId: true },
+      });
+
+      const existingCommunityIds = existingMemberships.map(m => m.communityId);
+
+      // Get communities user's connections are in
+      const connectionCommunities = await prisma.communityMember.findMany({
+        where: {
+          isApproved: true,
+          communityId: {
+            notIn: existingCommunityIds,
+          },
+          OR: [
+            {
+              user: {
+                connectionsInitiated: {
+                  some: {
+                    receiverId: userId,
+                    status: 'ACCEPTED',
+                  },
+                },
+              },
+            },
+            {
+              user: {
+                connectionsReceived: {
+                  some: {
+                    initiatorId: userId,
+                    status: 'ACCEPTED',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        select: {
+          communityId: true,
+        },
+        distinct: ['communityId'],
+        take: 5,
+      });
+
+      const connectionCommunityIds = connectionCommunities.map(c => c.communityId);
+
+      // Build recommendation query
+      const whereClause: Prisma.CommunityWhereInput = {
+        id: {
+          notIn: existingCommunityIds,
+        },
+      };
+
+      // If user has interests, prioritize communities with matching categories
+      if (userProfile?.interests && userProfile.interests.length > 0) {
+        whereClause.OR = [
+          {
+            category: {
+              in: userProfile.interests,
+            },
+          },
+          {
+            id: {
+              in: connectionCommunityIds,
+            },
+          },
+        ];
+      } else if (connectionCommunityIds.length > 0) {
+        whereClause.id = {
+          in: connectionCommunityIds,
+        };
+      }
+
+      const communities = await prisma.community.findMany({
+        where: whereClause,
+        take: limit,
+        orderBy: [
+          { isVerified: 'desc' },
+          { communityMembers: { _count: 'desc' } },
+          { createdAt: 'desc' },
+        ],
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          communityMembers: {
+            where: { userId },
+            select: {
+              role: true,
+              isApproved: true,
+            },
+          },
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      return communities.map(c => this.formatCommunityResponse(c, userId));
+    } catch (error) {
+      logger.error('Failed to get recommended communities', { error, userId, limit });
+      throw error;
+    }
+  }
+
+  /**
+   * Get communities by interest/category
+   */
+  async getCommunitiesByInterest(
+    interest: string,
+    userId?: string,
+    limit: number = 20
+  ): Promise<CommunityResponse[]> {
+    try {
+      const communities = await prisma.community.findMany({
+        where: {
+          category: {
+            contains: interest,
+            mode: 'insensitive',
+          },
+        },
+        take: limit,
+        orderBy: [
+          { isVerified: 'desc' },
+          { communityMembers: { _count: 'desc' } },
+        ],
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          communityMembers: userId
+            ? {
+                where: { userId },
+                select: {
+                  role: true,
+                  isApproved: true,
+                },
+              }
+            : false,
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      return communities.map(c => this.formatCommunityResponse(c, userId));
+    } catch (error) {
+      logger.error('Failed to get communities by interest', { error, interest, userId, limit });
+      throw error;
+    }
+  }
+
+  /**
+   * Get suggested communities for user (combines multiple signals)
+   */
+  async getSuggestedCommunities(userId: string, limit: number = 10): Promise<CommunityResponse[]> {
+    try {
+      // Get multiple recommendation sources in parallel
+      const [trending, recommended, newCommunities] = await Promise.all([
+        this.getTrendingCommunities(userId, 3),
+        this.getRecommendedCommunities(userId, 5),
+        this.getNewCommunities(userId, 2),
+      ]);
+
+      // Combine and deduplicate
+      const seen = new Set<string>();
+      const combined: CommunityResponse[] = [];
+
+      // Prioritize recommended, then trending, then new
+      for (const community of [...recommended, ...trending, ...newCommunities]) {
+        if (!seen.has(community.id) && combined.length < limit) {
+          seen.add(community.id);
+          combined.push(community);
+        }
+      }
+
+      return combined;
+    } catch (error) {
+      logger.error('Failed to get suggested communities', { error, userId, limit });
+      throw error;
+    }
+  }
+
+  /**
+   * Get communities user's friends are in
+   */
+  async getCommunitiesFromConnections(userId: string, limit: number = 10): Promise<CommunityResponse[]> {
+    try {
+      // Get user's connections
+      const connections = await prisma.userConnection.findMany({
+        where: {
+          OR: [
+            { initiatorId: userId, status: 'ACCEPTED' },
+            { receiverId: userId, status: 'ACCEPTED' },
+          ],
+        },
+        select: {
+          initiatorId: true,
+          receiverId: true,
+        },
+      });
+
+      const connectionUserIds = connections.map(c =>
+        c.initiatorId === userId ? c.receiverId : c.initiatorId
+      );
+
+      if (connectionUserIds.length === 0) {
+        return [];
+      }
+
+      // Get communities user is already in
+      const existingMemberships = await prisma.communityMember.findMany({
+        where: { userId },
+        select: { communityId: true },
+      });
+
+      const existingCommunityIds = existingMemberships.map(m => m.communityId);
+
+      // Get communities where connections are members
+      const communitiesWithConnections = await prisma.community.findMany({
+        where: {
+          id: {
+            notIn: existingCommunityIds,
+          },
+          communityMembers: {
+            some: {
+              userId: {
+                in: connectionUserIds,
+              },
+              isApproved: true,
+            },
+          },
+        },
+        take: limit,
+        orderBy: {
+          communityMembers: { _count: 'desc' },
+        },
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          communityMembers: {
+            where: {
+              userId: {
+                in: [...connectionUserIds, userId],
+              },
+              isApproved: true,
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  username: true,
+                  profile: {
+                    select: {
+                      profilePicture: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      return communitiesWithConnections.map(c => this.formatCommunityResponse(c, userId));
+    } catch (error) {
+      logger.error('Failed to get communities from connections', { error, userId, limit });
+      throw error;
+    }
+  }
 }

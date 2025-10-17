@@ -321,6 +321,12 @@ router.get('/docs', (req, res) => {
         'GET /v2/communities/:communityId/members/:userId/vouch-eligibility': 'Check vouch eligibility (auth required)',
         'POST /v2/communities/:communityId/members/:userId/vouch': 'Grant community vouch (auth required)',
         'DELETE /v2/communities/:communityId/members/:userId/vouch': 'Revoke community vouch (auth required)',
+        'GET /v2/communities/discovery/trending': 'Get trending communities by member count',
+        'GET /v2/communities/discovery/new': 'Get newly created communities (last 30 days)',
+        'GET /v2/communities/discovery/recommended': 'Get personalized recommendations (auth required)',
+        'GET /v2/communities/discovery/by-interest': 'Get communities by interest/category',
+        'GET /v2/communities/discovery/suggested': 'Get combined suggestions (auth required)',
+        'GET /v2/communities/discovery/from-connections': 'Get communities from friends (auth required)',
       },
       vouches: {
         'POST /v2/vouches/request': 'Request vouch from connection (auth required)',
