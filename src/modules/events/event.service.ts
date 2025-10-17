@@ -23,6 +23,7 @@ import { EventType, EventStatus, EventHostType, EventTicketStatus, PaymentStatus
 import logger from '../../utils/logger';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
+import { cacheService, CacheKeys, CacheTTL } from '../../services/cache.service';
 
 export class EventService {
   
@@ -95,6 +96,15 @@ export class EventService {
           },
         },
       });
+
+      // Invalidate relevant caches
+      await Promise.all([
+        cacheService.deletePattern('bersemuka:events:trending:*'),
+        cacheService.deletePattern('bersemuka:events:recommended:*'),
+        cacheService.deletePattern(`bersemuka:events:host:${userId}:*`),
+        data.communityId ? cacheService.deletePattern('bersemuka:events:community:*') : Promise.resolve(),
+      ]);
+      logger.debug('Cache invalidated after event creation');
 
       return this.transformEventResponse(event);
     } catch (error: any) {
@@ -1025,9 +1035,18 @@ export class EventService {
 
   /**
    * Get trending events (most popular based on RSVPs, tickets, and recency)
+   * Cached for 15 minutes for better performance
    */
   static async getTrendingEvents(limit: number = 10, userId?: string): Promise<EventResponse[]> {
     try {
+      // Try cache first
+      const cacheKey = CacheKeys.trendingEvents(limit);
+      const cached = await cacheService.get<EventResponse[]>(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit: trending events (limit=${limit})`);
+        return cached;
+      }
+
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -1092,6 +1111,10 @@ export class EventService {
         .sort((a, b) => b.score - a.score)
         .slice(0, limit)
         .map(item => this.transformEventResponse(item.event));
+
+      // Cache the results
+      await cacheService.set(cacheKey, topEvents, { ttl: CacheTTL.TRENDING });
+      logger.debug(`Cache set: trending events (limit=${limit})`);
 
       return topEvents;
     } catch (error: any) {
@@ -1181,9 +1204,18 @@ export class EventService {
   /**
    * Get recommended events based on user preferences and history
    * Optimized: Parallel queries, select only needed fields
+   * Cached for 1 hour per user
    */
   static async getRecommendedEvents(userId: string, limit: number = 10): Promise<EventResponse[]> {
     try {
+      // Try cache first
+      const cacheKey = CacheKeys.recommendedEvents(userId, limit);
+      const cached = await cacheService.get<EventResponse[]>(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit: recommended events (userId=${userId}, limit=${limit})`);
+        return cached;
+      }
+
       // Optimized: Fetch only event types, not full events
       const [userRsvps, userTickets, userCommunities] = await Promise.all([
         prisma.eventRsvp.findMany({
@@ -1262,7 +1294,13 @@ export class EventService {
         },
       });
 
-      return recommendedEvents.map(event => this.transformEventResponse(event));
+      const results = recommendedEvents.map(event => this.transformEventResponse(event));
+
+      // Cache the results
+      await cacheService.set(cacheKey, results, { ttl: CacheTTL.RECOMMENDED });
+      logger.debug(`Cache set: recommended events (userId=${userId}, limit=${limit})`);
+
+      return results;
     } catch (error: any) {
       logger.error('Error fetching recommended events:', error);
       throw error;

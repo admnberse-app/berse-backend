@@ -40,9 +40,16 @@ export class CountriesController {
         throw new AppError('Failed to fetch countries data', 500);
       }
 
+      // Sort countries alphabetically by name
+      const sortedCountries = allCountries.sort((a, b) => {
+        const nameA = a.name?.common || '';
+        const nameB = b.name?.common || '';
+        return nameA.localeCompare(nameB);
+      });
+
       // Calculate total and apply pagination
-      const totalCountries = allCountries.length;
-      const paginatedCountries = allCountries.slice(offset, offset + limitNum);
+      const totalCountries = sortedCountries.length;
+      const paginatedCountries = sortedCountries.slice(offset, offset + limitNum);
       const totalPages = Math.ceil(totalCountries / limitNum);
 
       // Transform data for frontend
@@ -142,10 +149,15 @@ export class CountriesController {
    */
   static async searchCountries(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { q, region } = req.query;
+      const { q, region, page = '1', limit = '250' } = req.query;
+      
+      // Validate and set pagination parameters
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(Math.max(1, parseInt(limit as string)), 250);
+      const offset = (pageNum - 1) * limitNum;
       
       // Check cache for search results
-      const cacheKey = `metadata:countries:search:${q || 'all'}:${region || 'all'}`;
+      const cacheKey = `metadata:countries:search:${q || 'all'}:${region || 'all'}:${page}:${limit}`;
       const cachedData = await cache.get(cacheKey);
       
       if (cachedData) {
@@ -180,7 +192,19 @@ export class CountriesController {
         );
       }
 
-      const transformedCountries = countries.map(country => ({
+      // Sort countries alphabetically by name
+      countries.sort((a, b) => {
+        const nameA = a.name?.common || '';
+        const nameB = b.name?.common || '';
+        return nameA.localeCompare(nameB);
+      });
+
+      // Calculate total and apply pagination
+      const totalCountries = countries.length;
+      const paginatedCountries = countries.slice(offset, offset + limitNum);
+      const totalPages = Math.ceil(totalCountries / limitNum);
+
+      const transformedCountries = paginatedCountries.map(country => ({
         code: country.cca2,
         code3: country.cca3,
         name: country.name?.common || '',
@@ -193,10 +217,22 @@ export class CountriesController {
           `${country.idd.root}${country.idd.suffixes[0] || ''}` : '',
       }));
 
-      sendSuccess(res, {
+      const responseData = {
         countries: transformedCountries,
-        total: transformedCountries.length,
-      });
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalItems: totalCountries,
+          itemsPerPage: limitNum,
+          hasNextPage: pageNum < totalPages,
+          hasPreviousPage: pageNum > 1,
+        },
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
     } catch (error) {
       next(error);
     }
@@ -275,6 +311,12 @@ export class CountriesController {
   static async getCountriesByRegion(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { region } = req.params;
+      const { page = '1', limit = '250' } = req.query;
+      
+      // Validate and set pagination parameters
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(Math.max(1, parseInt(limit as string)), 250);
+      const offset = (pageNum - 1) * limitNum;
       
       const allCountries = await getCountries({
         fields: ['name', 'cca2', 'capital', 'region', 'flag', 'idd']
@@ -292,7 +334,19 @@ export class CountriesController {
         throw new AppError(`No countries found in region '${region}'`, 404);
       }
 
-      const transformedCountries = countries.map(country => ({
+      // Sort countries alphabetically by name
+      countries.sort((a, b) => {
+        const nameA = a.name?.common || '';
+        const nameB = b.name?.common || '';
+        return nameA.localeCompare(nameB);
+      });
+
+      // Calculate total and apply pagination
+      const totalCountries = countries.length;
+      const paginatedCountries = countries.slice(offset, offset + limitNum);
+      const totalPages = Math.ceil(totalCountries / limitNum);
+
+      const transformedCountries = paginatedCountries.map(country => ({
         code: country.cca2,
         name: country.name?.common || '',
         capital: Array.isArray(country.capital) ? country.capital[0] : country.capital,
@@ -304,7 +358,14 @@ export class CountriesController {
       sendSuccess(res, {
         region,
         countries: transformedCountries,
-        total: transformedCountries.length,
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalItems: totalCountries,
+          itemsPerPage: limitNum,
+          hasNextPage: pageNum < totalPages,
+          hasPreviousPage: pageNum > 1,
+        },
       });
     } catch (error) {
       next(error);
@@ -546,9 +607,15 @@ export class CountriesController {
   static async getStatesByCountry(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { countryCode } = req.params;
+      const { page = '1', limit = '100' } = req.query;
+
+      // Validate and set pagination parameters
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(Math.max(1, parseInt(limit as string)), 500); // Max 500 items per page
+      const offset = (pageNum - 1) * limitNum;
 
       // Check cache
-      const cacheKey = `metadata:states:country:${countryCode.toUpperCase()}`;
+      const cacheKey = `metadata:states:country:${countryCode.toUpperCase()}:${page}:${limit}`;
       const cachedData = await cache.get(cacheKey);
       
       if (cachedData) {
@@ -562,7 +629,11 @@ export class CountriesController {
         throw new AppError(`No states found for country code '${countryCode}'`, 404);
       }
 
-      const transformedStates = states.map(state => ({
+      const totalStates = states.length;
+      const paginatedStates = states.slice(offset, offset + limitNum);
+      const totalPages = Math.ceil(totalStates / limitNum);
+
+      const transformedStates = paginatedStates.map(state => ({
         code: state.isoCode,
         name: state.name,
         latitude: state.latitude,
@@ -572,7 +643,14 @@ export class CountriesController {
       const responseData = {
         countryCode: countryCode.toUpperCase(),
         states: transformedStates,
-        total: transformedStates.length,
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalItems: totalStates,
+          itemsPerPage: limitNum,
+          hasNextPage: pageNum < totalPages,
+          hasPreviousPage: pageNum > 1,
+        },
       };
 
       // Cache for 1 day
