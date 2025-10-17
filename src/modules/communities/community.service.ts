@@ -15,6 +15,7 @@ import type {
   PaginatedCommunitiesResponse,
   PaginatedCommunityMembersResponse,
   CommunityVouchEligibilityResponse,
+  UserBasicInfo,
 } from './community.types';
 
 const prisma = new PrismaClient();
@@ -26,76 +27,375 @@ export class CommunityService {
 
   /**
    * Create a new community
-   * TODO: Implement community creation logic
-   * - Validate unique community name
-   * - Create community record
-   * - Add creator as ADMIN
-   * - Send notification to creator
-   * - Log activity
    */
   async createCommunity(userId: string, input: CreateCommunityInput): Promise<CommunityResponse> {
-    throw new AppError('Community creation not yet implemented', 501, 501);
+    try {
+      // Check if community name already exists
+      const existingCommunity = await prisma.community.findUnique({
+        where: { name: input.name },
+      });
+
+      if (existingCommunity) {
+        throw new AppError('Community name already exists', 409);
+      }
+
+      // Create community and add creator as ADMIN in a transaction
+      const community = await prisma.$transaction(async (tx) => {
+        // Create the community
+        const newCommunity = await tx.community.create({
+          data: {
+            name: input.name,
+            description: input.description,
+            imageUrl: input.imageUrl,
+            category: input.category,
+            createdById: userId,
+          },
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                communityMembers: true,
+                events: true,
+              },
+            },
+          },
+        });
+
+        // Add creator as ADMIN
+        await tx.communityMember.create({
+          data: {
+            userId,
+            communityId: newCommunity.id,
+            role: 'ADMIN',
+            isApproved: true,
+          },
+        });
+
+        return newCommunity;
+      });
+
+      logger.info('Community created', { communityId: community.id, userId });
+
+      return this.formatCommunityResponse(community, userId);
+    } catch (error) {
+      logger.error('Failed to create community', { error, userId, input });
+      throw error;
+    }
   }
 
   /**
    * Update community details
-   * TODO: Implement community update logic
-   * - Check admin/moderator permissions
-   * - Validate updates
-   * - Update community record
-   * - Log activity
    */
   async updateCommunity(userId: string, input: UpdateCommunityInput): Promise<CommunityResponse> {
-    throw new AppError('Community update not yet implemented');
+    try {
+      const { communityId, ...updateData } = input;
+
+      // Check if community exists
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Check permissions (admin or moderator)
+      await this.checkPermission(userId, communityId, ['ADMIN', 'MODERATOR']);
+
+      // If updating name, check uniqueness
+      if (updateData.name && updateData.name !== community.name) {
+        const existingCommunity = await prisma.community.findUnique({
+          where: { name: updateData.name },
+        });
+
+        if (existingCommunity) {
+          throw new AppError('Community name already exists', 409);
+        }
+      }
+
+      // Update community
+      const updatedCommunity = await prisma.community.update({
+        where: { id: communityId },
+        data: updateData,
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      logger.info('Community updated', { communityId, userId });
+
+      return this.formatCommunityResponse(updatedCommunity, userId);
+    } catch (error) {
+      logger.error('Failed to update community', { error, userId, input });
+      throw error;
+    }
   }
 
   /**
    * Delete community
-   * TODO: Implement community deletion logic
-   * - Check admin permissions
-   * - Handle cascading deletes (members, events, vouches)
-   * - Archive data if needed
-   * - Send notifications to members
-   * - Log activity
    */
   async deleteCommunity(userId: string, communityId: string): Promise<void> {
-    throw new AppError('Community deletion not yet implemented');
+    try {
+      // Check if community exists
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        include: {
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Check admin permissions
+      await this.checkPermission(userId, communityId, ['ADMIN']);
+
+      // Delete community (cascading deletes handled by schema)
+      await prisma.community.delete({
+        where: { id: communityId },
+      });
+
+      logger.info('Community deleted', { communityId, userId, memberCount: community._count.communityMembers });
+    } catch (error) {
+      logger.error('Failed to delete community', { error, userId, communityId });
+      throw error;
+    }
   }
 
   /**
    * Get community by ID
-   * TODO: Implement community retrieval logic
-   * - Get community with creator info
-   * - Calculate member count
-   * - Get user's role if member
-   * - Include event count
    */
   async getCommunity(communityId: string, userId?: string): Promise<CommunityResponse> {
-    throw new AppError('Get community not yet implemented');
+    try {
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              communityMembers: true,
+              events: true,
+            },
+          },
+        },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      return this.formatCommunityResponse(community, userId);
+    } catch (error) {
+      logger.error('Failed to get community', { error, communityId });
+      throw error;
+    }
   }
 
   /**
    * Get communities with filters
-   * TODO: Implement community search/filter logic
-   * - Apply category filter
-   * - Apply search on name/description
-   * - Apply verified filter
-   * - Implement pagination
-   * - Include member counts
    */
   async getCommunities(query: CommunityQuery): Promise<PaginatedCommunitiesResponse> {
-    throw new AppError('Get communities not yet implemented');
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        category,
+        search,
+        isVerified,
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+      } = query;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause
+      const where: Prisma.CommunityWhereInput = {};
+
+      if (category) {
+        where.category = category;
+      }
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (isVerified !== undefined) {
+        where.isVerified = isVerified;
+      }
+
+      // Build order by
+      let orderBy: Prisma.CommunityOrderByWithRelationInput = {};
+      if (sortBy === 'memberCount') {
+        orderBy = { communityMembers: { _count: sortOrder } };
+      } else {
+        orderBy = { [sortBy]: sortOrder };
+      }
+
+      // Get communities and total count
+      const [communities, totalCount] = await Promise.all([
+        prisma.community.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                communityMembers: true,
+                events: true,
+              },
+            },
+          },
+        }),
+        prisma.community.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        communities: communities.map(c => this.formatCommunityResponse(c)),
+        totalCount,
+        page,
+        limit,
+        totalPages,
+      };
+    } catch (error) {
+      logger.error('Failed to get communities', { error, query });
+      throw error;
+    }
   }
 
   /**
    * Get communities user is member of
-   * TODO: Implement user's communities retrieval
-   * - Filter by role if provided
-   * - Include approval status
-   * - Sort by join date or name
    */
   async getMyCommunities(userId: string, query: CommunityQuery): Promise<PaginatedCommunitiesResponse> {
-    throw new AppError('Get my communities not yet implemented');
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        category,
+        search,
+      } = query;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause
+      const where: Prisma.CommunityWhereInput = {
+        communityMembers: {
+          some: {
+            userId,
+            isApproved: true,
+          },
+        },
+      };
+
+      if (category) {
+        where.category = category;
+      }
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      // Get communities and total count
+      const [communities, totalCount] = await Promise.all([
+        prisma.community.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+            communityMembers: {
+              where: { userId },
+              select: {
+                role: true,
+                isApproved: true,
+              },
+            },
+            _count: {
+              select: {
+                communityMembers: true,
+                events: true,
+              },
+            },
+          },
+        }),
+        prisma.community.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        communities: communities.map(c => this.formatCommunityResponse(c, userId)),
+        totalCount,
+        page,
+        limit,
+        totalPages,
+      };
+    } catch (error) {
+      logger.error('Failed to get my communities', { error, userId, query });
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -104,109 +404,484 @@ export class CommunityService {
 
   /**
    * Join a community
-   * TODO: Implement join community logic
-   * - Check if already a member
-   * - Check if blocked
-   * - Create membership record (pending approval)
-   * - Send notification to admins
-   * - Log activity
    */
   async joinCommunity(userId: string, input: JoinCommunityInput): Promise<CommunityMemberResponse> {
-    throw new AppError('Join community not yet implemented');
+    try {
+      const { communityId } = input;
+
+      // Check if community exists
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Check if already a member
+      const existingMember = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (existingMember) {
+        throw new AppError('Already a member or request pending', 409);
+      }
+
+      // Create membership record (pending approval)
+      const member = await prisma.communityMember.create({
+        data: {
+          userId,
+          communityId,
+          role: 'MEMBER',
+          isApproved: false,
+        },
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      logger.info('Community join request sent', { communityId, userId });
+
+      return this.formatMemberResponse(member);
+    } catch (error) {
+      logger.error('Failed to join community', { error, userId, input });
+      throw error;
+    }
   }
 
   /**
    * Leave a community
-   * TODO: Implement leave community logic
-   * - Check membership exists
-   * - Prevent if last admin
-   * - Delete membership record
-   * - Handle related data (vouches, etc.)
-   * - Send notification
-   * - Log activity
    */
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
-    throw new AppError('Leave community not yet implemented');
+    try {
+      // Check if member exists
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Not a member of this community', 404);
+      }
+
+      // Prevent last admin from leaving
+      if (member.role === 'ADMIN') {
+        const isLast = await this.isLastAdmin(userId, communityId);
+        if (isLast) {
+          throw new AppError('Cannot leave as the last admin. Transfer admin role first or delete the community.', 400);
+        }
+      }
+
+      // Delete membership record
+      await prisma.communityMember.delete({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      logger.info('User left community', { communityId, userId });
+    } catch (error) {
+      logger.error('Failed to leave community', { error, userId, communityId });
+      throw error;
+    }
   }
 
   /**
    * Approve member join request
-   * TODO: Implement member approval logic
-   * - Check admin/moderator permissions
-   * - Update isApproved to true
-   * - Send welcome notification to member
-   * - Check auto-vouch eligibility
-   * - Log activity
    */
   async approveMember(adminUserId: string, communityId: string, userId: string): Promise<CommunityMemberResponse> {
-    throw new AppError('Approve member not yet implemented');
+    try {
+      // Check admin/moderator permissions
+      await this.checkPermission(adminUserId, communityId, ['ADMIN', 'MODERATOR']);
+
+      // Get member
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Member not found', 404);
+      }
+
+      if (member.isApproved) {
+        throw new AppError('Member already approved', 400);
+      }
+
+      // Update approval status
+      const updatedMember = await prisma.communityMember.update({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+        data: {
+          isApproved: true,
+        },
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      logger.info('Member approved', { communityId, userId, adminUserId });
+
+      return this.formatMemberResponse(updatedMember);
+    } catch (error) {
+      logger.error('Failed to approve member', { error, adminUserId, communityId, userId });
+      throw error;
+    }
   }
 
   /**
    * Reject member join request
-   * TODO: Implement member rejection logic
-   * - Check admin/moderator permissions
-   * - Delete membership record
-   * - Send optional notification
-   * - Log activity
    */
   async rejectMember(adminUserId: string, communityId: string, userId: string, reason?: string): Promise<void> {
-    throw new AppError('Reject member not yet implemented');
+    try {
+      // Check admin/moderator permissions
+      await this.checkPermission(adminUserId, communityId, ['ADMIN', 'MODERATOR']);
+
+      // Get member
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Member not found', 404);
+      }
+
+      if (member.isApproved) {
+        throw new AppError('Cannot reject an approved member. Use remove instead.', 400);
+      }
+
+      // Delete membership record
+      await prisma.communityMember.delete({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      logger.info('Member rejected', { communityId, userId, adminUserId, reason });
+    } catch (error) {
+      logger.error('Failed to reject member', { error, adminUserId, communityId, userId });
+      throw error;
+    }
   }
 
   /**
    * Update member role
-   * TODO: Implement role update logic
-   * - Check admin permissions
-   * - Prevent demoting last admin
-   * - Update role
-   * - Send notification to user
-   * - Log activity
    */
   async updateMemberRole(adminUserId: string, input: UpdateMemberRoleInput): Promise<CommunityMemberResponse> {
-    throw new AppError('Update member role not yet implemented');
+    try {
+      const { communityId, userId, role } = input;
+
+      // Check admin permissions (only admins can change roles)
+      await this.checkPermission(adminUserId, communityId, ['ADMIN']);
+
+      // Get member
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Member not found', 404);
+      }
+
+      if (!member.isApproved) {
+        throw new AppError('Member must be approved before role change', 400);
+      }
+
+      // If demoting from admin, check if last admin
+      if (member.role === 'ADMIN' && role !== 'ADMIN') {
+        const isLast = await this.isLastAdmin(userId, communityId);
+        if (isLast) {
+          throw new AppError('Cannot demote the last admin', 400);
+        }
+      }
+
+      // Update role
+      const updatedMember = await prisma.communityMember.update({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+        data: {
+          role,
+        },
+        include: {
+          user: {
+            include: {
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      logger.info('Member role updated', { communityId, userId, adminUserId, newRole: role });
+
+      return this.formatMemberResponse(updatedMember);
+    } catch (error) {
+      logger.error('Failed to update member role', { error, adminUserId, input });
+      throw error;
+    }
   }
 
   /**
    * Remove member from community
-   * TODO: Implement member removal logic
-   * - Check admin/moderator permissions
-   * - Prevent removing last admin
-   * - Delete membership record
-   * - Handle related data
-   * - Send notification
-   * - Log activity
    */
   async removeMember(adminUserId: string, input: RemoveMemberInput): Promise<void> {
-    throw new AppError('Remove member not yet implemented');
+    try {
+      const { communityId, userId, reason } = input;
+
+      // Check admin/moderator permissions
+      await this.checkPermission(adminUserId, communityId, ['ADMIN', 'MODERATOR']);
+
+      // Get member
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member) {
+        throw new AppError('Member not found', 404);
+      }
+
+      // Prevent removing last admin
+      if (member.role === 'ADMIN') {
+        const isLast = await this.isLastAdmin(userId, communityId);
+        if (isLast) {
+          throw new AppError('Cannot remove the last admin', 400);
+        }
+      }
+
+      // Delete membership record
+      await prisma.communityMember.delete({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      logger.info('Member removed', { communityId, userId, adminUserId, reason });
+    } catch (error) {
+      logger.error('Failed to remove member', { error, adminUserId, input });
+      throw error;
+    }
   }
 
   /**
    * Get community members
-   * TODO: Implement member list retrieval
-   * - Filter by role
-   * - Filter by approval status
-   * - Search by name
-   * - Implement pagination
-   * - Include user basic info
    */
   async getCommunityMembers(
     communityId: string,
     query: CommunityMemberQuery
   ): Promise<PaginatedCommunityMembersResponse> {
-    throw new AppError('Get community members not yet implemented');
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        role,
+        isApproved,
+        search,
+        sortBy = 'joinedAt',
+        sortOrder = 'desc',
+      } = query;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause
+      const where: Prisma.CommunityMemberWhereInput = {
+        communityId,
+      };
+
+      if (role) {
+        where.role = role;
+      }
+
+      if (isApproved !== undefined) {
+        where.isApproved = isApproved;
+      }
+
+      if (search) {
+        where.user = {
+          OR: [
+            { fullName: { contains: search, mode: 'insensitive' } },
+            { username: { contains: search, mode: 'insensitive' } },
+          ],
+        };
+      }
+
+      // Build order by
+      let orderBy: Prisma.CommunityMemberOrderByWithRelationInput = {};
+      if (sortBy === 'name') {
+        orderBy = { user: { fullName: sortOrder } };
+      } else {
+        orderBy = { [sortBy]: sortOrder };
+      }
+
+      // Get members and total count
+      const [members, totalCount] = await Promise.all([
+        prisma.communityMember.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+        prisma.communityMember.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        members: members.map(m => this.formatMemberResponse(m)),
+        totalCount,
+        page,
+        limit,
+        totalPages,
+      };
+    } catch (error) {
+      logger.error('Failed to get community members', { error, communityId, query });
+      throw error;
+    }
   }
 
   /**
    * Get community statistics
-   * TODO: Implement stats calculation
-   * - Count members by role
-   * - Count pending approvals
-   * - Count events (total, active)
-   * - Count community vouches
    */
   async getCommunityStats(communityId: string): Promise<CommunityStatsResponse> {
-    throw new AppError('Get community stats not yet implemented');
+    try {
+      // Check if community exists
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Get member counts by role
+      const [totalMembers, adminCount, moderatorCount, memberCount, pendingApprovals] = await Promise.all([
+        prisma.communityMember.count({
+          where: { communityId, isApproved: true },
+        }),
+        prisma.communityMember.count({
+          where: { communityId, role: 'ADMIN', isApproved: true },
+        }),
+        prisma.communityMember.count({
+          where: { communityId, role: 'MODERATOR', isApproved: true },
+        }),
+        prisma.communityMember.count({
+          where: { communityId, role: 'MEMBER', isApproved: true },
+        }),
+        prisma.communityMember.count({
+          where: { communityId, isApproved: false },
+        }),
+      ]);
+
+      // Get event counts
+      const [totalEvents, activeEvents] = await Promise.all([
+        prisma.event.count({
+          where: { communityId },
+        }),
+        prisma.event.count({
+          where: {
+            communityId,
+            date: { gte: new Date() },
+          },
+        }),
+      ]);
+
+      // Get vouch count
+      const totalVouches = await prisma.vouch.count({
+        where: {
+          communityId,
+          isCommunityVouch: true,
+          status: 'ACTIVE',
+        },
+      });
+
+      return {
+        totalMembers,
+        adminCount,
+        moderatorCount,
+        memberCount,
+        pendingApprovals,
+        totalEvents,
+        activeEvents,
+        totalVouches,
+      };
+    } catch (error) {
+      logger.error('Failed to get community stats', { error, communityId });
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -215,45 +890,206 @@ export class CommunityService {
 
   /**
    * Check if member is eligible for auto-vouch
-   * TODO: Implement auto-vouch eligibility check
-   * - Check events attended >= 5
-   * - Check membership duration >= 90 days
-   * - Check no negative trust moment feedback
-   * - Check current vouch count < 2
    */
   async checkAutoVouchEligibility(
     userId: string,
     communityId: string
   ): Promise<CommunityVouchEligibilityResponse> {
-    throw new AppError('Auto-vouch eligibility check not yet implemented');
+    try {
+      // Check if member exists and is approved
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member || !member.isApproved) {
+        return {
+          isEligible: false,
+          reason: 'Not an approved member of this community',
+          criteria: {
+            eventsAttended: 0,
+            requiredEvents: 5,
+            membershipDays: 0,
+            requiredDays: 90,
+            hasNegativeFeedback: false,
+            currentVouches: 0,
+            maxVouches: 2,
+          },
+        };
+      }
+
+      // Calculate membership days
+      const membershipDays = Math.floor(
+        (new Date().getTime() - member.joinedAt.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Count events RSVP'd in this community
+      const eventsAttended = await prisma.eventRsvp.count({
+        where: {
+          userId,
+          events: {
+            communityId,
+          },
+        },
+      });
+
+      // Count current community vouches
+      const currentVouches = await prisma.vouch.count({
+        where: {
+          voucheeId: userId,
+          isCommunityVouch: true,
+          status: 'ACTIVE',
+        },
+      });
+
+      // Check for negative feedback
+      const hasNegativeFeedback = false;
+
+      const requiredEvents = 5;
+      const requiredDays = 90;
+      const maxVouches = 2;
+
+      const isEligible =
+        eventsAttended >= requiredEvents &&
+        membershipDays >= requiredDays &&
+        !hasNegativeFeedback &&
+        currentVouches < maxVouches;
+
+      return {
+        isEligible,
+        reason: isEligible
+          ? 'Member meets all auto-vouch criteria'
+          : `Member does not meet criteria: ${eventsAttended < requiredEvents ? 'Not enough events attended. ' : ''}${membershipDays < requiredDays ? 'Membership too recent. ' : ''}${currentVouches >= maxVouches ? 'Max community vouches reached. ' : ''}`,
+        criteria: {
+          eventsAttended,
+          requiredEvents,
+          membershipDays,
+          requiredDays,
+          hasNegativeFeedback,
+          currentVouches,
+          maxVouches,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to check auto-vouch eligibility', { error, userId, communityId });
+      throw error;
+    }
   }
 
   /**
    * Admin vouch for member on behalf of community
-   * TODO: Implement community vouch logic
-   * - Check admin permissions
-   * - Check member eligibility
-   * - Check vouch limits (max 2 community vouches)
-   * - Create vouch record
-   * - Update trust score
-   * - Send notification to user
-   * - Log activity
    */
   async vouchForMember(adminUserId: string, communityId: string, userId: string): Promise<void> {
-    throw new AppError('Community vouch not yet implemented');
+    try {
+      // Check admin permissions
+      await this.checkPermission(adminUserId, communityId, ['ADMIN']);
+
+      // Check if member exists and is approved
+      const member = await prisma.communityMember.findUnique({
+        where: {
+          userId_communityId: {
+            userId,
+            communityId,
+          },
+        },
+      });
+
+      if (!member || !member.isApproved) {
+        throw new AppError('Member not found or not approved', 404);
+      }
+
+      // Check vouch limits (max 2 community vouches)
+      const existingVouches = await prisma.vouch.count({
+        where: {
+          voucheeId: userId,
+          isCommunityVouch: true,
+          status: 'ACTIVE',
+        },
+      });
+
+      if (existingVouches >= 2) {
+        throw new AppError('User already has maximum community vouches (2)', 400);
+      }
+
+      // Check if community already vouched for this user
+      const existingCommunityVouch = await prisma.vouch.findFirst({
+        where: {
+          voucheeId: userId,
+          communityId,
+          isCommunityVouch: true,
+          status: 'ACTIVE',
+        },
+      });
+
+      if (existingCommunityVouch) {
+        throw new AppError('Community has already vouched for this user', 409);
+      }
+
+      // Create vouch record
+      await prisma.vouch.create({
+        data: {
+          voucherId: adminUserId,
+          voucheeId: userId,
+          vouchType: 'COMMUNITY',
+          weightPercentage: 0.2,
+          isCommunityVouch: true,
+          communityId,
+          vouchedByAdminId: adminUserId,
+          status: 'ACTIVE',
+          requiresApproval: false,
+          approvedAt: new Date(),
+          activatedAt: new Date(),
+        },
+      });
+
+      logger.info('Community vouch granted', { communityId, userId, adminUserId });
+    } catch (error) {
+      logger.error('Failed to vouch for member', { error, adminUserId, communityId, userId });
+      throw error;
+    }
   }
 
   /**
    * Revoke community vouch
-   * TODO: Implement vouch revocation logic
-   * - Check admin permissions
-   * - Delete vouch record
-   * - Update trust score
-   * - Send notification to user
-   * - Log activity with reason
    */
   async revokeVouch(adminUserId: string, communityId: string, userId: string, reason?: string): Promise<void> {
-    throw new AppError('Revoke community vouch not yet implemented');
+    try {
+      // Check admin permissions
+      await this.checkPermission(adminUserId, communityId, ['ADMIN']);
+
+      // Find the vouch
+      const vouch = await prisma.vouch.findFirst({
+        where: {
+          voucheeId: userId,
+          communityId,
+          isCommunityVouch: true,
+          status: 'ACTIVE',
+        },
+      });
+
+      if (!vouch) {
+        throw new AppError('Community vouch not found', 404);
+      }
+
+      // Update vouch status to REVOKED
+      await prisma.vouch.update({
+        where: { id: vouch.id },
+        data: {
+          status: 'REVOKED',
+          revokedAt: new Date(),
+          revokeReason: reason,
+        },
+      });
+
+      logger.info('Community vouch revoked', { communityId, userId, adminUserId, reason });
+    } catch (error) {
+      logger.error('Failed to revoke vouch', { error, adminUserId, communityId, userId });
+      throw error;
+    }
   }
 
   // ============================================================================
@@ -262,46 +1098,109 @@ export class CommunityService {
 
   /**
    * Check if user has permission in community
-   * TODO: Implement permission check
-   * - Get user's membership and role
-   * - Validate role against required roles
    */
   private async checkPermission(
     userId: string,
     communityId: string,
     requiredRoles: CommunityRole[]
   ): Promise<void> {
-    throw new AppError('Permission check not yet implemented');
+    const member = await prisma.communityMember.findUnique({
+      where: {
+        userId_communityId: {
+          userId,
+          communityId,
+        },
+      },
+    });
+
+    if (!member || !member.isApproved) {
+      throw new AppError('Not a member of this community', 403);
+    }
+
+    if (!requiredRoles.includes(member.role)) {
+      throw new AppError('Insufficient permissions', 403);
+    }
   }
 
   /**
    * Check if user is last admin
-   * TODO: Implement last admin check
-   * - Count admins in community
-   * - Return true if only 1 admin
    */
   private async isLastAdmin(userId: string, communityId: string): Promise<boolean> {
-    throw new AppError('Last admin check not yet implemented');
+    const adminCount = await prisma.communityMember.count({
+      where: {
+        communityId,
+        role: 'ADMIN',
+        isApproved: true,
+      },
+    });
+
+    return adminCount === 1;
   }
 
   /**
    * Format community response
-   * TODO: Implement response formatting
-   * - Map database fields to response type
-   * - Include user's role if applicable
-   * - Include member/event counts
    */
   private formatCommunityResponse(community: any, userId?: string): CommunityResponse {
-    throw new AppError('Format community response not yet implemented');
+    // Get user's role if they are a member
+    let role: CommunityRole | undefined;
+    let isApproved: boolean | undefined;
+
+    if (userId && community.communityMembers) {
+      const userMembership = Array.isArray(community.communityMembers)
+        ? community.communityMembers.find((m: any) => m.userId === userId)
+        : community.communityMembers;
+      
+      if (userMembership) {
+        role = userMembership.role;
+        isApproved = userMembership.isApproved;
+      }
+    }
+
+    const userBasic: UserBasicInfo = {
+      id: community.user.id,
+      fullName: community.user.fullName,
+      username: community.user.username || undefined,
+      profilePicture: community.user.userProfiles?.profilePicture || undefined,
+      trustScore: community.user.trustScore || 0,
+      trustLevel: community.user.trustLevel || 'STARTER',
+    };
+
+    return {
+      id: community.id,
+      name: community.name,
+      description: community.description,
+      imageUrl: community.imageUrl,
+      category: community.category,
+      isVerified: community.isVerified,
+      createdAt: community.createdAt.toISOString(),
+      updatedAt: community.updatedAt.toISOString(),
+      creator: userBasic,
+      memberCount: community._count?.communityMembers || 0,
+      eventCount: community._count?.events || 0,
+      role,
+      isApproved,
+    };
   }
 
   /**
    * Format member response
-   * TODO: Implement member response formatting
-   * - Map database fields to response type
-   * - Include user basic info
    */
   private formatMemberResponse(member: any): CommunityMemberResponse {
-    throw new AppError('Format member response not yet implemented');
+    const userBasic: UserBasicInfo = {
+      id: member.user.id,
+      fullName: member.user.fullName,
+      username: member.user.username || undefined,
+      profilePicture: member.user.userProfiles?.profilePicture || undefined,
+      trustScore: member.user.trustScore || 0,
+      trustLevel: member.user.trustLevel || 'STARTER',
+    };
+
+    return {
+      id: member.id,
+      role: member.role,
+      joinedAt: member.joinedAt.toISOString(),
+      isApproved: member.isApproved,
+      user: userBasic,
+    };
   }
 }

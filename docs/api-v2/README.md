@@ -7,7 +7,8 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 🔐 [Authentication API](./AUTH_API.md) - User registration, login, session management, and device tracking
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
 - 🤝 [Connections API](./CONNECTIONS_API.md) - Connection management, vouching system, and trust scores ([Quick Ref](./CONNECTIONS_QUICKREF.md))
-- 🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
+- �️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
+- �🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
 - 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
@@ -85,6 +86,30 @@ Comprehensive connection management with trust-based vouching system and intelli
 - `GET /vouches/summary` - Vouch & trust score summary
 
 📖 [Full Connections API Documentation](./CONNECTIONS_API.md) | [Quick Reference](./CONNECTIONS_QUICKREF.md)
+
+### Communities Module (`/v2/communities`)
+Comprehensive community management system with role-based permissions, member approval workflows, and community vouching.
+
+**Key Endpoints:**
+- `POST /communities` - Create community
+- `GET /communities` - List/search communities
+- `GET /communities/my` - Get my communities
+- `GET /communities/:id` - Get community details
+- `PUT /communities/:id` - Update community
+- `DELETE /communities/:id` - Delete community
+- `POST /communities/:id/join` - Join community
+- `DELETE /communities/:id/leave` - Leave community
+- `GET /communities/:id/members` - List members
+- `POST /communities/:id/members/:userId/approve` - Approve member
+- `POST /communities/:id/members/:userId/reject` - Reject member
+- `PUT /communities/:id/members/:userId/role` - Update role
+- `DELETE /communities/:id/members/:userId` - Remove member
+- `GET /communities/:id/stats` - Get statistics
+- `GET /communities/:id/members/:userId/vouch-eligibility` - Check vouch eligibility
+- `POST /communities/:id/members/:userId/vouch` - Grant community vouch
+- `DELETE /communities/:id/members/:userId/vouch` - Revoke vouch
+
+📖 [Full Communities API Documentation](./COMMUNITIES_API.md) | [Quick Reference](./COMMUNITIES_QUICKREF.md)
 
 ### Metadata Module (`/v2/metadata`)
 Provides access to geographical and timezone data for the platform.

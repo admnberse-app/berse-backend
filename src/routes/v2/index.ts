@@ -7,6 +7,7 @@ import { eventRoutes } from '../../modules/events';
 import { connectionRoutes, vouchRoutes } from '../../modules/connections';
 import { cardGameRoutes } from '../../modules/cardgame';
 import { gamificationRoutes } from '../../modules/gamification';
+import { communityRoutes } from '../../modules/communities';
 import notificationRoutes from '../../modules/user/notification.routes';
 
 const router = Router();
@@ -50,6 +51,12 @@ router.use('/events', eventRoutes);
  * Base path: /v2/connections
  */
 router.use('/connections', connectionRoutes);
+
+/**
+ * Community routes
+ * Base path: /v2/communities
+ */
+router.use('/communities', communityRoutes);
 
 /**
  * Vouch routes
@@ -125,6 +132,7 @@ router.get('/health', (req, res) => {
       metadata: '/v2/metadata',
       events: '/v2/events',
       connections: '/v2/connections',
+      communities: '/v2/communities',
       vouches: '/v2/vouches',
       notifications: '/v2/notifications',
       cardgame: '/v2/cardgame',
@@ -267,6 +275,25 @@ router.get('/docs', (req, res) => {
         'POST /v2/connections/block': 'Block a user (auth required)',
         'DELETE /v2/connections/block/:userId': 'Unblock a user (auth required)',
         'GET /v2/connections/blocked': 'Get blocked users list (auth required)',
+      },
+      communities: {
+        'POST /v2/communities': 'Create new community (auth required)',
+        'GET /v2/communities': 'Get all communities with filters',
+        'GET /v2/communities/my': 'Get my communities (auth required)',
+        'GET /v2/communities/:communityId': 'Get community details',
+        'PUT /v2/communities/:communityId': 'Update community (auth required)',
+        'DELETE /v2/communities/:communityId': 'Delete community (auth required)',
+        'POST /v2/communities/:communityId/join': 'Join community (auth required)',
+        'DELETE /v2/communities/:communityId/leave': 'Leave community (auth required)',
+        'GET /v2/communities/:communityId/members': 'Get community members',
+        'POST /v2/communities/:communityId/members/:userId/approve': 'Approve member (auth required)',
+        'POST /v2/communities/:communityId/members/:userId/reject': 'Reject member (auth required)',
+        'PUT /v2/communities/:communityId/members/:userId/role': 'Update member role (auth required)',
+        'DELETE /v2/communities/:communityId/members/:userId': 'Remove member (auth required)',
+        'GET /v2/communities/:communityId/stats': 'Get community stats (auth required)',
+        'GET /v2/communities/:communityId/members/:userId/vouch-eligibility': 'Check vouch eligibility (auth required)',
+        'POST /v2/communities/:communityId/members/:userId/vouch': 'Grant community vouch (auth required)',
+        'DELETE /v2/communities/:communityId/members/:userId/vouch': 'Revoke community vouch (auth required)',
       },
       vouches: {
         'POST /v2/vouches/request': 'Request vouch from connection (auth required)',

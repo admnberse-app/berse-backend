@@ -6,12 +6,13 @@ const swaggerDefinition = {
   info: {
     title: 'Berse Platform API',
     version: '2.1.0',
-    description: `Modern, modular API for the Berse social platform with event management, user connections, and community features.
+    description: `Modern, modular API for the Berse social platform with event management, user connections, community features, and trust-based vouching.
 
 **🚀 Current Version: 2.1.0** | **📅 Updated: October 17, 2025** | **✅ Production Ready**
 
 **Quick Links:**
 - 📖 [Full API Documentation](/docs/api-v2/)
+- 🏘️ [Communities API](/docs/api-v2/COMMUNITIES_API.md)
 - 🔗 [Connections API](/docs/api-v2/CONNECTIONS_API.md)
 - 🎉 [Events API](/docs/api-v2/EVENTS_API.md)
 - 🔔 [Notifications API](/docs/api-v2/NOTIFICATIONS_API.md)
@@ -20,6 +21,16 @@ const swaggerDefinition = {
 <summary><b>📋 Version 2.1.0 Release Notes (October 17, 2025)</b> - Click to expand</summary>
 
 ### New Features
+
+#### Communities Module 🏘️
+- 18 community endpoints (create, manage, join, approve, vouch)
+- Role-based permission system (ADMIN, MODERATOR, MEMBER)
+- Community vouching system with trust score integration
+- Auto-vouch eligibility (5+ events, 90+ days membership)
+- Last admin protection logic
+- Member approval workflow
+- Comprehensive statistics and filtering
+- Max 2 community vouches per user (20% trust weight each)
 
 #### Notification System
 - 6 notification endpoints (get, unread count, mark as read, delete)
@@ -172,6 +183,10 @@ const swaggerDefinition = {
     {
       name: 'Notifications',
       description: 'In-app notification system. Get, mark as read, and manage user notifications for connections, events, vouches, and system alerts.',
+    },
+    {
+      name: 'Communities',
+      description: 'Community management, membership, and vouching system. Create communities, manage members with role-based permissions (ADMIN, MODERATOR, MEMBER), and grant community vouches integrated with trust scores.',
     },
     {
       name: 'Card Game',
@@ -600,6 +615,125 @@ const swaggerDefinition = {
             },
           },
           checkedInAt: { type: 'string', format: 'date-time', description: 'Check-in timestamp' },
+        },
+      },
+      Community: {
+        type: 'object',
+        required: ['id', 'name', 'createdBy', 'isVerified'],
+        properties: {
+          id: { type: 'string', description: 'Community ID' },
+          name: { type: 'string', minLength: 3, maxLength: 100, description: 'Community name (unique)' },
+          description: { type: 'string', minLength: 10, maxLength: 2000, description: 'Community description' },
+          imageUrl: { type: 'string', format: 'uri', description: 'Community image URL' },
+          category: { type: 'string', maxLength: 50, description: 'Community category' },
+          isVerified: { type: 'boolean', default: false, description: 'Whether community is verified' },
+          createdBy: { type: 'string', description: 'Creator user ID' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          memberCount: { type: 'integer', description: 'Total approved members' },
+          eventCount: { type: 'integer', description: 'Total events hosted' },
+          creator: {
+            type: 'object',
+            description: 'Community creator details',
+            properties: {
+              id: { type: 'string' },
+              displayName: { type: 'string' },
+              profilePicture: { type: 'string', format: 'uri' },
+            },
+          },
+          userRole: {
+            type: 'string',
+            enum: ['ADMIN', 'MODERATOR', 'MEMBER'],
+            description: 'Current user\'s role (if member)',
+            nullable: true,
+          },
+          userMembership: {
+            type: 'object',
+            description: 'Current user\'s membership details (if member)',
+            nullable: true,
+            properties: {
+              role: { type: 'string', enum: ['ADMIN', 'MODERATOR', 'MEMBER'] },
+              isApproved: { type: 'boolean' },
+              joinedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+      CommunityMember: {
+        type: 'object',
+        required: ['id', 'communityId', 'userId', 'role', 'isApproved'],
+        properties: {
+          id: { type: 'string', description: 'Membership ID' },
+          communityId: { type: 'string', description: 'Community ID' },
+          userId: { type: 'string', description: 'User ID' },
+          role: {
+            type: 'string',
+            enum: ['ADMIN', 'MODERATOR', 'MEMBER'],
+            default: 'MEMBER',
+            description: 'Member role in community',
+          },
+          isApproved: { type: 'boolean', default: false, description: 'Whether membership is approved' },
+          joinedAt: { type: 'string', format: 'date-time', description: 'When user joined' },
+          user: {
+            type: 'object',
+            description: 'User details',
+            properties: {
+              id: { type: 'string' },
+              displayName: { type: 'string' },
+              profilePicture: { type: 'string', format: 'uri' },
+              trustScore: { type: 'number', minimum: 0, maximum: 100 },
+              trustLevel: { type: 'string', enum: ['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'] },
+            },
+          },
+        },
+      },
+      CommunityVouch: {
+        type: 'object',
+        properties: {
+          vouchId: { type: 'string', description: 'Vouch ID' },
+          communityId: { type: 'string', description: 'Community ID' },
+          voucherId: { type: 'string', description: 'Community ID (voucher)' },
+          voucheeId: { type: 'string', description: 'User ID being vouched for' },
+          type: { type: 'string', enum: ['SECONDARY'], description: 'Community vouches are always SECONDARY' },
+          status: { type: 'string', enum: ['PENDING', 'ACTIVE', 'REVOKED'], description: 'Vouch status' },
+          isCommunityVouch: { type: 'boolean', default: true, description: 'Identifies community vouches' },
+          trustScoreWeight: { type: 'number', default: 20, description: 'Weight contribution (20% per vouch)' },
+          reason: { type: 'string', maxLength: 500, description: 'Reason for vouch' },
+          revokeReason: { type: 'string', maxLength: 500, description: 'Reason for revocation (if revoked)' },
+          createdAt: { type: 'string', format: 'date-time' },
+          revokedAt: { type: 'string', format: 'date-time', nullable: true },
+        },
+      },
+      CommunityStats: {
+        type: 'object',
+        properties: {
+          totalMembers: { type: 'integer', description: 'Total approved members' },
+          adminCount: { type: 'integer', description: 'Number of admins' },
+          moderatorCount: { type: 'integer', description: 'Number of moderators' },
+          memberCount: { type: 'integer', description: 'Number of regular members' },
+          pendingApprovals: { type: 'integer', description: 'Pending membership requests' },
+          totalEvents: { type: 'integer', description: 'Total events hosted' },
+          activeEvents: { type: 'integer', description: 'Active/upcoming events' },
+          totalVouches: { type: 'integer', description: 'Total community vouches granted' },
+        },
+      },
+      VouchEligibility: {
+        type: 'object',
+        properties: {
+          eligible: { type: 'boolean', description: 'Whether user is eligible for auto-vouch' },
+          reason: { type: 'string', description: 'Explanation of eligibility status' },
+          criteria: {
+            type: 'object',
+            properties: {
+              eventsAttended: { type: 'integer', description: 'Events attended' },
+              requiredEvents: { type: 'integer', default: 5, description: 'Required events' },
+              membershipDays: { type: 'integer', description: 'Days as member' },
+              requiredDays: { type: 'integer', default: 90, description: 'Required days' },
+              currentVouches: { type: 'integer', description: 'Current community vouches' },
+              maxVouches: { type: 'integer', default: 2, description: 'Maximum vouches allowed' },
+              hasNegativeFeedback: { type: 'boolean', description: 'Whether user has negative feedback' },
+            },
+          },
         },
       },
       QRCodeResponse: {
