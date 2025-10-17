@@ -9,6 +9,7 @@ import { cardGameRoutes } from '../../modules/cardgame';
 import { gamificationRoutes } from '../../modules/gamification';
 import { communityRoutes } from '../../modules/communities';
 import notificationRoutes from '../../modules/user/notification.routes';
+import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
 
 const router = Router();
 
@@ -88,6 +89,12 @@ router.use('/cardgame', cardGameRoutes);
  */
 router.use('/gamification', gamificationRoutes);
 
+/**
+ * Marketplace routes
+ * Base path: /v2/marketplace
+ */
+router.use('/marketplace', marketplaceRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -144,6 +151,7 @@ router.get('/health', (req, res) => {
       notifications: '/v2/notifications',
       cardgame: '/v2/cardgame',
       gamification: '/v2/gamification',
+      marketplace: '/v2/marketplace',
     },
   });
 });
