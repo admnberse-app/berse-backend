@@ -10,6 +10,7 @@ bower_components/
 .env.test.local
 .env.production.local
 .env.production
+.env.railway
 
 # Build output
 dist/
@@ -109,7 +110,10 @@ temp/
 *.tar.gz
 *.rar
 
-# Docker volumes
+# Docker (not used - Railway deployment)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
 docker-volumes/
 
 # Misc

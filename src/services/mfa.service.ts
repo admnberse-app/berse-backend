@@ -2,9 +2,40 @@ import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
-import { cacheService, CacheKeys, CacheTTL } from './cache.service';
 import logger from '../utils/logger';
 import { PrismaClient } from '@prisma/client';
+
+// Simple in-memory cache for MFA operations (replace with Redis in production)
+const mfaCache = new Map<string, { data: any; expires: number }>();
+
+// Cache key generators
+const CacheKeys = {
+  user: (key: string) => `user:${key}`,
+};
+
+// Cache TTL constants
+const CacheTTL = {
+  DAY: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+};
+
+// Simple cache operations
+const cacheService = {
+  set: async (key: string, data: any, options?: { ttl?: number }) => {
+    const expires = Date.now() + (options?.ttl ? options.ttl * 1000 : CacheTTL.DAY);
+    mfaCache.set(key, { data, expires });
+  },
+  get: async <T>(key: string): Promise<T | null> => {
+    const cached = mfaCache.get(key);
+    if (!cached || cached.expires < Date.now()) {
+      mfaCache.delete(key);
+      return null;
+    }
+    return cached.data as T;
+  },
+  delete: async (key: string) => {
+    mfaCache.delete(key);
+  },
+};
 
 const prisma = new PrismaClient();
 
@@ -156,15 +187,20 @@ class MFAService {
         return false;
       }
 
-      // Save to database (extend User model with MFA fields)
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          // Add these fields to User model in schema.prisma:
-          // mfaEnabled: true,
-          // mfaSecret: setupData.secret,
-          // mfaBackupCodes: setupData.backupCodes,
-        } as any,
+      // Store MFA data in UserSecurity table
+      await prisma.userSecurity.upsert({
+        where: { userId },
+        create: {
+          userId,
+          mfaEnabled: true,
+          mfaSecret: setupData.secret,
+          mfaBackupCodes: setupData.backupCodes,
+        },
+        update: {
+          mfaEnabled: true,
+          mfaSecret: setupData.secret,
+          mfaBackupCodes: setupData.backupCodes,
+        },
       });
 
       // Clear setup cache
@@ -190,14 +226,14 @@ class MFAService {
    */
   async verifyTOTP(userId: string, token: string): Promise<MFAVerificationResult> {
     try {
-      // Get user's MFA secret
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        // select: { mfaSecret: true, mfaBackupCodes: true },
+      // Get user's MFA data from UserSecurity
+      const userSecurity = await prisma.userSecurity.findUnique({
+        where: { userId },
+        select: { mfaSecret: true, mfaBackupCodes: true },
       });
 
-      if (!user) {
-        throw new Error('User not found');
+      if (!userSecurity || !userSecurity.mfaSecret) {
+        throw new Error('MFA not set up for user');
       }
 
       // Check if trying to use backup code
@@ -207,7 +243,7 @@ class MFAService {
 
       // Verify TOTP token
       const verified = speakeasy.totp.verify({
-        secret: (user as any).mfaSecret,
+        secret: userSecurity.mfaSecret,
         encoding: 'base32',
         token,
         window: 2,
@@ -229,16 +265,16 @@ class MFAService {
    */
   private async verifyBackupCode(userId: string, code: string): Promise<MFAVerificationResult> {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        // select: { mfaBackupCodes: true },
+      const userSecurity = await prisma.userSecurity.findUnique({
+        where: { userId },
+        select: { mfaBackupCodes: true },
       });
 
-      if (!user) {
+      if (!userSecurity) {
         return { isValid: false };
       }
 
-      const backupCodes = (user as any).mfaBackupCodes || [];
+      const backupCodes = userSecurity.mfaBackupCodes || [];
       const codeIndex = backupCodes.indexOf(code);
 
       if (codeIndex === -1) {
@@ -249,11 +285,11 @@ class MFAService {
       const updatedCodes = [...backupCodes];
       updatedCodes.splice(codeIndex, 1);
 
-      await prisma.user.update({
-        where: { id: userId },
+      await prisma.userSecurity.update({
+        where: { userId },
         data: {
-          // mfaBackupCodes: updatedCodes,
-        } as any,
+          mfaBackupCodes: updatedCodes,
+        },
       });
 
       logger.info(`Backup code used for user ${userId}, ${updatedCodes.length} codes remaining`);
@@ -403,13 +439,13 @@ class MFAService {
    */
   async disableMFA(userId: string): Promise<boolean> {
     try {
-      await prisma.user.update({
-        where: { id: userId },
+      await prisma.userSecurity.update({
+        where: { userId },
         data: {
-          // mfaEnabled: false,
-          // mfaSecret: null,
-          // mfaBackupCodes: [],
-        } as any,
+          mfaEnabled: false,
+          mfaSecret: null,
+          mfaBackupCodes: [],
+        },
       });
 
       // Clear MFA cache
@@ -437,12 +473,12 @@ class MFAService {
       }
 
       // Check database
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        // select: { mfaEnabled: true },
+      const userSecurity = await prisma.userSecurity.findUnique({
+        where: { userId },
+        select: { mfaEnabled: true },
       });
 
-      const isEnabled = !!(user as any)?.mfaEnabled;
+      const isEnabled = !!userSecurity?.mfaEnabled;
 
       // Cache result
       await cacheService.set(
@@ -483,11 +519,11 @@ class MFAService {
     try {
       const newCodes = this.generateBackupCodes();
 
-      await prisma.user.update({
-        where: { id: userId },
+      await prisma.userSecurity.update({
+        where: { userId },
         data: {
-          // mfaBackupCodes: newCodes,
-        } as any,
+          mfaBackupCodes: newCodes,
+        },
       });
 
       logger.info(`New backup codes generated for user ${userId}`);
@@ -509,7 +545,12 @@ class MFAService {
     try {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        // select: { mfaEnabled: true, mfaBackupCodes: true, phone: true },
+        select: { phone: true },
+      });
+
+      const userSecurity = await prisma.userSecurity.findUnique({
+        where: { userId },
+        select: { mfaEnabled: true, mfaBackupCodes: true },
       });
 
       if (!user) {
@@ -517,13 +558,13 @@ class MFAService {
       }
 
       const methods: string[] = [];
-      if ((user as any).mfaEnabled) methods.push('totp');
+      if (userSecurity?.mfaEnabled) methods.push('totp');
       if (user.phone) methods.push('sms');
       methods.push('email');
 
       return {
-        enabled: !!(user as any).mfaEnabled,
-        backupCodesCount: ((user as any).mfaBackupCodes || []).length,
+        enabled: !!userSecurity?.mfaEnabled,
+        backupCodesCount: (userSecurity?.mfaBackupCodes || []).length,
         methods,
       };
     } catch (error) {

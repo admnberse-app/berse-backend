@@ -3,15 +3,17 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/server.ts",
+    "dev": "dotenv -e .env.development.local -- nodemon --exec ts-node src/server.ts",
+    "dev:local": "nodemon --exec ts-node src/server.ts",
     "build": "rimraf dist && tsc && npm run copy-files",
     "build:backend": "rimraf dist && tsc && npm run copy-files",
     "build:check": "tsc --noEmit",
     "start": "node dist/server.js",
     "start:prod": "cross-env NODE_ENV=production node dist/server.js",
     "railway:build": "npm run build && cd frontend && npm install && npm run build",
-    "railway:start": "npx prisma generate && npm run start:prod",
+    "railway:start": "npx prisma generate && npx prisma migrate deploy && npm run start:prod",
     "railway:start:migrate": "npm run prisma:migrate:prod && npm run start:prod",
+    "railway:seed": "ts-node prisma/seed.ts && ts-node prisma/seed-app-config.ts",
     "start:cluster": "cross-env NODE_ENV=production CLUSTER_MODE=true node dist/server.js",
     "copy-files": "copyfiles -u 1 src/**/*.json dist/",
     "prisma:generate": "prisma generate",
@@ -30,11 +32,6 @@
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:e2e": "jest tests/e2e",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "docker:rebuild": "docker-compose down && docker-compose build --no-cache && docker-compose up -d",
     "db:backup": "node scripts/backup-db.js",
     "db:restore": "node scripts/restore-db.js",
     "migrate:make": "knex migrate:make",
@@ -110,6 +107,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/web-push": "^3.6.4",
     "copyfiles": "^2.4.1",
+    "dotenv-cli": "^10.0.0",
     "jest": "^30.0.5",
     "nodemon": "^3.1.10",
     "rimraf": "^6.0.1",
@@ -117,8 +115,5 @@
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
-  },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
   }
 }

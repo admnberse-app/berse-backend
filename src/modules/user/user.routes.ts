@@ -265,6 +265,112 @@ router.get('/all', UserController.getAllUsers);
 
 /**
  * @swagger
+ * /v2/users/recommendations:
+ *   get:
+ *     summary: Get personalized user recommendations
+ *     description: Get AI-powered user recommendations based on interests, location, and connection patterns
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of recommendations to return
+ *     responses:
+ *       200:
+ *         description: Recommendations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     recommendations:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           score:
+ *                             type: number
+ *                             description: Recommendation score (0-100)
+ *                           reasons:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             description: Why this user is recommended
+ *                           profile:
+ *                             type: object
+ *                           location:
+ *                             type: object
+ *                     total:
+ *                       type: integer
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/recommendations', UserController.getUserRecommendations);
+
+/**
+ * @swagger
+ * /v2/users/trending-interests:
+ *   get:
+ *     summary: Get trending interests
+ *     description: Get the most popular interests in the community
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 50
+ *         description: Number of trending interests to return
+ *     responses:
+ *       200:
+ *         description: Trending interests retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     interests:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           interest:
+ *                             type: string
+ *                           count:
+ *                             type: number
+ *                     total:
+ *                       type: integer
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/trending-interests', UserController.getTrendingInterests);
+
+/**
+ * @swagger
  * /v2/users/search:
  *   get:
  *     summary: Search users

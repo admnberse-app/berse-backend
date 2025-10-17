@@ -34,16 +34,74 @@ The Metadata API provides endpoints for accessing countries, regions, timezones,
 
 ---
 
+## Pagination
+
+All endpoints that return lists of data support pagination to improve performance and prevent large responses:
+
+### Pagination Parameters
+- `page` - Page number (1-based, default: 1)
+- `limit` - Items per page (varies by endpoint, see individual endpoint docs)
+
+### Pagination Limits
+- **Countries:** Max 250 per page (default: 250)
+- **Cities:** Max 500 per page (default: 100)
+- **States:** No pagination (typically small datasets)
+- **Other endpoints:** See individual endpoint documentation
+
+### Pagination Response Format
+All paginated endpoints include a `pagination` object in the response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "[items]": [...],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 10,
+      "totalItems": 1000,
+      "itemsPerPage": 100,
+      "hasNextPage": true,
+      "hasPreviousPage": false
+    }
+  }
+}
+```
+
+### Pagination Best Practices
+1. **Start with reasonable page sizes** - Use default limits unless you need more data
+2. **Implement proper loading states** - Show loading indicators while fetching pages
+3. **Cache pages locally** - Store fetched pages to avoid redundant requests
+4. **Use search parameters** - Combine with search to reduce dataset size
+5. **Handle edge cases** - Check `hasNextPage`/`hasPreviousPage` before navigation
+
+### Performance Benefits
+- **Faster response times** - Smaller payloads load quicker
+- **Reduced memory usage** - Less data to process on client/server
+- **Better user experience** - Progressive loading and smoother interactions
+- **Lower bandwidth usage** - Only fetch data as needed
+
+---
+
 ## Countries
 
 ### Get All Countries
-Get a complete list of all countries with their details.
+Get a paginated list of all countries with their details.
 
 **Endpoint:** `GET /v2/metadata/countries`
 
 **Cache:** 1 day (86400 seconds)
 
-**Query Parameters:** None
+**Query Parameters:**
+- `page` (optional, default: 1) - Page number (1-based)
+- `limit` (optional, default: 250, max: 250) - Number of countries per page
+
+**Examples:**
+```
+GET /v2/metadata/countries
+GET /v2/metadata/countries?page=1&limit=50
+GET /v2/metadata/countries?page=2&limit=100
+```
 
 **Success Response (200):**
 ```json
@@ -92,7 +150,14 @@ Get a complete list of all countries with their details.
         "dialCode": "+1"
       }
     ],
-    "total": 250
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 250,
+      "itemsPerPage": 50,
+      "hasNextPage": true,
+      "hasPreviousPage": false
+    }
   }
 }
 ```
@@ -375,7 +440,7 @@ GET /v2/metadata/countries/US/states
 ## Cities
 
 ### Get All Cities
-Get cities with optional filtering by country and/or state.
+Get paginated cities with optional filtering by country and/or state.
 
 **Endpoint:** `GET /v2/metadata/cities`
 
@@ -384,13 +449,15 @@ Get cities with optional filtering by country and/or state.
 **Query Parameters:**
 - `countryCode` (optional) - Filter by ISO 3166-1 alpha-2 country code
 - `stateCode` (optional) - Filter by state code (requires countryCode)
-- `limit` (optional, default: 100) - Maximum number of results to return
+- `page` (optional, default: 1) - Page number (1-based)
+- `limit` (optional, default: 100, max: 500) - Number of cities per page
 
 **Examples:**
 ```
 GET /v2/metadata/cities
-GET /v2/metadata/cities?countryCode=US&limit=50
-GET /v2/metadata/cities?countryCode=US&stateCode=CA&limit=20
+GET /v2/metadata/cities?page=2&limit=50
+GET /v2/metadata/cities?countryCode=US&page=1&limit=100
+GET /v2/metadata/cities?countryCode=US&stateCode=CA&page=1&limit=50
 ```
 
 **Success Response (200):**
@@ -414,7 +481,14 @@ GET /v2/metadata/cities?countryCode=US&stateCode=CA&limit=20
         "longitude": "-122.41942"
       }
     ],
-    "total": 20
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 20,
+      "totalItems": 1000,
+      "itemsPerPage": 50,
+      "hasNextPage": true,
+      "hasPreviousPage": false
+    }
   }
 }
 ```
@@ -432,7 +506,7 @@ GET /v2/metadata/cities?countryCode=US&stateCode=CA&limit=20
 ---
 
 ### Get Cities by Country
-Get all cities for a specific country with optional search functionality.
+Get paginated cities for a specific country with optional search functionality.
 
 **Endpoint:** `GET /v2/metadata/countries/:countryCode/cities`
 
@@ -443,13 +517,15 @@ Get all cities for a specific country with optional search functionality.
 
 **Query Parameters:**
 - `search` (optional) - Search cities by name (case-insensitive substring match)
-- `limit` (optional, default: 1000) - Maximum number of results
+- `page` (optional, default: 1) - Page number (1-based)
+- `limit` (optional, default: 100, max: 500) - Number of cities per page
 
 **Examples:**
 ```
 GET /v2/metadata/countries/MY/cities
-GET /v2/metadata/countries/MY/cities?search=Kuala
-GET /v2/metadata/countries/MY/cities?search=Shah&limit=10
+GET /v2/metadata/countries/MY/cities?page=2&limit=50
+GET /v2/metadata/countries/MY/cities?search=Kuala&page=1&limit=10
+GET /v2/metadata/countries/MY/cities?search=Shah&page=1&limit=10
 ```
 
 **Success Response (200):**
@@ -478,7 +554,14 @@ GET /v2/metadata/countries/MY/cities?search=Shah&limit=10
         "longitude": "100.93333"
       }
     ],
-    "total": 3
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 1,
+      "totalItems": 3,
+      "itemsPerPage": 10,
+      "hasNextPage": false,
+      "hasPreviousPage": false
+    }
   }
 }
 ```
@@ -505,7 +588,7 @@ GET /v2/metadata/countries/MY/cities?search=Shah&limit=10
 ---
 
 ### Get Cities by State
-Get all cities for a specific state/province within a country.
+Get paginated cities for a specific state/province within a country.
 
 **Endpoint:** `GET /v2/metadata/countries/:countryCode/states/:stateCode/cities`
 
@@ -517,12 +600,15 @@ Get all cities for a specific state/province within a country.
 
 **Query Parameters:**
 - `search` (optional) - Search cities by name (case-insensitive substring match)
+- `page` (optional, default: 1) - Page number (1-based)
+- `limit` (optional, default: 100, max: 500) - Number of cities per page
 
 **Examples:**
 ```
 GET /v2/metadata/countries/US/states/CA/cities
-GET /v2/metadata/countries/US/states/CA/cities?search=Los
-GET /v2/metadata/countries/US/states/NY/cities?search=New
+GET /v2/metadata/countries/US/states/CA/cities?page=2&limit=50
+GET /v2/metadata/countries/US/states/CA/cities?search=Los&page=1&limit=10
+GET /v2/metadata/countries/US/states/NY/cities?search=New&page=1&limit=20
 ```
 
 **Success Response (200):**
@@ -549,7 +635,14 @@ GET /v2/metadata/countries/US/states/NY/cities?search=New
         "longitude": "-122.11413"
       }
     ],
-    "total": 3
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 1,
+      "totalItems": 3,
+      "itemsPerPage": 10,
+      "hasNextPage": false,
+      "hasPreviousPage": false
+    }
   }
 }
 ```
@@ -640,13 +733,13 @@ All metadata endpoints use **Redis caching** with a cache-aside pattern for opti
 ### Cache Keys
 | Endpoint | Cache Key | TTL |
 |----------|-----------|-----|
-| Get All Countries | `metadata:countries:all` | 1 day |
+| Get All Countries | `metadata:countries:all:{page}:{limit}` | 1 day |
 | Get Country by Code | `metadata:country:{CODE}` | 1 day |
 | Search Countries | `metadata:countries:search:{query}:{region}` | 1 hour |
 | Get States by Country | `metadata:states:country:{CODE}` | 1 day |
-| Get All Cities | `metadata:cities:{country}:{state}:{limit}` | 1 day |
-| Get Cities by Country | `metadata:cities:country:{CODE}:{search}:{limit}` | 1 day |
-| Get Cities by State | `metadata:cities:state:{CODE}:{STATE}:{search}` | 1 day |
+| Get All Cities | `metadata:cities:{country}:{state}:{page}:{limit}` | 1 day |
+| Get Cities by Country | `metadata:cities:country:{CODE}:{search}:{page}:{limit}` | 1 day |
+| Get Cities by State | `metadata:cities:state:{CODE}:{STATE}:{search}:{page}:{limit}` | 1 day |
 | Get Regions | `metadata:regions:all` | 1 day |
 | Get Countries by Region | `metadata:region:{region}:countries` | 1 day |
 | Get Timezones | `metadata:timezones:all` | 1 day |
@@ -750,35 +843,53 @@ const LocationSelector = () => {
 };
 ```
 
-**City Search with Autocomplete:**
+**City Search with Autocomplete (Paginated):**
 ```javascript
 const CityAutocomplete = ({ countryCode }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState(null);
 
-  const searchCities = async (searchQuery) => {
+  const searchCities = async (searchQuery, page = 1) => {
     if (searchQuery.length < 2) {
       setResults([]);
+      setPagination(null);
       return;
     }
     
     setLoading(true);
     try {
+      const params = new URLSearchParams({
+        search: searchQuery,
+        page: page.toString(),
+        limit: '10'
+      });
+      
       const response = await fetch(
-        `/v2/metadata/countries/${countryCode}/cities?search=${encodeURIComponent(searchQuery)}&limit=10`
+        `/v2/metadata/countries/${countryCode}/cities?${params}`
       );
       const data = await response.json();
-      setResults(data.data.cities || []);
+      
+      if (data.success) {
+        setResults(page === 1 ? data.data.cities : [...results, ...data.data.cities]);
+        setPagination(data.data.pagination);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreResults = () => {
+    if (pagination?.hasNextPage && !loading) {
+      searchCities(query, pagination.currentPage + 1);
     }
   };
 
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchCities(query);
+      searchCities(query, 1); // Always start from page 1 for new search
     }, 300);
     
     return () => clearTimeout(timer);
@@ -794,8 +905,8 @@ const CityAutocomplete = ({ countryCode }) => {
       />
       {loading && <div>Loading...</div>}
       <ul>
-        {results.map(city => (
-          <li key={city.name} onClick={() => onSelectCity(city)}>
+        {results.map((city, index) => (
+          <li key={`${city.name}-${index}`} onClick={() => onSelectCity(city)}>
             {city.name}
             <span style={{ color: '#666', fontSize: '0.9em' }}>
               ({city.latitude}, {city.longitude})
@@ -803,6 +914,16 @@ const CityAutocomplete = ({ countryCode }) => {
           </li>
         ))}
       </ul>
+      {pagination?.hasNextPage && (
+        <button onClick={loadMoreResults} disabled={loading}>
+          {loading ? 'Loading...' : `Load More (${pagination.totalItems - results.length} remaining)`}
+        </button>
+      )}
+      {pagination && (
+        <div style={{ fontSize: '0.8em', color: '#666', marginTop: '8px' }}>
+          Showing {results.length} of {pagination.totalItems} cities
+        </div>
+      )}
     </div>
   );
 };
@@ -827,62 +948,122 @@ const usStates = await getStates('US');
 console.log(`${usStates.length} states found`);
 ```
 
-**Get Cities by Country:**
+**Get Cities by Country (with pagination):**
 ```javascript
-const getCities = async (countryCode, searchTerm = '', limit = 100) => {
+const getCities = async (countryCode, searchTerm = '', page = 1, limit = 100) => {
   const params = new URLSearchParams();
   if (searchTerm) params.append('search', searchTerm);
+  params.append('page', page.toString());
   params.append('limit', limit.toString());
   
   const response = await fetch(
     `https://api.berse-app.com/v2/metadata/countries/${countryCode}/cities?${params}`
   );
   const data = await response.json();
-  return data.data.cities;
+  
+  if (data.success) {
+    return {
+      cities: data.data.cities,
+      pagination: data.data.pagination,
+      countryCode: data.data.countryCode
+    };
+  }
+  return { cities: [], pagination: null };
 };
 
-// Get all cities in Malaysia
-const cities = await getCities('MY');
+// Get first page of cities in Malaysia
+const result = await getCities('MY', '', 1, 50);
+console.log(`Found ${result.pagination.totalItems} cities in ${result.countryCode}`);
 
-// Search for cities containing "Kuala"
-const kualaCities = await getCities('MY', 'Kuala', 10);
+// Search for cities containing "Kuala" (first page)
+const kualaCities = await getCities('MY', 'Kuala', 1, 10);
+
+// Load all pages of cities (for small datasets)
+const getAllCities = async (countryCode) => {
+  let allCities = [];
+  let currentPage = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const result = await getCities(countryCode, '', currentPage, 100);
+    allCities.push(...result.cities);
+    hasMore = result.pagination?.hasNextPage || false;
+    currentPage++;
+  }
+  
+  return allCities;
+};
 ```
 
-**Get Cities by State:**
+**Get Cities by State (with pagination):**
 ```javascript
-const getCitiesByState = async (countryCode, stateCode, searchTerm = '') => {
-  const params = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : '';
+const getCitiesByState = async (countryCode, stateCode, searchTerm = '', page = 1, limit = 100) => {
+  const params = new URLSearchParams();
+  if (searchTerm) params.append('search', searchTerm);
+  params.append('page', page.toString());
+  params.append('limit', limit.toString());
   
   const response = await fetch(
-    `https://api.berse-app.com/v2/metadata/countries/${countryCode}/states/${stateCode}/cities${params}`
+    `https://api.berse-app.com/v2/metadata/countries/${countryCode}/states/${stateCode}/cities?${params}`
   );
-  const data = await response.json();
-  return data.data.cities;
-};
-
-// Get all cities in California
-const caCities = await getCitiesByState('US', 'CA');
-
-// Search California cities
-const losCities = await getCitiesByState('US', 'CA', 'Los');
-```
-
-**Get All Countries:**
-```javascript
-const getCountries = async () => {
-  const response = await fetch('https://api.berse-app.com/v2/metadata/countries');
   const data = await response.json();
   
   if (data.success) {
-    return data.data.countries;
+    return {
+      cities: data.data.cities,
+      pagination: data.data.pagination,
+      countryCode: data.data.countryCode,
+      stateCode: data.data.stateCode
+    };
   }
+  return { cities: [], pagination: null };
 };
 
-// Use in dropdown
-const countries = await getCountries();
-countries.forEach(country => {
+// Get first page of cities in California
+const result = await getCitiesByState('US', 'CA', '', 1, 50);
+
+// Search California cities containing "Los"
+const losCities = await getCitiesByState('US', 'CA', 'Los', 1, 20);
+
+// Paginated city loader for UI
+const CityPaginator = {
+  async loadPage(countryCode, stateCode, page, limit = 50) {
+    return await getCitiesByState(countryCode, stateCode, '', page, limit);
+  },
+  
+  async searchCities(countryCode, stateCode, query, page = 1) {
+    return await getCitiesByState(countryCode, stateCode, query, page, 25);
+  }
+};
+```
+
+**Get All Countries (with pagination):**
+```javascript
+const getCountries = async (page = 1, limit = 50) => {
+  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+  const response = await fetch(`https://api.berse-app.com/v2/metadata/countries?${params}`);
+  const data = await response.json();
+  
+  if (data.success) {
+    return {
+      countries: data.data.countries,
+      pagination: data.data.pagination
+    };
+  }
+  return { countries: [], pagination: null };
+};
+
+// Use in dropdown with pagination
+const result = await getCountries(1, 50);
+result.countries.forEach(country => {
   console.log(`${country.flag} ${country.name} (${country.code})`);
 });
+
+// Check for more pages
+if (result.pagination?.hasNextPage) {
+  const nextPage = await getCountries(result.pagination.currentPage + 1, 50);
+  // Process next page...
+}
 ```
 
 **Search Countries:**
@@ -931,7 +1112,14 @@ const getAsianCountries = async () => {
 
 **Get All Countries:**
 ```bash
+# Get all countries (default pagination)
 curl https://api.berse-app.com/v2/metadata/countries
+
+# Get first 50 countries
+curl "https://api.berse-app.com/v2/metadata/countries?page=1&limit=50"
+
+# Get second page with 25 countries per page
+curl "https://api.berse-app.com/v2/metadata/countries?page=2&limit=25"
 ```
 
 **Search Countries:**
@@ -966,29 +1154,38 @@ curl https://api.berse-app.com/v2/metadata/countries/US/states
 
 **Get Cities by Country:**
 ```bash
-# Get all cities in Malaysia (limit 10)
-curl "https://api.berse-app.com/v2/metadata/countries/MY/cities?limit=10"
+# Get first page of cities in Malaysia (default 100 per page)
+curl https://api.berse-app.com/v2/metadata/countries/MY/cities
 
-# Search for cities containing "Kuala"
-curl "https://api.berse-app.com/v2/metadata/countries/MY/cities?search=Kuala&limit=5"
+# Get second page with 50 cities per page
+curl "https://api.berse-app.com/v2/metadata/countries/MY/cities?page=2&limit=50"
+
+# Search for cities containing "Kuala" (first page, 10 results)
+curl "https://api.berse-app.com/v2/metadata/countries/MY/cities?search=Kuala&page=1&limit=10"
 ```
 
 **Get Cities by State:**
 ```bash
-# Get all cities in California
+# Get first page of cities in California (default 100 per page)
 curl https://api.berse-app.com/v2/metadata/countries/US/states/CA/cities
 
-# Search California cities containing "Los"
-curl "https://api.berse-app.com/v2/metadata/countries/US/states/CA/cities?search=Los"
+# Get second page with 50 cities per page
+curl "https://api.berse-app.com/v2/metadata/countries/US/states/CA/cities?page=2&limit=50"
+
+# Search California cities containing "Los" (first page, 20 results)
+curl "https://api.berse-app.com/v2/metadata/countries/US/states/CA/cities?search=Los&page=1&limit=20"
 ```
 
 **Get Cities with Filters:**
 ```bash
-# Get cities in Singapore
-curl "https://api.berse-app.com/v2/metadata/cities?countryCode=SG&limit=10"
+# Get first page of cities in Singapore (10 per page)
+curl "https://api.berse-app.com/v2/metadata/cities?countryCode=SG&page=1&limit=10"
 
-# Get cities in California, USA
-curl "https://api.berse-app.com/v2/metadata/cities?countryCode=US&stateCode=CA&limit=20"
+# Get cities in California, USA (second page, 20 per page)
+curl "https://api.berse-app.com/v2/metadata/cities?countryCode=US&stateCode=CA&page=2&limit=20"
+
+# Get all cities (first page of global dataset - large!)
+curl "https://api.berse-app.com/v2/metadata/cities?page=1&limit=100"
 ```
 
 ### React Native/Mobile Examples
@@ -1192,23 +1389,56 @@ const capital = Array.isArray(country.capital)
 const currency = Object.keys(country.currencies)[0];
 ```
 
-### 6. Optimize City Search
-For better performance with city searches:
+### 6. Optimize City Search and Pagination
+For better performance with city searches and large datasets:
 
 ```javascript
-// ✅ Good: Use debouncing
+// ✅ Good: Use debouncing with pagination
 const debouncedSearch = debounce(async (query) => {
-  const results = await fetch(
-    `/v2/metadata/countries/${countryCode}/cities?search=${query}&limit=10`
+  const params = new URLSearchParams({
+    search: query,
+    page: '1',
+    limit: '10'
+  });
+  
+  const response = await fetch(
+    `/v2/metadata/countries/${countryCode}/cities?${params}`
   );
-  // Update UI
+  const data = await response.json();
+  
+  // Update UI with results and pagination info
+  setResults(data.data.cities);
+  setPagination(data.data.pagination);
 }, 300);
 
-// ✅ Good: Set reasonable limits
-const cities = await fetch(`/v2/metadata/countries/US/cities?limit=100`);
+// ✅ Good: Set reasonable page sizes
+const cities = await fetch(`/v2/metadata/countries/US/cities?page=1&limit=100`);
 
-// ❌ Bad: No limit on large datasets
-const cities = await fetch(`/v2/metadata/countries/US/cities`); // Could return 10,000+ cities
+// ✅ Good: Implement progressive loading for large datasets
+const loadAllCitiesProgressively = async (countryCode) => {
+  let allCities = [];
+  let currentPage = 1;
+  const limit = 100;
+  
+  while (true) {
+    const response = await fetch(
+      `/v2/metadata/countries/${countryCode}/cities?page=${currentPage}&limit=${limit}`
+    );
+    const data = await response.json();
+    
+    if (!data.success || data.data.cities.length === 0) break;
+    
+    allCities.push(...data.data.cities);
+    
+    if (!data.data.pagination.hasNextPage) break;
+    currentPage++;
+  }
+  
+  return allCities;
+};
+
+// ❌ Bad: No pagination on large datasets
+const cities = await fetch(`/v2/metadata/countries/US/cities`); // Could return 10,000+ cities without pagination
 ```
 
 ### 7. Use Cascading Selects
@@ -1232,25 +1462,79 @@ handleStateChange(stateCode) {
 }
 ```
 
-### 8. Cache Strategically
+### 8. Implement Smart Pagination
 ```javascript
-// Cache countries (rarely changes)
+// ✅ Good: Implement pagination with caching
+class PaginatedCityLoader {
+  constructor(countryCode) {
+    this.countryCode = countryCode;
+    this.cache = new Map(); // Cache pages by page number
+    this.pageSize = 100;
+  }
+  
+  async loadPage(page) {
+    // Check cache first
+    const cacheKey = `${this.countryCode}_page_${page}`;
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+    
+    // Fetch from API
+    const response = await fetch(
+      `/v2/metadata/countries/${this.countryCode}/cities?page=${page}&limit=${this.pageSize}`
+    );
+    const data = await response.json();
+    
+    // Cache the result
+    this.cache.set(cacheKey, data.data);
+    
+    return data.data;
+  }
+  
+  async searchWithPagination(query, page = 1) {
+    const params = new URLSearchParams({
+      search: query,
+      page: page.toString(),
+      limit: this.pageSize.toString()
+    });
+    
+    const response = await fetch(
+      `/v2/metadata/countries/${this.countryCode}/cities?${params}`
+    );
+    return await response.json();
+  }
+}
+
+// Usage
+const cityLoader = new PaginatedCityLoader('US');
+const firstPage = await cityLoader.loadPage(1);
+```
+
+### 9. Cache Strategically
+```javascript
+// Cache countries with pagination support
 const COUNTRIES_CACHE_KEY = 'metadata_countries';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-const getCachedCountries = async () => {
-  const cached = localStorage.getItem(COUNTRIES_CACHE_KEY);
-  const cacheTime = localStorage.getItem(`${COUNTRIES_CACHE_KEY}_time`);
+const getCachedCountries = async (page = 1, limit = 250) => {
+  const cacheKey = `${COUNTRIES_CACHE_KEY}_${page}_${limit}`;
+  const cached = localStorage.getItem(cacheKey);
+  const cacheTime = localStorage.getItem(`${cacheKey}_time`);
   
   if (cached && cacheTime && Date.now() - cacheTime < CACHE_DURATION) {
     return JSON.parse(cached);
   }
   
-  const countries = await fetchCountries();
-  localStorage.setItem(COUNTRIES_CACHE_KEY, JSON.stringify(countries));
-  localStorage.setItem(`${COUNTRIES_CACHE_KEY}_time`, Date.now().toString());
+  // Fetch with pagination
+  const response = await fetch(
+    `/v2/metadata/countries?page=${page}&limit=${limit}`
+  );
+  const data = await response.json();
   
-  return countries;
+  localStorage.setItem(cacheKey, JSON.stringify(data.data));
+  localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+  
+  return data.data;
 };
 ```
 
@@ -1267,6 +1551,17 @@ Metadata endpoints are public and have generous rate limits:
 ---
 
 ## Changelog
+
+### v2.1.0 (2025-10-16)
+- **🎯 BREAKING CHANGE:** Added comprehensive pagination support to all city endpoints
+- **🎯 BREAKING CHANGE:** Added pagination to countries endpoint for consistency
+- Added `page` and `limit` query parameters to all relevant endpoints
+- Updated response format to include `pagination` object with navigation metadata
+- Enhanced cache keys to include pagination parameters
+- Updated documentation with pagination examples and best practices
+- Set reasonable pagination limits: Countries (250), Cities (500), States (no limit)
+- Improved performance for large datasets through proper pagination
+- Added pagination support to JavaScript, cURL, and React examples
 
 ### v2.0.0 (2025-10-15)
 - Added states/provinces endpoints

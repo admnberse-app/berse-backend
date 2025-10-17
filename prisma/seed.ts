@@ -623,17 +623,11 @@ async function main() {
         },
         metadata: {
           create: {
+            referralCode: `REF${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
             referralSource: 'seed',
           },
         },
         serviceProfile: serviceProfile ? { create: serviceProfile } : undefined,
-        userStats: {
-          create: {
-            eventsAttended: 0,
-            eventsHosted: 0,
-            totalPoints: userCore.totalPoints,
-          },
-        },
       },
       include: {
         profile: true,
@@ -733,17 +727,16 @@ async function main() {
     const createdCommunities = [];
     for (const community of communities) {
       const created = await prisma.community.create({
+        data: community,
+      });
+      
+      // Add creator as owner
+      await prisma.communityMember.create({
         data: {
-          ...community,
-          members: {
-            create: [
-              {
-                userId: community.createdById,
-                role: 'OWNER',
-                isApproved: true,
-              },
-            ],
-          },
+          communityId: created.id,
+          userId: community.createdById,
+          role: 'OWNER',
+          isApproved: true,
         },
       });
       createdCommunities.push(created);
@@ -849,13 +842,8 @@ async function main() {
     ];
 
     for (const event of events) {
-      const { hostId, communityId, ...eventData } = event;
       await prisma.event.create({
-        data: {
-          ...eventData,
-          host: { connect: { id: hostId } },
-          ...(communityId && { community: { connect: { id: communityId } } }),
-        },
+        data: event,
       });
     }
     console.log('✅ Sample events created');
@@ -902,13 +890,8 @@ async function main() {
     ];
 
     for (const connection of connections) {
-      const { initiatorId, receiverId, ...connectionData } = connection;
       await prisma.userConnection.create({
-        data: {
-          ...connectionData,
-          initiator: { connect: { id: initiatorId } },
-          receiver: { connect: { id: receiverId } },
-        },
+        data: connection,
       });
     }
     console.log('✅ User connections created');
@@ -1112,7 +1095,7 @@ async function main() {
       });
 
       // Create referral stats
-      await prisma.referralStats.upsert({
+      await prisma.referralStat.upsert({
         where: { userId: hostUser.id },
         create: {
           userId: hostUser.id,

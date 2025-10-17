@@ -3,6 +3,7 @@ import { authRoutes } from '../../modules/auth';
 import { userRoutes } from '../../modules/user';
 import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
+import { eventRoutes } from '../../modules/events';
 
 const router = Router();
 
@@ -33,6 +34,12 @@ router.use('/metadata', countriesRoutes);
  * Base path: /v2/onboarding
  */
 router.use('/onboarding', onboardingRoutes);
+
+/**
+ * Event routes
+ * Base path: /v2/events
+ */
+router.use('/events', eventRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION
@@ -82,6 +89,7 @@ router.get('/health', (req, res) => {
       auth: '/v2/auth',
       users: '/v2/users',
       metadata: '/v2/metadata',
+      events: '/v2/events',
     },
   });
 });
@@ -187,6 +195,23 @@ router.get('/docs', (req, res) => {
         'DELETE /v2/users/follow/:id': 'Unfollow user',
         'POST /v2/users/upload-avatar': 'Upload profile picture',
         'DELETE /v2/users/:id': 'Delete user (admin only)',
+      },
+      events: {
+        'GET /v2/events': 'Get all events with filters',
+        'GET /v2/events/:id': 'Get event by ID',
+        'POST /v2/events': 'Create new event (auth required)',
+        'PUT /v2/events/:id': 'Update event (auth required)',
+        'DELETE /v2/events/:id': 'Delete event (auth required)',
+        'GET /v2/events/:id/ticket-tiers': 'Get ticket tiers for event',
+        'POST /v2/events/ticket-tiers': 'Create ticket tier (auth required)',
+        'PUT /v2/events/ticket-tiers/:id': 'Update ticket tier (auth required)',
+        'POST /v2/events/tickets/purchase': 'Purchase ticket (auth required)',
+        'GET /v2/events/tickets/my-tickets': 'Get my tickets (auth required)',
+        'POST /v2/events/:id/rsvp': 'RSVP to event (auth required)',
+        'DELETE /v2/events/:id/rsvp': 'Cancel RSVP (auth required)',
+        'GET /v2/events/rsvps/my-rsvps': 'Get my RSVPs (auth required)',
+        'POST /v2/events/:id/check-in': 'Check-in attendee (auth required)',
+        'GET /v2/events/:id/attendees': 'Get event attendees (auth required)',
       },
     },
     authentication: {

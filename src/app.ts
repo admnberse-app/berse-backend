@@ -16,7 +16,6 @@ import { csrfTokenEndpoint } from './middleware/csrf';
 import logger, { stream } from './utils/logger';
 
 // Import API routers
-import apiV1Router from './routes/api/v1';
 import apiV2Router from './routes/v2';
 
 const app: Application = express();
@@ -235,7 +234,8 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
 // ============================================================================
 
 // API Routes with versioning
-app.use('/api/v1', apiV1Router); // Legacy v1 routes (kept for backward compatibility)
+// API Routes
+app.use('/api/v2', apiV2Router);
 app.use('/v2', apiV2Router);      // New v2 routes (primary)
 
 // CSRF token endpoint
