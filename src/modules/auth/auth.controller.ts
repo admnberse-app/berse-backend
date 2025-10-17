@@ -412,7 +412,7 @@ export class AuthController {
         });
         
         logger.warn('Login attempt with non-existent email', { email });
-        throw new AppError('Invalid credentials', 401);
+        throw new AppError('Email is not registered. Please sign up first.', 401);
       }
 
       const isValidPassword = await comparePassword(password, user.password);
@@ -866,11 +866,9 @@ export class AuthController {
         where: { email },
       });
 
-      // Always return success to prevent email enumeration
       if (!user) {
         logger.warn('Password reset requested for non-existent email', { email });
-        sendSuccess(res, null, 'If the email exists, a password reset link has been sent.');
-        return;
+        throw new AppError('Email is not registered. Please sign up first.', 404);
       }
 
       // Generate reset token (32 bytes = 64 hex characters)
