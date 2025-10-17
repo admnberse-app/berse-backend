@@ -574,7 +574,7 @@ Approve, decline, or downgrade a vouch request.
 - `approvedType` (required if approve/downgrade): `PRIMARY`, `SECONDARY`, or `COMMUNITY`
 - `message` (optional): Response message
 
-**Response:** `200 OK`
+**Response (Approved):** `200 OK`
 ```json
 {
   "success": true,
@@ -588,6 +588,26 @@ Approve, decline, or downgrade a vouch request.
   }
 }
 ```
+
+**Response (Declined):** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Vouch request declined",
+  "data": {
+    "id": "clxvouch123",
+    "status": "DECLINED",
+    "approvedAt": "2025-10-17T10:30:00.000Z",
+    "trustImpact": 0
+  }
+}
+```
+
+**Notes:**
+- Declined vouches are preserved in the database (not deleted)
+- Status becomes `DECLINED` for tracking and analytics
+- No trust score impact when declined
+- `approvedAt` timestamp records when the decline occurred
 
 ---
 
@@ -702,8 +722,8 @@ Get vouches you've received.
 **Authentication:** Required
 
 **Query Parameters:**
-- `vouchType` (optional): Filter by type
-- `status` (optional): Filter by status
+- `vouchType` (optional): Filter by type - `PRIMARY`, `SECONDARY`, `COMMUNITY`
+- `status` (optional): Filter by status - `PENDING`, `APPROVED`, `ACTIVE`, `DECLINED`, `REVOKED`
 - `page`, `limit`: Pagination
 
 **Response:** `200 OK`
@@ -725,6 +745,20 @@ Get vouches you've received.
         "message": "We've known each other...",
         "trustImpact": 30.0,
         "approvedAt": "2025-10-17T10:30:00.000Z"
+      },
+      {
+        "id": "clxvouch456",
+        "voucher": {
+          "id": "cm789xyz123abc456",
+          "displayName": "Jane Smith",
+          "profilePicture": "https://cdn.berse.com/avatars/jane.jpg",
+          "trustScore": 78.0
+        },
+        "vouchType": "PRIMARY",
+        "status": "DECLINED",
+        "message": "Please vouch for me",
+        "trustImpact": 0,
+        "approvedAt": "2025-10-17T10:25:00.000Z"
       }
     ],
     "summary": {
@@ -737,6 +771,11 @@ Get vouches you've received.
     }
   }
 }
+```
+
+**Example - Filter Declined Vouches:**
+```bash
+GET /v2/vouches/received?status=DECLINED
 ```
 
 ---
@@ -835,19 +874,19 @@ Get a comprehensive summary of your vouches.
 {
   "success": true,
   "data": {
-    "received": {
-      "total": 3,
-      "byType": { "PRIMARY": 1, "SECONDARY": 2 },
-      "totalImpact": 70.0
-    },
-    "given": {
-      "total": 2,
-      "byType": { "SECONDARY": 2 },
-      "available": { "PRIMARY": 0, "SECONDARY": 1, "COMMUNITY": 2 }
-    },
-    "pending": {
-      "received": 1,
-      "sent": 0
+    "totalVouchesReceived": 3,
+    "totalVouchesGiven": 2,
+    "primaryVouches": 1,
+    "secondaryVouches": 2,
+    "communityVouches": 0,
+    "pendingRequests": 1,
+    "activeVouches": 3,
+    "revokedVouches": 0,
+    "declinedVouches": 1,
+    "availableSlots": {
+      "primary": 0,
+      "secondary": 1,
+      "community": 2
     },
     "trustScoreContribution": 28.0,
     "recommendations": [
@@ -857,6 +896,11 @@ Get a comprehensive summary of your vouches.
   }
 }
 ```
+
+**Fields:**
+- `declinedVouches`: Count of vouch requests that were declined (tracked for analytics)
+- `activeVouches`: Currently active vouches contributing to trust score
+- `availableSlots`: Remaining vouches you can give by type
 
 ---
 
@@ -923,11 +967,11 @@ Trust scores update automatically when:
 - `COMMUNITY` - Community-issued (2 max, 40% weight)
 
 ### VouchStatus
-- `PENDING` - Awaiting approval
-- `APPROVED` - Approved, becoming active
-- `ACTIVE` - Contributing to trust score
-- `REVOKED` - Vouch removed
-- `DECLINED` - Request declined
+- `PENDING` - Awaiting approval from voucher
+- `APPROVED` - Approved and contributing to trust score
+- `ACTIVE` - Currently active vouch
+- `DECLINED` - Request declined by voucher (preserved for analytics, no trust impact)
+- `REVOKED` - Previously approved vouch removed
 
 ---
 
@@ -986,6 +1030,15 @@ curl -X PUT http://localhost:3000/v2/vouches/clxvouch123/respond \
     "action": "approve",
     "approvedType": "SECONDARY"
   }'
+
+# Alternative: Decline vouch (status becomes DECLINED, preserved for history)
+curl -X PUT http://localhost:3000/v2/vouches/clxvouch123/respond \
+  -H "Authorization: Bearer <RECIPIENT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "decline",
+    "message": "Not comfortable vouching at this time"
+  }'
 ```
 
 ### Get Connection Analytics
@@ -1041,7 +1094,7 @@ curl -X GET "http://localhost:3000/v2/connections/suggestions?limit=10" \
 
 **Last Updated:** October 17, 2025  
 **API Version:** v2.1.0  
-**Module Status:** Core Complete, Vouching Skeleton Ready  
+**Module Status:** Core Complete ✅ | Vouching Complete ✅ (DECLINED status tracking implemented)  
 
 For implementation details, see:
 - [Connection Module README](../../src/modules/connections/README.md)

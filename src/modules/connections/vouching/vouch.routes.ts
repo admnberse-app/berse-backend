@@ -84,7 +84,19 @@ router.post(
  * /v2/vouches/{vouchId}/respond:
  *   post:
  *     summary: Respond to vouch request
- *     description: Approve, decline, or downgrade a vouch request (approved vouches count toward trust score)
+ *     description: |
+ *       Approve, decline, or downgrade a vouch request.
+ *       
+ *       **Actions:**
+ *       - `approve`: Accept vouch at requested level (adds trust points)
+ *       - `decline`: Reject vouch request (status becomes DECLINED, tracked for analytics)
+ *       - `downgrade`: Accept at lower tier (e.g., PRIMARY → SECONDARY with reduced points)
+ *       
+ *       **Trust Impact:**
+ *       - PRIMARY: 12 points
+ *       - SECONDARY: 12 points  
+ *       - COMMUNITY: 16 points
+ *       - DECLINED: 0 points (no trust score impact)
  *     tags: [Connections - Vouching]
  *     security:
  *       - bearerAuth: []
@@ -106,7 +118,7 @@ router.post(
  *               action:
  *                 type: string
  *                 enum: [approve, decline, downgrade]
- *                 description: Approve (full points), Decline, or Downgrade (lower tier)
+ *                 description: Approve (full points), Decline (tracked, no points), or Downgrade (lower tier)
  *               downgradeTo:
  *                 type: string
  *                 enum: [PRIMARY, SECONDARY]
@@ -117,6 +129,22 @@ router.post(
  *     responses:
  *       200:
  *         description: Vouch request responded to
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [APPROVED, DECLINED]
+ *                     trustImpact:
+ *                       type: number
+ *                       description: Trust points awarded (0 if declined)
  *       403:
  *         description: Not authorized to respond
  */
@@ -246,7 +274,15 @@ router.get(
  * /v2/vouches/received:
  *   get:
  *     summary: Get vouches received
- *     description: Get vouches you've received with filtering
+ *     description: |
+ *       Get vouches you've received with filtering options.
+ *       
+ *       **Status Values:**
+ *       - `PENDING`: Awaiting voucher's response
+ *       - `APPROVED`: Accepted and contributing to trust score
+ *       - `ACTIVE`: Currently active vouch
+ *       - `DECLINED`: Rejected by voucher (tracked for history)
+ *       - `REVOKED`: Previously approved but later revoked
  *     tags: [Connections - Vouching]
  *     security:
  *       - bearerAuth: []
@@ -255,12 +291,14 @@ router.get(
  *         name: status
  *         schema:
  *           type: string
- *           enum: [PENDING, APPROVED, DECLINED, REVOKED]
+ *           enum: [PENDING, APPROVED, ACTIVE, DECLINED, REVOKED]
+ *         description: Filter by vouch status
  *       - in: query
  *         name: vouchType
  *         schema:
  *           type: string
  *           enum: [PRIMARY, SECONDARY, COMMUNITY]
+ *         description: Filter by vouch type
  *       - in: query
  *         name: page
  *         schema:
@@ -274,6 +312,21 @@ router.get(
  *     responses:
  *       200:
  *         description: Vouches retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 vouches:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       status:
+ *                         type: string
+ *                         enum: [PENDING, APPROVED, ACTIVE, DECLINED, REVOKED]
+ *                 totalCount:
+ *                   type: integer
  */
 router.get(
   '/received',
@@ -287,7 +340,9 @@ router.get(
  * /v2/vouches/given:
  *   get:
  *     summary: Get vouches given
- *     description: Get vouches you've given with availability counts
+ *     description: |
+ *       Get vouches you've given with availability counts.
+ *       Includes both approved vouches (counting toward limits) and declined requests.
  *     tags: [Connections - Vouching]
  *     security:
  *       - bearerAuth: []
@@ -296,7 +351,8 @@ router.get(
  *         name: status
  *         schema:
  *           type: string
- *           enum: [PENDING, APPROVED, DECLINED, REVOKED]
+ *           enum: [PENDING, APPROVED, ACTIVE, DECLINED, REVOKED]
+ *         description: Filter by status (DECLINED shows requests you rejected)
  *       - in: query
  *         name: vouchType
  *         schema:
@@ -393,19 +449,36 @@ router.get(
  *                 data:
  *                   type: object
  *                   properties:
- *                     received:
+ *                     totalVouchesReceived:
+ *                       type: integer
+ *                       description: Total approved/active vouches received
+ *                     totalVouchesGiven:
+ *                       type: integer
+ *                     primaryVouches:
+ *                       type: integer
+ *                     secondaryVouches:
+ *                       type: integer
+ *                     communityVouches:
+ *                       type: integer
+ *                     pendingRequests:
+ *                       type: integer
+ *                       description: Vouches awaiting response
+ *                     activeVouches:
+ *                       type: integer
+ *                     revokedVouches:
+ *                       type: integer
+ *                     declinedVouches:
+ *                       type: integer
+ *                       description: Vouch requests that were declined
+ *                     availableSlots:
  *                       type: object
  *                       properties:
- *                         total:
+ *                         primary:
  *                           type: integer
- *                         byType:
- *                           type: object
- *                         trustPoints:
- *                           type: number
- *                     given:
- *                       type: object
- *                     pending:
- *                       type: object
+ *                         secondary:
+ *                           type: integer
+ *                         community:
+ *                           type: integer
  */
 router.get(
   '/summary',

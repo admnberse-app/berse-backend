@@ -18,14 +18,15 @@ The Connection & Network module is a comprehensive system for managing user conn
 - ✅ Connection statistics and analytics
 - ✅ Connection suggestions (basic implementation)
 
-### Vouching System 🚧 SKELETON
-- 🚧 Request vouches from connections (PRIMARY, SECONDARY)
-- 🚧 Approve/decline/downgrade vouch requests
-- 🚧 Revoke existing vouches
-- 🚧 Community vouches (admin-initiated)
-- 🚧 Auto-vouch eligibility checking
-- 🚧 Vouch limits enforcement (1 primary, 3 secondary, 2 community)
-- 🚧 Vouch statistics and summary
+### Vouching System ✅ COMPLETE
+- ✅ Request vouches from connections (PRIMARY, SECONDARY)
+- ✅ Approve/decline/downgrade vouch requests (DECLINED status tracked)
+- ✅ Revoke existing vouches
+- ✅ Community vouches (admin-initiated)
+- ✅ Auto-vouch eligibility checking
+- ✅ Vouch limits enforcement (1 primary, 3 secondary, 2 community)
+- ✅ Vouch statistics and summary (includes declined count)
+- 🚧 Background job for auto-vouch processing (non-critical)
 
 ### Trust Score System ✅ COMPLETE
 - ✅ Trust score calculation (40% vouches, 30% activity, 30% trust moments)
@@ -102,16 +103,16 @@ src/modules/connections/
 - `DELETE /v2/connections/block/:userId` - Unblock a user
 - `GET /v2/connections/blocked` - Get blocked users list
 
-### Vouching (🚧 SKELETON)
+### Vouching (✅ COMPLETE)
 - `POST /v2/vouches/request` - Request vouch from connection
-- `POST /v2/vouches/:vouchId/respond` - Approve/decline/downgrade
+- `POST /v2/vouches/:vouchId/respond` - Approve/decline/downgrade (DECLINED status tracked)
 - `POST /v2/vouches/:vouchId/revoke` - Revoke vouch
 - `POST /v2/vouches/community` - Community admin vouch
 - `GET /v2/vouches/auto-vouch/eligibility` - Check auto-vouch eligibility
-- `GET /v2/vouches/received` - Get vouches received
+- `GET /v2/vouches/received` - Get vouches received (filter by DECLINED)
 - `GET /v2/vouches/given` - Get vouches given
-- `GET /v2/vouches/limits` - Get vouch limits
-- `GET /v2/vouches/summary` - Get vouch summary
+- `GET /v2/vouches/limits` - Get vouch limits (1/3/2)
+- `GET /v2/vouches/summary` - Get vouch summary (includes declinedVouches)
 
 ### Travel (🚧 TODO)
 - `POST /v2/travel` - Create travel entry
@@ -164,17 +165,34 @@ GET /v2/connections?status=ACCEPTED&relationshipCategory=friend&page=1&limit=20
 Authorization: Bearer <token>
 ```
 
-### Request a Vouch (🚧 SKELETON)
+### Request a Vouch
 
 ```typescript
 POST /v2/vouches/request
 Authorization: Bearer <token>
 
 {
-  "voucherId": "user_789",
+  "voucheeId": "user_789",
   "vouchType": "PRIMARY",
   "message": "We've been friends for years and attended many events together"
 }
+```
+
+### Respond to Vouch Request
+
+```typescript
+POST /v2/vouches/:vouchId/respond
+Authorization: Bearer <token>
+
+{
+  "action": "approve",  // or "decline" or "downgrade"
+  "downgradeTo": "SECONDARY"  // if action is "downgrade"
+}
+
+// Response includes:
+// - status: "APPROVED" or "DECLINED"
+// - trustImpact: points awarded (0 if declined)
+// - Declined vouches tracked with DECLINED status
 ```
 
 ## 🔐 Database Schema
@@ -199,7 +217,8 @@ Authorization: Bearer <token>
 #### Vouch
 - Vouch requests and approvals
 - Types: PRIMARY (max 1), SECONDARY (max 3), COMMUNITY (max 2)
-- Status: PENDING, APPROVED, ACTIVE, REVOKED
+- Status: PENDING, APPROVED, ACTIVE, DECLINED, REVOKED
+- DECLINED status tracks rejected requests (preserved for analytics)
 - Tracks trust impact and approval timeline
 
 #### VouchConfig
@@ -252,10 +271,11 @@ Trust scores are automatically recalculated when:
 
 ## 🚀 Next Steps / Future Enhancements
 
-### Phase 1: Complete Skeleton Implementations 🚧
-1. **Vouching System** - Implement all vouch request/approval/revoke logic
-2. **Travel Logbook** - Full CRUD for travel entries and connection linking
-3. **Trust Moments** - Complete event-specific feedback system
+### Phase 1: Complete Skeleton Implementations
+1. ✅ **Vouching System** - Implemented all vouch request/approval/decline/revoke logic
+2. 🚧 **Travel Logbook** - Full CRUD for travel entries and connection linking
+3. 🚧 **Trust Moments** - Complete event-specific feedback system
+4. 🚧 **Auto-vouch Background Job** - processAutoVouches() cron job (non-critical)
 
 ### Phase 2: Advanced Features 🔮
 4. **Connection Suggestions Algorithm** - ML-based recommendations:

@@ -100,6 +100,7 @@ export interface VouchSummary {
   pendingRequests: number;
   activeVouches: number;
   revokedVouches: number;
+  declinedVouches: number;
   availableSlots: {
     primary: number;
     secondary: number;
