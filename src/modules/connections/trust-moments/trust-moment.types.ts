@@ -1,10 +1,12 @@
-// Trust Moments types - Event-specific feedback
+// ============================================================================
+// TRUST MOMENT INPUT TYPES
+// ============================================================================
 
 export interface CreateTrustMomentInput {
   connectionId: string;
   receiverId: string;
   eventId?: string;
-  momentType: string; // 'event', 'travel', 'collaboration', 'general'
+  momentType?: string; // 'event', 'travel', 'collaboration', 'service', 'general'
   rating: number; // 1-5
   feedback?: string;
   experienceDescription?: string;
@@ -13,13 +15,16 @@ export interface CreateTrustMomentInput {
 }
 
 export interface UpdateTrustMomentInput {
-  momentId: string;
   rating?: number;
   feedback?: string;
   experienceDescription?: string;
   tags?: string[];
   isPublic?: boolean;
 }
+
+// ============================================================================
+// TRUST MOMENT QUERY TYPES
+// ============================================================================
 
 export interface TrustMomentQuery {
   page?: number;
@@ -29,17 +34,94 @@ export interface TrustMomentQuery {
   minRating?: number;
   maxRating?: number;
   isPublic?: boolean;
-  sortBy?: 'createdAt' | 'rating';
+  sortBy?: 'createdAt' | 'rating' | 'trustImpact';
   sortOrder?: 'asc' | 'desc';
 }
 
-// TODO: Implement full trust moments service
-// Features to implement:
-// - Create trust moment (feedback after event/experience)
-// - Update trust moment
-// - Delete trust moment
-// - Get trust moments received by user
-// - Get trust moments given by user
-// - Get trust moments for a specific event
-// - Calculate trust moment statistics
-// - Trigger trust score update when trust moment is created/updated
+// ============================================================================
+// TRUST MOMENT RESPONSE TYPES
+// ============================================================================
+
+export interface TrustMomentResponse {
+  id: string;
+  connectionId: string;
+  giverId: string;
+  receiverId: string;
+  eventId?: string;
+  momentType: string;
+  rating: number;
+  feedback?: string;
+  experienceDescription?: string;
+  tags: string[];
+  isPublic: boolean;
+  isVerified: boolean;
+  verificationSource?: string;
+  trustImpact: number;
+  createdAt: string;
+  updatedAt: string;
+  giver?: UserBasicInfo;
+  receiver?: UserBasicInfo;
+  event?: EventBasicInfo;
+}
+
+export interface UserBasicInfo {
+  id: string;
+  fullName: string;
+  username?: string;
+  profilePicture?: string;
+  trustScore: number;
+  trustLevel: string;
+}
+
+export interface EventBasicInfo {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  location: string;
+}
+
+export interface PaginatedTrustMomentsResponse {
+  moments: TrustMomentResponse[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+// ============================================================================
+// TRUST MOMENT STATISTICS TYPES
+// ============================================================================
+
+export interface TrustMomentStats {
+  received: {
+    total: number;
+    averageRating: number;
+    ratingDistribution: {
+      oneStar: number;
+      twoStar: number;
+      threeStar: number;
+      fourStar: number;
+      fiveStar: number;
+    };
+    byMomentType: Record<string, number>;
+    topTags: Array<{ tag: string; count: number }>;
+    positiveCount: number; // Rating 4-5
+    neutralCount: number; // Rating 3
+    negativeCount: number; // Rating 1-2
+    recentMoments: TrustMomentResponse[];
+  };
+  given: {
+    total: number;
+    averageRating: number;
+    byMomentType: Record<string, number>;
+  };
+  trustImpact: {
+    total: number;
+    fromPositive: number;
+    fromNeutral: number;
+    fromNegative: number;
+  };
+}

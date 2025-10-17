@@ -32,6 +32,16 @@ const swaggerDefinition = {
 - Comprehensive statistics and filtering
 - Max 2 community vouches per user (20% trust weight each)
 
+#### Trust Moments Module 💬
+- 8 trust moment endpoints (create, update, delete, query, statistics)
+- Feedback/rating system after shared experiences
+- Rating scale 1-5 stars with trust impact (-5 to +5 points)
+- Event-based feedback linking
+- Public/private visibility controls
+- Comprehensive statistics and analytics
+- Contributes 30% to trust score (30 points maximum)
+- Zero negative feedback requirement for auto-vouch eligibility
+
 #### Notification System
 - 6 notification endpoints (get, unread count, mark as read, delete)
 - Real-time notifications for connections, vouches, events, security alerts
@@ -153,8 +163,16 @@ const swaggerDefinition = {
       description: 'Trust-based vouching system. Request, approve, and manage vouches with impact on trust scores.',
     },
     {
+      name: 'Connections - Trust Moments',
+      description: 'Feedback and ratings after shared experiences. Leave trust moments after events, travels, and collaborations. Contributes 30% to trust score.',
+    },
+    {
       name: 'Connections - Trust',
       description: 'Trust score calculation and management. Algorithm: 40% vouches + 30% activity + 30% trust moments.',
+    },
+    {
+      name: 'Connections - Trust Moments',
+      description: 'Trust moment feedback system. Leave ratings/feedback after shared experiences (events, travel, collaboration). Contributes 30% to trust score.',
     },
     {
       name: 'Events',
@@ -715,6 +733,140 @@ const swaggerDefinition = {
           totalEvents: { type: 'integer', description: 'Total events hosted' },
           activeEvents: { type: 'integer', description: 'Active/upcoming events' },
           totalVouches: { type: 'integer', description: 'Total community vouches granted' },
+        },
+      },
+      TrustMoment: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Trust moment ID' },
+          connectionId: { type: 'string', description: 'Connection ID' },
+          giverId: { type: 'string', description: 'User who gave feedback' },
+          receiverId: { type: 'string', description: 'User who received feedback' },
+          eventId: { type: 'string', nullable: true, description: 'Event ID if event-based' },
+          momentType: {
+            type: 'string',
+            enum: ['event', 'travel', 'collaboration', 'service', 'general'],
+            default: 'general',
+            description: 'Type of shared experience',
+          },
+          rating: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 5,
+            description: 'Rating from 1 (poor) to 5 (excellent)',
+          },
+          feedback: { type: 'string', maxLength: 1000, nullable: true, description: 'Detailed feedback text' },
+          experienceDescription: { type: 'string', maxLength: 500, nullable: true, description: 'Brief experience description' },
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Tags for categorization (e.g., friendly, reliable, helpful)',
+          },
+          isPublic: { type: 'boolean', default: true, description: 'Public visibility' },
+          isVerified: { type: 'boolean', default: false, description: 'Verified by system' },
+          trustImpact: {
+            type: 'number',
+            description: 'Trust score impact: -5 (rating 1) to +5 (rating 5)',
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          giver: {
+            type: 'object',
+            description: 'Feedback giver details',
+            properties: {
+              id: { type: 'string' },
+              fullName: { type: 'string' },
+              username: { type: 'string', nullable: true },
+              profilePicture: { type: 'string', format: 'uri', nullable: true },
+              trustScore: { type: 'number', minimum: 0, maximum: 100 },
+              trustLevel: { type: 'string', enum: ['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'] },
+            },
+          },
+          receiver: {
+            type: 'object',
+            description: 'Feedback receiver details',
+            properties: {
+              id: { type: 'string' },
+              fullName: { type: 'string' },
+              username: { type: 'string', nullable: true },
+              profilePicture: { type: 'string', format: 'uri', nullable: true },
+              trustScore: { type: 'number', minimum: 0, maximum: 100 },
+              trustLevel: { type: 'string', enum: ['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'] },
+            },
+          },
+          event: {
+            type: 'object',
+            nullable: true,
+            description: 'Event details if event-based',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              type: { type: 'string' },
+              date: { type: 'string', format: 'date-time' },
+              location: { type: 'string' },
+            },
+          },
+        },
+      },
+      TrustMomentStats: {
+        type: 'object',
+        properties: {
+          received: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer', description: 'Total feedback received' },
+              averageRating: { type: 'number', description: 'Average rating received' },
+              ratingDistribution: {
+                type: 'object',
+                properties: {
+                  oneStar: { type: 'integer' },
+                  twoStar: { type: 'integer' },
+                  threeStar: { type: 'integer' },
+                  fourStar: { type: 'integer' },
+                  fiveStar: { type: 'integer' },
+                },
+              },
+              byMomentType: {
+                type: 'object',
+                description: 'Count by moment type',
+                additionalProperties: { type: 'integer' },
+              },
+              topTags: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    tag: { type: 'string' },
+                    count: { type: 'integer' },
+                  },
+                },
+              },
+              positiveCount: { type: 'integer', description: 'Count of 4-5 star ratings' },
+              neutralCount: { type: 'integer', description: 'Count of 3 star ratings' },
+              negativeCount: { type: 'integer', description: 'Count of 1-2 star ratings' },
+            },
+          },
+          given: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer', description: 'Total feedback given' },
+              averageRating: { type: 'number', description: 'Average rating given' },
+              byMomentType: {
+                type: 'object',
+                description: 'Count by moment type',
+                additionalProperties: { type: 'integer' },
+              },
+            },
+          },
+          trustImpact: {
+            type: 'object',
+            properties: {
+              total: { type: 'number', description: 'Total trust impact from all feedback' },
+              fromPositive: { type: 'number', description: 'Impact from positive feedback (4-5 stars)' },
+              fromNeutral: { type: 'number', description: 'Impact from neutral feedback (3 stars)' },
+              fromNegative: { type: 'number', description: 'Impact from negative feedback (1-2 stars)' },
+            },
+          },
         },
       },
       VouchEligibility: {

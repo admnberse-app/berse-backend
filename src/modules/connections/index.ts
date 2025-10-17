@@ -46,4 +46,12 @@ export { TrustScoreService } from './trust';
 export { TravelService } from './travel';
 
 // Trust moments module
-export { TrustMomentService } from './trust-moments';
+export { trustMomentRoutes, TrustMomentService, TrustMomentController } from './trust-moments';
+export type {
+  CreateTrustMomentInput,
+  UpdateTrustMomentInput,
+  TrustMomentQuery,
+  TrustMomentResponse,
+  PaginatedTrustMomentsResponse,
+  TrustMomentStats,
+} from './trust-moments';

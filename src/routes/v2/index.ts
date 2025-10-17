@@ -4,7 +4,7 @@ import { userRoutes } from '../../modules/user';
 import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
 import { eventRoutes } from '../../modules/events';
-import { connectionRoutes, vouchRoutes } from '../../modules/connections';
+import { connectionRoutes, vouchRoutes, trustMomentRoutes } from '../../modules/connections';
 import { cardGameRoutes } from '../../modules/cardgame';
 import { gamificationRoutes } from '../../modules/gamification';
 import { communityRoutes } from '../../modules/communities';
@@ -63,6 +63,12 @@ router.use('/communities', communityRoutes);
  * Base path: /v2/vouches
  */
 router.use('/vouches', vouchRoutes);
+
+/**
+ * Trust Moment routes
+ * Base paths: /v2/connections/:connectionId/trust-moments, /v2/trust-moments, /v2/users/:userId/trust-moments, /v2/events/:eventId/trust-moments
+ */
+router.use('/', trustMomentRoutes);
 
 /**
  * Notification routes
@@ -134,6 +140,7 @@ router.get('/health', (req, res) => {
       connections: '/v2/connections',
       communities: '/v2/communities',
       vouches: '/v2/vouches',
+      trustMoments: '/v2/connections/:connectionId/trust-moments, /v2/trust-moments, /v2/users/:userId/trust-moments, /v2/events/:eventId/trust-moments',
       notifications: '/v2/notifications',
       cardgame: '/v2/cardgame',
       gamification: '/v2/gamification',
@@ -305,6 +312,16 @@ router.get('/docs', (req, res) => {
         'GET /v2/vouches/given': 'Get vouches given (auth required)',
         'GET /v2/vouches/limits': 'Get vouch limits (auth required)',
         'GET /v2/vouches/summary': 'Get vouch summary (auth required)',
+      },
+      trustMoments: {
+        'POST /v2/connections/:connectionId/trust-moments': 'Create trust moment feedback (auth required)',
+        'GET /v2/trust-moments/:momentId': 'Get trust moment by ID (auth required)',
+        'PATCH /v2/trust-moments/:momentId': 'Update trust moment (auth required)',
+        'DELETE /v2/trust-moments/:momentId': 'Delete trust moment (auth required)',
+        'GET /v2/users/:userId/trust-moments/received': 'Get feedback received by user (auth required)',
+        'GET /v2/users/:userId/trust-moments/given': 'Get feedback given by user (auth required)',
+        'GET /v2/events/:eventId/trust-moments': 'Get feedback for event (auth required)',
+        'GET /v2/users/:userId/trust-moments/stats': 'Get trust moment statistics (auth required)',
       },
       notifications: {
         'GET /v2/notifications': 'Get user notifications with pagination (auth required)',
