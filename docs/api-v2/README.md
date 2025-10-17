@@ -10,6 +10,7 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 🎯 [Onboarding API](./ONBOARDING_API.md) - Onboarding screens, user tracking, and completion flow
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
+- 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
 
 ## Base URL
 
@@ -111,6 +112,19 @@ Comprehensive event management system with ticket sales, RSVPs, and QR code-base
 - `POST /events/:id/check-in` - Check in attendee
 
 📖 [Full Events Documentation](./EVENTS_API.md)
+
+### Notifications Module (`/v2/notifications`)
+In-app notification system for user actions including connections, vouches, events, and security alerts.
+
+**Key Endpoints:**
+- `GET /notifications` - Get user notifications (paginated)
+- `GET /notifications/unread-count` - Get unread count (for badge)
+- `PUT /notifications/read-all` - Mark all as read
+- `PUT /notifications/:id/read` - Mark specific as read
+- `DELETE /notifications/read` - Delete all read notifications
+- `DELETE /notifications/:id` - Delete specific notification
+
+📖 [Full Notifications Documentation](./NOTIFICATIONS_API.md)
 
 ## Response Format
 

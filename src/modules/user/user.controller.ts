@@ -73,6 +73,7 @@ export class UserController {
               travelStyle: true,
               bucketList: true,
               travelBio: true,
+              locationPrivacy: true,
             },
           },
           location: {
@@ -85,6 +86,14 @@ export class UserController {
               latitude: true,
               longitude: true,
               lastLocationUpdate: true,
+            },
+          },
+          security: {
+            select: {
+              emailVerifiedAt: true,
+              phoneVerifiedAt: true,
+              mfaEnabled: true,
+              lastLoginAt: true,
             },
           },
           metadata: {

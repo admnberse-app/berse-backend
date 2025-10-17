@@ -12,6 +12,7 @@ import { emailQueue } from '../../services/emailQueue.service';
 import { EmailTemplate } from '../../types/email.types';
 import { RegisterRequest, LoginRequest, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest } from './auth.types';
 import { ActivityLoggerService, ActivityType, SecuritySeverity } from '../../services/activityLogger.service';
+import { NotificationService } from '../../services/notification.service';
 
 /**
  * Generate a 7-character alphanumeric referral code
@@ -338,6 +339,9 @@ export class AuthController {
             }
           );
 
+          // Create in-app notification to verify email
+          await NotificationService.notifyEmailVerificationRequired(user.id, user.fullName);
+
           logger.info('Verification email sent to new user', { 
             userId: user.id, 
             email: user.email 
@@ -349,6 +353,9 @@ export class AuthController {
           });
           // Don't fail registration if email sending fails
         }
+      } else {
+        // If email verification is disabled, send welcome notification immediately
+        await NotificationService.notifyRegistrationSuccess(user.id, user.fullName);
       }
 
       // Log successful registration
@@ -822,6 +829,9 @@ export class AuthController {
           }
         );
         
+        // Send in-app notification
+        await NotificationService.notifyPasswordChanged(user.id, user.fullName);
+        
         logger.info('Password changed confirmation email sent', { userId });
       } catch (error) {
         logger.error('Failed to send password changed email', { 
@@ -1165,6 +1175,9 @@ export class AuthController {
           exploreUrl: `${process.env.APP_URL}/explore`,
         }
       );
+
+      // Send welcome notification
+      await NotificationService.notifyEmailVerified(user.id, user.fullName);
 
       // Log verification activity
       await ActivityLoggerService.logActivity({

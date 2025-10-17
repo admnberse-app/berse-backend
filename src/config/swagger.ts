@@ -9,6 +9,12 @@ const swaggerDefinition = {
     description: `Modern, modular API for the Berse social platform with event management, user connections, and community features.
     
 **Version 2.1.0 Updates (October 17, 2025):**
+- **Notification System**: Complete in-app notification system
+  - 6 notification endpoints (get, unread count, mark as read, delete)
+  - Real-time notifications for connections, vouches, events, security alerts
+  - Priority levels (low, normal, high, urgent) for UI differentiation
+  - Email verification status flag for mobile app banners
+  - Pagination and filtering support
 - **Connection & Vouching Module**: Complete trust-based connection system
   - 13 connection endpoints (request, accept, remove, block, stats, mutual, suggestions)
   - 9 vouching endpoints (request, approve, revoke, limits, summary)
@@ -134,6 +140,10 @@ const swaggerDefinition = {
     {
       name: 'Metadata',
       description: 'Country, state, city, region, timezone, and location metadata endpoints. Provides comprehensive geographical data including countries, states/provinces, cities with coordinates, regions, and timezones for global coverage.',
+    },
+    {
+      name: 'Notifications',
+      description: 'In-app notification system. Get, mark as read, and manage user notifications for connections, events, vouches, and system alerts.',
     },
     {
       name: 'Health',

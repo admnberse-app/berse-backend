@@ -20,6 +20,7 @@ export interface RegisterRequest {
   phone?: string;
   password: string;
   fullName: string;
+  username?: string;
   nationality?: string;
   countryOfResidence?: string;
   city?: string;

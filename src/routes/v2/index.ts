@@ -5,6 +5,7 @@ import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
 import { eventRoutes } from '../../modules/events';
 import { connectionRoutes, vouchRoutes } from '../../modules/connections';
+import notificationRoutes from '../../modules/user/notification.routes';
 
 const router = Router();
 
@@ -53,6 +54,12 @@ router.use('/connections', connectionRoutes);
  * Base path: /v2/vouches
  */
 router.use('/vouches', vouchRoutes);
+
+/**
+ * Notification routes
+ * Base path: /v2/notifications
+ */
+router.use('/notifications', notificationRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION
@@ -105,6 +112,7 @@ router.get('/health', (req, res) => {
       events: '/v2/events',
       connections: '/v2/connections',
       vouches: '/v2/vouches',
+      notifications: '/v2/notifications',
     },
   });
 });
@@ -253,6 +261,14 @@ router.get('/docs', (req, res) => {
         'GET /v2/vouches/given': 'Get vouches given (auth required)',
         'GET /v2/vouches/limits': 'Get vouch limits (auth required)',
         'GET /v2/vouches/summary': 'Get vouch summary (auth required)',
+      },
+      notifications: {
+        'GET /v2/notifications': 'Get user notifications with pagination (auth required)',
+        'GET /v2/notifications/unread-count': 'Get unread notification count (auth required)',
+        'PUT /v2/notifications/read-all': 'Mark all notifications as read (auth required)',
+        'PUT /v2/notifications/:notificationId/read': 'Mark specific notification as read (auth required)',
+        'DELETE /v2/notifications/read': 'Delete all read notifications (auth required)',
+        'DELETE /v2/notifications/:notificationId': 'Delete specific notification (auth required)',
       },
     },
     authentication: {

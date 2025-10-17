@@ -16,6 +16,7 @@ import {
 import { VouchType, VouchStatus, ConnectionStatus, CommunityRole } from '@prisma/client';
 import logger from '../../../utils/logger';
 import { TrustScoreService } from '../trust/trust-score.service';
+import { NotificationService } from '../../../services/notification.service';
 
 export class VouchService {
   
@@ -193,7 +194,25 @@ export class VouchService {
 
       logger.info(`Vouch request created: ${vouch.id} (${vouchType})`);
 
-      // TODO: Send notification to voucher
+      // Send notification to voucher
+      const voucheeUser = vouch.users_vouches_voucheeIdTousers;
+      if (voucheeUser) {
+        await NotificationService.createNotification({
+          userId: voucherId,
+          type: 'VOUCH',
+          title: 'Vouch Request Received',
+          message: `${voucheeUser.fullName || voucheeUser.username} is requesting a ${vouchType.toLowerCase()} vouch from you`,
+          actionUrl: `/vouches`,
+          priority: 'normal',
+          relatedEntityId: vouch.id,
+          relatedEntityType: 'vouch_request',
+          metadata: {
+            vouchId: vouch.id,
+            vouchType,
+            voucheeId,
+          },
+        });
+      }
 
       return this.formatVouchResponse(vouch);
     } catch (error) {
@@ -303,6 +322,14 @@ export class VouchService {
         await TrustScoreService.triggerTrustScoreUpdate(
           vouch.voucheeId,
           `Vouch approved by ${voucherName}`
+        );
+
+        // Send notification to vouchee
+        await NotificationService.notifyVouchReceived(
+          vouch.voucheeId,
+          voucherName,
+          voucherId,
+          vouch.vouchType
         );
 
         logger.info(`Vouch approved: ${vouchId} (${vouch.vouchType})`);

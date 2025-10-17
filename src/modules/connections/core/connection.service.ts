@@ -22,6 +22,7 @@ import {
 } from './connection.types';
 import { ConnectionStatus, Prisma } from '@prisma/client';
 import logger from '../../../utils/logger';
+import { NotificationService } from '../../../services/notification.service';
 
 export class ConnectionService {
   
@@ -134,7 +135,19 @@ export class ConnectionService {
       // Update connection stats
       await this.updateConnectionStats(userId);
 
-      // TODO: Send notification to receiver
+      // Send notification to receiver
+      const senderUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { fullName: true, username: true },
+      });
+      
+      if (senderUser) {
+        await NotificationService.notifyConnectionRequest(
+          data.receiverId,
+          senderUser.fullName || senderUser.username || 'Someone',
+          userId
+        );
+      }
 
       logger.info(`Connection request sent from ${userId} to ${data.receiverId}`);
 
@@ -198,6 +211,13 @@ export class ConnectionService {
               location: { select: { currentCity: true, countryOfResidence: true } },
             },
           },
+          users_user_connections_receiverIdTousers: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+            },
+          },
         },
       });
 
@@ -210,9 +230,17 @@ export class ConnectionService {
 
         // Calculate mutual connections
         await this.calculateMutualConnections(data.connectionId);
+        
+        // Send notification to initiator
+        const accepterName = updatedConnection.users_user_connections_receiverIdTousers?.fullName || 
+                            updatedConnection.users_user_connections_receiverIdTousers?.username || 
+                            'Someone';
+        await NotificationService.notifyConnectionAccepted(
+          connection.initiatorId,
+          accepterName,
+          userId
+        );
       }
-
-      // TODO: Send notification to initiator
 
       logger.info(
         `Connection request ${data.action}ed: ${data.connectionId} by ${userId}`

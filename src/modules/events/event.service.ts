@@ -24,6 +24,7 @@ import logger from '../../utils/logger';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { cacheService, CacheKeys, CacheTTL } from '../../services/cache.service';
+import { NotificationService } from '../../services/notification.service';
 
 export class EventService {
   
@@ -105,6 +106,60 @@ export class EventService {
         data.communityId ? cacheService.deletePattern('bersemuka:events:community:*') : Promise.resolve(),
       ]);
       logger.debug('Cache invalidated after event creation');
+
+      // Notify connections/community members about new event (only if published)
+      if (event.status === EventStatus.PUBLISHED) {
+        // Get connections or community members
+        let notificationUserIds: string[] = [];
+        
+        if (data.communityId) {
+          // Notify community members
+          const members = await prisma.communityMember.findMany({
+            where: {
+              communityId: data.communityId,
+              userId: { not: userId },
+            },
+            select: { userId: true },
+            take: 100, // Limit to avoid sending too many notifications
+          });
+          notificationUserIds = members.map(m => m.userId);
+        } else {
+          // Notify connections
+          const connections = await prisma.userConnection.findMany({
+            where: {
+              OR: [
+                { initiatorId: userId, status: 'ACCEPTED' },
+                { receiverId: userId, status: 'ACCEPTED' },
+              ],
+            },
+            select: { initiatorId: true, receiverId: true },
+            take: 50, // Limit to avoid spam
+          });
+          
+          notificationUserIds = connections.map(c => 
+            c.initiatorId === userId ? c.receiverId : c.initiatorId
+          );
+        }
+
+        // Send notifications in background (don't await)
+        if (notificationUserIds.length > 0) {
+          const hostName = event.user.fullName || event.user.username || 'Someone';
+          NotificationService.createBulkNotifications(notificationUserIds, {
+            type: 'EVENT',
+            title: 'New Event',
+            message: `${hostName} created: ${event.title}`,
+            actionUrl: `/events/${event.id}`,
+            priority: 'low',
+            relatedEntityId: event.id,
+            relatedEntityType: 'event_created',
+            metadata: {
+              eventId: event.id,
+              hostId: userId,
+              eventTitle: event.title,
+            },
+          }).catch(err => logger.error('Failed to send event creation notifications:', err));
+        }
+      }
 
       return this.transformEventResponse(event);
     } catch (error: any) {
@@ -713,8 +768,33 @@ export class EventService {
               title: true,
               date: true,
               location: true,
+              hostId: true,
             },
           },
+          user: {
+            select: {
+              fullName: true,
+              username: true,
+            },
+          },
+        },
+      });
+
+      // Send notification to event host
+      const userName = rsvp.user?.fullName || rsvp.user?.username || 'Someone';
+      await NotificationService.createNotification({
+        userId: rsvp.events.hostId,
+        type: 'EVENT',
+        title: 'New Event RSVP',
+        message: `${userName} RSVP'd to your event: ${rsvp.events.title}`,
+        actionUrl: `/events/${eventId}/attendees`,
+        priority: 'normal',
+        relatedEntityId: eventId,
+        relatedEntityType: 'event_rsvp',
+        metadata: {
+          eventId,
+          userId,
+          eventTitle: rsvp.events.title,
         },
       });
 
