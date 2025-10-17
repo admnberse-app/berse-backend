@@ -436,3 +436,59 @@ export const getUserAttendedEventsValidators = [
     .optional()
     .isISO8601().withMessage('End date must be a valid ISO 8601 date'),
 ];
+
+// ============================================================================
+// CALENDAR VALIDATORS
+// ============================================================================
+
+export const getTodayEventsValidators = [
+  query('type')
+    .optional()
+    .isIn(Object.values(EventType)).withMessage('Invalid event type'),
+  
+  query('sortBy')
+    .optional()
+    .isIn(['date', 'title', 'popularity']).withMessage('Sort by must be date, title, or popularity'),
+  
+  query('sortOrder')
+    .optional()
+    .isIn(['asc', 'desc']).withMessage('Sort order must be asc or desc'),
+  
+  query('timezone')
+    .optional()
+    .isString().withMessage('Timezone must be a string'),
+];
+
+export const getWeekScheduleValidators = [
+  query('type')
+    .optional()
+    .isIn(Object.values(EventType)).withMessage('Invalid event type'),
+  
+  query('timezone')
+    .optional()
+    .isString().withMessage('Timezone must be a string'),
+];
+
+export const getCalendarCountsValidators = [
+  query('startDate')
+    .optional()
+    .isISO8601().withMessage('Start date must be a valid ISO 8601 date'),
+  
+  query('endDate')
+    .optional()
+    .isISO8601().withMessage('End date must be a valid ISO 8601 date')
+    .custom((value, { req }) => {
+      if (req.query.startDate && value) {
+        const start = new Date(req.query.startDate as string);
+        const end = new Date(value);
+        if (end < start) {
+          throw new Error('End date must be after start date');
+        }
+      }
+      return true;
+    }),
+  
+  query('type')
+    .optional()
+    .isIn(Object.values(EventType)).withMessage('Invalid event type'),
+];

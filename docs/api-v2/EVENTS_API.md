@@ -40,9 +40,13 @@ The Events API provides comprehensive endpoints for managing events, ticket sale
    - [Get Events by Host](#get-events-by-host)
    - [Get My Community Events](#get-my-community-events)
    - [Get User Attended Events](#get-user-attended-events)
-7. [Enums & Types](#enums--types)
-8. [Error Codes](#error-codes)
-9. [Examples](#examples)
+7. [Calendar Views](#calendar-views)
+   - [Get Today's Events](#get-todays-events)
+   - [Get Week Schedule](#get-week-schedule)
+   - [Get Calendar Counts](#get-calendar-counts)
+8. [Enums & Types](#enums--types)
+9. [Error Codes](#error-codes)
+10. [Examples](#examples)
 
 ---
 
@@ -1328,6 +1332,316 @@ Get events that a specific user has attended (checked in to). Useful for display
 - Public endpoint - anyone can see attended events
 - Consider adding privacy settings in future
 - Only shows events user actually checked in to (not just RSVP'd)
+
+---
+
+## Calendar Views
+
+The Calendar Views endpoints provide optimized access to events for calendar-style displays, daily schedules, and weekly planners. These endpoints are designed for performance and user experience when building event calendars.
+
+### Get Today's Events
+
+Get all published events happening today with sorting and filtering options.
+
+**Endpoint:** `GET /v2/events/calendar/today`
+
+**Authentication:** Not required
+
+**Query Parameters:**
+- `type` (optional): Filter by event type (see [EventType enum](#eventtype))
+- `sortBy` (optional): Sort field - `date`, `title`, or `popularity` (default: `date`)
+- `sortOrder` (optional): Sort order - `asc` or `desc` (default: `asc`)
+- `timezone` (optional): Timezone for date calculation (default: `UTC`)
+  - Examples: `Asia/Kuala_Lumpur`, `America/New_York`, `Europe/London`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Today events retrieved successfully",
+  "data": {
+    "events": [
+      {
+        "id": "evt_cm123456789",
+        "title": "Morning Badminton Session",
+        "description": "Weekly badminton game for beginners",
+        "type": "SPORTS",
+        "date": "2025-10-17T08:00:00.000Z",
+        "location": "Badminton Arena KL",
+        "mapLink": "https://maps.google.com/?q=Badminton+Arena+KL",
+        "maxAttendees": 20,
+        "isFree": true,
+        "status": "PUBLISHED",
+        "host": {
+          "id": "usr_cm987654321",
+          "displayName": "Ahmad Ali",
+          "profilePicture": "https://cdn.berse.com/profiles/ahmad.jpg"
+        },
+        "rsvpCount": 15,
+        "attendanceCount": 0,
+        "ticketCount": 0
+      },
+      {
+        "id": "evt_cm234567890",
+        "title": "Tech Talk: AI in 2025",
+        "type": "WORKSHOP",
+        "date": "2025-10-17T19:00:00.000Z",
+        "location": "KLCC Convention Center",
+        "isFree": false,
+        "price": 50,
+        "currency": "MYR",
+        "host": {
+          "id": "usr_cm888999000",
+          "displayName": "TechHub KL"
+        },
+        "rsvpCount": 45,
+        "ticketCount": 12
+      }
+    ],
+    "count": 2
+  }
+}
+```
+
+**Features:**
+- Only returns `PUBLISHED` events (no drafts or cancelled)
+- Filters events to today's date based on specified timezone
+- Sorting by `popularity` uses RSVP + attendance + ticket counts
+- Optimized queries with count aggregations
+
+**Use Cases:**
+- "What's happening today" dashboard widget
+- Daily event digest emails
+- Homepage "Today's Events" section
+- Quick calendar overview
+
+---
+
+### Get Week Schedule
+
+Get events for the next 7 days, grouped by date with day names and timezone support.
+
+**Endpoint:** `GET /v2/events/calendar/week`
+
+**Authentication:** Not required
+
+**Query Parameters:**
+- `type` (optional): Filter by event type (see [EventType enum](#eventtype))
+- `timezone` (optional): Timezone for date calculation (default: `UTC`)
+  - Examples: `Asia/Kuala_Lumpur`, `America/New_York`, `Europe/London`
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Week schedule retrieved successfully",
+  "data": {
+    "2025-10-17": {
+      "dayName": "Friday",
+      "dayOfWeek": 5,
+      "date": "2025-10-17",
+      "events": [
+        {
+          "id": "evt_cm123456789",
+          "title": "Morning Badminton Session",
+          "type": "SPORTS",
+          "date": "2025-10-17T08:00:00.000Z",
+          "location": "Badminton Arena KL",
+          "isFree": true,
+          "host": {
+            "id": "usr_cm987654321",
+            "displayName": "Ahmad Ali"
+          },
+          "rsvpCount": 15
+        },
+        {
+          "id": "evt_cm234567890",
+          "title": "Tech Talk: AI in 2025",
+          "type": "WORKSHOP",
+          "date": "2025-10-17T19:00:00.000Z",
+          "location": "KLCC Convention Center",
+          "isFree": false,
+          "price": 50,
+          "currency": "MYR"
+        }
+      ]
+    },
+    "2025-10-18": {
+      "dayName": "Saturday",
+      "dayOfWeek": 6,
+      "date": "2025-10-18",
+      "events": [
+        {
+          "id": "evt_cm345678901",
+          "title": "Community Cleanup",
+          "type": "VOLUNTEER",
+          "date": "2025-10-18T09:00:00.000Z",
+          "location": "Taman Tun Dr Ismail",
+          "isFree": true,
+          "rsvpCount": 32
+        }
+      ]
+    },
+    "2025-10-20": {
+      "dayName": "Monday",
+      "dayOfWeek": 1,
+      "date": "2025-10-20",
+      "events": [
+        {
+          "id": "evt_cm456789012",
+          "title": "Cafe Meetup",
+          "type": "CAFE_MEETUP",
+          "date": "2025-10-20T15:00:00.000Z",
+          "location": "Kopikku Cafe Bangsar",
+          "isFree": true
+        }
+      ]
+    }
+  }
+}
+```
+
+**Response Structure:**
+- Object keyed by date (YYYY-MM-DD format)
+- Each date includes:
+  - `dayName`: Full day name (Monday, Tuesday, etc.)
+  - `dayOfWeek`: Day number (0=Sunday, 1=Monday, ..., 6=Saturday)
+  - `date`: ISO date string (YYYY-MM-DD)
+  - `events`: Array of events for that date
+
+**Features:**
+- Returns next 7 days starting from today
+- Events grouped by date for easy display
+- Only includes `PUBLISHED` events
+- Empty dates won't appear in response
+- Events sorted chronologically within each day
+
+**Use Cases:**
+- Weekly calendar view
+- "This Week's Events" page
+- Event planning dashboard
+- Mobile app weekly schedule
+
+**Frontend Integration Example:**
+```typescript
+// Easy iteration for calendar display
+Object.entries(weekSchedule).forEach(([date, dayData]) => {
+  console.log(`${dayData.dayName}, ${date}: ${dayData.events.length} events`);
+  dayData.events.forEach(event => {
+    // Render event card
+  });
+});
+```
+
+---
+
+### Get Calendar Counts
+
+Get count of published events per date for calendar display. Optimized for performance with caching.
+
+**Endpoint:** `GET /v2/events/calendar/counts`
+
+**Authentication:** Not required
+
+**Query Parameters:**
+- `startDate` (optional): Start date for count range (ISO 8601 format)
+  - Default: First day of current month
+  - Example: `2025-10-01T00:00:00Z`
+- `endDate` (optional): End date for count range (ISO 8601 format)
+  - Default: Last day of current month
+  - Example: `2025-10-31T23:59:59Z`
+- `type` (optional): Filter by event type (see [EventType enum](#eventtype))
+
+**Default Behavior:**
+- If no date range specified, returns counts for current month
+- Maximum recommended range: 3 months for performance
+- Results are cached for 15 minutes
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Calendar counts retrieved successfully",
+  "data": {
+    "counts": {
+      "2025-10-01": 2,
+      "2025-10-05": 1,
+      "2025-10-10": 4,
+      "2025-10-15": 3,
+      "2025-10-17": 5,
+      "2025-10-18": 2,
+      "2025-10-20": 1,
+      "2025-10-25": 3,
+      "2025-10-31": 1
+    },
+    "total": 22
+  }
+}
+```
+
+**Response Structure:**
+- `counts`: Object with dates as keys (YYYY-MM-DD) and event counts as values
+- `total`: Total number of events across all dates in the range
+- Dates with zero events are omitted from the response
+
+**Performance Features:**
+- ✅ Cached for 15 minutes (per date range and type filter)
+- ✅ Returns only counts, not full event data
+- ✅ Optimized database query (single query)
+- ✅ Suitable for rendering large calendar grids
+
+**Use Cases:**
+- Calendar month view with event count badges
+- Heat map visualization of event activity
+- Quick overview of busy vs quiet days
+- Performance-first calendar rendering
+
+**Recommended Workflow:**
+
+1. **Initial Calendar Load:**
+   ```
+   GET /v2/events/calendar/counts?startDate=2025-10-01&endDate=2025-10-31
+   ```
+   Display counts on calendar dates (e.g., show "5" badge on Oct 17)
+
+2. **User Clicks a Date:**
+   ```
+   GET /v2/events?startDate=2025-10-17T00:00:00Z&endDate=2025-10-17T23:59:59Z&status=PUBLISHED
+   ```
+   Fetch and display full event details for that specific date
+
+**Frontend Integration Example:**
+```typescript
+// 1. Load calendar counts
+const response = await fetch('/v2/events/calendar/counts?startDate=2025-10-01&endDate=2025-10-31');
+const { counts } = response.data;
+
+// 2. Render calendar with counts
+dates.forEach(date => {
+  const count = counts[date] || 0;
+  renderCalendarDay(date, count); // Show badge if count > 0
+});
+
+// 3. When user clicks a date with events
+onClick(date) {
+  if (counts[date] > 0) {
+    // Fetch full event details
+    fetchEventsForDate(date);
+  }
+}
+```
+
+**Cache Behavior:**
+- Cache key includes: date range + event type filter
+- Cache TTL: 15 minutes
+- Cache automatically clears when events are created/updated
+- Different filters have separate caches
+
+**Query Optimization Tips:**
+- Request only the months you need to display
+- Use type filter if calendar is category-specific
+- For month-to-month navigation, fetch 1 month at a time
+- Cache results on frontend to avoid repeated calls
 
 ---
 

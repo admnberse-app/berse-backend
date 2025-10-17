@@ -1615,4 +1615,295 @@ export class EventService {
       throw error;
     }
   }
+
+  // ============================================================================
+  // CALENDAR ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get events happening today
+   * Returns all published events for the current date with sorting and filters
+   */
+  static async getTodayEvents(
+    type?: EventType,
+    sortBy: 'date' | 'title' | 'popularity' = 'date',
+    sortOrder: 'asc' | 'desc' = 'asc',
+    timezone: string = 'UTC'
+  ): Promise<EventResponse[]> {
+    try {
+      // Get start and end of today in the specified timezone
+      const today = new Date();
+      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+      const where: Prisma.EventWhereInput = {
+        status: EventStatus.PUBLISHED,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      };
+
+      if (type) {
+        where.type = type;
+      }
+
+      // Build order by clause
+      let orderBy: any = {};
+      if (sortBy === 'popularity') {
+        // We'll sort by engagement after fetching
+        orderBy = { date: sortOrder };
+      } else {
+        orderBy = { [sortBy]: sortOrder };
+      }
+
+      const events = await prisma.event.findMany({
+        where,
+        orderBy,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          date: true,
+          location: true,
+          mapLink: true,
+          maxAttendees: true,
+          notes: true,
+          images: true,
+          isFree: true,
+          price: true,
+          currency: true,
+          status: true,
+          hostType: true,
+          hostId: true,
+          communityId: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      let transformed = events.map(event => this.transformEventResponse(event));
+
+      // Sort by popularity if requested
+      if (sortBy === 'popularity') {
+        transformed.sort((a: any, b: any) => {
+          const aEngagement = (a.rsvpCount || 0) + (a.attendanceCount || 0);
+          const bEngagement = (b.rsvpCount || 0) + (b.attendanceCount || 0);
+          return sortOrder === 'asc' ? aEngagement - bEngagement : bEngagement - aEngagement;
+        });
+      }
+
+      return transformed;
+    } catch (error: any) {
+      logger.error('Error fetching today events:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get events for the next 7 days, grouped by date
+   * Returns events grouped by date with day names
+   */
+  static async getWeekSchedule(
+    type?: EventType,
+    timezone: string = 'UTC'
+  ): Promise<{
+    [date: string]: {
+      dayName: string;
+      dayOfWeek: number;
+      date: string;
+      events: EventResponse[];
+    };
+  }> {
+    try {
+      const today = new Date();
+      const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+      const endOfWeek = new Date(startOfToday);
+      endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+      const where: Prisma.EventWhereInput = {
+        status: EventStatus.PUBLISHED,
+        date: {
+          gte: startOfToday,
+          lt: endOfWeek,
+        },
+      };
+
+      if (type) {
+        where.type = type;
+      }
+
+      const events = await prisma.event.findMany({
+        where,
+        orderBy: { date: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          type: true,
+          date: true,
+          location: true,
+          mapLink: true,
+          maxAttendees: true,
+          notes: true,
+          images: true,
+          isFree: true,
+          price: true,
+          currency: true,
+          status: true,
+          hostType: true,
+          hostId: true,
+          communityId: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              eventRsvps: true,
+              eventAttendances: true,
+              eventTickets: true,
+              tier: true,
+            },
+          },
+        },
+      });
+
+      // Group events by date
+      const groupedEvents: {
+        [date: string]: {
+          dayName: string;
+          dayOfWeek: number;
+          date: string;
+          events: EventResponse[];
+        };
+      } = {};
+
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      events.forEach(event => {
+        const eventDate = new Date(event.date);
+        const dateKey = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        if (!groupedEvents[dateKey]) {
+          groupedEvents[dateKey] = {
+            dayName: dayNames[eventDate.getDay()],
+            dayOfWeek: eventDate.getDay(),
+            date: dateKey,
+            events: [],
+          };
+        }
+
+        groupedEvents[dateKey].events.push(this.transformEventResponse(event));
+      });
+
+      return groupedEvents;
+    } catch (error: any) {
+      logger.error('Error fetching week schedule:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get event counts for calendar view
+   * Returns count of published events per date for performance
+   * Results are cached for 15 minutes
+   */
+  static async getCalendarCounts(
+    startDate?: Date,
+    endDate?: Date,
+    type?: EventType
+  ): Promise<{ [date: string]: number }> {
+    try {
+      // Default to current month if no range specified
+      const today = new Date();
+      const defaultStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const defaultEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+      const start = startDate || defaultStart;
+      const end = endDate || defaultEnd;
+
+      // Generate cache key
+      const cacheKey = `calendar:counts:${start.toISOString()}:${end.toISOString()}:${type || 'all'}`;
+
+      // Check cache first
+      const cached = await cacheService.get<{ [date: string]: number }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      const where: Prisma.EventWhereInput = {
+        status: EventStatus.PUBLISHED,
+        date: {
+          gte: start,
+          lte: end,
+        },
+      };
+
+      if (type) {
+        where.type = type;
+      }
+
+      // Fetch all events in the range (we need dates to group by)
+      const events = await prisma.event.findMany({
+        where,
+        select: {
+          date: true,
+        },
+      });
+
+      // Count events per date
+      const counts: { [date: string]: number } = {};
+      
+      events.forEach(event => {
+        const dateKey = new Date(event.date).toISOString().split('T')[0]; // YYYY-MM-DD
+        counts[dateKey] = (counts[dateKey] || 0) + 1;
+      });
+
+      // Cache for 15 minutes
+      await cacheService.set(cacheKey, counts, { ttl: CacheTTL.MEDIUM });
+
+      return counts;
+    } catch (error: any) {
+      logger.error('Error fetching calendar counts:', error);
+      throw error;
+    }
+  }
 }

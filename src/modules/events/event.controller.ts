@@ -445,4 +445,62 @@ export class EventController {
       next(error);
     }
   }
+
+  // ============================================================================
+  // CALENDAR ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get events happening today
+   * @route GET /v2/events/calendar/today
+   */
+  static async getTodayEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const type = req.query.type as any;
+      const sortBy = (req.query.sortBy as any) || 'date';
+      const sortOrder = (req.query.sortOrder as any) || 'asc';
+      const timezone = (req.query.timezone as string) || 'UTC';
+
+      const events = await EventService.getTodayEvents(type, sortBy, sortOrder, timezone);
+
+      sendSuccess(res, { events, count: events.length }, 'Today events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get events for the next 7 days, grouped by date
+   * @route GET /v2/events/calendar/week
+   */
+  static async getWeekSchedule(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const type = req.query.type as any;
+      const timezone = (req.query.timezone as string) || 'UTC';
+
+      const schedule = await EventService.getWeekSchedule(type, timezone);
+
+      sendSuccess(res, schedule, 'Week schedule retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get event counts for calendar view
+   * @route GET /v2/events/calendar/counts
+   */
+  static async getCalendarCounts(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+      const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+      const type = req.query.type as any;
+
+      const counts = await EventService.getCalendarCounts(startDate, endDate, type);
+
+      sendSuccess(res, { counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0) }, 'Calendar counts retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }

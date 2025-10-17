@@ -17,7 +17,10 @@ import {
   getRecommendedEventsValidators,
   getEventsByHostValidators,
   getCommunityEventsValidators,
-  getUserAttendedEventsValidators
+  getUserAttendedEventsValidators,
+  getTodayEventsValidators,
+  getWeekScheduleValidators,
+  getCalendarCountsValidators
 } from './event.validators';
 
 const router = Router();
@@ -1057,6 +1060,213 @@ router.get(
   getUserAttendedEventsValidators,
   handleValidationErrors,
   EventController.getUserAttendedEvents
+);
+
+// ============================================================================
+// CALENDAR ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/events/calendar/today:
+ *   get:
+ *     summary: Get events happening today
+ *     description: Retrieve all published events happening today with sorting and filtering options
+ *     tags: [Events - Calendar]
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *         description: Filter by event type
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [date, title, popularity]
+ *           default: date
+ *         description: Sort events by field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order
+ *       - in: query
+ *         name: timezone
+ *         schema:
+ *           type: string
+ *           default: UTC
+ *         description: Timezone for date calculation (e.g., Asia/Kuala_Lumpur)
+ *     responses:
+ *       200:
+ *         description: Today events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Today events retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Event'
+ *                     count:
+ *                       type: integer
+ *                       example: 5
+ */
+router.get(
+  '/calendar/today',
+  getTodayEventsValidators,
+  handleValidationErrors,
+  EventController.getTodayEvents
+);
+
+/**
+ * @swagger
+ * /v2/events/calendar/week:
+ *   get:
+ *     summary: Get events for the next 7 days
+ *     description: Retrieve events for the next 7 days, grouped by date with day names and timezone support
+ *     tags: [Events - Calendar]
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *         description: Filter by event type
+ *       - in: query
+ *         name: timezone
+ *         schema:
+ *           type: string
+ *           default: UTC
+ *         description: Timezone for date calculation (e.g., Asia/Kuala_Lumpur)
+ *     responses:
+ *       200:
+ *         description: Week schedule retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Week schedule retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: object
+ *                     properties:
+ *                       dayName:
+ *                         type: string
+ *                         example: Monday
+ *                       dayOfWeek:
+ *                         type: integer
+ *                         example: 1
+ *                       date:
+ *                         type: string
+ *                         example: "2025-10-17"
+ *                       events:
+ *                         type: array
+ *                         items:
+ *                           $ref: '#/components/schemas/Event'
+ *                   example:
+ *                     "2025-10-17":
+ *                       dayName: "Friday"
+ *                       dayOfWeek: 5
+ *                       date: "2025-10-17"
+ *                       events: []
+ */
+router.get(
+  '/calendar/week',
+  getWeekScheduleValidators,
+  handleValidationErrors,
+  EventController.getWeekSchedule
+);
+
+/**
+ * @swagger
+ * /v2/events/calendar/counts:
+ *   get:
+ *     summary: Get event counts for calendar view
+ *     description: |
+ *       Retrieve count of published events per date for calendar display.
+ *       Defaults to current month if no date range specified.
+ *       Results are cached for 15 minutes for performance.
+ *       
+ *       **Use case:** Display event counts on calendar dates, then fetch full event details
+ *       when user clicks a specific date using GET /v2/events?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ *     tags: [Events - Calendar]
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for count range (defaults to first day of current month)
+ *         example: "2025-10-01T00:00:00Z"
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for count range (defaults to last day of current month)
+ *         example: "2025-10-31T23:59:59Z"
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *         description: Filter by event type
+ *     responses:
+ *       200:
+ *         description: Calendar counts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Calendar counts retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     counts:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: integer
+ *                       example:
+ *                         "2025-10-17": 3
+ *                         "2025-10-18": 5
+ *                         "2025-10-25": 2
+ *                     total:
+ *                       type: integer
+ *                       example: 10
+ *                       description: Total number of events in the date range
+ */
+router.get(
+  '/calendar/counts',
+  getCalendarCountsValidators,
+  handleValidationErrors,
+  EventController.getCalendarCounts
 );
 
 export default router;
