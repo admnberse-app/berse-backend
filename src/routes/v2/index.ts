@@ -11,6 +11,7 @@ import { gamificationRoutes } from '../../modules/gamification';
 import { communityRoutes } from '../../modules/communities';
 import notificationRoutes from '../../modules/user/notification.routes';
 import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
+import { paymentRoutes } from '../../modules/payments';
 
 const router = Router();
 
@@ -103,6 +104,12 @@ router.use('/gamification', gamificationRoutes);
  */
 router.use('/marketplace', marketplaceRoutes);
 
+/**
+ * Payment routes
+ * Base path: /v2/payments
+ */
+router.use('/payments', paymentRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -160,6 +167,7 @@ router.get('/health', (req, res) => {
       cardgame: '/v2/cardgame',
       gamification: '/v2/gamification',
       marketplace: '/v2/marketplace',
+      payments: '/v2/payments',
     },
   });
 });
@@ -389,6 +397,21 @@ router.get('/docs', (req, res) => {
         'GET /v2/gamification/leaderboard/events': 'Get events leaderboard (auth required)',
         'GET /v2/gamification/leaderboard/connections': 'Get connections leaderboard (auth required)',
         'GET /v2/gamification/leaderboard/referrals': 'Get referrals leaderboard (auth required)',
+      },
+      payments: {
+        'POST /v2/payments/intent': 'Create payment intent (auth required)',
+        'POST /v2/payments/confirm': 'Confirm payment (auth required)',
+        'POST /v2/payments/:transactionId/capture': 'Capture authorized payment (auth required)',
+        'POST /v2/payments/:transactionId/refund': 'Refund payment (auth required)',
+        'GET /v2/payments/transactions': 'Get user transactions with filters (auth required)',
+        'GET /v2/payments/:transactionId': 'Get transaction details (auth required)',
+        'POST /v2/payments/methods': 'Add payment method (auth required)',
+        'GET /v2/payments/methods': 'Get user payment methods (auth required)',
+        'PUT /v2/payments/methods/:paymentMethodId': 'Update payment method (auth required)',
+        'DELETE /v2/payments/methods/:paymentMethodId': 'Delete payment method (auth required)',
+        'GET /v2/payments/payouts': 'Get user payouts (auth required)',
+        'POST /v2/payments/calculate-fees': 'Calculate transaction fees',
+        'POST /v2/payments/webhooks/:provider': 'Handle payment provider webhooks',
       },
     },
     authentication: {

@@ -288,6 +288,7 @@ router.get(
  */
 router.post(
   '/calculate-fees',
+  optionalAuth,
   asyncHandler(paymentController.calculateFees.bind(paymentController))
 );
 
