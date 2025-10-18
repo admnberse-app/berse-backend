@@ -3,7 +3,7 @@ import { UserController } from './user.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { updateProfileValidators, searchUsersValidators } from './user.validators';
-import { upload } from '../../middleware/upload';
+import { uploadImage } from '../../middleware/upload';
 import { uploadLimiter } from '../../middleware/rateLimiter';
 
 const router = Router();
@@ -199,7 +199,7 @@ router.put(
 router.post(
   '/upload-avatar',
   uploadLimiter,
-  upload.single('avatar'),
+  uploadImage.single('avatar'),
   UserController.uploadAvatar
 );
 

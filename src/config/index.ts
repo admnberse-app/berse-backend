@@ -38,6 +38,14 @@ const envSchema = z.object({
   MAX_FILE_SIZE: z.string().default('10mb'),
   UPLOAD_DIR: z.string().default('uploads'),
   
+  // Digital Ocean Spaces
+  SPACES_ENDPOINT: z.string().optional(),
+  SPACES_BUCKET: z.string().optional(),
+  SPACES_REGION: z.string().optional(),
+  SPACES_ACCESS_KEY_ID: z.string().optional(),
+  SPACES_SECRET_ACCESS_KEY: z.string().optional(),
+  SPACES_CDN_ENDPOINT: z.string().optional(),
+  
   // Email
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().default('587').transform((val) => parseInt(val, 10)),
@@ -178,6 +186,16 @@ export const config = {
   upload: {
     maxFileSize: parseFileSize(env.MAX_FILE_SIZE),
     uploadDir: env.UPLOAD_DIR,
+  },
+  
+  // Digital Ocean Spaces
+  spaces: {
+    endpoint: env.SPACES_ENDPOINT || 'https://sgp1.digitaloceanspaces.com',
+    bucket: env.SPACES_BUCKET || '',
+    region: env.SPACES_REGION || 'sgp1',
+    accessKeyId: env.SPACES_ACCESS_KEY_ID || '',
+    secretAccessKey: env.SPACES_SECRET_ACCESS_KEY || '',
+    cdnEndpoint: env.SPACES_CDN_ENDPOINT,
   },
   
   // Email

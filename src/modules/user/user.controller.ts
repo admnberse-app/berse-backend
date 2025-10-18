@@ -13,10 +13,27 @@ import { RecommendationsService } from '../../services/recommendations.service';
 export class UserController {
   /**
    * Helper function to ensure consistent response format
-   * Note: Relation names are now clean, no transformation needed
+   * Transforms storage keys to full URLs dynamically
    */
   private static transformUserResponse(user: any) {
-    // No transformation needed anymore - relation names are already clean
+    if (!user) return user;
+
+    // Transform profile picture key to full URL
+    if (user.profile?.profilePicture) {
+      const profilePicture = user.profile.profilePicture;
+      
+      // If it's already a full URL (legacy data or base64), keep it
+      if (profilePicture.startsWith('http://') || 
+          profilePicture.startsWith('https://') || 
+          profilePicture.startsWith('data:')) {
+        // Keep as is
+      } else {
+        // It's a storage key, generate full URL
+        const { storageService } = require('../../services/storage.service');
+        user.profile.profilePicture = storageService.getPublicUrl(profilePicture);
+      }
+    }
+
     return user;
   }
 
@@ -1229,32 +1246,80 @@ export class UserController {
       const { image } = req.body; // For base64 image
       const file = req.file; // For file upload
 
-      let profilePictureUrl;
+      let profilePictureKey: string; // Store key, not URL
+      let uploadedFileKey: string | undefined;
+      let fullUrl: string; // For response only
 
       if (image) {
-        // Handle base64 image
-        profilePictureUrl = image;
+        // Handle base64 image (legacy support) - store as-is
+        profilePictureKey = image;
+        fullUrl = image;
       } else if (file) {
-        // Handle file upload
-        profilePictureUrl = `/uploads/${file.filename}`;
+        // Upload to Digital Ocean Spaces
+        const { storageService } = await import('../../services/storage.service');
+        
+        const uploadResult = await storageService.uploadFile(file, 'avatars', {
+          optimize: true,
+          isPublic: true,
+          userId,
+        });
+
+        // Store only the key in database
+        profilePictureKey = uploadResult.key;
+        uploadedFileKey = uploadResult.key;
+        fullUrl = uploadResult.url; // For response
+
+        logger.info('Avatar uploaded to Spaces', {
+          userId,
+          key: uploadResult.key,
+          url: uploadResult.url,
+          size: uploadResult.size,
+        });
       } else {
         throw new AppError('No image provided', 400);
       }
 
-      // Update user's profile picture
+      // Get current profile to check for old avatar
+      const currentProfile = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { profilePicture: true },
+      });
+
+      // Update user's profile picture with KEY only
       await prisma.userProfile.upsert({
         where: { userId },
         update: {
-          profilePicture: profilePictureUrl,
+          profilePicture: profilePictureKey,
         },
         create: {
           userId,
-          profilePicture: profilePictureUrl,
+          profilePicture: profilePictureKey,
         } as any,
       });
 
+      // Delete old avatar from Spaces if it exists
+      if (currentProfile?.profilePicture && uploadedFileKey) {
+        try {
+          const { storageService } = await import('../../services/storage.service');
+          // Old value might be a key or a full URL (legacy data)
+          const oldKey = currentProfile.profilePicture.startsWith('http://') || 
+                         currentProfile.profilePicture.startsWith('https://')
+            ? storageService.extractKeyFromUrl(currentProfile.profilePicture)
+            : currentProfile.profilePicture;
+            
+          if (oldKey && !oldKey.startsWith('data:')) { // Don't try to delete base64 images
+            await storageService.deleteFile(oldKey);
+            logger.info('Old avatar deleted from Spaces', { userId, oldKey });
+          }
+        } catch (error) {
+          logger.warn('Failed to delete old avatar', { userId, error });
+          // Don't fail the request if old file deletion fails
+        }
+      }
+
       logger.info('Profile picture uploaded', { userId });
-      sendSuccess(res, { profilePicture: profilePictureUrl }, 'Profile picture uploaded successfully');
+      // Return full URL in response for immediate use
+      sendSuccess(res, { profilePicture: fullUrl }, 'Profile picture uploaded successfully');
     } catch (error) {
       next(error);
     }
