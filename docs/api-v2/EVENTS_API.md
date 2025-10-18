@@ -275,6 +275,8 @@ Get a paginated, filterable list of events. **When no events match the applied f
 
 **Authentication:** Optional (public endpoint, but shows user-specific data if authenticated)
 
+**Note:** The list endpoint returns basic event data. Use `GET /v2/events/:id` for detailed event information including `isOwner`, `hasRsvped`, and `hasTicket` flags.
+
 **Query Parameters:**
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -296,9 +298,11 @@ Get a paginated, filterable list of events. **When no events match the applied f
 | `maxPrice` | number | No | - | Maximum ticket price |
 
 **Fallback Behavior:**
-- When filters are applied but no events match the criteria, the API returns upcoming published events (sorted by date ascending)
-- The response includes `isFallback: true` to indicate fallback events are being shown
-- This ensures users always see relevant events even when their specific filters don't match any events
+- When user's exact filters return no results, the API shows any upcoming published events as fallback
+- Fallback applies only these base filters: `status=PUBLISHED` and `date>=today`
+- All user filters (type, location, price, etc.) are removed in fallback
+- Response includes `isFallback: true` and message changes to: **"No events match your filters. Showing upcoming events instead."**
+- This ensures users are clearly informed when their filters don't match, while still seeing available events
 
 **Examples:**
 ```
@@ -357,18 +361,18 @@ GET /v2/events?communityId=cm123456789&status=PUBLISHED
 ```json
 {
   "status": "success",
-  "message": "Events retrieved successfully",
+  "message": "No events match your filters. Showing upcoming events instead.",
   "data": {
     "events": [
       {
         "id": "evt_cm999888777",
-        "title": "Alternative Event 1",
+        "title": "Community Gathering",
         "description": "An upcoming event",
-        "type": "SPORTS",
+        "type": "SOCIAL",
         "date": "2025-10-20T10:00:00.000Z",
-        "location": "Petaling Jaya Stadium",
-        "isFree": false,
-        "price": 25,
+        "location": "Petaling Jaya",
+        "isFree": true,
+        "price": 0,
         "currency": "MYR",
         "status": "PUBLISHED",
         "hostType": "PERSONAL",
@@ -390,7 +394,11 @@ GET /v2/events?communityId=cm123456789&status=PUBLISHED
 }
 ```
 
-**Note:** The `isFallback` field is only present when fallback events are returned. Mobile apps should display a message to users indicating that alternative events are being shown because no events matched their filters.
+**Mobile UI Handling:**
+- Check for `isFallback: true` in the response
+- Display the message from the API: **"No events match your filters. Showing upcoming events instead."**
+- Consider showing a banner or alert to make it clear these are alternative events, not exact matches
+- Fallback shows any upcoming published events (all user filters removed)
 
 ---
 
@@ -404,6 +412,25 @@ Get detailed information about a specific event.
 
 **Path Parameters:**
 - `id` (required): Event ID
+
+**Response Fields:**
+- **Basic Event Info:** title, description, type, date, location, pricing, status, etc.
+- **Host & Community:** Full host and community details with images
+- **Ticket Tiers:** All active ticket tiers with availability status
+- **User-Specific Fields (when authenticated):**
+  - `hasRsvped` - Boolean indicating if user has RSVP'd
+  - `hasTicket` - Boolean indicating if user has purchased a ticket
+  - `isOwner` - Boolean indicating if authenticated user is the event creator (use this to show/hide edit/delete buttons)
+  - `userRsvp` - User's RSVP details if exists
+  - `userTicket` - User's ticket details if exists
+- **Attendees Preview:** First 5 attendees with profile info (use `GET /v2/events/:id/attendees` for full list)
+- **RSVPs Preview:** First 5 most recent RSVPs with profile info
+- **Event Statistics:**
+  - `totalAttendees` - Number of checked-in attendees
+  - `totalRsvps` - Number of RSVPs
+  - `totalTicketsSold` - Number of tickets sold
+  - `totalTicketTiers` - Number of ticket tiers
+  - `attendanceRate` - Percentage of RSVPs who attended (0-100)
 
 **Response:** `200 OK`
 ```json
@@ -487,6 +514,41 @@ Get detailed information about a specific event.
       "quantity": 2,
       "purchasedAt": "2025-10-15T10:00:00.000Z"
     },
+    "hasRsvped": false,
+    "hasTicket": true,
+    "isOwner": false,
+    "attendeesPreview": [
+      {
+        "id": "usr_abc123",
+        "fullName": "Jane Smith",
+        "username": "janesmith",
+        "profilePicture": "https://cdn.berse.com/users/jane.jpg",
+        "checkedInAt": "2025-10-16T09:30:00.000Z"
+      },
+      {
+        "id": "usr_def456",
+        "fullName": "Bob Johnson",
+        "username": "bjohnson",
+        "profilePicture": "https://cdn.berse.com/users/bob.jpg",
+        "checkedInAt": "2025-10-16T09:25:00.000Z"
+      }
+    ],
+    "rsvpsPreview": [
+      {
+        "id": "usr_ghi789",
+        "fullName": "Alice Williams",
+        "username": "awilliams",
+        "profilePicture": "https://cdn.berse.com/users/alice.jpg",
+        "rsvpedAt": "2025-10-14T15:20:00.000Z"
+      }
+    ],
+    "stats": {
+      "totalAttendees": 20,
+      "totalRsvps": 30,
+      "totalTicketsSold": 38,
+      "totalTicketTiers": 2,
+      "attendanceRate": 67
+    },
     "createdAt": "2025-10-16T10:00:00.000Z",
     "updatedAt": "2025-10-16T10:00:00.000Z"
   }
@@ -495,6 +557,10 @@ Get detailed information about a specific event.
 
 **Error Responses:**
 - `404 Not Found` - Event not found
+
+**Related Endpoints:**
+- For full attendees list: `GET /v2/events/:id/attendees` (requires authentication and ownership)
+- For full RSVP list: View through the attendees endpoint which includes all RSVPs
 
 ---
 

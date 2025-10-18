@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../types';
 import { EventService } from './event.service';
+import { QRCodeService } from '../user/qr-code.service';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
 import { 
@@ -69,7 +70,11 @@ export class EventController {
 
       const result = await EventService.getEvents(query, userId);
 
-      sendSuccess(res, result, 'Events retrieved successfully');
+      const message = result.isFallback 
+        ? 'No events match your filters. Showing upcoming events instead.'
+        : 'Events retrieved successfully';
+
+      sendSuccess(res, result, message);
     } catch (error) {
       next(error);
     }
@@ -316,6 +321,64 @@ export class EventController {
 
       logger.info(`Attendee checked in for event ${id}`);
       sendSuccess(res, attendance, 'Check-in successful', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Scan QR code for event check-in
+   * @route POST /v2/events/scan-qr
+   */
+  static async scanQRCodeForCheckin(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const organizerId = req.user!.id;
+      const { qrData } = req.body;
+
+      if (!qrData) {
+        throw new AppError('QR code data is required', 400);
+      }
+
+      // Validate QR code
+      const qrValidation = await QRCodeService.validateQRCode(qrData);
+
+      if (qrValidation.purpose !== 'CHECKIN') {
+        throw new AppError('This QR code is not for event check-in', 400);
+      }
+
+      const attendeeUserId = qrValidation.userId;
+      const eventId = qrValidation.eventId!;
+
+      // Verify organizer has permission to check-in for this event
+      const event = await EventService.getEventById(eventId, organizerId);
+      if (!event.isOwner) {
+        throw new AppError('You do not have permission to check-in attendees for this event', 403);
+      }
+
+      // Check-in the attendee
+      const data = {
+        eventId,
+        userId: attendeeUserId,
+        qrCode: qrData,
+      };
+
+      const attendance = await EventService.checkInAttendee(eventId, data);
+
+      // Invalidate QR code nonce to prevent reuse
+      await QRCodeService.invalidateQRCode(qrValidation.userId);
+
+      logger.info(`QR check-in: Event ${eventId}, Attendee ${attendeeUserId}`);
+      
+      sendSuccess(res, {
+        ...qrValidation,
+        attendance,
+        event: {
+          id: event.id,
+          title: event.title,
+          date: event.date,
+        },
+        message: 'Check-in successful',
+      }, 'Attendee checked in successfully via QR code', 201);
     } catch (error) {
       next(error);
     }

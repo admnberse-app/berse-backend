@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { UserController } from './user.controller';
+import { QRCodeController } from './qr-code.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { updateProfileValidators, searchUsersValidators } from './user.validators';
+import { generateQRCodeValidators, scanQRCodeValidators } from './qr-code.validators';
 import { uploadImage } from '../../middleware/upload';
 import { uploadLimiter } from '../../middleware/rateLimiter';
 
@@ -1032,6 +1034,280 @@ router.get('/login-history', UserController.getUserLoginHistory);
  *         $ref: '#/components/responses/NotFoundError'
  */
 router.delete('/sessions/:sessionToken', UserController.terminateSession);
+
+// ============================================================================
+// QR CODE ROUTES (Must be before /:id route)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/me/qr-code:
+ *   post:
+ *     summary: Generate QR code for user identity
+ *     description: |
+ *       Generate a secure, time-limited QR code for user identification.
+ *       
+ *       **Two purposes:**
+ *       - `CONNECT`: For making connections with other users (15 min validity)
+ *       - `CHECKIN`: For event check-in (5 min validity, requires eventId)
+ *       
+ *       QR codes are JWT-signed and include a one-time nonce to prevent replay attacks.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - purpose
+ *             properties:
+ *               purpose:
+ *                 type: string
+ *                 enum: [CONNECT, CHECKIN]
+ *                 description: Purpose of the QR code
+ *                 example: CONNECT
+ *               eventId:
+ *                 type: string
+ *                 description: Event ID (required when purpose is CHECKIN)
+ *                 example: evt_123abc
+ *     responses:
+ *       201:
+ *         description: QR code generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: QR code generated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     qrData:
+ *                       type: string
+ *                       description: JWT token to encode in QR code
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     purpose:
+ *                       type: string
+ *                       enum: [CONNECT, CHECKIN]
+ *                       example: CONNECT
+ *                     expiresAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2025-10-19T03:15:00.000Z
+ *                     expiresIn:
+ *                       type: integer
+ *                       description: Seconds until expiration
+ *                       example: 900
+ *                     userId:
+ *                       type: string
+ *                       example: user_123
+ *                     eventId:
+ *                       type: string
+ *                       description: Present when purpose is CHECKIN
+ *                       example: evt_123abc
+ *       400:
+ *         description: Invalid request (missing eventId for CHECKIN, etc.)
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: User not active or doesn't have ticket/RSVP for event
+ *       404:
+ *         description: Event not found
+ */
+router.post(
+  '/me/qr-code',
+  generateQRCodeValidators,
+  handleValidationErrors,
+  QRCodeController.generateQRCode
+);
+
+/**
+ * @swagger
+ * /v2/users/me/qr-code/image:
+ *   post:
+ *     summary: Generate QR code as PNG image
+ *     description: |
+ *       Generate a QR code as a PNG image that can be displayed directly in mobile apps.
+ *       Returns binary image data instead of JSON. Use the response headers to get metadata.
+ *       
+ *       **Response Headers:**
+ *       - `X-QR-Expires-In`: Validity period in seconds
+ *       - `X-QR-Purpose`: CONNECT or CHECKIN
+ *       - `X-QR-Event-Id`: Present when purpose is CHECKIN
+ *       
+ *       **Recommended for:**
+ *       - Mobile apps that want to display QR code directly
+ *       - Web apps that need image-based QR codes
+ *       - Systems without client-side QR generation libraries
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - purpose
+ *             properties:
+ *               purpose:
+ *                 type: string
+ *                 enum: [CONNECT, CHECKIN]
+ *                 description: Purpose of the QR code
+ *                 example: CONNECT
+ *               eventId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Required when purpose is CHECKIN
+ *                 example: 550e8400-e29b-41d4-a716-446655440000
+ *               size:
+ *                 type: integer
+ *                 description: Image size in pixels (width and height)
+ *                 default: 300
+ *                 minimum: 100
+ *                 maximum: 1000
+ *                 example: 300
+ *     responses:
+ *       200:
+ *         description: QR code image generated successfully
+ *         headers:
+ *           Content-Type:
+ *             schema:
+ *               type: string
+ *               example: image/png
+ *           X-QR-Expires-In:
+ *             schema:
+ *               type: integer
+ *               example: 900
+ *             description: QR code validity in seconds
+ *           X-QR-Purpose:
+ *             schema:
+ *               type: string
+ *               example: CONNECT
+ *             description: Purpose of the QR code
+ *           X-QR-Event-Id:
+ *             schema:
+ *               type: string
+ *               format: uuid
+ *             description: Event ID (only for CHECKIN purpose)
+ *         content:
+ *           image/png:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Invalid request (e.g., CHECKIN without eventId)
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: User not active or doesn't have ticket/RSVP for event
+ *       404:
+ *         description: Event not found
+ */
+router.post(
+  '/me/qr-code/image',
+  generateQRCodeValidators,
+  handleValidationErrors,
+  QRCodeController.generateQRCodeImage
+);
+
+/**
+ * @swagger
+ * /v2/users/qr-code/validate:
+ *   post:
+ *     summary: Validate QR code
+ *     description: |
+ *       Validate a QR code and retrieve user information.
+ *       This is a general validation endpoint - for specific actions (connections, check-ins),
+ *       use the dedicated scan endpoints in their respective modules.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qrData
+ *             properties:
+ *               qrData:
+ *                 type: string
+ *                 description: JWT token from QR code
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *     responses:
+ *       200:
+ *         description: QR code is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: QR code validated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       example: true
+ *                     purpose:
+ *                       type: string
+ *                       enum: [CONNECT, CHECKIN]
+ *                       example: CONNECT
+ *                     userId:
+ *                       type: string
+ *                       example: user_123
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         fullName:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         profilePicture:
+ *                           type: string
+ *                         trustLevel:
+ *                           type: string
+ *                         trustScore:
+ *                           type: number
+ *                     eventId:
+ *                       type: string
+ *                       description: Present when purpose is CHECKIN
+ *                     message:
+ *                       type: string
+ *                       example: QR code is valid
+ *       400:
+ *         description: Invalid or expired QR code
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: User account not active
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/qr-code/validate',
+  scanQRCodeValidators,
+  handleValidationErrors,
+  QRCodeController.validateQRCode
+);
 
 // ============================================================================
 // GET USER BY ID (Must be after all specific routes)

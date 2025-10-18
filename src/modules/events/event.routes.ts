@@ -76,10 +76,13 @@ router.get('/types', EventController.getEventTypes);
  *     description: |
  *       Retrieve all events with optional filters and pagination.
  *       
- *       **Fallback Behavior:** When filters are applied but no events match the criteria, 
- *       the API automatically returns upcoming published events as a fallback. 
- *       The response will include `isFallback: true` to indicate alternative events are being shown.
- *       This ensures users always see relevant events even when their specific filters don't match any events.
+ *       **Fallback Behavior:** When user's exact filters return no results:
+ *       - Shows any upcoming published events (status=PUBLISHED, date>=today)
+ *       - All user filters are removed in fallback
+ *       - Response includes `isFallback: true`
+ *       - Message changes to: "No events match your filters. Showing upcoming events instead."
+ *       
+ *       This clearly informs users when their filters don't match while showing available events.
  *     tags: [Events]
  *     parameters:
  *       - in: query
@@ -280,7 +283,15 @@ router.post(
  *         description: Event ID
  *     responses:
  *       200:
- *         description: Event retrieved successfully
+ *         description: |
+ *           Event retrieved successfully with comprehensive details including:
+ *           - Basic event information
+ *           - Host and community details
+ *           - Ticket tiers (active only)
+ *           - User interaction status (isOwner, hasRsvped, hasTicket)
+ *           - Preview of attendees (first 5)
+ *           - Preview of RSVPs (first 5)
+ *           - Event statistics (attendance rate, totals)
  *         content:
  *           application/json:
  *             schema:
@@ -289,7 +300,61 @@ router.post(
  *                 success:
  *                   type: boolean
  *                 data:
- *                   $ref: '#/components/schemas/Event'
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Event'
+ *                     - type: object
+ *                       properties:
+ *                         isOwner:
+ *                           type: boolean
+ *                           description: True if the authenticated user is the event creator
+ *                         attendeesPreview:
+ *                           type: array
+ *                           description: Preview of first 5 attendees (use GET /v2/events/:id/attendees for full list)
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               fullName:
+ *                                 type: string
+ *                               username:
+ *                                 type: string
+ *                               profilePicture:
+ *                                 type: string
+ *                               checkedInAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                         rsvpsPreview:
+ *                           type: array
+ *                           description: Preview of first 5 RSVPs (most recent)
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               fullName:
+ *                                 type: string
+ *                               username:
+ *                                 type: string
+ *                               profilePicture:
+ *                                 type: string
+ *                               rsvpedAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                         stats:
+ *                           type: object
+ *                           properties:
+ *                             totalAttendees:
+ *                               type: integer
+ *                             totalRsvps:
+ *                               type: integer
+ *                             totalTicketsSold:
+ *                               type: integer
+ *                             totalTicketTiers:
+ *                               type: integer
+ *                             attendanceRate:
+ *                               type: integer
+ *                               description: Percentage of RSVPs who actually attended (0-100)
  *       404:
  *         description: Event not found
  */
@@ -888,6 +953,105 @@ router.get(
   eventIdValidator,
   handleValidationErrors,
   EventController.getEventAttendees
+);
+
+/**
+ * @swagger
+ * /v2/events/scan-qr:
+ *   post:
+ *     summary: Scan QR code for event check-in
+ *     description: |
+ *       Scan an attendee's QR code to check them in to an event.
+ *       Only event organizers can use this endpoint.
+ *       
+ *       **Requirements:**
+ *       - QR code must be a CHECKIN-purpose code
+ *       - Attendee must have a valid ticket or RSVP
+ *       - Organizer must own the event
+ *       - QR code is invalidated after use to prevent replay attacks
+ *     tags: [Events - Attendance]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - qrData
+ *             properties:
+ *               qrData:
+ *                 type: string
+ *                 description: JWT token from scanned QR code
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *     responses:
+ *       201:
+ *         description: Check-in successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Attendee checked in successfully via QR code
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       example: true
+ *                     purpose:
+ *                       type: string
+ *                       example: CHECKIN
+ *                     userId:
+ *                       type: string
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         fullName:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         profilePicture:
+ *                           type: string
+ *                         trustLevel:
+ *                           type: string
+ *                         trustScore:
+ *                           type: number
+ *                     eventId:
+ *                       type: string
+ *                     attendance:
+ *                       type: object
+ *                       description: Attendance record details
+ *                     event:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *                         date:
+ *                           type: string
+ *       400:
+ *         description: Invalid QR code, wrong purpose, or already checked in
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: Not authorized to check-in attendees for this event
+ *       404:
+ *         description: Event or attendance record not found
+ */
+router.post(
+  '/scan-qr',
+  authenticateToken,
+  EventController.scanQRCodeForCheckin
 );
 
 // ============================================================================

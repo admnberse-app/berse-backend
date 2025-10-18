@@ -77,31 +77,57 @@ router.post(
  * /v2/communities:
  *   get:
  *     summary: Get all communities with filters
+ *     description: |
+ *       Retrieve all communities with optional filters and pagination.
+ *       
+ *       **Fallback Behavior:** When filters return no results:
+ *       - Shows all communities (most recent first)
+ *       - Response includes `isFallback: true`
+ *       - Message changes to: "No communities match your filters. Showing all communities instead."
  *     tags: [Communities]
  *     parameters:
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
+ *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           default: 20
+ *         description: Items per page
  *       - in: query
  *         name: category
  *         schema:
  *           type: string
+ *         description: Filter by category
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
+ *         description: Search in name and description
  *       - in: query
  *         name: isVerified
  *         schema:
  *           type: boolean
+ *         description: Filter verified communities
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, name, memberCount]
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
  *     responses:
  *       200:
- *         description: Communities retrieved successfully
+ *         description: Communities retrieved successfully (includes isFallback field when showing alternatives)
  */
 router.get(
   '/',
@@ -280,7 +306,13 @@ router.get(
  * @swagger
  * /v2/communities/{communityId}:
  *   get:
- *     summary: Get community details
+ *     summary: Get community details with enhanced data
+ *     description: |
+ *       Get comprehensive community details including:
+ *       - Basic community information
+ *       - Members preview (first 5 members)
+ *       - Upcoming events preview (first 3 events)
+ *       - User membership status (if authenticated)
  *     tags: [Communities]
  *     parameters:
  *       - in: path
@@ -288,9 +320,10 @@ router.get(
  *         required: true
  *         schema:
  *           type: string
+ *         description: Community ID
  *     responses:
  *       200:
- *         description: Community retrieved successfully
+ *         description: Community details retrieved with members preview, events preview, and user status
  *       404:
  *         description: Community not found
  */

@@ -110,6 +110,33 @@ export interface CommunityResponse {
   eventCount?: number;
   role?: CommunityRole;
   isApproved?: boolean;
+  membersPreview?: Array<{
+    id: string;
+    fullName: string;
+    username?: string;
+    profilePicture?: string;
+    trustLevel: string;
+    role: CommunityRole;
+    joinedAt: string;
+  }>;
+  upcomingEventsPreview?: Array<{
+    id: string;
+    title: string;
+    type: string;
+    date: string;
+    location: string;
+    images: string[];
+    isFree: boolean;
+    price?: number;
+    rsvpCount: number;
+  }>;
+  userStatus?: {
+    isMember: boolean;
+    isAdmin: boolean;
+    isModerator: boolean;
+    isPending: boolean;
+    role?: CommunityRole;
+  };
 }
 
 export interface UserBasicInfo {
@@ -117,7 +144,6 @@ export interface UserBasicInfo {
   fullName: string;
   username?: string;
   profilePicture?: string;
-  trustScore: number;
   trustLevel: string;
 }
 
@@ -146,6 +172,7 @@ export interface PaginatedCommunitiesResponse {
   page: number;
   limit: number;
   totalPages: number;
+  isFallback?: boolean;
 }
 
 export interface PaginatedCommunityMembersResponse {

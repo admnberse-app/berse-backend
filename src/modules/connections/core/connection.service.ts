@@ -31,6 +31,58 @@ export class ConnectionService {
   // ============================================================================
   
   /**
+   * Get connection status between two users
+   */
+  static async getConnectionStatus(
+    userId: string,
+    otherUserId: string
+  ): Promise<'CONNECTED' | 'PENDING' | 'BLOCKED' | 'NONE'> {
+    try {
+      // Check if blocked
+      const blockExists = await prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: userId, blockedId: otherUserId },
+            { blockerId: otherUserId, blockedId: userId },
+          ],
+        },
+      });
+
+      if (blockExists) {
+        return 'BLOCKED';
+      }
+
+      // Check connection
+      const connection = await prisma.userConnection.findFirst({
+        where: {
+          OR: [
+            { initiatorId: userId, receiverId: otherUserId },
+            { initiatorId: otherUserId, receiverId: userId },
+          ],
+        },
+        select: { status: true },
+      });
+
+      if (!connection) {
+        return 'NONE';
+      }
+
+      if (connection.status === ConnectionStatus.ACCEPTED) {
+        return 'CONNECTED';
+      }
+
+      if (connection.status === ConnectionStatus.PENDING) {
+        return 'PENDING';
+      }
+
+      return 'NONE';
+    } catch (error) {
+      logger.error('Error getting connection status:', error);
+      return 'NONE';
+    }
+  }
+
+  /**
    * Send a connection request
    */
   static async sendConnectionRequest(

@@ -86,7 +86,12 @@ export class CommunityController {
     };
 
     const result = await communityService.getCommunities(query);
-    sendSuccess(res, result);
+    
+    const message = (result as any).isFallback
+      ? 'No communities match your filters. Showing all communities instead.'
+      : 'Communities retrieved successfully';
+
+    sendSuccess(res, result, message);
   }
 
   /**

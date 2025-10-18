@@ -224,6 +224,48 @@ export class EventService {
         });
       }
 
+      // Get attendee preview (first 5 attendees with profiles)
+      const attendees = await prisma.eventAttendance.findMany({
+        where: { eventId },
+        take: 5,
+        orderBy: { checkedInAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Get RSVP preview (first 5 RSVPs)
+      const rsvps = await prisma.eventRsvp.findMany({
+        where: { eventId },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
       const transformed = this.transformEventResponse(event);
       
       return {
@@ -233,6 +275,30 @@ export class EventService {
         userTicket: userTicket || undefined,
         hasRsvped: !!userRsvp,
         hasTicket: !!userTicket,
+        isOwner: userId ? event.hostId === userId : false,
+        attendeesPreview: attendees.map(a => ({
+          id: a.user.id,
+          fullName: a.user.fullName,
+          username: a.user.username,
+          profilePicture: a.user.profile?.profilePicture,
+          checkedInAt: a.checkedInAt,
+        })),
+        rsvpsPreview: rsvps.map(r => ({
+          id: r.user.id,
+          fullName: r.user.fullName,
+          username: r.user.username,
+          profilePicture: r.user.profile?.profilePicture,
+          rsvpedAt: r.createdAt,
+        })),
+        stats: {
+          totalAttendees: event._count.eventAttendances,
+          totalRsvps: event._count.eventRsvps,
+          totalTicketsSold: event._count.eventTickets,
+          totalTicketTiers: event._count.tier,
+          attendanceRate: event._count.eventRsvps > 0 
+            ? Math.round((event._count.eventAttendances / event._count.eventRsvps) * 100) 
+            : 0,
+        },
       };
     } catch (error: any) {
       logger.error('Error fetching event:', error);
@@ -330,7 +396,7 @@ export class EventService {
       if (transformedEvents.length === 0 && query.filters && Object.keys(query.filters).length > 0) {
         logger.info('No events found with filters, fetching fallback events');
         
-        // Fetch upcoming published events as fallback
+        // Fetch any upcoming published events as fallback (no filter preservation)
         const fallbackEvents = await prisma.event.findMany({
           where: {
             status: 'PUBLISHED',
@@ -342,7 +408,7 @@ export class EventService {
         });
 
         transformedEvents = fallbackEvents.map(event => this.transformEventResponse(event));
-        isFallback = true;
+        isFallback = transformedEvents.length > 0;
       }
 
       return {

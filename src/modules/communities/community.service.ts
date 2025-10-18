@@ -220,7 +220,109 @@ export class CommunityService {
         throw new AppError('Community not found', 404);
       }
 
-      return this.formatCommunityResponse(community, userId);
+      // Get member preview (first 5 members)
+      const membersPreview = await prisma.communityMember.findMany({
+        where: { communityId, isApproved: true },
+        take: 5,
+        orderBy: { joinedAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustLevel: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Get upcoming events preview (first 3)
+      const upcomingEvents = await prisma.event.findMany({
+        where: {
+          communityId,
+          status: 'PUBLISHED',
+          date: { gte: new Date() },
+        },
+        take: 3,
+        orderBy: { date: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          date: true,
+          location: true,
+          images: true,
+          isFree: true,
+          price: true,
+          _count: {
+            select: {
+              eventRsvps: true,
+            },
+          },
+        },
+      });
+
+      // Check user membership status
+      let userMembership = null;
+      let isAdmin = false;
+      let isModerator = false;
+      let isMember = false;
+
+      if (userId) {
+        userMembership = await prisma.communityMember.findUnique({
+          where: {
+            userId_communityId: {
+              userId,
+              communityId,
+            },
+          },
+        });
+
+        if (userMembership && userMembership.isApproved) {
+          isMember = true;
+          isAdmin = userMembership.role === 'ADMIN';
+          isModerator = userMembership.role === 'MODERATOR';
+        }
+      }
+
+      const formattedCommunity = this.formatCommunityResponse(community, userId);
+
+      return {
+        ...formattedCommunity,
+        membersPreview: membersPreview.map(m => ({
+          id: m.user.id,
+          fullName: m.user.fullName,
+          username: m.user.username,
+          profilePicture: m.user.profile?.profilePicture,
+          trustLevel: m.user.trustLevel || 'starter',
+          role: m.role,
+          joinedAt: m.joinedAt.toISOString(),
+        })),
+        upcomingEventsPreview: upcomingEvents.map(e => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          date: e.date.toISOString(),
+          location: e.location,
+          images: e.images,
+          isFree: e.isFree,
+          price: e.price,
+          rsvpCount: e._count.eventRsvps,
+        })),
+        userStatus: {
+          isMember,
+          isAdmin,
+          isModerator,
+          isPending: userMembership?.isApproved === false,
+          role: userMembership?.role,
+        },
+      };
     } catch (error) {
       logger.error('Failed to get community', { error, communityId });
       throw error;
@@ -298,14 +400,48 @@ export class CommunityService {
         prisma.community.count({ where }),
       ]);
 
-      const totalPages = Math.ceil(totalCount / limit);
+      let isFallback = false;
+      let resultCommunities = communities;
+
+      // If no results and filters were applied, show fallback (all communities)
+      if (communities.length === 0 && (category || search || isVerified !== undefined)) {
+        logger.info('No communities found with filters, fetching fallback communities');
+        
+        const fallbackCommunities = await prisma.community.findMany({
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              include: {
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                communityMembers: true,
+                events: true,
+              },
+            },
+          },
+        });
+
+        resultCommunities = fallbackCommunities;
+        isFallback = fallbackCommunities.length > 0;
+      }
+
+      const totalPages = Math.ceil((isFallback ? resultCommunities.length : totalCount) / limit);
 
       return {
-        communities: communities.map(c => this.formatCommunityResponse(c)),
-        totalCount,
+        communities: resultCommunities.map(c => this.formatCommunityResponse(c)),
+        totalCount: isFallback ? resultCommunities.length : totalCount,
         page,
         limit,
         totalPages,
+        ...(isFallback && { isFallback: true }),
       };
     } catch (error) {
       logger.error('Failed to get communities', { error, query });
@@ -1161,8 +1297,7 @@ export class CommunityService {
       fullName: community.user.fullName,
       username: community.user.username || undefined,
       profilePicture: community.user.userProfiles?.profilePicture || undefined,
-      trustScore: community.user.trustScore || 0,
-      trustLevel: community.user.trustLevel || 'STARTER',
+      trustLevel: community.user.trustLevel || 'starter',
     };
 
     return {
@@ -1191,8 +1326,7 @@ export class CommunityService {
       fullName: member.user.fullName,
       username: member.user.username || undefined,
       profilePicture: member.user.userProfiles?.profilePicture || undefined,
-      trustScore: member.user.trustScore || 0,
-      trustLevel: member.user.trustLevel || 'STARTER',
+      trustLevel: member.user.trustLevel || 'starter',
     };
 
     return {

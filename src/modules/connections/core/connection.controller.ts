@@ -1,7 +1,9 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../../types';
 import { ConnectionService } from './connection.service';
+import { QRCodeService } from '../../user/qr-code.service';
 import { sendSuccess } from '../../../utils/response';
+import { AppError } from '../../../middleware/error';
 import {
   SendConnectionRequestInput,
   RespondToConnectionRequestInput,
@@ -39,6 +41,81 @@ export class ConnectionController {
 
       logger.info(`Connection request sent by user ${userId}`);
       sendSuccess(res, connection, 'Connection request sent successfully', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Scan QR code to send connection request
+   * @route POST /v2/connections/scan-qr
+   */
+  static async scanQRCodeForConnection(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const scannerId = req.user!.id;
+      const { qrData } = req.body;
+
+      if (!qrData) {
+        throw new AppError('QR code data is required', 400);
+      }
+
+      // Validate QR code
+      const qrValidation = await QRCodeService.validateQRCode(qrData);
+
+      if (qrValidation.purpose !== 'CONNECT') {
+        throw new AppError('This QR code is not for making connections', 400);
+      }
+
+      const targetUserId = qrValidation.userId;
+
+      // Check if scanner is trying to connect with themselves
+      if (scannerId === targetUserId) {
+        throw new AppError('You cannot connect with yourself', 400);
+      }
+
+      // Check existing connection status
+      const connectionStatus = await ConnectionService.getConnectionStatus(scannerId, targetUserId);
+
+      if (connectionStatus === 'CONNECTED') {
+        sendSuccess(res, {
+          ...qrValidation,
+          connectionStatus: 'connected',
+          message: 'You are already connected with this user',
+        }, 'Already connected');
+        return;
+      }
+
+      if (connectionStatus === 'PENDING') {
+        sendSuccess(res, {
+          ...qrValidation,
+          connectionStatus: 'pending',
+          message: 'Connection request already pending',
+        }, 'Request already sent');
+        return;
+      }
+
+      // Send connection request
+      const connection = await ConnectionService.sendConnectionRequest(scannerId, {
+        receiverId: targetUserId,
+        message: 'Connected via QR code',
+        relationshipType: 'friend',
+      });
+
+      // Invalidate the QR code nonce to prevent reuse
+      await QRCodeService.invalidateQRCode(qrValidation.userId);
+
+      logger.info(`Connection request via QR scan: ${scannerId} -> ${targetUserId}`);
+      
+      sendSuccess(res, {
+        ...qrValidation,
+        connection,
+        connectionStatus: 'pending',
+        message: 'Connection request sent successfully',
+      }, 'Connection request sent via QR code', 201);
     } catch (error) {
       next(error);
     }

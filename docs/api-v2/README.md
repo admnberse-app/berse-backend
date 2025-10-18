@@ -7,7 +7,16 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 🔐 [Authentication API](./AUTH_API.md) - User registration, login, session management, and device tracking
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
 - 🤝 [Connections API](./CONNECTIONS_API.md) - Connection management, vouching system, and trust scores ([Quick Ref](./CONNECTIONS_QUICKREF.md))
-- �️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
+
+- 🔐 [Authentication API](./AUTH_API.md) - User registration, login, session management, and device tracking
+- 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
+- 📱 [QR Code Identity API](./QR_CODE_API.md) - JWT-based QR codes for connections and event check-ins ([Quick Ref](./QR_CODE_QUICKREF.md))
+- 🤝 [Connections API](./CONNECTIONS_API.md) - Connection management, vouching system, and trust scores ([Quick Ref](./CONNECTIONS_QUICKREF.md))
+- 🏘️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
+- 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
+- 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
+- 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
+- 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
 - 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
@@ -150,6 +159,25 @@ In-app notification system for user actions including connections, vouches, even
 - `DELETE /notifications/:id` - Delete specific notification
 
 📖 [Full Notifications Documentation](./NOTIFICATIONS_API.md)
+
+### QR Code Identity Module (`/v2/users/qr-code`, `/v2/connections/scan-qr`, `/v2/events/scan-qr`)
+Secure JWT-based QR code system for user identity verification, instant connections, and event check-ins with nonce-based replay protection.
+
+**Key Endpoints:**
+- `POST /users/me/qr-code` - Generate QR code (CONNECT or CHECKIN purpose)
+- `POST /users/qr-code/validate` - Validate QR code without action
+- `POST /connections/scan-qr` - Scan QR to send connection request
+- `POST /events/scan-qr` - Scan QR to check in attendee at event
+
+**Key Features:**
+- **JWT-Based:** HS256 signed tokens with user identity and purpose
+- **Time-Limited:** CONNECT (15 min), CHECKIN (5 min)
+- **Replay Protection:** One-time use nonces stored in Redis
+- **Purpose Validation:** Can't use CONNECT QR for CHECKIN
+- **Permission Checks:** Organizers only for event check-ins
+- **Security:** Self-connection prevention, status validation, blocked user handling
+
+📖 [Full QR Code API Documentation](./QR_CODE_API.md) | [Quick Reference](./QR_CODE_QUICKREF.md)
 
 ### Onboarding Module V2 (`/v2/onboarding-v2`)
 Two-phase onboarding system: anonymous app preview before authentication, and personalized setup after registration.

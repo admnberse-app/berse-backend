@@ -210,6 +210,28 @@ export interface EventResponse {
   userTicket?: TicketResponse;
   hasRsvped?: boolean;
   hasTicket?: boolean;
+  isOwner?: boolean;
+  attendeesPreview?: Array<{
+    id: string;
+    fullName: string;
+    username?: string;
+    profilePicture?: string;
+    checkedInAt: Date;
+  }>;
+  rsvpsPreview?: Array<{
+    id: string;
+    fullName: string;
+    username?: string;
+    profilePicture?: string;
+    rsvpedAt: Date;
+  }>;
+  stats?: {
+    totalAttendees: number;
+    totalRsvps: number;
+    totalTicketsSold: number;
+    totalTicketTiers: number;
+    attendanceRate: number;
+  };
 }
 
 export interface TicketTierResponse {
