@@ -2,6 +2,7 @@ import { PrismaClient, PaymentStatus, TransactionType } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
 import { PaymentGatewayFactory } from './gateways/PaymentGatewayFactory';
+import { NotificationService } from '../../services/notification.service';
 import type {
   CreatePaymentIntentInput,
   ConfirmPaymentInput,
@@ -119,7 +120,24 @@ export class PaymentService {
         invoiceUrl: paymentIntent.paymentUrl,
       });
 
-      // 7. Return response
+      // 7. Send notification to user
+      await NotificationService.createNotification({
+        userId,
+        type: 'PAYMENT',
+        title: 'Payment Initiated',
+        message: `Your payment of ${currency} ${input.amount} has been initiated. Complete the checkout to proceed.`,
+        actionUrl: `/payments/${transaction.id}`,
+        priority: 'high',
+        relatedEntityId: transaction.id,
+        relatedEntityType: 'payment_transaction',
+        metadata: {
+          transactionId: transaction.id,
+          amount: input.amount,
+          currency,
+        },
+      });
+
+      // 8. Return response
       return {
         transactionId: updatedTransaction.id,
         clientSecret: paymentIntent.paymentUrl, // For Xendit, this is the checkout URL
@@ -205,6 +223,42 @@ export class PaymentService {
           logger.error('[PaymentService] Failed to distribute payout:', error);
           // Don't fail the confirmation if payout distribution fails
         });
+
+        // Send success notification
+        await NotificationService.createNotification({
+          userId: transaction.userId,
+          type: 'PAYMENT',
+          title: '✅ Payment Successful',
+          message: `Your payment of ${transaction.currency} ${transaction.amount} was completed successfully.`,
+          actionUrl: `/payments/${transaction.id}`,
+          priority: 'high',
+          relatedEntityId: transaction.id,
+          relatedEntityType: 'payment_transaction',
+          metadata: {
+            transactionId: transaction.id,
+            amount: transaction.amount,
+            currency: transaction.currency,
+            status: 'SUCCEEDED',
+          },
+        });
+      } else if (newStatus === PaymentStatus.FAILED) {
+        // Send failure notification
+        await NotificationService.createNotification({
+          userId: transaction.userId,
+          type: 'PAYMENT',
+          title: '❌ Payment Failed',
+          message: `Your payment of ${transaction.currency} ${transaction.amount} could not be processed. Please try again.`,
+          actionUrl: `/payments/${transaction.id}`,
+          priority: 'high',
+          relatedEntityId: transaction.id,
+          relatedEntityType: 'payment_transaction',
+          metadata: {
+            transactionId: transaction.id,
+            amount: transaction.amount,
+            currency: transaction.currency,
+            status: 'FAILED',
+          },
+        });
       }
 
       logger.info(`[PaymentService] Payment confirmed successfully`, {
@@ -263,6 +317,22 @@ export class PaymentService {
         // Trigger payout distribution
         await this.distributePayout(transactionId).catch((error) => {
           logger.error('[PaymentService] Failed to distribute payout:', error);
+        });
+
+        // Send capture notification
+        await NotificationService.createNotification({
+          userId: transaction.userId,
+          type: 'PAYMENT',
+          title: '✅ Payment Captured',
+          message: `Your payment of ${transaction.currency} ${amount || transaction.amount} has been successfully captured.`,
+          actionUrl: `/payments/${transactionId}`,
+          priority: 'normal',
+          relatedEntityId: transactionId,
+          relatedEntityType: 'payment_transaction',
+          metadata: {
+            transactionId,
+            capturedAmount: amount || transaction.amount,
+          },
         });
 
         return this.formatTransactionResponse(updatedTransaction);
@@ -341,6 +411,24 @@ export class PaymentService {
         transactionId: input.transactionId,
         refundAmount,
         newStatus,
+      });
+
+      // Send refund notification
+      await NotificationService.createNotification({
+        userId: transaction.userId,
+        type: 'PAYMENT',
+        title: '💰 Refund Processed',
+        message: `A refund of ${transaction.currency} ${refundAmount} has been issued. ${input.reason || ''}`,
+        actionUrl: `/payments/${input.transactionId}`,
+        priority: 'high',
+        relatedEntityId: input.transactionId,
+        relatedEntityType: 'payment_refund',
+        metadata: {
+          transactionId: input.transactionId,
+          refundedAmount: refundAmount,
+          reason: input.reason,
+          status: newStatus,
+        },
       });
 
       return this.formatTransactionResponse(updatedTransaction);
@@ -535,6 +623,21 @@ export class PaymentService {
             ? new Date(input.expiryYear, input.expiryMonth - 1) 
             : undefined,
           isDefault,
+        },
+      });
+
+      // Send notification
+      await NotificationService.createNotification({
+        userId,
+        type: 'PAYMENT',
+        title: '💳 Payment Method Added',
+        message: `A new ${input.type} ending in ${input.lastFour} has been added to your account.`,
+        actionUrl: '/settings/payment-methods',
+        priority: 'normal',
+        metadata: {
+          methodId: method.id,
+          type: input.type,
+          lastFour: input.lastFour,
         },
       });
 
