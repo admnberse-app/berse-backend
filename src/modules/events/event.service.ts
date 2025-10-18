@@ -698,8 +698,6 @@ export class EventService {
         price = tier.price;
       }
 
-      const quantity = data.quantity || 1;
-      const totalPrice = price * quantity;
       const ticketNumber = this.generateTicketNumber();
 
       // Create ticket (PENDING until payment is confirmed)
@@ -709,12 +707,12 @@ export class EventService {
           userId: userId,
           ticketTierId: data.ticketTierId,
           ticketType: tier ? tier.tierName : 'GENERAL',
-          price: totalPrice,
+          price: price,
           currency: event.currency,
           status: EventTicketStatus.PENDING,
           paymentStatus: PaymentStatus.PENDING,
           ticketNumber: ticketNumber,
-          quantity: quantity,
+          quantity: 1,
           attendeeName: data.attendeeName,
           attendeeEmail: data.attendeeEmail,
           attendeePhone: data.attendeePhone,
@@ -743,14 +741,14 @@ export class EventService {
       if (data.ticketTierId) {
         await prisma.eventTicketTier.update({
           where: { id: data.ticketTierId },
-          data: { soldQuantity: { increment: quantity } },
+          data: { soldQuantity: { increment: 1 } },
         });
       }
 
       // Update event tickets sold
       await prisma.event.update({
         where: { id: data.eventId },
-        data: { ticketsSold: { increment: quantity } },
+        data: { ticketsSold: { increment: 1 } },
       });
 
       return ticket as any;

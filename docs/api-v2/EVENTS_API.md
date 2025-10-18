@@ -511,7 +511,7 @@ Get detailed information about a specific event.
       "id": "tkt_456",
       "ticketNumber": "TKT-1729080000000-A3F9",
       "status": "ACTIVE",
-      "quantity": 2,
+      "quantity": 1,
       "purchasedAt": "2025-10-15T10:00:00.000Z"
     },
     "hasRsvped": false,
@@ -890,7 +890,7 @@ Update an existing ticket tier.
 
 ### Purchase Ticket
 
-Purchase tickets for a paid event.
+Purchase a single ticket for a paid event. Each purchase is for one attendee only.
 
 **Endpoint:** `POST /v2/events/tickets/purchase`
 
@@ -901,7 +901,6 @@ Purchase tickets for a paid event.
 {
   "eventId": "evt_cm123456789",
   "ticketTierId": "tier_124",
-  "quantity": 2,
   "attendeeName": "John Doe",
   "attendeeEmail": "john@example.com",
   "attendeePhone": "+60123456789"
@@ -911,7 +910,6 @@ Purchase tickets for a paid event.
 **Field Validations:**
 - `eventId` (required): Valid event ID
 - `ticketTierId` (optional): If not provided, uses event's base price
-- `quantity` (optional): Default 1, respects tier's min/max purchase limits
 - `attendeeName` (optional): 2-200 characters
 - `attendeeEmail` (optional): Valid email format
 - `attendeePhone` (optional): Valid phone format
@@ -932,7 +930,7 @@ Purchase tickets for a paid event.
     "status": "PENDING",
     "paymentStatus": "PENDING",
     "ticketNumber": "TKT-1729080000000-B7E2",
-    "quantity": 2,
+    "quantity": 1,
     "purchasedAt": "2025-10-16T10:00:00.000Z",
     "attendeeName": "John Doe",
     "attendeeEmail": "john@example.com",
@@ -953,6 +951,7 @@ Purchase tickets for a paid event.
 - `404 Not Found` - Event or tier not found
 
 **Notes:**
+- Each purchase is for **one ticket only**. To buy multiple tickets, make separate purchase requests
 - This is a simplified implementation. In production, integrate with payment gateways (Stripe, PayPal, etc.)
 - Payment status should be updated via webhooks after successful payment
 - Consider implementing payment timeout and ticket reservation systems
@@ -991,7 +990,7 @@ GET /v2/events/tickets/my-tickets?eventId=evt_cm123456789
       "currency": "MYR",
       "status": "ACTIVE",
       "paymentStatus": "COMPLETED",
-      "quantity": 2,
+      "quantity": 1,
       "purchasedAt": "2025-10-16T10:00:00.000Z",
       "checkedInAt": null,
       "event": {

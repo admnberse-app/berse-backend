@@ -321,10 +321,6 @@ export const purchaseTicketValidators = [
     .optional()
     .isString().withMessage('Ticket tier ID must be a valid string'),
   
-  body('quantity')
-    .optional()
-    .isInt({ min: 1, max: 50 }).withMessage('Quantity must be between 1 and 50'),
-  
   body('attendeeName')
     .optional()
     .trim()

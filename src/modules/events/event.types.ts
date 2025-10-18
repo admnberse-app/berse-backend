@@ -100,7 +100,6 @@ export interface UpdateTicketTierRequest {
 export interface PurchaseTicketRequest {
   eventId: string;
   ticketTierId?: string;
-  quantity?: number;
   attendeeName?: string;
   attendeeEmail?: string;
   attendeePhone?: string;

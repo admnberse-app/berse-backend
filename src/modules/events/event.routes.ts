@@ -693,7 +693,9 @@ router.put(
  * /v2/events/tickets/purchase:
  *   post:
  *     summary: Purchase ticket
- *     description: Purchase a ticket for an event
+ *     description: |
+ *       Purchase a single ticket for an event. Each purchase is for one attendee only.
+ *       To purchase multiple tickets, make separate purchase requests.
  *     tags: [Events - Tickets]
  *     security:
  *       - bearerAuth: []
@@ -708,20 +710,32 @@ router.put(
  *             properties:
  *               eventId:
  *                 type: string
+ *                 description: Event ID
+ *                 example: evt_cm123456789
  *               ticketTierId:
  *                 type: string
- *               quantity:
- *                 type: integer
- *                 default: 1
+ *                 description: Optional ticket tier ID for multi-tier events
+ *                 example: tier_124
  *               attendeeName:
  *                 type: string
+ *                 description: Name of the attendee
+ *                 example: John Doe
  *               attendeeEmail:
  *                 type: string
+ *                 format: email
+ *                 description: Email of the attendee
+ *                 example: john@example.com
  *               attendeePhone:
  *                 type: string
+ *                 description: Phone number of the attendee
+ *                 example: +60123456789
  *     responses:
  *       201:
- *         description: Ticket purchased successfully
+ *         description: Ticket purchased successfully (single ticket)
+ *       400:
+ *         description: Invalid request or ticket tier sold out
+ *       404:
+ *         description: Event or ticket tier not found
  */
 router.post(
   '/tickets/purchase',
