@@ -24,6 +24,7 @@ The Metadata API provides endpoints for accessing countries, regions, timezones,
   - [Get All Cities](#get-all-cities)
   - [Get Cities by Country](#get-cities-by-country)
   - [Get Cities by State](#get-cities-by-state)
+  - [Get Popular Cities](#get-popular-cities)
 - [Regions](#regions)
   - [Get All Regions](#get-all-regions)
   - [Get Countries by Region](#get-countries-by-region)
@@ -674,6 +675,230 @@ const filtered = await fetch(
 
 ---
 
+### Get Popular Cities
+Get popular cities based on user locations and published upcoming events.
+
+**Endpoint:** `GET /v2/metadata/cities/popular`
+
+**Cache:** 1 hour (3600 seconds)
+
+**Query Parameters:**
+- `userLatitude` (optional) - User's current latitude for location-based results
+- `userLongitude` (optional) - User's current longitude for location-based results  
+- `limit` (optional, default: 5, max: 20) - Number of cities to return
+- `radius` (optional, default: 500) - Radius in kilometers for nearby cities (only used when location provided)
+
+**Examples:**
+```
+GET /v2/metadata/cities/popular
+GET /v2/metadata/cities/popular?limit=10
+GET /v2/metadata/cities/popular?userLatitude=3.139&userLongitude=101.6869&limit=5&radius=300
+GET /v2/metadata/cities/popular?userLatitude=1.3521&userLongitude=103.8198&limit=5&radius=500
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "cities": [
+      {
+        "name": "Kuala Lumpur",
+        "country": "MY",
+        "userCount": 150,
+        "eventCount": 45,
+        "latitude": "3.139",
+        "longitude": "101.6869"
+      },
+      {
+        "name": "Singapore",
+        "country": "SG",
+        "userCount": 120,
+        "eventCount": 38,
+        "latitude": "1.3521",
+        "longitude": "103.8198"
+      },
+      {
+        "name": "Jakarta",
+        "country": "ID",
+        "userCount": 95,
+        "eventCount": 28,
+        "latitude": "-6.2088",
+        "longitude": "106.8456"
+      },
+      {
+        "name": "Bangkok",
+        "country": "TH",
+        "userCount": 88,
+        "eventCount": 32,
+        "latitude": "13.7563",
+        "longitude": "100.5018"
+      },
+      {
+        "name": "Manila",
+        "country": "PH",
+        "userCount": 76,
+        "eventCount": 24,
+        "latitude": "14.5995",
+        "longitude": "120.9842"
+      }
+    ],
+    "total": 5,
+    "criteria": {
+      "userLocationProvided": false,
+      "radius": 500,
+      "limit": 5
+    }
+  }
+}
+```
+
+**Response Fields:**
+- `name` - City name
+- `country` - ISO 3166-1 alpha-2 country code
+- `userCount` - Number of users in this city (from UserLocation table)
+- `eventCount` - Number of upcoming published events in this city
+- `latitude` - City latitude coordinate
+- `longitude` - City longitude coordinate
+- `total` - Total number of cities returned
+- `criteria.userLocationProvided` - Whether user coordinates were provided
+- `criteria.radius` - Search radius in kilometers (when location provided)
+- `criteria.limit` - Number of cities returned
+
+**Algorithm:**
+
+The endpoint uses a sophisticated scoring system to rank cities:
+
+1. **User Location Score**: Each user in a city adds 2 points
+2. **Event Score**: Each upcoming published event adds 1.5 points
+3. **Proximity Bonus** (when user location provided):
+   - Cities within radius get bonus points
+   - Bonus = (1 - distance/radius) × 100
+   - Closer cities get higher bonuses
+4. **Fallback Cities**: If results < limit, adds these top cities:
+   - Kuala Lumpur (MY)
+   - Singapore (SG)
+   - Jakarta (ID)
+   - Bangkok (TH)
+   - Manila (PH)
+
+**Data Sources:**
+- **User Locations**: Aggregates from `UserLocation` table (current city data)
+- **Events**: Counts from `Event` table (only PUBLISHED events with future dates)
+- **City Coordinates**: From `country-state-city` npm package
+
+**Use Cases:**
+- Event discovery - Show users where events are happening
+- User onboarding - Suggest popular cities during setup
+- Location filters - Pre-populate city dropdowns with relevant options
+- Travel planning - Help users discover active communities
+- City recommendations - Suggest where to connect with other users
+
+**Examples:**
+
+**Get Top 5 Popular Cities (Global):**
+```javascript
+const response = await fetch('/v2/metadata/cities/popular');
+const data = await response.json();
+
+console.log(`Top ${data.data.total} popular cities:`);
+data.data.cities.forEach(city => {
+  console.log(`${city.name}: ${city.userCount} users, ${city.eventCount} events`);
+});
+```
+
+**Get Popular Cities Near User Location:**
+```javascript
+const getPopularNearby = async (latitude, longitude, radius = 300) => {
+  const params = new URLSearchParams({
+    userLatitude: latitude.toString(),
+    userLongitude: longitude.toString(),
+    limit: '5',
+    radius: radius.toString()
+  });
+  
+  const response = await fetch(`/v2/metadata/cities/popular?${params}`);
+  const data = await response.json();
+  
+  return data.data.cities;
+};
+
+// Get cities within 300km of Kuala Lumpur
+const nearbyCities = await getPopularNearby(3.139, 101.6869, 300);
+```
+
+**Get Top 10 Popular Cities:**
+```javascript
+const response = await fetch('/v2/metadata/cities/popular?limit=10');
+const data = await response.json();
+
+// Cities ranked by popularity (user count + event count)
+const topCities = data.data.cities;
+```
+
+**Display Popular Cities in UI:**
+```javascript
+const PopularCities = () => {
+  const [cities, setCities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // Try to get user's location
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const params = new URLSearchParams({
+          userLatitude: position.coords.latitude.toString(),
+          userLongitude: position.coords.longitude.toString(),
+          limit: '5',
+          radius: '500'
+        });
+        
+        const response = await fetch(`/v2/metadata/cities/popular?${params}`);
+        const data = await response.json();
+        setCities(data.data.cities);
+        setLoading(false);
+      },
+      async () => {
+        // Fallback: Get global popular cities
+        const response = await fetch('/v2/metadata/cities/popular?limit=5');
+        const data = await response.json();
+        setCities(data.data.cities);
+        setLoading(false);
+      }
+    );
+  }, []);
+  
+  if (loading) return <div>Loading popular cities...</div>;
+  
+  return (
+    <div>
+      <h3>Popular Cities</h3>
+      {cities.map(city => (
+        <div key={`${city.name}-${city.country}`}>
+          <h4>{city.name}</h4>
+          <p>{city.userCount} users · {city.eventCount} events</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+```
+
+**Performance:**
+- Cached for 1 hour (shorter TTL as data changes frequently)
+- Optimized database queries with manual aggregation
+- Efficient distance calculations using Haversine formula
+- Maximum 20 cities to prevent overload
+
+**Notes:**
+- Cities must have at least one user OR one event to appear in results
+- Location coordinates enhance results but are not required
+- Results automatically fall back to top global cities if needed
+- Cache ensures fast response times for repeated queries
+- Proximity bonus only applied when user coordinates are provided
+
+---
+
 ## Timezones
 
 ### Get All Timezones
@@ -740,6 +965,7 @@ All metadata endpoints use **Redis caching** with a cache-aside pattern for opti
 | Get All Cities | `metadata:cities:{country}:{state}:{page}:{limit}` | 1 day |
 | Get Cities by Country | `metadata:cities:country:{CODE}:{search}:{page}:{limit}` | 1 day |
 | Get Cities by State | `metadata:cities:state:{CODE}:{STATE}:{search}:{page}:{limit}` | 1 day |
+| Get Popular Cities | `metadata:cities:popular:{lat}:{lon}:{limit}:{radius}` | 1 hour |
 | Get Regions | `metadata:regions:all` | 1 day |
 | Get Countries by Region | `metadata:region:{region}:countries` | 1 day |
 | Get Timezones | `metadata:timezones:all` | 1 day |
@@ -1188,6 +1414,21 @@ curl "https://api.berse-app.com/v2/metadata/cities?countryCode=US&stateCode=CA&p
 curl "https://api.berse-app.com/v2/metadata/cities?page=1&limit=100"
 ```
 
+**Get Popular Cities:**
+```bash
+# Get top 5 popular cities globally
+curl https://api.berse-app.com/v2/metadata/cities/popular
+
+# Get top 10 popular cities
+curl "https://api.berse-app.com/v2/metadata/cities/popular?limit=10"
+
+# Get popular cities near Kuala Lumpur (within 300km)
+curl "https://api.berse-app.com/v2/metadata/cities/popular?userLatitude=3.139&userLongitude=101.6869&limit=5&radius=300"
+
+# Get popular cities near Singapore (within 500km)
+curl "https://api.berse-app.com/v2/metadata/cities/popular?userLatitude=1.3521&userLongitude=103.8198&limit=5&radius=500"
+```
+
 ### React Native/Mobile Examples
 
 **Country Picker Component:**
@@ -1555,6 +1796,7 @@ Metadata endpoints are public and have generous rate limits:
 ### v2.1.0 (2025-10-16)
 - **🎯 BREAKING CHANGE:** Added comprehensive pagination support to all city endpoints
 - **🎯 BREAKING CHANGE:** Added pagination to countries endpoint for consistency
+- **✨ NEW:** Added `/cities/popular` endpoint for dynamic city recommendations
 - Added `page` and `limit` query parameters to all relevant endpoints
 - Updated response format to include `pagination` object with navigation metadata
 - Enhanced cache keys to include pagination parameters
@@ -1562,6 +1804,9 @@ Metadata endpoints are public and have generous rate limits:
 - Set reasonable pagination limits: Countries (250), Cities (500), States (no limit)
 - Improved performance for large datasets through proper pagination
 - Added pagination support to JavaScript, cURL, and React examples
+- Popular cities endpoint uses smart scoring based on users and events
+- Location-aware ranking with proximity bonuses when user coordinates provided
+- Automatic fallback to top global cities (KL, Singapore, Jakarta, Bangkok, Manila)
 
 ### v2.0.0 (2025-10-15)
 - Added states/provinces endpoints

@@ -399,6 +399,97 @@ router.get('/cities', CountriesController.getAllCities);
 
 /**
  * @swagger
+ * /v2/metadata/cities/popular:
+ *   get:
+ *     summary: Get popular cities
+ *     description: Get popular cities based on user locations and published upcoming events. Returns top 5 cities by default, or cities based on user's location if coordinates are provided.
+ *     tags: [Metadata]
+ *     parameters:
+ *       - in: query
+ *         name: userLatitude
+ *         schema:
+ *           type: string
+ *         description: User's current latitude for location-based results
+ *         example: "3.139"
+ *       - in: query
+ *         name: userLongitude
+ *         schema:
+ *           type: string
+ *         description: User's current longitude for location-based results
+ *         example: "101.6869"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *           default: "5"
+ *         description: Number of cities to return (max 20)
+ *         example: "5"
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: string
+ *           default: "500"
+ *         description: Radius in kilometers for nearby cities (only used when location is provided)
+ *         example: "500"
+ *     responses:
+ *       200:
+ *         description: Popular cities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Kuala Lumpur"
+ *                           country:
+ *                             type: string
+ *                             example: "MY"
+ *                           userCount:
+ *                             type: integer
+ *                             example: 150
+ *                             description: Number of users in this city
+ *                           eventCount:
+ *                             type: integer
+ *                             example: 45
+ *                             description: Number of upcoming events in this city
+ *                           latitude:
+ *                             type: string
+ *                             example: "3.139"
+ *                           longitude:
+ *                             type: string
+ *                             example: "101.6869"
+ *                     total:
+ *                       type: integer
+ *                       example: 5
+ *                     criteria:
+ *                       type: object
+ *                       properties:
+ *                         userLocationProvided:
+ *                           type: boolean
+ *                           example: true
+ *                         radius:
+ *                           type: integer
+ *                           example: 500
+ *                         limit:
+ *                           type: integer
+ *                           example: 5
+ */
+router.get('/cities/popular', CountriesController.getPopularCities);
+
+/**
+ * @swagger
  * /v2/metadata/countries/{countryCode}/states:
  *   get:
  *     summary: Get states by country

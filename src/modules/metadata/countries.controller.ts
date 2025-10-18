@@ -661,4 +661,295 @@ export class CountriesController {
       next(error);
     }
   }
+
+  /**
+   * Get popular cities based on user locations and events
+   * @route GET /v2/metadata/cities/popular
+   */
+  static async getPopularCities(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { 
+        userLatitude, 
+        userLongitude,
+        limit = '5',
+        radius = '500' // radius in km for nearby cities
+      } = req.query;
+
+      const limitNum = Math.min(Math.max(1, parseInt(limit as string)), 20);
+      const radiusKm = parseInt(radius as string);
+
+      // Check cache
+      const cacheKey = `metadata:cities:popular:${userLatitude || 'none'}:${userLongitude || 'none'}:${limitNum}:${radiusKm}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
+      // Import prisma here to avoid circular dependencies
+      const { prisma } = await import('../../config/database');
+
+      // Get cities from user locations
+      const userLocations = await prisma.userLocation.findMany({
+        where: {
+          currentCity: {
+            not: null,
+          },
+          countryOfResidence: {
+            not: null,
+          },
+        },
+        select: {
+          currentCity: true,
+          countryOfResidence: true,
+        },
+      });
+
+      // Get cities from events
+      const events = await prisma.event.findMany({
+        where: {
+          location: {
+            not: null,
+          },
+          status: 'PUBLISHED',
+          date: {
+            gte: new Date(),
+          },
+        },
+        select: {
+          location: true,
+        },
+      });
+
+      // Manually aggregate user location cities
+      const userLocationCountMap = new Map<string, { city: string; country: string; count: number }>();
+      userLocations.forEach(loc => {
+        if (loc.currentCity && loc.countryOfResidence) {
+          const key = `${loc.currentCity.toLowerCase()}|${loc.countryOfResidence}`;
+          const existing = userLocationCountMap.get(key);
+          if (existing) {
+            existing.count++;
+          } else {
+            userLocationCountMap.set(key, {
+              city: loc.currentCity,
+              country: loc.countryOfResidence,
+              count: 1,
+            });
+          }
+        }
+      });
+
+      // Sort and take top 20
+      const userLocationCities = Array.from(userLocationCountMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20)
+        .map(item => ({
+          currentCity: item.city,
+          countryOfResidence: item.country,
+          _count: { userId: item.count },
+        }));
+
+      // Manually aggregate event cities
+      const eventLocationCountMap = new Map<string, { location: string; count: number }>();
+      events.forEach(event => {
+        if (event.location) {
+          const key = event.location.toLowerCase();
+          const existing = eventLocationCountMap.get(key);
+          if (existing) {
+            existing.count++;
+          } else {
+            eventLocationCountMap.set(key, {
+              location: event.location,
+              count: 1,
+            });
+          }
+        }
+      });
+
+      // Sort and take top 20
+      const eventCities = Array.from(eventLocationCountMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20)
+        .map(item => ({
+          location: item.location,
+          _count: { id: item.count },
+        }));
+
+      // Create a scoring system: combine user locations and events
+      const cityScores = new Map<string, { 
+        city: string; 
+        country: string; 
+        userCount: number; 
+        eventCount: number; 
+        score: number;
+        latitude?: string;
+        longitude?: string;
+      }>();
+
+      // Process user location cities
+      userLocationCities.forEach(item => {
+        if (item.currentCity && item.countryOfResidence) {
+          const key = `${item.currentCity.toLowerCase()}|${item.countryOfResidence}`;
+          cityScores.set(key, {
+            city: item.currentCity,
+            country: item.countryOfResidence,
+            userCount: item._count.userId,
+            eventCount: 0,
+            score: item._count.userId * 2, // Weight user locations higher
+          });
+        }
+      });
+
+      // Process event cities
+      eventCities.forEach(item => {
+        if (item.location) {
+          // Try to extract city name from location string
+          const cityName = item.location.split(',')[0].trim();
+          
+          // Try to match with existing cities or add as new
+          let matched = false;
+          for (const [key, data] of cityScores.entries()) {
+            if (data.city.toLowerCase() === cityName.toLowerCase()) {
+              data.eventCount += item._count.id;
+              data.score += item._count.id * 1.5; // Weight events moderately
+              matched = true;
+              break;
+            }
+          }
+          
+          if (!matched) {
+            // Add as new city (we'll try to find country later)
+            const tempKey = `${cityName.toLowerCase()}|unknown`;
+            if (!cityScores.has(tempKey)) {
+              cityScores.set(tempKey, {
+                city: cityName,
+                country: 'Unknown',
+                userCount: 0,
+                eventCount: item._count.id,
+                score: item._count.id * 1.5,
+              });
+            } else {
+              const existing = cityScores.get(tempKey)!;
+              existing.eventCount += item._count.id;
+              existing.score += item._count.id * 1.5;
+            }
+          }
+        }
+      });
+
+      // Convert to array and sort by score
+      let popularCities = Array.from(cityScores.values())
+        .sort((a, b) => b.score - a.score);
+
+      // If user location is provided, calculate distances and adjust scores
+      if (userLatitude && userLongitude) {
+        const userLat = parseFloat(userLatitude as string);
+        const userLon = parseFloat(userLongitude as string);
+
+        // Get all cities to find coordinates
+        const allCities = City.getAllCities();
+        
+        // Add coordinates and calculate distances
+        popularCities = popularCities.map(cityData => {
+          // Find matching city in the database
+          const matchingCity = allCities.find(c => 
+            c.name.toLowerCase() === cityData.city.toLowerCase()
+          );
+
+          if (matchingCity && matchingCity.latitude && matchingCity.longitude) {
+            const cityLat = parseFloat(matchingCity.latitude);
+            const cityLon = parseFloat(matchingCity.longitude);
+            
+            // Calculate distance using Haversine formula
+            const R = 6371; // Earth's radius in km
+            const dLat = (cityLat - userLat) * Math.PI / 180;
+            const dLon = (cityLon - userLon) * Math.PI / 180;
+            const a = 
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(userLat * Math.PI / 180) * Math.cos(cityLat * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+
+            // Boost score for nearby cities
+            if (distance <= radiusKm) {
+              const proximityBonus = (1 - (distance / radiusKm)) * 100;
+              cityData.score += proximityBonus;
+            }
+
+            cityData.latitude = matchingCity.latitude;
+            cityData.longitude = matchingCity.longitude;
+          }
+
+          return cityData;
+        }).sort((a, b) => b.score - a.score);
+      }
+
+      // If we have less than the requested limit, add top cities globally
+      if (popularCities.length < limitNum) {
+        const topGlobalCities = [
+          { city: 'Kuala Lumpur', country: 'MY' },
+          { city: 'Singapore', country: 'SG' },
+          { city: 'Jakarta', country: 'ID' },
+          { city: 'Bangkok', country: 'TH' },
+          { city: 'Manila', country: 'PH' },
+        ];
+
+        const existingCityNames = new Set(popularCities.map(c => c.city.toLowerCase()));
+        
+        for (const globalCity of topGlobalCities) {
+          if (popularCities.length >= limitNum) break;
+          
+          if (!existingCityNames.has(globalCity.city.toLowerCase())) {
+            const allCities = City.getAllCities();
+            const cityInfo = allCities.find(c => 
+              c.name.toLowerCase() === globalCity.city.toLowerCase() &&
+              c.countryCode === globalCity.country
+            );
+
+            popularCities.push({
+              city: globalCity.city,
+              country: globalCity.country,
+              userCount: 0,
+              eventCount: 0,
+              score: 0,
+              latitude: cityInfo?.latitude,
+              longitude: cityInfo?.longitude,
+            });
+          }
+        }
+      }
+
+      // Take top cities based on limit
+      const finalCities = popularCities.slice(0, limitNum);
+
+      // Transform for response
+      const transformedCities = finalCities.map(cityData => ({
+        name: cityData.city,
+        country: cityData.country,
+        userCount: cityData.userCount,
+        eventCount: cityData.eventCount,
+        latitude: cityData.latitude,
+        longitude: cityData.longitude,
+      }));
+
+      const responseData = {
+        cities: transformedCities,
+        total: transformedCities.length,
+        criteria: {
+          userLocationProvided: !!(userLatitude && userLongitude),
+          radius: radiusKm,
+          limit: limitNum,
+        },
+      };
+
+      // Cache for 1 hour (shorter TTL as this data changes more frequently)
+      await cache.set(cacheKey, responseData, 3600);
+
+      sendSuccess(res, responseData);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
