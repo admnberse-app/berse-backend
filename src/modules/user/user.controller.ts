@@ -398,18 +398,53 @@ export class UserController {
   }
 
   /**
-   * Search users
+   * Search users with advanced filters
    * @route GET /v2/users/search
    */
   static async searchUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { city, interest, query, page = 1, limit = 20 }: UserSearchQuery = req.query as any;
+      const currentUserId = req.user?.id;
+      
+      const {
+        query,
+        city,
+        interest,
+        gender,
+        latitude,
+        longitude,
+        radius,
+        nearby,
+        minTrustScore,
+        maxTrustScore,
+        trustLevel,
+        minEventsAttended,
+        hasHostedEvents,
+        isVerified,
+        excludeConnected = false,
+        page = 1,
+        limit = 20,
+      }: any = req.query;
 
       const where: any = {
         status: 'ACTIVE',
+        deletedAt: null,
       };
 
-      // Build search conditions
+      // Exclude current user
+      if (currentUserId) {
+        where.id = { not: currentUserId };
+      }
+
+      // Text search
+      if (query) {
+        where.OR = [
+          { fullName: { contains: query, mode: 'insensitive' } },
+          { username: { contains: query, mode: 'insensitive' } },
+          { profile: { bio: { contains: query, mode: 'insensitive' } } },
+        ];
+      }
+
+      // Location filters
       if (city) {
         where.location = {
           OR: [
@@ -419,18 +454,94 @@ export class UserController {
         };
       }
 
+      // Profile filters
       if (interest) {
         where.profile = {
+          ...where.profile,
           interests: { has: interest },
         };
       }
 
-      if (query) {
-        where.OR = [
-          { fullName: { contains: query, mode: 'insensitive' } },
-          { username: { contains: query, mode: 'insensitive' } },
-          { profile: { bio: { contains: query, mode: 'insensitive' } } },
-        ];
+      if (gender) {
+        where.profile = {
+          ...where.profile,
+          gender: gender,
+        };
+      }
+
+      // Trust score filters
+      if (minTrustScore !== undefined) {
+        where.trustScore = { ...where.trustScore, gte: Number(minTrustScore) };
+      }
+
+      if (maxTrustScore !== undefined) {
+        where.trustScore = { ...where.trustScore, lte: Number(maxTrustScore) };
+      }
+
+      if (trustLevel) {
+        where.trustLevel = trustLevel;
+      }
+
+      // Email verification filter
+      if (isVerified === 'true' || isVerified === true) {
+        where.security = {
+          emailVerifiedAt: { not: null },
+        };
+      }
+
+      // Exclude connected users if requested
+      if (excludeConnected === 'true' || excludeConnected === true) {
+        if (currentUserId) {
+          const connections = await prisma.userConnection.findMany({
+            where: {
+              OR: [
+                { initiatorId: currentUserId },
+                { receiverId: currentUserId },
+              ],
+              status: 'ACCEPTED',
+            },
+            select: {
+              initiatorId: true,
+              receiverId: true,
+            },
+          });
+
+          const connectedUserIds = connections.map(c =>
+            c.initiatorId === currentUserId ? c.receiverId : c.initiatorId
+          );
+
+          if (connectedUserIds.length > 0) {
+            where.id = { ...where.id, notIn: connectedUserIds };
+          }
+        }
+      }
+
+      // Always exclude blocked users
+      if (currentUserId) {
+        const blocked = await prisma.userBlock.findMany({
+          where: {
+            OR: [
+              { blockerId: currentUserId },
+              { blockedId: currentUserId },
+            ],
+          },
+          select: {
+            blockerId: true,
+            blockedId: true,
+          },
+        });
+
+        const blockedUserIds = blocked.map(b =>
+          b.blockerId === currentUserId ? b.blockedId : b.blockerId
+        );
+
+        if (blockedUserIds.length > 0) {
+          if (where.id?.notIn) {
+            where.id.notIn = [...where.id.notIn, ...blockedUserIds];
+          } else {
+            where.id = { ...where.id, notIn: blockedUserIds };
+          }
+        }
       }
 
       const skip = (Number(page) - 1) * Number(limit);
@@ -443,38 +554,149 @@ export class UserController {
             fullName: true,
             username: true,
             role: true,
+            trustScore: true,
+            trustLevel: true,
             profile: {
               select: {
                 profilePicture: true,
                 bio: true,
                 shortBio: true,
                 interests: true,
+                gender: true,
+                profession: true,
               },
             },
             location: {
               select: {
                 currentCity: true,
+                countryOfResidence: true,
+                latitude: true,
+                longitude: true,
+              },
+            },
+            security: {
+              select: {
+                emailVerifiedAt: true,
+                lastSeenAt: true,
+              },
+            },
+            stats: {
+              select: {
+                eventsHosted: true,
+                eventsAttended: true,
               },
             },
           },
+          orderBy: { trustScore: 'desc' },
           skip,
           take: Number(limit),
         }),
         prisma.user.count({ where }),
       ]);
 
+      // Post-query filters and enhancements
+      let filteredUsers = users;
+
+      // Filter by events attended
+      if (minEventsAttended !== undefined) {
+        filteredUsers = filteredUsers.filter(u => (u.stats?.eventsAttended || 0) >= Number(minEventsAttended));
+      }
+
+      if (hasHostedEvents === 'true' || hasHostedEvents === true) {
+        filteredUsers = filteredUsers.filter(u => (u.stats?.eventsHosted || 0) > 0);
+      }
+
+      // Calculate distance and filter by radius
+      if (latitude !== undefined && longitude !== undefined) {
+        filteredUsers = filteredUsers
+          .map(user => {
+            if (user.location?.latitude && user.location?.longitude) {
+              const distance = this.calculateDistance(
+                Number(latitude),
+                Number(longitude),
+                user.location.latitude,
+                user.location.longitude
+              );
+              return { ...user, distance };
+            }
+            return { ...user, distance: null };
+          })
+          .filter(user => {
+            if (radius) {
+              return user.distance !== null && user.distance <= Number(radius);
+            }
+            if (nearby === 'true' || nearby === true) {
+              return user.distance !== null && user.distance <= 50; // 50km default for nearby
+            }
+            return true;
+          }) as any;
+
+        // Sort by distance
+        filteredUsers.sort((a: any, b: any) => {
+          if (a.distance === null) return 1;
+          if (b.distance === null) return -1;
+          return a.distance - b.distance;
+        });
+      }
+
+      // Transform response
+      const transformedUsers = filteredUsers.map((user: any) => ({
+        id: user.id,
+        fullName: user.fullName,
+        username: user.username,
+        role: user.role,
+        trustScore: user.trustScore,
+        trustLevel: user.trustLevel,
+        profilePicture: user.profile?.profilePicture,
+        bio: user.profile?.bio || user.profile?.shortBio,
+        interests: user.profile?.interests || [],
+        gender: user.profile?.gender,
+        profession: user.profile?.profession,
+        location: {
+          city: user.location?.currentCity,
+          country: user.location?.countryOfResidence,
+        },
+        isVerified: !!user.security?.emailVerifiedAt,
+        lastSeen: user.security?.lastSeenAt,
+        stats: {
+          hostedEvents: user.stats?.eventsHosted || 0,
+          attendedEvents: user.stats?.eventsAttended || 0,
+        },
+        ...(user.distance !== undefined && { distance: user.distance }),
+      }));
+
       sendSuccess(res, {
-        users,
+        users: transformedUsers,
         pagination: {
           page: Number(page),
           limit: Number(limit),
-          total,
-          pages: Math.ceil(total / Number(limit)),
+          total: transformedUsers.length,
+          totalPages: Math.ceil(transformedUsers.length / Number(limit)),
         },
       });
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Calculate distance between two coordinates using Haversine formula
+   * @returns distance in kilometers
+   */
+  private static calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c * 10) / 10; // Round to 1 decimal
   }
 
   /**

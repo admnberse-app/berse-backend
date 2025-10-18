@@ -559,7 +559,7 @@ GET /v2/users/trending-interests?limit=10
 ---
 
 ### Search Users
-Search for users by various criteria.
+Search for users with comprehensive filtering including location-based search, trust scoring, activity filters, and connection management.
 
 **Endpoint:** `GET /v2/users/search`
 
@@ -569,17 +569,60 @@ Authorization: Bearer <access_token>
 ```
 
 **Query Parameters:**
-- `query` (optional): Search term (searches name, username, bio)
-- `city` (optional): Filter by current city (case-insensitive) 
-- `interest` (optional): Filter by specific interest (exact match)
-- `page` (optional): Page number (default: 1, min: 1)
-- `limit` (optional): Items per page (default: 20, max: 100)
-- `page` (optional): Page number (default: 1, min: 1) *(Validated v2.0.1)*
-- `limit` (optional): Items per page (default: 20, max: 100) *(Validated v2.0.1)*
 
-**Example:**
+#### Basic Search & Profile Filters
+- `query` (optional, string): Search term for name, username, or bio (case-insensitive)
+- `city` (optional, string): Filter by current city (case-insensitive)
+- `interest` (optional, string): Filter by specific interest (exact match)
+- `gender` (optional, enum): Filter by gender (`MALE`, `FEMALE`, `NON_BINARY`, `OTHER`, `PREFER_NOT_TO_SAY`)
+- `isVerified` (optional, boolean): Filter verified users only
+
+#### Location-Based Filters
+- `latitude` (optional, number): Latitude for distance calculations (-90 to 90)
+- `longitude` (optional, number): Longitude for distance calculations (-180 to 180)
+- `radius` (optional, number): Search radius in kilometers (1-500, requires latitude/longitude)
+- `nearby` (optional, boolean): Find users within 50km (requires latitude/longitude)
+
+#### Trust & Reputation Filters
+- `minTrustScore` (optional, number): Minimum trust score (0-100)
+- `maxTrustScore` (optional, number): Maximum trust score (0-100)
+- `trustLevel` (optional, enum): Filter by trust level (`NEW`, `BUILDING`, `ESTABLISHED`, `TRUSTED`, `VERIFIED`)
+
+#### Activity & Engagement Filters
+- `minEventsAttended` (optional, number): Minimum number of events attended
+- `hasHostedEvents` (optional, boolean): Filter users who have hosted events
+
+#### Connection & Relationship Filters
+- `connectionType` (optional, enum): Filter by connection status (`all`, `connected`, `not_connected`)
+- `hasMutualFriends` (optional, boolean): Filter users with mutual connections (requires authentication)
+- `excludeConnected` (optional, boolean): Exclude already connected users
+
+#### Sorting & Pagination
+- `sortBy` (optional, enum): Sort field (`relevance`, `trustScore`, `distance`, `eventsAttended`)
+- `sortOrder` (optional, enum): Sort direction (`asc`, `desc`, default: `desc`)
+- `page` (optional, number): Page number (default: 1, min: 1)
+- `limit` (optional, number): Items per page (default: 20, max: 100)
+
+**Common Use Cases:**
+
+1. **Nearby Verified Users:**
 ```
-GET /v2/users/search?city=kuala%20lumpur&interest=food&page=1
+GET /v2/users/search?latitude=3.1390&longitude=101.6869&radius=10&isVerified=true&sortBy=distance
+```
+
+2. **High Trust Score Matches:**
+```
+GET /v2/users/search?minTrustScore=70&trustLevel=TRUSTED&interest=travel&sortBy=trustScore
+```
+
+3. **Active Community Members:**
+```
+GET /v2/users/search?hasHostedEvents=true&minEventsAttended=5&excludeConnected=true
+```
+
+4. **Location-Based with Interest:**
+```
+GET /v2/users/search?nearby=true&latitude=1.3521&longitude=103.8198&interest=food&city=singapore
 ```
 
 **Success Response (200):**
@@ -595,13 +638,25 @@ GET /v2/users/search?city=kuala%20lumpur&interest=food&page=1
         "role": "GENERAL_USER",
         "profile": {
           "profilePicture": "https://...",
-          "bio": "Travel enthusiast...",
+          "bio": "Travel enthusiast and food lover",
           "shortBio": "Traveler | Artist",
-          "interests": ["travel", "art", "food"]
+          "interests": ["travel", "art", "food"],
+          "gender": "FEMALE",
+          "isVerified": true
         },
         "location": {
-          "currentCity": "Kuala Lumpur"
-        }
+          "currentCity": "Kuala Lumpur",
+          "latitude": 3.1390,
+          "longitude": 101.6869
+        },
+        "stats": {
+          "eventsHosted": 5,
+          "eventsAttended": 23,
+          "trustScore": 85
+        },
+        "distance": 2.5,
+        "connectionStatus": "not_connected",
+        "mutualConnections": 3
       }
     ],
     "pagination": {
@@ -614,11 +669,20 @@ GET /v2/users/search?city=kuala%20lumpur&interest=food&page=1
 }
 ```
 
+**Response Fields:**
+- `distance` (number, optional): Distance in kilometers (only when latitude/longitude provided)
+- `connectionStatus` (string): User's connection relationship (`connected`, `pending`, `not_connected`)
+- `mutualConnections` (number, optional): Count of mutual connections (authenticated requests only)
+- `stats`: Activity statistics including events hosted/attended and trust score
+
 **Search Logic:**
-- `query`: Case-insensitive search in fullName, username, and bio
-- `currentCity`: Case-insensitive search in currentCity field
-- `interest`: Exact match in interests array
+- All text filters are case-insensitive
 - Multiple filters are combined with AND logic
+- Automatically excludes blocked users and users who blocked you
+- Distance calculations use Haversine formula for accuracy
+- Trust score ranges validate min ≤ max
+- Location-based searches require both latitude and longitude
+- Results sorted by relevance by default, or by specified `sortBy` parameter
 
 ---
 

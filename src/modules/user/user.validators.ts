@@ -207,21 +207,119 @@ export const updateProfileValidators = [
 ];
 
 export const searchUsersValidators = [
-  query('city')
-    .optional()
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('City must be 2-100 characters'),
-  query('interest')
-    .optional()
-    .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Interest must be 1-50 characters'),
+  // Text search
   query('query')
     .optional()
     .trim()
     .isLength({ min: 1, max: 100 })
     .withMessage('Search query must be 1-100 characters'),
+  
+  // Location filters
+  query('city')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('City must be 2-100 characters'),
+  query('latitude')
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .toFloat()
+    .withMessage('Latitude must be between -90 and 90'),
+  query('longitude')
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .toFloat()
+    .withMessage('Longitude must be between -180 and 180'),
+  query('radius')
+    .optional()
+    .isInt({ min: 1, max: 500 })
+    .toInt()
+    .withMessage('Radius must be between 1 and 500 km'),
+  query('nearby')
+    .optional()
+    .isBoolean()
+    .toBoolean()
+    .withMessage('Nearby must be a boolean'),
+  
+  // Connection filters
+  query('connectionType')
+    .optional()
+    .isIn(['all', 'mutuals', 'suggestions', 'new'])
+    .withMessage('Connection type must be: all, mutuals, suggestions, or new'),
+  query('hasMutualFriends')
+    .optional()
+    .isBoolean()
+    .toBoolean()
+    .withMessage('Has mutual friends must be a boolean'),
+  query('mutualFriendsMin')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .toInt()
+    .withMessage('Mutual friends min must be 1-100'),
+  
+  // Trust filters
+  query('minTrustScore')
+    .optional()
+    .isInt({ min: 0, max: 100 })
+    .toInt()
+    .withMessage('Min trust score must be 0-100'),
+  query('maxTrustScore')
+    .optional()
+    .isInt({ min: 0, max: 100 })
+    .toInt()
+    .withMessage('Max trust score must be 0-100'),
+  query('trustLevel')
+    .optional()
+    .isIn(['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'])
+    .withMessage('Trust level must be: NEW, BUILDING, ESTABLISHED, TRUSTED, or VERIFIED'),
+  
+  // Activity filters
+  query('minEventsAttended')
+    .optional()
+    .isInt({ min: 0 })
+    .toInt()
+    .withMessage('Min events attended must be >= 0'),
+  query('hasHostedEvents')
+    .optional()
+    .isBoolean()
+    .toBoolean()
+    .withMessage('Has hosted events must be a boolean'),
+  query('isVerified')
+    .optional()
+    .isBoolean()
+    .toBoolean()
+    .withMessage('Is verified must be a boolean'),
+  
+  // Other filters
+  query('interest')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Interest must be 1-50 characters'),
+  query('gender')
+    .optional()
+    .trim()
+    .isIn(['male', 'female', 'other'])
+    .withMessage('Gender must be: male, female, or other'),
+  
+  // Sorting
+  query('sortBy')
+    .optional()
+    .isIn(['relevance', 'trustScore', 'distance', 'recentActivity', 'mutualFriends'])
+    .withMessage('Sort by must be: relevance, trustScore, distance, recentActivity, or mutualFriends'),
+  query('sortOrder')
+    .optional()
+    .isIn(['asc', 'desc'])
+    .withMessage('Sort order must be: asc or desc'),
+  
+  // Exclusions
+  query('excludeConnected')
+    .optional()
+    .isBoolean()
+    .toBoolean()
+    .withMessage('Exclude connected must be a boolean'),
+  
+  // Pagination
   query('page')
     .optional()
     .isInt({ min: 1 })

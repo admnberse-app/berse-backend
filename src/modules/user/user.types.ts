@@ -62,11 +62,46 @@ export interface UpdateProfileRequest {
 }
 
 export interface UserSearchQuery {
+  // Text search
+  query?: string;
+  
+  // Basic filters
   city?: string;
   interest?: string;
-  query?: string;
+  gender?: string;
+  
+  // Location-based filters
+  latitude?: number;
+  longitude?: number;
+  radius?: number; // in kilometers
+  nearby?: boolean; // shorthand for radius-based search
+  
+  // Connection filters
+  connectionType?: 'all' | 'mutuals' | 'suggestions' | 'new';
+  hasMutualFriends?: boolean;
+  mutualFriendsMin?: number;
+  
+  // Trust score filters
+  minTrustScore?: number;
+  maxTrustScore?: number;
+  trustLevel?: 'NEW' | 'BUILDING' | 'ESTABLISHED' | 'TRUSTED' | 'VERIFIED';
+  
+  // Activity filters
+  minEventsAttended?: number;
+  hasHostedEvents?: boolean;
+  isVerified?: boolean;
+  
+  // Sorting
+  sortBy?: 'relevance' | 'trustScore' | 'distance' | 'recentActivity' | 'mutualFriends';
+  sortOrder?: 'asc' | 'desc';
+  
+  // Pagination
   page?: number;
   limit?: number;
+  
+  // Exclusions
+  excludeConnected?: boolean; // Exclude already connected users
+  excludeBlocked?: boolean; // Exclude blocked users (always applied)
 }
 
 export interface UserProfileResponse {

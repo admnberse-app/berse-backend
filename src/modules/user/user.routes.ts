@@ -373,17 +373,17 @@ router.get('/trending-interests', UserController.getTrendingInterests);
  * @swagger
  * /v2/users/search:
  *   get:
- *     summary: Search users
- *     description: Search users by name, username, location, or interests
+ *     summary: Search users with advanced filters
+ *     description: Search users by name, username, location, interests, trust score, connection type, and more
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: q
+ *         name: query
  *         schema:
  *           type: string
- *         description: Search query
+ *         description: Search query (name, username, bio)
  *         example: john
  *       - in: query
  *         name: city
@@ -392,11 +392,84 @@ router.get('/trending-interests', UserController.getTrendingInterests);
  *         description: Filter by city
  *         example: New York
  *       - in: query
- *         name: interests
+ *         name: interest
  *         schema:
  *           type: string
- *         description: Filter by interests (comma-separated)
- *         example: travel,photography
+ *         description: Filter by interest
+ *         example: travel
+ *       - in: query
+ *         name: gender
+ *         schema:
+ *           type: string
+ *           enum: [male, female, other]
+ *         description: Filter by gender
+ *       - in: query
+ *         name: latitude
+ *         schema:
+ *           type: number
+ *         description: Your latitude for distance calculation
+ *         example: 3.1390
+ *       - in: query
+ *         name: longitude
+ *         schema:
+ *           type: number
+ *         description: Your longitude for distance calculation
+ *         example: 101.6869
+ *       - in: query
+ *         name: radius
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 500
+ *         description: Search radius in kilometers
+ *         example: 50
+ *       - in: query
+ *         name: nearby
+ *         schema:
+ *           type: boolean
+ *         description: Find nearby users (default 50km radius)
+ *       - in: query
+ *         name: minTrustScore
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *         description: Minimum trust score
+ *         example: 50
+ *       - in: query
+ *         name: maxTrustScore
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *         description: Maximum trust score
+ *       - in: query
+ *         name: trustLevel
+ *         schema:
+ *           type: string
+ *           enum: [NEW, BUILDING, ESTABLISHED, TRUSTED, VERIFIED]
+ *         description: Filter by trust level
+ *       - in: query
+ *         name: minEventsAttended
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: Minimum events attended
+ *       - in: query
+ *         name: hasHostedEvents
+ *         schema:
+ *           type: boolean
+ *         description: Filter users who have hosted events
+ *       - in: query
+ *         name: isVerified
+ *         schema:
+ *           type: boolean
+ *         description: Filter verified users only
+ *       - in: query
+ *         name: excludeConnected
+ *         schema:
+ *           type: boolean
+ *         description: Exclude already connected users
  *       - in: query
  *         name: page
  *         schema:
@@ -411,7 +484,7 @@ router.get('/trending-interests', UserController.getTrendingInterests);
  *         description: Results per page
  *     responses:
  *       200:
- *         description: Search results
+ *         description: Search results with pagination
  *         content:
  *           application/json:
  *             schema:
@@ -426,7 +499,33 @@ router.get('/trending-interests', UserController.getTrendingInterests);
  *                     users:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/User'
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           trustScore:
+ *                             type: integer
+ *                           trustLevel:
+ *                             type: string
+ *                           profilePicture:
+ *                             type: string
+ *                           bio:
+ *                             type: string
+ *                           interests:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           location:
+ *                             type: object
+ *                           isVerified:
+ *                             type: boolean
+ *                           distance:
+ *                             type: number
+ *                             description: Distance in km (if lat/lng provided)
  *                     pagination:
  *                       type: object
  *       401:
