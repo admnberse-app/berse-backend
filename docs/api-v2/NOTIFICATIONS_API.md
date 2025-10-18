@@ -74,7 +74,7 @@ Complete in-app notification system for the Berse platform. Provides real-time n
 ## Notification Types
 
 | Type | Description | Use Cases |
-|------|-------------|-----------|
+|------|-------------|-----------||
 | `SYSTEM` | System-wide announcements | App updates, maintenance, important announcements |
 | `EVENT` | Event-related notifications | RSVPs, new events, event updates, reminders |
 | `POINTS` | Points/rewards earned | Points awarded, achievements unlocked |
@@ -84,6 +84,12 @@ Complete in-app notification system for the Berse platform. Provides real-time n
 | `SERVICE` | Service updates | Service bookings, service reviews |
 | `MARKETPLACE` | Marketplace activities | Item listings, purchases, reviews |
 | `PAYMENT` | Payment-related | Payment confirmations, payment failures |
+| `SOCIAL` | Social interactions | Referrals used, profile views, birthdays, social milestones |
+| `CONNECTION` | Connection activities | Connection requests, acceptances, suggestions |
+| `ACHIEVEMENT` | Badges and milestones | Badges unlocked, level-ups, achievement progress |
+| `REMINDER` | Action reminders | Upcoming events, incomplete profiles, pending actions |
+| `COMMUNITY` | Community updates | New posts, member joins, community events, announcements |
+| `TRAVEL` | Travel features | Trip companions, travel matches, bucket list updates |
 
 ---
 
@@ -518,6 +524,11 @@ function NotificationItem({ notification }) {
 - ✅ Email verified
 - ✅ Password changed
 
+### Social
+- ✅ Someone used your referral code
+- Profile views (planned)
+- Birthday reminders (planned)
+
 ### Connections
 - ✅ Connection request received
 - ✅ Connection request accepted
@@ -529,6 +540,11 @@ function NotificationItem({ notification }) {
 ### Events
 - ✅ User RSVPs to your event
 - ✅ New event published (to connections/community)
+
+### Achievements
+- Badge unlocked (planned)
+- Milestone reached (planned)
+- Level up (planned)
 
 ---
 
@@ -610,5 +626,5 @@ For issues or questions:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: October 17, 2025
+**Version**: 1.1.0  
+**Last Updated**: October 18, 2025

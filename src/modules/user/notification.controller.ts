@@ -60,7 +60,7 @@ export class NotificationController {
    *                             type: string
    *                           type:
    *                             type: string
-   *                             enum: [SYSTEM, EVENT, POINTS, VOUCH, MATCH, MESSAGE, SERVICE, MARKETPLACE, PAYMENT]
+   *                             enum: [SYSTEM, EVENT, POINTS, VOUCH, MATCH, MESSAGE, SERVICE, MARKETPLACE, PAYMENT, SOCIAL, CONNECTION, ACHIEVEMENT, REMINDER, COMMUNITY, TRAVEL]
    *                           title:
    *                             type: string
    *                           message:

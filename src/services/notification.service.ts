@@ -267,7 +267,7 @@ export class NotificationService {
   static async notifyConnectionRequest(userId: string, senderName: string, senderId: string) {
     return await this.createNotification({
       userId,
-      type: 'SYSTEM',
+      type: 'CONNECTION',
       title: 'New Connection Request',
       message: `${senderName} wants to connect with you!`,
       actionUrl: `/connections/requests`,
@@ -288,7 +288,7 @@ export class NotificationService {
   static async notifyConnectionAccepted(userId: string, accepterName: string, accepterId: string) {
     return await this.createNotification({
       userId,
-      type: 'SYSTEM',
+      type: 'CONNECTION',
       title: 'Connection Accepted! 🤝',
       message: `${accepterName} accepted your connection request!`,
       actionUrl: `/profile/${accepterId}`,
@@ -399,6 +399,31 @@ export class NotificationService {
         event: 'security_alert',
         security: true,
         details,
+      },
+    });
+  }
+
+  /**
+   * Notify user when someone uses their referral code
+   */
+  static async notifyReferralUsed(
+    referrerId: string,
+    refereeName: string,
+    refereeId: string,
+    referralCode: string
+  ) {
+    return await this.createNotification({
+      userId: referrerId,
+      type: 'SOCIAL',
+      title: '🎉 Someone Used Your Referral Code!',
+      message: `${refereeName} just joined using your referral code "${referralCode}". You've earned referral points!`,
+      actionUrl: `/users/${refereeId}`,
+      priority: 'normal',
+      metadata: {
+        event: 'referral_used',
+        refereeId,
+        refereeName,
+        referralCode,
       },
     });
   }

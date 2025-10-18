@@ -2674,6 +2674,12 @@ enum NotificationType {
   SERVICE
   MARKETPLACE
   PAYMENT
+  SOCIAL
+  CONNECTION
+  ACHIEVEMENT
+  REMINDER
+  COMMUNITY
+  TRAVEL
 }
 
 enum OrderStatus {

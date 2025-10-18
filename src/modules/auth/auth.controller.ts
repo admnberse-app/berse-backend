@@ -239,9 +239,69 @@ export class AuthController {
       // Award registration points
       await PointsService.awardPoints(user.id, 'REGISTER');
 
-      // Award referral points if applicable
-      if (referredBy) {
+      // Award referral points and create referral record if applicable
+      if (referredBy && referralCode) {
+        // Award points to referrer
         await PointsService.awardPoints(referredBy.id, 'REFERRAL', `Referred ${user.fullName}`);
+        
+        // Create referral record to track the relationship
+        await prisma.referral.create({
+          data: {
+            id: crypto.randomUUID(),
+            referrerId: referredBy.id,
+            refereeId: user.id,
+            referralCode: referralCode.toUpperCase(),
+            referralMethod: 'code',
+            referralSource: (req.query.utm_source as string) || 'direct',
+            clickedAt: new Date(), // User clicked/entered the code
+            signedUpAt: new Date(), // User just signed up
+            activatedAt: new Date(), // Immediately activated upon signup
+            isActivated: true,
+            referrerRewardGiven: true, // Points already awarded
+            refereeRewardGiven: false, // Can be used for future rewards
+            ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
+            userAgent: req.get('user-agent') || 'unknown',
+            deviceInfo: (deviceInfo || {}) as any,
+            metadata: {
+              registrationSource: 'web',
+              utmSource: req.query.utm_source,
+              utmMedium: req.query.utm_medium,
+              utmCampaign: req.query.utm_campaign,
+            },
+          },
+        });
+        
+        // Update referral stats for referrer
+        await prisma.referralStat.upsert({
+          where: { userId: referredBy.id },
+          create: {
+            userId: referredBy.id,
+            totalReferrals: 1,
+            totalSignups: 1,
+            totalActivated: 1,
+            lastReferralAt: new Date(),
+          },
+          update: {
+            totalReferrals: { increment: 1 },
+            totalSignups: { increment: 1 },
+            totalActivated: { increment: 1 },
+            lastReferralAt: new Date(),
+          },
+        });
+
+        // Notify referrer that their code was used
+        await NotificationService.notifyReferralUsed(
+          referredBy.id,
+          user.fullName,
+          user.id,
+          referralCode
+        );
+
+        logger.info('Referral recorded', {
+          referrerId: referredBy.id,
+          refereeId: user.id,
+          referralCode,
+        });
       }
 
       // Generate token pair
@@ -1242,13 +1302,23 @@ export class AuthController {
         throw new AppError('Invalid referral code', 404);
       }
 
+      // Transform profile picture key to full URL if needed
+      let profilePictureUrl = referrer.profile?.profilePicture || null;
+      if (profilePictureUrl && 
+          !profilePictureUrl.startsWith('http://') && 
+          !profilePictureUrl.startsWith('https://') &&
+          !profilePictureUrl.startsWith('data:')) {
+        const { storageService } = await import('../../services/storage.service');
+        profilePictureUrl = storageService.getPublicUrl(profilePictureUrl);
+      }
+
       // Return referrer information
       sendSuccess(res, {
         valid: true,
         referrer: {
           fullName: referrer.fullName,
           username: referrer.username,
-          profilePicture: referrer.profile?.profilePicture || null,
+          profilePicture: profilePictureUrl,
           referralCode: referrer.metadata?.referralCode,
         }
       }, 'Referral code is valid');

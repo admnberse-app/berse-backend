@@ -29,6 +29,42 @@ The Authentication API provides endpoints for user registration, login, password
 
 ## Public Endpoints
 
+### Validate Referral Code
+Validate a referral code before registration.
+
+**Endpoint:** `GET /v2/auth/validate-referral/:code`
+
+**Path Parameters:**
+- `code` - The referral code to validate (case-insensitive)
+
+**Request Example:**
+```bash
+curl "https://api.berse-app.com/v2/auth/validate-referral/ABC123XYZ"
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Valid referral code",
+  "data": {
+    "isValid": true,
+    "referrerName": "John Doe",
+    "referrerId": "usr_abc123"
+  }
+}
+```
+
+**Error Response (404):**
+```json
+{
+  "success": false,
+  "message": "Invalid referral code"
+}
+```
+
+---
+
 ### Register
 Create a new user account.
 
@@ -685,3 +721,6 @@ const refreshToken = async () => {
 - Password reset functionality
 - Session management
 - Referral code support during registration
+- Referral code validation endpoint
+- Automatic referral tracking and rewards
+- Referral notifications to referrer
