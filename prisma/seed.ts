@@ -1,6 +1,22 @@
 // Load environment from parent directory
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
+/**
+ * DATABASE SEED SCRIPT
+ * 
+ * This script seeds the database with initial data including:
+ * - Badges, Rewards, Subscription Tiers
+ * - Payment Providers & Fee Configurations
+ * - Test Users & Communities
+ * - Sample Events, Connections, Vouches
+ * 
+ * IMPORTANT: This seed script PRESERVES EXISTING DATA
+ * - Uses upsert operations where possible
+ * - Checks for existing records before creating new ones
+ * - Won't delete existing users, communities, events, etc.
+ * - Safe to run multiple times
+ */
+
 import { PrismaClient, BadgeType, UserRole, UserStatus, TransactionType, EventType, EventStatus, EventHostType, ConnectionStatus, VouchType, VouchStatus, ServiceType, ServiceStatus, PricingType, ListingStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -156,19 +172,25 @@ async function main() {
     },
   ];
 
-  await prisma.reward.deleteMany({});
+  // Only create rewards that don't exist
   for (const reward of rewards) {
-    await prisma.reward.create({ data: reward });
+    const exists = await prisma.reward.findFirst({
+      where: { title: reward.title, partner: reward.partner },
+    });
+    if (!exists) {
+      await prisma.reward.create({ data: reward });
+    }
   }
-  console.log('✅ Sample rewards created');
+  console.log('✅ Sample rewards seeded (existing preserved)');
 
   // ===================================
   // 3. CREATE VOUCH CONFIGURATION
   // ===================================
   console.log('\n🤝 Seeding vouch configuration...');
-  await prisma.vouchConfig.deleteMany({});
-  await prisma.vouchConfig.create({
-    data: {
+  const existingVouchConfig = await prisma.vouchConfig.findFirst();
+  if (!existingVouchConfig) {
+    await prisma.vouchConfig.create({
+      data: {
       maxPrimaryVouches: 1,
       maxSecondaryVouches: 3,
       maxCommunityVouches: 2,
@@ -184,15 +206,15 @@ async function main() {
       autoVouchRequireZeroNegativity: true,
       reconnectionCooldownDays: 30,
       effectiveFrom: new Date(),
-    },
-  });
-  console.log('✅ Vouch configuration created');
+      },
+    });
+  }
+  console.log('✅ Vouch configuration seeded (existing preserved)');
 
   // ===================================
   // 4. CREATE SUBSCRIPTION TIERS
   // ===================================
   console.log('\n💎 Seeding subscription tiers...');
-  await prisma.subscriptionTier.deleteMany({});
   
   const tiers = [
     {
@@ -263,18 +285,23 @@ async function main() {
   ];
 
   for (const tier of tiers) {
-    await prisma.subscriptionTier.create({ data: tier });
+    await prisma.subscriptionTier.upsert({
+      where: { tierCode: tier.tierCode },
+      update: {},
+      create: tier,
+    });
   }
-  console.log('✅ Subscription tiers created');
+  console.log('✅ Subscription tiers seeded (existing preserved)');
 
   // ===================================
   // 5. CREATE PAYMENT PROVIDER
   // ===================================
   console.log('\n💳 Seeding payment provider...');
-  await prisma.paymentProvider.deleteMany({});
   
-  await prisma.paymentProvider.create({
-    data: {
+  await prisma.paymentProvider.upsert({
+    where: { providerCode: 'XENDIT' },
+    update: {},
+    create: {
       providerCode: 'XENDIT',
       providerName: 'Xendit',
       providerType: 'aggregator',
@@ -309,13 +336,12 @@ async function main() {
       },
     },
   });
-  console.log('✅ Payment provider (Xendit) created');
+  console.log('✅ Payment provider (Xendit) seeded (existing preserved)');
 
   // ===================================
   // 6. CREATE PLATFORM FEE CONFIGS
   // ===================================
   console.log('\n💰 Seeding platform fee configurations...');
-  await prisma.platformFeeConfig.deleteMany({});
   
   const feeConfigs = [
     {
@@ -369,18 +395,28 @@ async function main() {
   ];
 
   for (const config of feeConfigs) {
-    await prisma.platformFeeConfig.create({ data: config });
+    // Check if config already exists
+    const exists = await prisma.platformFeeConfig.findFirst({
+      where: {
+        configName: config.configName,
+        transactionType: config.transactionType,
+      },
+    });
+    if (!exists) {
+      await prisma.platformFeeConfig.create({ data: config });
+    }
   }
-  console.log('✅ Platform fee configurations created');
+  console.log('✅ Platform fee configurations seeded (existing preserved)');
 
   // ===================================
   // 7. CREATE REFERRAL CAMPAIGN
   // ===================================
   console.log('\n🎯 Seeding referral campaign...');
-  await prisma.referralCampaign.deleteMany({});
   
-  await prisma.referralCampaign.create({
-    data: {
+  await prisma.referralCampaign.upsert({
+    where: { campaignCode: 'LAUNCH2025' },
+    update: {},
+    create: {
       campaignCode: 'LAUNCH2025',
       campaignName: 'BerseMuka Launch Campaign 2025',
       description: 'Special rewards for early adopters and referrers',
@@ -409,7 +445,7 @@ async function main() {
       isPaused: false,
     },
   });
-  console.log('✅ Referral campaign created');
+  console.log('✅ Referral campaign seeded (existing preserved)');
 
   // ===================================
   // 8. CREATE TEST USERS
@@ -418,8 +454,6 @@ async function main() {
   
   const defaultPassword = await bcrypt.hash('password123', 12);
   const adminPassword = await bcrypt.hash('admin123', 12);
-
-  await prisma.user.deleteMany({});
   
   const usersData = [
     {
@@ -602,7 +636,19 @@ async function main() {
   for (const userData of usersData) {
     const { profile, location, security, serviceProfile, ...userCore } = userData;
     
-    const user = await prisma.user.create({
+    // Check if user already exists
+    let user = await prisma.user.findUnique({
+      where: { email: userData.email },
+      include: {
+        profile: true,
+        location: true,
+        security: true,
+        metadata: true,
+      },
+    });
+    
+    if (!user) {
+      user = await prisma.user.create({
       data: {
         ...userCore,
         profile: profile ? { create: profile } : undefined,
@@ -634,39 +680,50 @@ async function main() {
         location: true,
         security: true,
         metadata: true,
-      },
-    });
+        },
+      });
+    }
     
     createdUsers.push(user);
   }
 
-  console.log('✅ Test users created successfully');
+  console.log('✅ Test users seeded (existing preserved)');
 
   for (const user of createdUsers) {
-    await prisma.authIdentity.create({
-      data: {
-        userId: user.id,
-        provider: 'password',
-        providerUid: user.email || user.phone || user.username || '',
-        email: user.email,
-      },
+    const existingIdentity = await prisma.authIdentity.findFirst({
+      where: { userId: user.id, provider: 'password' },
     });
+    if (!existingIdentity) {
+      await prisma.authIdentity.create({
+        data: {
+          userId: user.id,
+          provider: 'password',
+          providerUid: user.email || user.phone || user.username || '',
+          email: user.email,
+        },
+      });
+    }
   }
-  console.log('✅ Auth identities created');
+  console.log('✅ Auth identities seeded (existing preserved)');
 
   for (let i = 0; i < Math.min(2, createdUsers.length); i++) {
     const user = createdUsers[i];
-    await prisma.refreshToken.create({
-      data: {
-        tokenHash: `refresh_hash_${user.id}_${Date.now()}`,
-        tokenFamily: `family_${user.id}`,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        isRevoked: false,
-      },
+    const existingToken = await prisma.refreshToken.findFirst({
+      where: { userId: user.id, isRevoked: false },
     });
+    if (!existingToken) {
+      await prisma.refreshToken.create({
+        data: {
+          tokenHash: `refresh_hash_${user.id}_${Date.now()}`,
+          tokenFamily: `family_${user.id}`,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          isRevoked: false,
+        },
+      });
+    }
   }
-  console.log('✅ Sample refresh tokens created');
+  console.log('✅ Sample refresh tokens seeded (existing preserved)');
 
   // ===================================
   // 9. CREATE SAMPLE COMMUNITIES
@@ -726,36 +783,55 @@ async function main() {
 
     const createdCommunities = [];
     for (const community of communities) {
-      const created = await prisma.community.create({
-        data: community,
+      // Check if community already exists
+      let existing = await prisma.community.findFirst({
+        where: { name: community.name },
       });
       
-      // Add creator as owner
-      await prisma.communityMember.create({
-        data: {
-          communityId: created.id,
-          userId: community.createdById,
-          role: 'OWNER',
-          isApproved: true,
-        },
-      });
-      createdCommunities.push(created);
+      if (!existing) {
+        existing = await prisma.community.create({
+          data: community,
+        });
+        
+        // Add creator as owner
+        await prisma.communityMember.create({
+          data: {
+            communityId: existing.id,
+            userId: community.createdById,
+            role: 'OWNER',
+            isApproved: true,
+          },
+        });
+      }
+      createdCommunities.push(existing);
     }
     
-    // Add more members to communities
+    // Add more members to communities (check if not already a member)
     if (createdCommunities.length > 0 && aliceUser && bobUser) {
-      await prisma.communityMember.createMany({
-        data: [
-          { communityId: createdCommunities[0].id, userId: aliceUser.id, role: 'MEMBER', isApproved: true },
-          { communityId: createdCommunities[0].id, userId: bobUser.id, role: 'MEMBER', isApproved: true },
-          { communityId: createdCommunities[1].id, userId: adminUser.id, role: 'MEMBER', isApproved: true },
-          { communityId: createdCommunities[1].id, userId: bobUser.id, role: 'MODERATOR', isApproved: true },
-          { communityId: createdCommunities[2].id, userId: bobUser.id, role: 'MEMBER', isApproved: true },
-          { communityId: createdCommunities[3].id, userId: hostUser.id, role: 'MEMBER', isApproved: true },
-        ],
-      });
+      const membershipsToCreate = [
+        { communityId: createdCommunities[0].id, userId: aliceUser.id, role: 'MEMBER', isApproved: true },
+        { communityId: createdCommunities[0].id, userId: bobUser.id, role: 'MEMBER', isApproved: true },
+        { communityId: createdCommunities[1].id, userId: adminUser.id, role: 'MEMBER', isApproved: true },
+        { communityId: createdCommunities[1].id, userId: bobUser.id, role: 'MODERATOR', isApproved: true },
+        { communityId: createdCommunities[2].id, userId: bobUser.id, role: 'MEMBER', isApproved: true },
+        { communityId: createdCommunities[3].id, userId: hostUser.id, role: 'MEMBER', isApproved: true },
+      ];
+      
+      for (const membership of membershipsToCreate) {
+        const exists = await prisma.communityMember.findUnique({
+          where: {
+            userId_communityId: {
+              userId: membership.userId,
+              communityId: membership.communityId,
+            },
+          },
+        });
+        if (!exists) {
+          await prisma.communityMember.create({ data: membership });
+        }
+      }
     }
-    console.log('✅ Sample communities created');
+    console.log('✅ Sample communities seeded (existing preserved)');
   }
 
   // ===================================
@@ -842,11 +918,20 @@ async function main() {
     ];
 
     for (const event of events) {
-      await prisma.event.create({
-        data: event,
+      // Check if event already exists (by title and hostId)
+      const exists = await prisma.event.findFirst({
+        where: {
+          title: event.title,
+          hostId: event.hostId,
+        },
       });
+      if (!exists) {
+        await prisma.event.create({
+          data: event,
+        });
+      }
     }
-    console.log('✅ Sample events created');
+    console.log('✅ Sample events seeded (existing preserved)');
   }
 
   // ===================================
@@ -890,11 +975,22 @@ async function main() {
     ];
 
     for (const connection of connections) {
-      await prisma.userConnection.create({
-        data: connection,
+      // Check if connection already exists
+      const exists = await prisma.userConnection.findFirst({
+        where: {
+          OR: [
+            { initiatorId: connection.initiatorId, receiverId: connection.receiverId },
+            { initiatorId: connection.receiverId, receiverId: connection.initiatorId },
+          ],
+        },
       });
+      if (!exists) {
+        await prisma.userConnection.create({
+          data: connection,
+        });
+      }
     }
-    console.log('✅ User connections created');
+    console.log('✅ User connections seeded (existing preserved)');
   }
 
   // ===================================
@@ -927,9 +1023,18 @@ async function main() {
     ];
 
     for (const vouch of vouches) {
-      await prisma.vouch.create({ data: vouch });
+      // Check if vouch already exists
+      const exists = await prisma.vouch.findFirst({
+        where: {
+          voucherId: vouch.voucherId,
+          voucheeId: vouch.voucheeId,
+        },
+      });
+      if (!exists) {
+        await prisma.vouch.create({ data: vouch });
+      }
     }
-    console.log('✅ Sample vouches created');
+    console.log('✅ Sample vouches seeded (existing preserved)');
   }
 
   // ===================================
@@ -969,9 +1074,18 @@ async function main() {
     ];
 
     for (const trip of trips) {
-      await prisma.travelTrip.create({ data: trip });
+      // Check if trip already exists
+      const exists = await prisma.travelTrip.findFirst({
+        where: {
+          userId: trip.userId,
+          title: trip.title,
+        },
+      });
+      if (!exists) {
+        await prisma.travelTrip.create({ data: trip });
+      }
     }
-    console.log('✅ Sample travel trips created');
+    console.log('✅ Sample travel trips seeded (existing preserved)');
   }
 
   // ===================================
@@ -1010,9 +1124,18 @@ async function main() {
     ];
 
     for (const service of services) {
-      await prisma.service.create({ data: service });
+      // Check if service already exists
+      const exists = await prisma.service.findFirst({
+        where: {
+          providerId: service.providerId,
+          title: service.title,
+        },
+      });
+      if (!exists) {
+        await prisma.service.create({ data: service });
+      }
     }
-    console.log('✅ Sample services created');
+    console.log('✅ Sample services seeded (existing preserved)');
   }
 
   // ===================================
@@ -1059,14 +1182,23 @@ async function main() {
 
     for (const listing of listings) {
       const { userId, ...listingData } = listing;
-      await prisma.marketplaceListing.create({
-        data: {
-          ...listingData,
-          user: { connect: { id: userId } },
+      // Check if listing already exists
+      const exists = await prisma.marketplaceListing.findFirst({
+        where: {
+          userId: userId,
+          title: listing.title,
         },
       });
+      if (!exists) {
+        await prisma.marketplaceListing.create({
+          data: {
+            ...listingData,
+            user: { connect: { id: userId } },
+          },
+        });
+      }
     }
-    console.log('✅ Sample marketplace listings created');
+    console.log('✅ Sample marketplace listings seeded (existing preserved)');
   }
 
   // ===================================
@@ -1081,36 +1213,47 @@ async function main() {
     });
 
     if (referralMetadata) {
-      const referral = await prisma.referral.create({
-        data: {
+      // Check if referral sample already exists
+      const existingReferral = await prisma.referral.findFirst({
+        where: {
           referrerId: hostUser.id,
           referralCode: referralMetadata.referralCode,
-          referralMethod: 'link',
           referralSource: 'social_media',
-          campaignId: campaign.id,
-          clickedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-          signedUpAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-          isActivated: false,
         },
       });
+      
+      if (!existingReferral) {
+        const referral = await prisma.referral.create({
+          data: {
+            referrerId: hostUser.id,
+            referralCode: referralMetadata.referralCode,
+            referralMethod: 'link',
+            referralSource: 'social_media',
+            campaignId: campaign.id,
+            clickedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+            signedUpAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+            isActivated: false,
+          },
+        });
 
-      // Create referral stats
-      await prisma.referralStat.upsert({
-        where: { userId: hostUser.id },
-        create: {
-          userId: hostUser.id,
-          totalReferrals: 1,
-          totalClicks: 3,
-          totalSignups: 1,
-          totalActivated: 0,
-          clickToSignupRate: 33.33,
-          signupToActiveRate: 0.0,
-          overallConversionRate: 0.0,
-        },
-        update: {},
-      });
+        // Create referral stats
+        await prisma.referralStat.upsert({
+          where: { userId: hostUser.id },
+          create: {
+            userId: hostUser.id,
+            totalReferrals: 1,
+            totalClicks: 3,
+            totalSignups: 1,
+            totalActivated: 0,
+            clickToSignupRate: 33.33,
+            signupToActiveRate: 0.0,
+            overallConversionRate: 0.0,
+          },
+          update: {},
+        });
+      }
     }
-    console.log('✅ Sample referrals created');
+    console.log('✅ Sample referrals seeded (existing preserved)');
   }
 
   // ===================================
@@ -1132,9 +1275,19 @@ async function main() {
   ];
 
   for (const point of pointsData) {
-    await prisma.pointHistory.create({ data: point });
+    // Check if similar point history exists for this user and action
+    const exists = await prisma.pointHistory.findFirst({
+      where: {
+        userId: point.userId,
+        action: point.action,
+        description: point.description,
+      },
+    });
+    if (!exists) {
+      await prisma.pointHistory.create({ data: point });
+    }
   }
-  console.log('✅ Point history created');
+  console.log('✅ Point history seeded (existing preserved)');
 
   // ===================================
   // DISPLAY SUMMARY

@@ -3,6 +3,9 @@
  * 
  * This script seeds payment providers and routing rules for the payment gateway abstraction layer.
  * Run this after the main seed to set up Xendit and optional providers like Stripe.
+ * 
+ * IMPORTANT: Uses upsert operations to preserve existing payment configurations
+ * Safe to run multiple times without deleting existing data.
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
@@ -15,20 +18,21 @@ async function main() {
   console.log('💳 Starting payment provider seed...\n');
 
   // ============================================================================
-  // 1. CLEAR EXISTING DATA
+  // 1. CLEAR EXISTING ROUTING RULES ONLY (preserve providers)
   // ============================================================================
-  console.log('🧹 Clearing existing payment provider data...');
+  console.log('🧹 Clearing existing routing rules...');
   await prisma.paymentProviderRouting.deleteMany({});
-  await prisma.paymentProvider.deleteMany({});
-  console.log('✅ Existing data cleared\n');
+  console.log('✅ Routing rules cleared\n');
 
   // ============================================================================
   // 2. XENDIT PROVIDER (Primary for Southeast Asia)
   // ============================================================================
-  console.log('📦 Creating Xendit provider...');
+  console.log('📦 Upserting Xendit provider...');
   
-  const xenditProvider = await prisma.paymentProvider.create({
-    data: {
+  const xenditProvider = await prisma.paymentProvider.upsert({
+    where: { providerCode: 'xendit' },
+    update: {},
+    create: {
       providerCode: 'xendit',
       providerName: 'Xendit',
       providerType: 'GATEWAY',
@@ -118,10 +122,12 @@ async function main() {
   // ============================================================================
   // 3. STRIPE PROVIDER (Optional - for global coverage)
   // ============================================================================
-  console.log('📦 Creating Stripe provider (optional)...');
+  console.log('📦 Upserting Stripe provider (optional)...');
   
-  const stripeProvider = await prisma.paymentProvider.create({
-    data: {
+  const stripeProvider = await prisma.paymentProvider.upsert({
+    where: { providerCode: 'stripe' },
+    update: {},
+    create: {
       providerCode: 'stripe',
       providerName: 'Stripe',
       providerType: 'GATEWAY',
