@@ -24,6 +24,7 @@ The Metadata API provides endpoints for accessing countries, regions, timezones,
   - [Get All Cities](#get-all-cities)
   - [Get Cities by Country](#get-cities-by-country)
   - [Get Cities by State](#get-cities-by-state)
+  - [Search Cities](#search-cities)
   - [Get Popular Cities](#get-popular-cities)
 - [Regions](#regions)
   - [Get All Regions](#get-all-regions)
@@ -675,6 +676,119 @@ const filtered = await fetch(
 
 ---
 
+### Search Cities
+Search for cities globally by name without needing to specify a country first.
+
+**Endpoint:** `GET /v2/metadata/cities/search`
+
+**Cache:** 1 day (86400 seconds)
+
+**Query Parameters:**
+- `q` (required) - Search query (minimum 2 characters)
+- `page` (optional, default: 1) - Page number (1-based)
+- `limit` (optional, default: 50, max: 100) - Number of cities per page
+
+**Examples:**
+```
+GET /v2/metadata/cities/search?q=kuala
+GET /v2/metadata/cities/search?q=new&page=1&limit=20
+GET /v2/metadata/cities/search?q=san&page=2&limit=50
+GET /v2/metadata/cities/search?q=paris
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "cities": [
+      {
+        "name": "Kuala Lumpur",
+        "countryCode": "MY",
+        "countryName": "Malaysia",
+        "stateCode": "14",
+        "stateName": "Wilayah Persekutuan Kuala Lumpur",
+        "latitude": "3.139",
+        "longitude": "101.6869"
+      },
+      {
+        "name": "Kuala Terengganu",
+        "countryCode": "MY",
+        "countryName": "Malaysia",
+        "stateCode": "11",
+        "stateName": "Terengganu",
+        "latitude": "5.33018",
+        "longitude": "103.14323"
+      },
+      {
+        "name": "Kuala Kangsar",
+        "countryCode": "MY",
+        "countryName": "Malaysia",
+        "stateCode": "08",
+        "stateName": "Perak",
+        "latitude": "4.76667",
+        "longitude": "100.93333"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 3,
+      "totalItems": 150,
+      "itemsPerPage": 50,
+      "hasNextPage": true,
+      "hasPreviousPage": false
+    }
+  }
+}
+```
+
+**Error Responses:**
+- `400` - Invalid request (missing query or too short)
+```json
+{
+  "success": false,
+  "error": "Search query parameter \"q\" is required"
+}
+```
+```json
+{
+  "success": false,
+  "error": "Search query must be at least 2 characters long"
+}
+```
+
+**Response Fields:**
+- `name` - City name
+- `countryCode` - ISO 3166-1 alpha-2 country code
+- `countryName` - Full country name
+- `stateCode` - State/province code (if available)
+- `stateName` - State/province name (if available)
+- `latitude` - City latitude coordinate
+- `longitude` - City longitude coordinate
+
+**Search Behavior:**
+- Case-insensitive substring matching
+- Matches anywhere in city name
+- Minimum query length: 2 characters
+- Searches across all 130,000+ cities globally
+- Results include country and state information for context
+
+**Use Cases:**
+- Global city autocomplete
+- Multi-country search without pre-selecting a country
+- Quick city lookup from any part of the world
+- Location suggestions for international users
+- Travel destination search
+
+**Performance Tips:**
+- Results are cached for 1 day
+- Use reasonable page sizes (50 is default)
+- Implement debouncing for search (300ms recommended)
+- More specific queries return faster results
+- Consider using country-specific search for better performance on large result sets
+
+---
+
 ### Get Popular Cities
 Get popular cities based on user locations and published upcoming events.
 
@@ -775,12 +889,14 @@ The endpoint uses a sophisticated scoring system to rank cities:
    - Cities within radius get bonus points
    - Bonus = (1 - distance/radius) × 100
    - Closer cities get higher bonuses
-4. **Fallback Cities**: If results < limit, adds these top cities:
-   - Kuala Lumpur (MY)
-   - Singapore (SG)
-   - Jakarta (ID)
-   - Bangkok (TH)
-   - Manila (PH)
+4. **Fallback Logic**:
+   - **With User Location**: If results < limit, returns the 5 closest cities to the user based on distance
+   - **Without User Location**: If results < limit, adds these top cities:
+     - Kuala Lumpur (MY)
+     - Singapore (SG)
+     - Jakarta (ID)
+     - Bangkok (TH)
+     - Manila (PH)
 
 **Data Sources:**
 - **User Locations**: Aggregates from `UserLocation` table (current city data)
@@ -965,6 +1081,7 @@ All metadata endpoints use **Redis caching** with a cache-aside pattern for opti
 | Get All Cities | `metadata:cities:{country}:{state}:{page}:{limit}` | 1 day |
 | Get Cities by Country | `metadata:cities:country:{CODE}:{search}:{page}:{limit}` | 1 day |
 | Get Cities by State | `metadata:cities:state:{CODE}:{STATE}:{search}:{page}:{limit}` | 1 day |
+| Search Cities | `metadata:cities:search:{query}:{page}:{limit}` | 1 day |
 | Get Popular Cities | `metadata:cities:popular:{lat}:{lon}:{limit}:{radius}` | 1 hour |
 | Get Regions | `metadata:regions:all` | 1 day |
 | Get Countries by Region | `metadata:region:{region}:countries` | 1 day |
@@ -1263,6 +1380,126 @@ const CityPaginator = {
 };
 ```
 
+**Search Cities Globally:**
+```javascript
+const searchCities = async (query, page = 1, limit = 50) => {
+  if (query.length < 2) {
+    throw new Error('Search query must be at least 2 characters');
+  }
+
+  const params = new URLSearchParams({
+    q: query,
+    page: page.toString(),
+    limit: limit.toString()
+  });
+  
+  const response = await fetch(
+    `https://api.berse-app.com/v2/metadata/cities/search?${params}`
+  );
+  const data = await response.json();
+  
+  if (data.success) {
+    return {
+      cities: data.data.cities,
+      pagination: data.data.pagination
+    };
+  }
+  return { cities: [], pagination: null };
+};
+
+// Search for cities containing "kuala"
+const results = await searchCities('kuala');
+
+// Search with pagination
+const page2 = await searchCities('new', 2, 20);
+
+// Global city autocomplete component
+const GlobalCityAutocomplete = ({ onSelectCity }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState(null);
+
+  const handleSearch = async (searchQuery, page = 1) => {
+    if (searchQuery.length < 2) {
+      setResults([]);
+      setPagination(null);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const data = await searchCities(searchQuery, page, 20);
+      
+      if (page === 1) {
+        setResults(data.cities);
+      } else {
+        setResults(prev => [...prev, ...data.cities]);
+      }
+      
+      setPagination(data.pagination);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (pagination?.hasNextPage && !loading) {
+      handleSearch(query, pagination.currentPage + 1);
+    }
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch(query, 1);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search cities worldwide..."
+        minLength={2}
+      />
+      {loading && <div>Loading...</div>}
+      <ul>
+        {results.map((city, index) => (
+          <li 
+            key={`${city.name}-${city.countryCode}-${index}`}
+            onClick={() => onSelectCity(city)}
+          >
+            <strong>{city.name}</strong>
+            {city.stateName && <span>, {city.stateName}</span>}
+            <span> - {city.countryName}</span>
+            <small style={{ color: '#666', display: 'block' }}>
+              {city.latitude}, {city.longitude}
+            </small>
+          </li>
+        ))}
+      </ul>
+      {pagination?.hasNextPage && (
+        <button onClick={loadMore} disabled={loading}>
+          {loading ? 'Loading...' : `Load More (${pagination.totalItems - results.length} remaining)`}
+        </button>
+      )}
+      {pagination && (
+        <div style={{ fontSize: '0.8em', color: '#666', marginTop: '8px' }}>
+          Showing {results.length} of {pagination.totalItems} cities
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
 **Get All Countries (with pagination):**
 ```javascript
 const getCountries = async (page = 1, limit = 50) => {
@@ -1400,6 +1637,21 @@ curl "https://api.berse-app.com/v2/metadata/countries/US/states/CA/cities?page=2
 
 # Search California cities containing "Los" (first page, 20 results)
 curl "https://api.berse-app.com/v2/metadata/countries/US/states/CA/cities?search=Los&page=1&limit=20"
+```
+
+**Search Cities Globally:**
+```bash
+# Search for cities containing "kuala"
+curl "https://api.berse-app.com/v2/metadata/cities/search?q=kuala"
+
+# Search for cities containing "new" (first page, 20 results)
+curl "https://api.berse-app.com/v2/metadata/cities/search?q=new&page=1&limit=20"
+
+# Search for cities containing "san" (second page)
+curl "https://api.berse-app.com/v2/metadata/cities/search?q=san&page=2&limit=50"
+
+# Search for "paris"
+curl "https://api.berse-app.com/v2/metadata/cities/search?q=paris"
 ```
 
 **Get Cities with Filters:**
@@ -1792,6 +2044,15 @@ Metadata endpoints are public and have generous rate limits:
 ---
 
 ## Changelog
+
+### v2.2.0 (2025-10-19)
+- **✨ NEW:** Added `/cities/search` endpoint for global city search by name
+- Global city search without requiring country selection first
+- Returns city name with country and state information for context
+- Supports pagination (max 100 results per page)
+- Minimum query length: 2 characters
+- Case-insensitive substring matching across 130,000+ cities
+- Cached for 1 day for optimal performance
 
 ### v2.1.0 (2025-10-16)
 - **🎯 BREAKING CHANGE:** Added comprehensive pagination support to all city endpoints

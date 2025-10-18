@@ -663,6 +663,95 @@ export class CountriesController {
   }
 
   /**
+   * Search cities by name
+   * @route GET /v2/metadata/cities/search
+   */
+  static async searchCities(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { 
+        q,
+        page = '1', 
+        limit = '50' 
+      } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        throw new AppError('Search query parameter "q" is required', 400);
+      }
+
+      if (q.trim().length < 2) {
+        throw new AppError('Search query must be at least 2 characters long', 400);
+      }
+
+      // Validate and set pagination parameters
+      const pageNum = Math.max(1, parseInt(page as string));
+      const limitNum = Math.min(Math.max(1, parseInt(limit as string)), 100); // Max 100 items per page
+      const offset = (pageNum - 1) * limitNum;
+
+      // Check cache
+      const cacheKey = `metadata:cities:search:${q.toLowerCase().trim()}:${page}:${limit}`;
+      const cachedData = await cache.get(cacheKey);
+      
+      if (cachedData) {
+        sendSuccess(res, cachedData);
+        return;
+      }
+
+      // Get all cities
+      const allCities = City.getAllCities();
+
+      if (!allCities) {
+        throw new AppError('Failed to fetch cities data', 500);
+      }
+
+      // Search cities by name (case-insensitive substring match)
+      const searchLower = q.trim().toLowerCase();
+      const filteredCities = allCities.filter(city => 
+        city.name.toLowerCase().includes(searchLower)
+      );
+
+      // Calculate total and apply pagination
+      const totalCities = filteredCities.length;
+      const paginatedCities = filteredCities.slice(offset, offset + limitNum);
+      const totalPages = Math.ceil(totalCities / limitNum);
+
+      // Get country names for better UX
+      const transformedCities = paginatedCities.map(city => {
+        const country = CSCCountry.getCountryByCode(city.countryCode);
+        const state = city.stateCode ? State.getStateByCodeAndCountry(city.stateCode, city.countryCode) : null;
+        
+        return {
+          name: city.name,
+          countryCode: city.countryCode,
+          countryName: country?.name || city.countryCode,
+          stateCode: city.stateCode,
+          stateName: state?.name,
+          latitude: city.latitude,
+          longitude: city.longitude,
+        };
+      });
+
+      const responseData = {
+        cities: transformedCities,
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          totalItems: totalCities,
+          itemsPerPage: limitNum,
+          hasNextPage: pageNum < totalPages,
+          hasPreviousPage: pageNum > 1,
+        },
+      };
+
+      // Cache for 1 day
+      await cache.set(cacheKey, responseData, CacheTTL.DAY);
+
+      sendSuccess(res, responseData);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get popular cities based on user locations and events
    * @route GET /v2/metadata/cities/popular
    */
@@ -693,12 +782,10 @@ export class CountriesController {
       // Get cities from user locations
       const userLocations = await prisma.userLocation.findMany({
         where: {
-          currentCity: {
-            not: null,
-          },
-          countryOfResidence: {
-            not: null,
-          },
+          NOT: [
+            { currentCity: null },
+            { countryOfResidence: null },
+          ],
         },
         select: {
           currentCity: true,
@@ -706,12 +793,9 @@ export class CountriesController {
         },
       });
 
-      // Get cities from events
+      // Get cities from events - filter out null locations in application code
       const events = await prisma.event.findMany({
         where: {
-          location: {
-            not: null,
-          },
           status: 'PUBLISHED',
           date: {
             gte: new Date(),
@@ -721,6 +805,9 @@ export class CountriesController {
           location: true,
         },
       });
+
+      // Filter out events with null location
+      const validEvents = events.filter(e => e.location !== null);
 
       // Manually aggregate user location cities
       const userLocationCountMap = new Map<string, { city: string; country: string; count: number }>();
@@ -752,7 +839,7 @@ export class CountriesController {
 
       // Manually aggregate event cities
       const eventLocationCountMap = new Map<string, { location: string; count: number }>();
-      events.forEach(event => {
+      validEvents.forEach(event => {
         if (event.location) {
           const key = event.location.toLowerCase();
           const existing = eventLocationCountMap.get(key);
@@ -886,37 +973,92 @@ export class CountriesController {
         }).sort((a, b) => b.score - a.score);
       }
 
-      // If we have less than the requested limit, add top cities globally
+      // If we have less than the requested limit, add fallback cities
       if (popularCities.length < limitNum) {
-        const topGlobalCities = [
-          { city: 'Kuala Lumpur', country: 'MY' },
-          { city: 'Singapore', country: 'SG' },
-          { city: 'Jakarta', country: 'ID' },
-          { city: 'Bangkok', country: 'TH' },
-          { city: 'Manila', country: 'PH' },
-        ];
-
-        const existingCityNames = new Set(popularCities.map(c => c.city.toLowerCase()));
-        
-        for (const globalCity of topGlobalCities) {
-          if (popularCities.length >= limitNum) break;
+        // If user location is provided, find closest cities
+        if (userLatitude && userLongitude) {
+          const userLat = parseFloat(userLatitude as string);
+          const userLon = parseFloat(userLongitude as string);
+          const allCities = City.getAllCities();
           
-          if (!existingCityNames.has(globalCity.city.toLowerCase())) {
-            const allCities = City.getAllCities();
-            const cityInfo = allCities.find(c => 
-              c.name.toLowerCase() === globalCity.city.toLowerCase() &&
-              c.countryCode === globalCity.country
-            );
+          // Calculate distances for all cities and sort by distance
+          const citiesWithDistances = allCities
+            .filter(c => c.latitude && c.longitude)
+            .map(c => {
+              const cityLat = parseFloat(c.latitude!);
+              const cityLon = parseFloat(c.longitude!);
+              
+              // Haversine formula for distance
+              const R = 6371; // Earth's radius in km
+              const dLat = (cityLat - userLat) * Math.PI / 180;
+              const dLon = (cityLon - userLon) * Math.PI / 180;
+              const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(userLat * Math.PI / 180) * Math.cos(cityLat * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              
+              return {
+                city: c.name,
+                country: c.countryCode,
+                latitude: c.latitude,
+                longitude: c.longitude,
+                distance: dist,
+              };
+            })
+            .sort((a, b) => a.distance - b.distance);
+          
+          // Add closest cities that aren't already in the list
+          const existingCityNames = new Set(popularCities.map(c => c.city.toLowerCase()));
+          
+          for (const nearbyCity of citiesWithDistances) {
+            if (popularCities.length >= limitNum) break;
+            
+            if (!existingCityNames.has(nearbyCity.city.toLowerCase())) {
+              popularCities.push({
+                city: nearbyCity.city,
+                country: nearbyCity.country,
+                userCount: 0,
+                eventCount: 0,
+                score: 0,
+                latitude: nearbyCity.latitude,
+                longitude: nearbyCity.longitude,
+              });
+              existingCityNames.add(nearbyCity.city.toLowerCase());
+            }
+          }
+        } else {
+          // No user location provided, use default top cities
+          const topGlobalCities = [
+            { city: 'Kuala Lumpur', country: 'MY' },
+            { city: 'Singapore', country: 'SG' },
+            { city: 'Jakarta', country: 'ID' },
+            { city: 'Bangkok', country: 'TH' },
+            { city: 'Manila', country: 'PH' },
+          ];
 
-            popularCities.push({
-              city: globalCity.city,
-              country: globalCity.country,
-              userCount: 0,
-              eventCount: 0,
-              score: 0,
-              latitude: cityInfo?.latitude,
-              longitude: cityInfo?.longitude,
-            });
+          const existingCityNames = new Set(popularCities.map(c => c.city.toLowerCase()));
+          
+          for (const globalCity of topGlobalCities) {
+            if (popularCities.length >= limitNum) break;
+            
+            if (!existingCityNames.has(globalCity.city.toLowerCase())) {
+              const allCities = City.getAllCities();
+              const cityInfo = allCities.find(c => 
+                c.name.toLowerCase() === globalCity.city.toLowerCase() &&
+                c.countryCode === globalCity.country
+              );
+
+              popularCities.push({
+                city: globalCity.city,
+                country: globalCity.country,
+                userCount: 0,
+                eventCount: 0,
+                score: 0,
+                latitude: cityInfo?.latitude,
+                longitude: cityInfo?.longitude,
+              });
+            }
           }
         }
       }

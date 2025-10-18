@@ -1,5 +1,6 @@
 import { prisma } from '../config/database';
 import { BadgeType } from '@prisma/client';
+import { NotificationService } from './notification.service';
 
 export class BadgeService {
   static async checkAndAwardBadges(userId: string): Promise<void> {
@@ -222,6 +223,23 @@ export class BadgeService {
         userId,
         badgeId: badge.id,
       } as any,
+    });
+
+    // Send badge earned notification
+    await NotificationService.createNotification({
+      userId,
+      type: 'ACHIEVEMENT',
+      title: '⭐ New Badge Earned!',
+      message: `Congratulations! You've earned the "${badge.name}" badge! ${badge.description}`,
+      actionUrl: '/badges',
+      priority: 'high',
+      relatedEntityId: badge.id,
+      relatedEntityType: 'badge',
+      metadata: {
+        badgeId: badge.id,
+        badgeType: badge.type,
+        badgeName: badge.name,
+      },
     });
   }
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { EventController } from './event.controller';
 import { handleValidationErrors } from '../../middleware/validation';
 import { authenticateToken } from '../../middleware/auth';
+import { uploadImage } from '../../middleware/upload';
 import { 
   createEventValidators,
   updateEventValidators,
@@ -33,10 +34,52 @@ const router = Router();
 
 /**
  * @swagger
+ * /v2/events/types:
+ *   get:
+ *     summary: Get all event types
+ *     description: Retrieve all available event types for filtering and categorization
+ *     tags: [Events]
+ *     responses:
+ *       200:
+ *         description: Event types retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Event types retrieved successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       value:
+ *                         type: string
+ *                         enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
+ *                         example: SOCIAL
+ *                       label:
+ *                         type: string
+ *                         example: Social
+ */
+router.get('/types', EventController.getEventTypes);
+
+/**
+ * @swagger
  * /v2/events:
  *   get:
  *     summary: Get all events
- *     description: Retrieve all events with optional filters and pagination
+ *     description: |
+ *       Retrieve all events with optional filters and pagination.
+ *       
+ *       **Fallback Behavior:** When filters are applied but no events match the criteria, 
+ *       the API automatically returns upcoming published events as a fallback. 
+ *       The response will include `isFallback: true` to indicate alternative events are being shown.
+ *       This ensures users always see relevant events even when their specific filters don't match any events.
  *     tags: [Events]
  *     parameters:
  *       - in: query
@@ -70,14 +113,20 @@ const router = Router();
  *         name: type
  *         schema:
  *           type: string
- *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY]
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
  *         description: Filter by event type
  *       - in: query
  *         name: status
  *         schema:
  *           type: string
- *           enum: [DRAFT, PUBLISHED, CANCELLED, COMPLETED]
+ *           enum: [DRAFT, PUBLISHED, CANCELED, COMPLETED]
  *         description: Filter by event status
+ *       - in: query
+ *         name: hostType
+ *         schema:
+ *           type: string
+ *           enum: [PERSONAL, COMMUNITY]
+ *         description: Filter by host type (individual or community-hosted)
  *       - in: query
  *         name: isFree
  *         schema:
@@ -88,6 +137,16 @@ const router = Router();
  *         schema:
  *           type: string
  *         description: Filter by location (partial match)
+ *       - in: query
+ *         name: communityId
+ *         schema:
+ *           type: string
+ *         description: Filter by community ID
+ *       - in: query
+ *         name: hostId
+ *         schema:
+ *           type: string
+ *         description: Filter by host user ID
  *       - in: query
  *         name: search
  *         schema:
@@ -105,9 +164,21 @@ const router = Router();
  *           type: string
  *           format: date-time
  *         description: Filter events ending before this date
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Minimum ticket price
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *         description: Maximum ticket price
  *     responses:
  *       200:
- *         description: Events retrieved successfully
+ *         description: Events retrieved successfully. If no events match the filters, fallback events (upcoming published events) are returned with isFallback=true.
  *         content:
  *           application/json:
  *             schema:
@@ -128,12 +199,69 @@ const router = Router();
  *                       type: integer
  *                     limit:
  *                       type: integer
+ *                     isFallback:
+ *                       type: boolean
+ *                       description: True when fallback events are returned (no matches for filters)
  */
 router.get(
   '/',
   eventQueryValidators,
   handleValidationErrors,
   EventController.getEvents
+);
+
+/**
+ * @swagger
+ * /v2/events/upload-image:
+ *   post:
+ *     summary: Upload event image
+ *     description: Upload an image for an event. Returns the image URL to be used in event creation/update.
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Event image file (JPEG, PNG, GIF, WebP)
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Event image uploaded successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       example: https://cdn.example.com/events/abc123.jpg
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post(
+  '/upload-image',
+  authenticateToken,
+  uploadImage.single('image'),
+  EventController.uploadEventImage
 );
 
 /**
@@ -206,7 +334,13 @@ router.get(
  * /v2/events:
  *   post:
  *     summary: Create new event
- *     description: Create a new event (requires authentication)
+ *     description: |
+ *       Create a new event (requires authentication).
+ *       
+ *       **Image Upload Workflow:**
+ *       1. First upload event image using POST /v2/events/upload-image
+ *       2. Use the returned imageUrl in the images array
+ *       3. Create the event with the image URL
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -222,6 +356,7 @@ router.get(
  *               - date
  *               - location
  *               - isFree
+ *               - hostType
  *             properties:
  *               title:
  *                 type: string
@@ -234,19 +369,21 @@ router.get(
  *                 example: "Join us for an exciting badminton tournament!"
  *               type:
  *                 type: string
- *                 enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY]
- *                 example: BADMINTON
+ *                 enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
+ *                 example: SPORTS
  *               date:
  *                 type: string
  *                 format: date-time
- *                 example: "2024-06-15T14:00:00Z"
+ *                 example: "2025-12-15T14:00:00Z"
  *               location:
  *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 500
  *                 example: "Kuala Lumpur Sports Center"
  *               mapLink:
  *                 type: string
  *                 format: uri
- *                 example: "https://maps.google.com/..."
+ *                 example: "https://maps.google.com/?q=KLCC"
  *               maxAttendees:
  *                 type: integer
  *                 minimum: 1
@@ -257,13 +394,16 @@ router.get(
  *                 example: "Please bring your own racket"
  *               communityId:
  *                 type: string
+ *                 description: Required if hostType is COMMUNITY
  *                 example: "cm123abc"
  *               images:
  *                 type: array
+ *                 description: Array of image URLs (upload images first via /v2/events/upload-image)
  *                 items:
  *                   type: string
  *                   format: uri
  *                 maxItems: 10
+ *                 example: ["https://cdn.berse.com/events/abc123.jpg"]
  *               isFree:
  *                 type: boolean
  *                 example: false
@@ -271,15 +411,18 @@ router.get(
  *                 type: number
  *                 minimum: 0
  *                 example: 50.00
+ *                 description: Required if isFree is false
  *               currency:
  *                 type: string
+ *                 default: MYR
  *                 example: MYR
  *               hostType:
  *                 type: string
  *                 enum: [PERSONAL, COMMUNITY]
+ *                 example: PERSONAL
  *               status:
  *                 type: string
- *                 enum: [DRAFT, PUBLISHED, CANCELLED, COMPLETED]
+ *                 enum: [DRAFT, PUBLISHED, CANCELED, COMPLETED]
  *                 default: DRAFT
  *     responses:
  *       201:
@@ -330,7 +473,7 @@ router.post(
  *                 type: string
  *               status:
  *                 type: string
- *                 enum: [DRAFT, PUBLISHED, CANCELLED, COMPLETED]
+ *                 enum: [DRAFT, PUBLISHED, CANCELED, COMPLETED]
  *     responses:
  *       200:
  *         description: Event updated successfully
@@ -1080,7 +1223,7 @@ router.get(
  *         name: type
  *         schema:
  *           type: string
- *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
  *         description: Filter by event type
  *       - in: query
  *         name: sortBy
@@ -1147,7 +1290,7 @@ router.get(
  *         name: type
  *         schema:
  *           type: string
- *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
  *         description: Filter by event type
  *       - in: query
  *         name: sortBy
@@ -1227,7 +1370,7 @@ router.get(
  *         name: type
  *         schema:
  *           type: string
- *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
  *         description: Filter by event type
  *       - in: query
  *         name: timezone
@@ -1312,7 +1455,7 @@ router.get(
  *         name: type
  *         schema:
  *           type: string
- *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
  *         description: Filter by event type
  *       - in: query
  *         name: timezone
@@ -1397,7 +1540,7 @@ router.get(
  *         name: type
  *         schema:
  *           type: string
- *           enum: [BADMINTON, SOCIAL, WORKSHOP, CONFERENCE, NETWORKING, SPORTS, CULTURAL, CHARITY, ILM, CAFE_MEETUP, VOLUNTEER]
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
  *         description: Filter by event type
  *     responses:
  *       200:

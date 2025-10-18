@@ -399,6 +399,112 @@ router.get('/cities', CountriesController.getAllCities);
 
 /**
  * @swagger
+ * /v2/metadata/cities/search:
+ *   get:
+ *     summary: Search cities by name
+ *     description: Search for cities globally by name. Returns cities with country and state information.
+ *     tags: [Metadata]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query (minimum 2 characters)
+ *         example: "kuala"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: string
+ *           default: "1"
+ *         description: Page number (1-based)
+ *         example: "1"
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *           default: "50"
+ *         description: Number of cities per page (max 100)
+ *         example: "50"
+ *     responses:
+ *       200:
+ *         description: Cities found matching the search query
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Kuala Lumpur"
+ *                           countryCode:
+ *                             type: string
+ *                             example: "MY"
+ *                           countryName:
+ *                             type: string
+ *                             example: "Malaysia"
+ *                           stateCode:
+ *                             type: string
+ *                             example: "14"
+ *                           stateName:
+ *                             type: string
+ *                             example: "Wilayah Persekutuan Kuala Lumpur"
+ *                           latitude:
+ *                             type: string
+ *                             example: "3.139"
+ *                           longitude:
+ *                             type: string
+ *                             example: "101.6869"
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 3
+ *                         totalItems:
+ *                           type: integer
+ *                           example: 150
+ *                         itemsPerPage:
+ *                           type: integer
+ *                           example: 50
+ *                         hasNextPage:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPreviousPage:
+ *                           type: boolean
+ *                           example: false
+ *       400:
+ *         description: Invalid request (missing query or too short)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Search query parameter \"q\" is required"
+ */
+router.get('/cities/search', CountriesController.searchCities);
+
+/**
+ * @swagger
  * /v2/metadata/cities/popular:
  *   get:
  *     summary: Get popular cities

@@ -14,10 +14,12 @@ The Events API provides comprehensive endpoints for managing events, ticket sale
 ## Table of Contents
 1. [Event Management](#event-management)
    - [Create Event](#create-event)
+   - [Upload Event Image](#upload-event-image)
    - [Get Events (List)](#get-events-list)
    - [Get Event Details](#get-event-details)
    - [Update Event](#update-event)
    - [Delete Event](#delete-event)
+   - [Get Event Types](#get-event-types)
 2. [Ticket Tiers](#ticket-tiers)
    - [Create Ticket Tier](#create-ticket-tier)
    - [Get Ticket Tiers](#get-ticket-tiers)
@@ -66,7 +68,7 @@ Create a new event (free or paid).
 {
   "title": "Bersemuka Summer Meetup 2025",
   "description": "Join us for an amazing community gathering!",
-  "type": "MEETUP",
+  "type": "SOCIAL",
   "date": "2025-08-15T10:00:00Z",
   "location": "KLCC Convention Center, Kuala Lumpur",
   "mapLink": "https://maps.google.com/?q=KLCC",
@@ -98,6 +100,12 @@ Create a new event (free or paid).
 - `status` (optional): See [EventStatus enum](#eventstatus), default "DRAFT"
 - `hostType` (required): See [EventHostType enum](#eventhosttype)
 - `communityId` (optional): Required if hostType is "COMMUNITY"
+- `images` (optional): Array of image URLs (upload images first using [Upload Event Image](#upload-event-image) endpoint)
+
+**Image Upload Workflow:**
+1. First, upload your image using `POST /v2/events/upload-image` (see below)
+2. Get the returned `imageUrl` from the upload response
+3. Include the `imageUrl` in the `images` array when creating the event
 
 **Response:** `201 Created`
 ```json
@@ -108,7 +116,7 @@ Create a new event (free or paid).
     "id": "evt_cm123456789",
     "title": "Bersemuka Summer Meetup 2025",
     "description": "Join us for an amazing community gathering!",
-    "type": "MEETUP",
+    "type": "SOCIAL",
     "date": "2025-08-15T10:00:00.000Z",
     "location": "KLCC Convention Center, Kuala Lumpur",
     "mapLink": "https://maps.google.com/?q=KLCC",
@@ -150,9 +158,118 @@ Create a new event (free or paid).
 
 ---
 
+### Upload Event Image
+
+Upload an image file for use in event creation or updates. Returns a CDN URL to include in the `images` array.
+
+**Endpoint:** `POST /v2/events/upload-image`
+
+**Authentication:** Required
+
+**Request:**
+- Content-Type: `multipart/form-data`
+- Body: Form data with `image` field containing the image file
+
+**Supported Formats:**
+- JPEG (`.jpg`, `.jpeg`)
+- PNG (`.png`)
+- GIF (`.gif`)
+- WebP (`.webp`)
+
+**File Size Limit:** 5MB
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Event image uploaded successfully",
+  "data": {
+    "imageUrl": "https://cdn.berse.com/events/abc123xyz.jpg"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - No file provided, invalid file type, or file too large
+- `401 Unauthorized` - Invalid or missing token
+
+**Example (cURL):**
+```bash
+# Upload image
+curl -X POST https://api.berse-app.com/v2/events/upload-image \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "image=@/path/to/event-photo.jpg"
+
+# Response:
+# {
+#   "success": true,
+#   "data": {
+#     "imageUrl": "https://cdn.berse.com/events/cm12345.jpg"
+#   }
+# }
+
+# Use the URL in event creation
+curl -X POST https://api.berse-app.com/v2/events \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My Event",
+    "type": "SOCIAL",
+    "date": "2025-12-01T10:00:00Z",
+    "location": "Kuala Lumpur",
+    "isFree": true,
+    "hostType": "PERSONAL",
+    "images": ["https://cdn.berse.com/events/cm12345.jpg"]
+  }'
+```
+
+**Example (JavaScript):**
+```javascript
+// Upload image
+const formData = new FormData();
+formData.append('image', imageFile); // imageFile from file input
+
+const uploadResponse = await fetch('https://api.berse-app.com/v2/events/upload-image', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  },
+  body: formData
+});
+
+const { data } = await uploadResponse.json();
+const imageUrl = data.imageUrl;
+
+// Create event with uploaded image
+const eventResponse = await fetch('https://api.berse-app.com/v2/events', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    title: 'My Event',
+    type: 'SOCIAL',
+    date: '2025-12-01T10:00:00Z',
+    location: 'Kuala Lumpur',
+    isFree: true,
+    hostType: 'PERSONAL',
+    images: [imageUrl]
+  })
+});
+```
+
+**Notes:**
+- Images are automatically optimized for web delivery
+- Uploaded images are stored on CDN for fast global access
+- Image URLs are permanent and don't expire
+- You can upload multiple images and use them in the `images` array (currently supporting 1 image, up to 10 planned)
+
+---
+
 ### Get Events (List)
 
-Get a paginated, filterable list of events.
+Get a paginated, filterable list of events. **When no events match the applied filters, the API automatically returns alternative upcoming published events as a fallback.**
 
 **Endpoint:** `GET /v2/events`
 
@@ -178,15 +295,20 @@ Get a paginated, filterable list of events.
 | `minPrice` | number | No | - | Minimum ticket price |
 | `maxPrice` | number | No | - | Maximum ticket price |
 
+**Fallback Behavior:**
+- When filters are applied but no events match the criteria, the API returns upcoming published events (sorted by date ascending)
+- The response includes `isFallback: true` to indicate fallback events are being shown
+- This ensures users always see relevant events even when their specific filters don't match any events
+
 **Examples:**
 ```
-GET /v2/events?page=1&limit=20&type=MEETUP&isFree=true
+GET /v2/events?page=1&limit=20&type=SOCIAL&isFree=true
 GET /v2/events?location=Kuala%20Lumpur&startDate=2025-08-01
 GET /v2/events?search=summer&sortBy=date&sortOrder=asc
 GET /v2/events?communityId=cm123456789&status=PUBLISHED
 ```
 
-**Response:** `200 OK`
+**Response (Normal):** `200 OK`
 ```json
 {
   "status": "success",
@@ -197,7 +319,7 @@ GET /v2/events?communityId=cm123456789&status=PUBLISHED
         "id": "evt_cm123456789",
         "title": "Bersemuka Summer Meetup 2025",
         "description": "Join us for an amazing community gathering!",
-        "type": "MEETUP",
+        "type": "SOCIAL",
         "date": "2025-08-15T10:00:00.000Z",
         "location": "KLCC Convention Center, Kuala Lumpur",
         "images": ["https://cdn.berse.com/events/summer-2025.jpg"],
@@ -224,15 +346,51 @@ GET /v2/events?communityId=cm123456789&status=PUBLISHED
         "createdAt": "2025-10-16T10:00:00.000Z"
       }
     ],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 150,
-      "totalPages": 8
-    }
+    "total": 150,
+    "page": 1,
+    "limit": 20
   }
 }
 ```
+
+**Response (Fallback):** `200 OK`
+```json
+{
+  "status": "success",
+  "message": "Events retrieved successfully",
+  "data": {
+    "events": [
+      {
+        "id": "evt_cm999888777",
+        "title": "Alternative Event 1",
+        "description": "An upcoming event",
+        "type": "SPORTS",
+        "date": "2025-10-20T10:00:00.000Z",
+        "location": "Petaling Jaya Stadium",
+        "isFree": false,
+        "price": 25,
+        "currency": "MYR",
+        "status": "PUBLISHED",
+        "hostType": "PERSONAL",
+        "attendeeCount": 12,
+        "maxAttendees": 50,
+        "host": {
+          "id": "usr_cm111222333",
+          "displayName": "Jane Smith",
+          "profilePicture": "https://cdn.berse.com/users/jane.jpg"
+        },
+        "createdAt": "2025-10-15T10:00:00.000Z"
+      }
+    ],
+    "total": 20,
+    "page": 1,
+    "limit": 20,
+    "isFallback": true
+  }
+}
+```
+
+**Note:** The `isFallback` field is only present when fallback events are returned. Mobile apps should display a message to users indicating that alternative events are being shown because no events matched their filters.
 
 ---
 
@@ -256,7 +414,7 @@ Get detailed information about a specific event.
     "id": "evt_cm123456789",
     "title": "Bersemuka Summer Meetup 2025",
     "description": "Join us for an amazing community gathering! This is a full-day event with networking, workshops, and entertainment.",
-    "type": "MEETUP",
+    "type": "SOCIAL",
     "date": "2025-08-15T10:00:00.000Z",
     "location": "KLCC Convention Center, Kuala Lumpur",
     "mapLink": "https://maps.google.com/?q=KLCC",
@@ -409,6 +567,96 @@ Delete an event (soft delete - sets status to CANCELED).
 - `401 Unauthorized` - Invalid or missing token
 - `403 Forbidden` - Not authorized to delete this event
 - `404 Not Found` - Event not found
+
+---
+
+### Get Event Types
+
+Get all available event types for filtering and categorization.
+
+**Endpoint:** `GET /v2/events/types`
+
+**Authentication:** Not required
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "Event types retrieved successfully",
+  "data": [
+    {
+      "value": "SOCIAL",
+      "label": "Social"
+    },
+    {
+      "value": "SPORTS",
+      "label": "Sports"
+    },
+    {
+      "value": "TRIP",
+      "label": "Trip"
+    },
+    {
+      "value": "ILM",
+      "label": "Ilm"
+    },
+    {
+      "value": "CAFE_MEETUP",
+      "label": "Cafe Meetup"
+    },
+    {
+      "value": "VOLUNTEER",
+      "label": "Volunteer"
+    },
+    {
+      "value": "MONTHLY_EVENT",
+      "label": "Monthly Event"
+    },
+    {
+      "value": "LOCAL_TRIP",
+      "label": "Local Trip"
+    }
+  ]
+}
+```
+
+**Use Cases:**
+- Populate event type dropdowns in UI
+- Filter events by type
+- Display event categories
+
+**Available Types:**
+| Value | Label | Description |
+|-------|-------|-------------|
+| `SOCIAL` | Social | Social gatherings and meetups |
+| `SPORTS` | Sports | Sports activities and competitions |
+| `TRIP` | Trip | Travel and trips |
+| `ILM` | Ilm | Knowledge and learning sessions |
+| `CAFE_MEETUP` | Cafe Meetup | Casual cafe meetups |
+| `VOLUNTEER` | Volunteer | Volunteer and community service |
+| `MONTHLY_EVENT` | Monthly Event | Monthly recurring events |
+| `LOCAL_TRIP` | Local Trip | Local excursions and day trips |
+
+**Example:**
+```javascript
+// Get event types for dropdown
+const response = await fetch('https://api.berse-app.com/v2/events/types');
+const { data: eventTypes } = await response.json();
+
+// Use in UI
+eventTypes.forEach(type => {
+  console.log(`${type.label}: ${type.value}`);
+});
+// Output:
+// Social: SOCIAL
+// Sports: SPORTS
+// Trip: TRIP
+// Ilm: ILM
+// Cafe Meetup: CAFE_MEETUP
+// Volunteer: VOLUNTEER
+// Monthly Event: MONTHLY_EVENT
+// Local Trip: LOCAL_TRIP
+```
 
 ---
 
@@ -722,7 +970,7 @@ RSVP to a free event.
       "title": "Bersemuka Summer Meetup 2025",
       "date": "2025-08-15T10:00:00.000Z",
       "location": "KLCC Convention Center, Kuala Lumpur",
-      "type": "MEETUP"
+      "type": "SOCIAL"
     },
     "createdAt": "2025-10-16T10:00:00.000Z"
   }
@@ -789,7 +1037,7 @@ Get all RSVPs made by the authenticated user.
         "title": "Bersemuka Summer Meetup 2025",
         "date": "2025-08-15T10:00:00.000Z",
         "location": "KLCC Convention Center, Kuala Lumpur",
-        "type": "MEETUP"
+        "type": "SOCIAL"
       },
       "createdAt": "2025-10-16T10:00:00.000Z"
     },
@@ -1121,7 +1369,7 @@ Get personalized event recommendations based on user's history and preferences.
     {
       "id": "evt_cm345678901",
       "title": "Startup Networking Night",
-      "type": "MEETUP",
+      "type": "SOCIAL",
       "date": "2025-08-30T18:00:00.000Z",
       "location": "Bangsar Village II, KL",
       "isFree": true,
@@ -1287,7 +1535,7 @@ Get events that a specific user has attended (checked in to). Useful for display
     {
       "id": "evt_cm678901234",
       "title": "Tech Meetup July 2025",
-      "type": "MEETUP",
+      "type": "SOCIAL",
       "date": "2025-07-20T18:00:00.000Z",
       "location": "Tech Hub KL",
       "isFree": true,
@@ -1757,16 +2005,18 @@ onClick(date) {
 
 ```typescript
 enum EventType {
-  MEETUP = "MEETUP",
-  WORKSHOP = "WORKSHOP",
-  CONFERENCE = "CONFERENCE",
-  NETWORKING = "NETWORKING",
-  OUTDOOR = "OUTDOOR",
-  SOCIAL = "SOCIAL",
-  CULTURAL = "CULTURAL",
-  OTHER = "OTHER"
+  SOCIAL = "SOCIAL",           // Social gatherings and meetups
+  SPORTS = "SPORTS",           // Sports activities and competitions
+  TRIP = "TRIP",               // Travel and trips
+  ILM = "ILM",                 // Knowledge and learning sessions
+  CAFE_MEETUP = "CAFE_MEETUP", // Casual cafe meetups
+  VOLUNTEER = "VOLUNTEER",     // Volunteer and community service
+  MONTHLY_EVENT = "MONTHLY_EVENT", // Monthly recurring events
+  LOCAL_TRIP = "LOCAL_TRIP"    // Local excursions and day trips
 }
 ```
+
+**Note:** These types can be retrieved via the `GET /v2/events/types` endpoint.
 
 ### EventStatus
 
@@ -1787,6 +2037,27 @@ enum EventHostType {
   COMMUNITY = "COMMUNITY"  // Hosted by community
 }
 ```
+
+**Description:**
+- `PERSONAL` - Events created and managed by individual users. The creator has full control and is listed as the host.
+- `COMMUNITY` - Events created on behalf of a community. Requires `communityId` to be specified. Managed by community admins/moderators.
+
+**Filter Usage:**
+```bash
+# Get personal events
+GET /v2/events?hostType=PERSONAL
+
+# Get community events
+GET /v2/events?hostType=COMMUNITY
+```
+
+**Use Cases:**
+- Separate personal vs community event listings
+- Different permission models (personal = creator only, community = admin/moderator access)
+- Display appropriate host information in UI
+- Community event discovery
+
+---
 
 ### EventTicketStatus
 

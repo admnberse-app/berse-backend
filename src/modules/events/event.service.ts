@@ -243,7 +243,7 @@ export class EventService {
   /**
    * Get all events with filters and pagination
    */
-  static async getEvents(query: EventQuery, userId?: string): Promise<{ events: EventResponse[], total: number, page: number, limit: number }> {
+  static async getEvents(query: EventQuery, userId?: string): Promise<{ events: EventResponse[], total: number, page: number, limit: number, isFallback?: boolean }> {
     try {
       const page = query.page || 1;
       const limit = query.limit || 20;
@@ -286,48 +286,71 @@ export class EventService {
         }),
       };
 
+      const eventInclude = {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            profile: { select: { profilePicture: true } },
+          },
+        },
+        communities: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            eventRsvps: true,
+            eventAttendances: true,
+            eventTickets: true,
+            tier: true,
+          },
+        },
+      };
+
       const [events, total] = await Promise.all([
         prisma.event.findMany({
           where,
           skip,
           take: limit,
           orderBy: { [sortBy]: sortOrder },
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                username: true,
-                profile: { select: { profilePicture: true } },
-              },
-            },
-            communities: {
-              select: {
-                id: true,
-                name: true,
-                imageUrl: true,
-              },
-            },
-            _count: {
-              select: {
-                eventRsvps: true,
-                eventAttendances: true,
-                eventTickets: true,
-                tier: true,
-              },
-            },
-          },
+          include: eventInclude,
         }),
         prisma.event.count({ where }),
       ]);
 
-      const transformedEvents = events.map(event => this.transformEventResponse(event));
+      let transformedEvents = events.map(event => this.transformEventResponse(event));
+      let isFallback = false;
+
+      // If no events found and filters were applied, return fallback events
+      if (transformedEvents.length === 0 && query.filters && Object.keys(query.filters).length > 0) {
+        logger.info('No events found with filters, fetching fallback events');
+        
+        // Fetch upcoming published events as fallback
+        const fallbackEvents = await prisma.event.findMany({
+          where: {
+            status: 'PUBLISHED',
+            date: { gte: new Date() },
+          },
+          take: limit,
+          orderBy: { date: 'asc' },
+          include: eventInclude,
+        });
+
+        transformedEvents = fallbackEvents.map(event => this.transformEventResponse(event));
+        isFallback = true;
+      }
 
       return {
         events: transformedEvents,
-        total,
+        total: isFallback ? transformedEvents.length : total,
         page,
         limit,
+        ...(isFallback && { isFallback: true }),
       };
     } catch (error: any) {
       logger.error('Error fetching events:', error);

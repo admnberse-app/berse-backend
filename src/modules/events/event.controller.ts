@@ -12,6 +12,7 @@ import {
   PurchaseTicketRequest,
   CheckInRequest
 } from './event.types';
+import { EventType } from '@prisma/client';
 import logger from '../../utils/logger';
 
 export class EventController {
@@ -539,6 +540,58 @@ export class EventController {
       const counts = await EventService.getCalendarCounts(startDate, endDate, type);
 
       sendSuccess(res, { counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0) }, 'Calendar counts retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all event types
+   * @route GET /v2/events/types
+   */
+  static async getEventTypes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const eventTypes = Object.values(EventType).map(type => ({
+        value: type,
+        label: type.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')
+      }));
+
+      sendSuccess(res, eventTypes, 'Event types retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Upload event image
+   * @route POST /v2/events/upload-image
+   */
+  static async uploadEventImage(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const file = req.file;
+
+      if (!file) {
+        throw new AppError('No image file provided', 400);
+      }
+
+      // Upload to storage
+      const { storageService } = await import('../../services/storage.service');
+      
+      const uploadResult = await storageService.uploadFile(file, 'events', {
+        optimize: true,
+        isPublic: true,
+        userId,
+      });
+
+      logger.info('Event image uploaded', {
+        userId,
+        key: uploadResult.key,
+        url: uploadResult.url,
+        size: uploadResult.size,
+      });
+
+      sendSuccess(res, { imageUrl: uploadResult.url }, 'Event image uploaded successfully');
     } catch (error) {
       next(error);
     }

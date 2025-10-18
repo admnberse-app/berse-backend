@@ -1,6 +1,7 @@
 import { prisma } from '../../config/database';
 import { BadgeService } from '../../services/badge.service';
 import { PointsService } from '../../services/points.service';
+import { NotificationService } from '../../services/notification.service';
 import { POINT_VALUES } from '../../types';
 import {
   GamificationDashboard,
@@ -309,6 +310,24 @@ export class GamificationService {
       });
 
       return redemption;
+    });
+
+    // Send reward redemption notification
+    await NotificationService.createNotification({
+      userId,
+      type: 'POINTS',
+      title: '🎁 Reward Redeemed!',
+      message: `You've successfully redeemed ${reward.title} for ${reward.pointsRequired} points!`,
+      actionUrl: '/rewards',
+      priority: 'normal',
+      relatedEntityId: redemption.id,
+      relatedEntityType: 'reward_redemption',
+      metadata: {
+        rewardId: reward.id,
+        rewardTitle: reward.title,
+        pointsSpent: reward.pointsRequired,
+        category: reward.category,
+      },
     });
 
     return redemption;
