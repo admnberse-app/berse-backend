@@ -50,8 +50,9 @@ export const createListingValidator: ValidationChain[] = [
   
   body('images.*')
     .optional()
-    .isURL()
-    .withMessage('Each image must be a valid URL'),
+    .isString()
+    .notEmpty()
+    .withMessage('Each image must be a valid path or key'),
   
   body('status')
     .optional()
@@ -112,8 +113,9 @@ export const updateListingValidator: ValidationChain[] = [
   
   body('images.*')
     .optional()
-    .isURL()
-    .withMessage('Each image must be a valid URL'),
+    .isString()
+    .notEmpty()
+    .withMessage('Each image must be a valid path or key'),
   
   body('status')
     .optional()

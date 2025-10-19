@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { marketplaceService } from './marketplace.service';
 import { AppError } from '../../middleware/error';
+import logger from '../../utils/logger';
 import {
   CreateListingRequest,
   UpdateListingRequest,
@@ -22,6 +23,13 @@ export class MarketplaceController {
    * /api/v2/marketplace/listings:
    *   post:
    *     summary: Create a new marketplace listing
+   *     description: |
+   *       Create a new marketplace listing.
+   *       
+   *       **Steps to create a listing with images:**
+   *       1. First upload images using POST /v2/marketplace/upload-images
+   *       2. Use the returned `imageKeys` (not full URLs) in the `images` array when creating the listing
+   *       3. API will automatically convert keys to full CDN URLs in responses
    *     tags: [Marketplace]
    *     security:
    *       - bearerAuth: []
@@ -35,25 +43,35 @@ export class MarketplaceController {
    *             properties:
    *               title:
    *                 type: string
+   *                 example: "iPhone 13 Pro Max"
    *               description:
    *                 type: string
+   *                 example: "Excellent condition, barely used. Includes original box and accessories."
    *               category:
    *                 type: string
+   *                 example: "Electronics"
    *               price:
    *                 type: number
+   *                 example: 4500
    *               currency:
    *                 type: string
+   *                 example: "MYR"
    *               quantity:
    *                 type: integer
+   *                 example: 1
    *               location:
    *                 type: string
+   *                 example: "Kuala Lumpur"
    *               images:
    *                 type: array
    *                 items:
    *                   type: string
+   *                 description: Array of image keys/paths from upload endpoint (not full URLs)
+   *                 example: ["marketplace/userId/timestamp-hash1.jpg", "marketplace/userId/timestamp-hash2.jpg"]
    *               status:
    *                 type: string
    *                 enum: [DRAFT, ACTIVE]
+   *                 example: "ACTIVE"
    *     responses:
    *       201:
    *         description: Listing created successfully
@@ -1147,6 +1165,64 @@ export class MarketplaceController {
       res.json({
         success: true,
         data: marketplaceService.getConstants()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Upload listing image(s)
+   * @route POST /v2/marketplace/upload-images
+   */
+  async uploadListingImages(req: Request, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        throw new AppError('No image files provided', 400);
+      }
+
+      // Check max images limit
+      const MAX_IMAGES = 10; // MARKETPLACE_CONSTANTS.MAX_IMAGES_PER_LISTING
+      if (files.length > MAX_IMAGES) {
+        throw new AppError(`Maximum ${MAX_IMAGES} images allowed per upload`, 400);
+      }
+
+      // Upload all images to storage
+      const { storageService } = await import('../../services/storage.service');
+      
+      const uploadPromises = files.map(file =>
+        storageService.uploadFile(file, 'marketplace', {
+          optimize: true,
+          isPublic: true,
+          userId,
+        })
+      );
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      // Store only the keys (paths), not full URLs
+      // The frontend/app will construct full URLs using CDN endpoint
+      const imageKeys = uploadResults.map(result => result.key);
+      const imageUrls = uploadResults.map(result => result.url);
+
+      logger.info('Marketplace images uploaded', {
+        userId,
+        count: imageKeys.length,
+        keys: imageKeys,
+        urls: imageUrls,
+      });
+
+      res.json({
+        success: true,
+        data: {
+          imageKeys,  // Use these when creating listings
+          imageUrls,  // Full URLs for preview/reference
+          count: imageKeys.length
+        },
+        message: `${imageKeys.length} image(s) uploaded successfully`
       });
     } catch (error) {
       throw error;

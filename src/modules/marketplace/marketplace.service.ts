@@ -1592,8 +1592,15 @@ export class MarketplaceService {
   // ============= HELPER METHODS =============
 
   private formatListingResponse(listing: any): ListingResponse {
+    // Convert image keys to full URLs
+    const { storageService } = require('../../services/storage.service');
+    const images = listing.images?.map((key: string) => 
+      key.startsWith('http') ? key : storageService.getPublicUrl(key)
+    ) || [];
+
     return {
       ...listing,
+      images,
       seller: listing.user
     };
   }
@@ -1610,6 +1617,12 @@ export class MarketplaceService {
   }
 
   private formatCartItemResponse(item: any): CartItemResponse {
+    // Convert image keys to full URLs
+    const { storageService } = require('../../services/storage.service');
+    const images = item.marketplaceListings.images?.map((key: string) => 
+      key.startsWith('http') ? key : storageService.getPublicUrl(key)
+    ) || [];
+
     return {
       ...item,
       listing: {
@@ -1617,7 +1630,7 @@ export class MarketplaceService {
         title: item.marketplaceListings.title,
         price: item.marketplaceListings.price,
         currency: item.marketplaceListings.currency,
-        images: item.marketplaceListings.images,
+        images,
         status: item.marketplaceListings.status,
         quantity: item.marketplaceListings.quantity,
         seller: item.marketplaceListings.user

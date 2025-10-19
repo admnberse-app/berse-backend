@@ -35,10 +35,61 @@ Public endpoints (no auth required):
 
 ## Listings
 
+### Upload Listing Images
+**POST** `/upload-images`
+- **Auth Required:** Yes
+- **Description:** Upload one or multiple images for a marketplace listing
+- **Content-Type:** `multipart/form-data`
+- **Max Files:** 10 images per request
+- **Max Size:** 5MB per image
+- **Supported Formats:** JPEG, PNG, GIF, WebP
+
+**Form Data:**
+```
+images: [File, File, File, ...]
+```
+
+**Example cURL:**
+```bash
+curl -X POST "https://api.bersemuka.com/v2/marketplace/upload-images" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "images=@photo1.jpg" \
+  -F "images=@photo2.jpg" \
+  -F "images=@photo3.jpg"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "imageKeys": [
+      "marketplace/userId/1760867198186-abc123.jpg",
+      "marketplace/userId/1760867198186-def456.jpg",
+      "marketplace/userId/1760867198186-ghi789.jpg"
+    ],
+    "imageUrls": [
+      "https://cdn.bersemuka.com/marketplace/userId/1760867198186-abc123.jpg",
+      "https://cdn.bersemuka.com/marketplace/userId/1760867198186-def456.jpg",
+      "https://cdn.bersemuka.com/marketplace/userId/1760867198186-ghi789.jpg"
+    ],
+    "count": 3
+  },
+  "message": "3 image(s) uploaded successfully"
+}
+```
+
+**Important Notes:**
+- `imageKeys`: Use these when creating/updating listings - they are stored in the database
+- `imageUrls`: Full CDN URLs for preview/display purposes
+- Database stores only keys/paths, API responses automatically convert to full URLs
+
 ### Create Listing
 **POST** `/listings`
 - **Auth Required:** Yes
 - **Description:** Create a new marketplace listing
+
+> **Note:** Upload images first using the `/upload-images` endpoint, then use the returned `imageKeys` in the `images` array.
 
 **Request Body:**
 ```json
@@ -50,7 +101,10 @@ Public endpoints (no auth required):
   "currency": "MYR",
   "quantity": 1,
   "location": "Kuala Lumpur",
-  "images": ["https://example.com/image1.jpg"],
+  "images": [
+    "marketplace/userId/1760867198186-abc123.jpg",
+    "marketplace/userId/1760867198186-def456.jpg"
+  ],
   "status": "ACTIVE"
 }
 ```
@@ -1219,6 +1273,57 @@ When payment is confirmed by the gateway:
 ## SDK Examples
 
 ### JavaScript/TypeScript
+
+#### Upload Images and Create Listing
+```typescript
+// Step 1: Upload images first
+const uploadImages = async (files: File[]) => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('images', file));
+
+  const response = await fetch('https://api.bersemuka.com/v2/marketplace/upload-images', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  });
+
+  const { data } = await response.json();
+  return data.imageKeys; // Array of storage keys/paths
+};
+
+// Step 2: Create listing with image keys
+const createListing = async (imageKeys: string[]) => {
+  const response = await fetch('https://api.bersemuka.com/v2/marketplace/listings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title: 'Vintage Camera',
+      description: 'Classic film camera in excellent condition',
+      category: 'Electronics',
+      price: 250.00,
+      currency: 'MYR',
+      quantity: 1,
+      location: 'Kuala Lumpur',
+      images: imageKeys, // Use image keys, not full URLs
+      status: 'ACTIVE'
+    })
+  });
+
+  return await response.json();
+};
+
+// Usage
+const imageFiles = [file1, file2, file3]; // From file input
+const imageKeys = await uploadImages(imageFiles);
+const listing = await createListing(imageKeys);
+```
+
+#### Create Order
 ```typescript
 // Create Order
 const response = await fetch('https://api.bersemuka.com/v2/marketplace/orders', {
@@ -1248,6 +1353,79 @@ window.location.href = data.paymentIntent.clientSecret;
 ```
 
 ### Mobile (React Native)
+
+#### Upload Images from Camera/Gallery
+```typescript
+import { launchImageLibrary } from 'react-native-image-picker';
+import DocumentPicker from 'react-native-document-picker';
+
+// Pick multiple images
+const pickImages = async () => {
+  const result = await launchImageLibrary({
+    mediaType: 'photo',
+    selectionLimit: 10, // Max 10 images
+    quality: 0.8
+  });
+
+  if (result.assets) {
+    return result.assets;
+  }
+};
+
+// Upload to server
+const uploadListingImages = async (images) => {
+  const formData = new FormData();
+  
+  images.forEach((image) => {
+    formData.append('images', {
+      uri: image.uri,
+      type: image.type || 'image/jpeg',
+      name: image.fileName || `photo_${Date.now()}.jpg`
+    });
+  });
+
+  const response = await fetch('https://api.bersemuka.com/v2/marketplace/upload-images', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data'
+    },
+    body: formData
+  });
+
+  const { data } = await response.json();
+  return data.imageKeys; // Array of storage keys/paths
+};
+
+// Full workflow
+const createListingWithImages = async () => {
+  const selectedImages = await pickImages();
+  const imageKeys = await uploadListingImages(selectedImages);
+  
+  // Create listing
+  const response = await fetch('https://api.bersemuka.com/v2/marketplace/listings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title: 'Vintage Camera',
+      description: 'Classic film camera',
+      category: 'Electronics',
+      price: 250.00,
+      currency: 'MYR',
+      quantity: 1,
+      images: imageKeys, // Use image keys, not full URLs
+      status: 'ACTIVE'
+    })
+  });
+
+  return await response.json();
+};
+```
+
+#### Get Metadata on App Launch
 ```typescript
 // Get Metadata on App Launch
 const fetchMetadata = async () => {
@@ -1272,6 +1450,9 @@ const fetchMetadata = async () => {
 ## Changelog
 
 ### Version 2.0 (Current)
+- Added `/upload-images` endpoint for multiple image uploads (up to 10 images per request)
+- Enhanced listing creation workflow with dedicated image upload step
+- Images stored as keys/paths in database, automatically converted to full CDN URLs in API responses
 - Added payment gateway integration
 - Added metadata endpoints for dynamic configuration
 - Added discovery endpoints (trending, recommended, nearby)

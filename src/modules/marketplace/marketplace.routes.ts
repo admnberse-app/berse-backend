@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { marketplaceController } from './marketplace.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
+import { uploadImage } from '../../middleware/upload';
 import {
   createListingValidator,
   updateListingValidator,
@@ -22,6 +23,74 @@ import {
 } from './marketplace.validators';
 
 const router = Router();
+
+// ============= IMAGE UPLOAD ROUTE (must be before listing routes) =============
+
+/**
+ * @swagger
+ * /v2/marketplace/upload-images:
+ *   post:
+ *     summary: Upload marketplace listing images
+ *     description: Upload one or multiple images for a marketplace listing. Returns array of image URLs to be used in listing creation/update.
+ *     tags: [Marketplace]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Image files to upload (max 10 images, 5MB each)
+ *     responses:
+ *       200:
+ *         description: Images uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageKeys:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: Storage keys/paths to use when creating listings
+ *                       example: ["marketplace/userId/timestamp-hash1.jpg", "marketplace/userId/timestamp-hash2.jpg"]
+ *                     imageUrls:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: Full CDN URLs for preview/reference
+ *                       example: ["https://cdn.example.com/marketplace/userId/timestamp-hash1.jpg", "https://cdn.example.com/marketplace/userId/timestamp-hash2.jpg"]
+ *                     count:
+ *                       type: integer
+ *                       example: 2
+ *                 message:
+ *                   type: string
+ *                   example: "2 image(s) uploaded successfully"
+ *       400:
+ *         description: No images provided or too many images
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  '/upload-images',
+  authenticateToken,
+  uploadImage.array('images', 10), // max 10 images
+  marketplaceController.uploadListingImages.bind(marketplaceController)
+);
 
 // ============= LISTING ROUTES =============
 
