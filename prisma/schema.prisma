@@ -1349,20 +1349,30 @@ model PayoutDistribution {
   id                   String               @id @default(cuid())
   paymentTransactionId String
   recipientId          String
-  recipientType        String
+  recipientType        String               // 'event_organizer', 'marketplace_seller', 'service_provider', 'platform'
   amount               Float
   currency             String               @default("MYR")
-  status               PayoutStatus         @default(PENDING)
-  releaseDate          DateTime?
+  status               PayoutStatus         @default(HELD)
+  releaseDate          DateTime?            // When funds can be released (escrow hold until this date)
   gatewayPayoutId      String?
+  holdReason           String?              // 'awaiting_delivery', 'awaiting_event', 'dispute', 'verification', etc.
+  canReleaseAt         DateTime?            // Earliest possible release time (calculated based on rules)
+  autoReleaseEnabled   Boolean              @default(true) // Auto-release when releaseDate passes
+  requiresManualReview Boolean              @default(false) // Admin must approve release
+  metadata             Json?                // Additional context (eventId, orderId, etc.)
+  notes                String?              // Admin notes or release conditions
   createdAt            DateTime             @default(now())
   releasedAt           DateTime?
+  canceledAt           DateTime?
+  failureReason        String?              // If payout fails
   paymentTransactions PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
   user                User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([paymentTransactionId])
   @@index([recipientId, status])
   @@index([releaseDate, status])
+  @@index([canReleaseAt, status, autoReleaseEnabled])
+  @@index([status, requiresManualReview])
 
   @@map("payout_distributions")
 }
@@ -2702,12 +2712,13 @@ enum PaymentStatus {
 }
 
 enum PayoutStatus {
-  PENDING
-  PROCESSING
-  RELEASED
-  HELD
-  FAILED
-  CANCELED
+  PENDING      // Ready for processing/release
+  PROCESSING   // Being processed by payment gateway
+  RELEASED     // Successfully paid out
+  HELD         // In escrow, waiting for release conditions
+  FROZEN       // Frozen due to dispute or investigation
+  FAILED       // Payout attempt failed
+  CANCELED     // Payout canceled (refunded to buyer)
 }
 
 enum PricingType {
