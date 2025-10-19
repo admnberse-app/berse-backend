@@ -27,6 +27,7 @@ import {
 import { AppError } from '../../middleware/error';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { PaymentService } from '../payments/payment.service';
+import { NotificationService } from '../../services/notification.service';
 
 const prisma = new PrismaClient();
 const paymentService = new PaymentService();
@@ -129,6 +130,19 @@ export class MarketplaceService {
         priceHistory: true
       }
     });
+
+    // Check for low stock and send notification (threshold: 5 items)
+    if (data.quantity !== undefined && data.quantity > 0 && data.quantity <= 5) {
+      // Only notify if quantity was higher before (don't spam on every update)
+      if (existingListing.quantity > 5 || existingListing.quantity > data.quantity) {
+        await NotificationService.notifyLowStock(
+          userId,
+          listing.title,
+          listingId,
+          data.quantity
+        );
+      }
+    }
 
     // Log activity - TODO: Implement marketplace activity logging
 
@@ -344,6 +358,15 @@ export class MarketplaceService {
       }
     });
 
+    // Notify seller about item added to cart
+    if (cartItem.marketplaceListings.userId) {
+      await NotificationService.notifyItemAddedToCart(
+        cartItem.marketplaceListings.userId,
+        cartItem.marketplaceListings.title,
+        cartItem.marketplaceListings.id
+      );
+    }
+
     return this.formatCartItemResponse(cartItem);
   }
 
@@ -549,6 +572,16 @@ export class MarketplaceService {
       }
     });
 
+    // Notify seller about new order
+    await NotificationService.notifyNewOrder(
+      order.sellerId,
+      order.users_marketplace_orders_buyerIdTousers.fullName,
+      order.marketplaceListings.title,
+      order.id,
+      order.totalAmount,
+      order.currency
+    );
+
     // Log activity
 
     // Return order with payment intent details
@@ -742,7 +775,7 @@ export class MarketplaceService {
       // Mark as SOLD if quantity reaches 0
       const listing = await prisma.marketplaceListing.findUnique({
         where: { id: order.listingId },
-        select: { quantity: true }
+        select: { quantity: true, userId: true, title: true }
       });
 
       if (listing?.quantity === 0) {
@@ -750,7 +783,33 @@ export class MarketplaceService {
           where: { id: order.listingId },
           data: { status: ListingStatus.SOLD }
         });
+
+        // Notify seller about sold out listing
+        if (listing.userId) {
+          await NotificationService.notifyListingSoldOut(
+            listing.userId,
+            listing.title,
+            order.listingId
+          );
+        }
       }
+
+      // Notify buyer about delivery
+      await NotificationService.notifyOrderDelivered(
+        updatedOrder.buyerId,
+        updatedOrder.marketplaceListings.title,
+        updatedOrder.id
+      );
+    }
+
+    // Notify buyer about shipment
+    if (data.status === OrderStatus.SHIPPED) {
+      await NotificationService.notifyOrderShipped(
+        updatedOrder.buyerId,
+        updatedOrder.marketplaceListings.title,
+        updatedOrder.id,
+        data.trackingNumber
+      );
     }
 
     // Log activity
@@ -807,6 +866,17 @@ export class MarketplaceService {
         }
       }
     });
+
+    // Notify the other party about cancellation
+    const canceledBy = userId === order.buyerId ? 'buyer' : 'seller';
+    const notifyUserId = userId === order.buyerId ? order.sellerId : order.buyerId;
+    
+    await NotificationService.notifyOrderCanceled(
+      notifyUserId,
+      updatedOrder.marketplaceListings.title,
+      updatedOrder.id,
+      canceledBy
+    );
 
     // Log activity
 
@@ -895,6 +965,15 @@ export class MarketplaceService {
         }
       }
     });
+
+    // Notify reviewee about new review
+    await NotificationService.notifyNewReview(
+      data.revieweeId,
+      review.users_marketplace_reviews_reviewerIdTousers.fullName,
+      review.marketplace_orders.marketplaceListings.title,
+      data.rating,
+      review.id
+    );
 
     // Award points for positive review
     if (data.rating >= 4) {
@@ -1043,6 +1122,29 @@ export class MarketplaceService {
       data: { status: OrderStatus.DISPUTED }
     });
 
+    // Notify both parties about dispute
+    const listingTitle = dispute.marketplace_orders.marketplaceListings.title;
+    const buyerId = dispute.marketplace_orders.buyerId;
+    const sellerId = dispute.marketplace_orders.sellerId;
+    
+    // Notify buyer
+    await NotificationService.notifyDisputeCreated(
+      buyerId,
+      data.orderId,
+      listingTitle,
+      dispute.id,
+      userId === buyerId
+    );
+    
+    // Notify seller
+    await NotificationService.notifyDisputeCreated(
+      sellerId,
+      data.orderId,
+      listingTitle,
+      dispute.id,
+      userId === sellerId
+    );
+
     // Log activity
 
     return this.formatDisputeResponse(dispute);
@@ -1115,6 +1217,31 @@ export class MarketplaceService {
         }
       }
     });
+
+    // Notify both parties if dispute resolved
+    if (data.status === DisputeStatus.RESOLVED && data.resolution) {
+      const listingTitle = updatedDispute.marketplace_orders.marketplaceListings.title;
+      const buyerId = updatedDispute.marketplace_orders.buyerId;
+      const sellerId = updatedDispute.marketplace_orders.sellerId;
+      
+      // Notify buyer
+      await NotificationService.notifyDisputeResolved(
+        buyerId,
+        updatedDispute.marketplace_orders.id,
+        listingTitle,
+        disputeId,
+        data.resolution
+      );
+      
+      // Notify seller
+      await NotificationService.notifyDisputeResolved(
+        sellerId,
+        updatedDispute.marketplace_orders.id,
+        listingTitle,
+        disputeId,
+        data.resolution
+      );
+    }
 
     // Log activity
 

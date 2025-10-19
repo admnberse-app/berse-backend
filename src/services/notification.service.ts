@@ -460,4 +460,385 @@ export class NotificationService {
       },
     });
   }
+
+  // ============================================================================
+  // MARKETPLACE NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify seller about new order
+   */
+  static async notifyNewOrder(
+    sellerId: string,
+    buyerName: string,
+    listingTitle: string,
+    orderId: string,
+    totalAmount: number,
+    currency: string
+  ) {
+    return await this.createNotification({
+      userId: sellerId,
+      type: 'MARKETPLACE',
+      title: '🛍️ New Order Received!',
+      message: `${buyerName} just ordered "${listingTitle}" for ${currency} ${totalAmount.toFixed(2)}`,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'high',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_new_order',
+        orderId,
+        buyerName,
+        listingTitle,
+        totalAmount,
+        currency,
+      },
+    });
+  }
+
+  /**
+   * Notify buyer about order confirmation (payment success)
+   */
+  static async notifyOrderConfirmed(
+    buyerId: string,
+    listingTitle: string,
+    orderId: string,
+    sellerName: string
+  ) {
+    return await this.createNotification({
+      userId: buyerId,
+      type: 'MARKETPLACE',
+      title: '✅ Order Confirmed!',
+      message: `Your payment for "${listingTitle}" has been confirmed. ${sellerName} will prepare your order for shipment.`,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'high',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_order_confirmed',
+        orderId,
+        listingTitle,
+        sellerName,
+      },
+    });
+  }
+
+  /**
+   * Notify buyer about order shipped
+   */
+  static async notifyOrderShipped(
+    buyerId: string,
+    listingTitle: string,
+    orderId: string,
+    trackingNumber?: string
+  ) {
+    const message = trackingNumber
+      ? `Your order "${listingTitle}" has been shipped! Tracking: ${trackingNumber}`
+      : `Your order "${listingTitle}" has been shipped!`;
+
+    return await this.createNotification({
+      userId: buyerId,
+      type: 'MARKETPLACE',
+      title: '📦 Order Shipped!',
+      message,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'normal',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_order_shipped',
+        orderId,
+        listingTitle,
+        trackingNumber,
+      },
+    });
+  }
+
+  /**
+   * Notify buyer about order delivered
+   */
+  static async notifyOrderDelivered(
+    buyerId: string,
+    listingTitle: string,
+    orderId: string
+  ) {
+    return await this.createNotification({
+      userId: buyerId,
+      type: 'MARKETPLACE',
+      title: '🎉 Order Delivered!',
+      message: `Your order "${listingTitle}" has been delivered! Please leave a review if you're satisfied.`,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'normal',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_order_delivered',
+        orderId,
+        listingTitle,
+        canReview: true,
+      },
+    });
+  }
+
+  /**
+   * Notify about order cancellation
+   */
+  static async notifyOrderCanceled(
+    userId: string,
+    listingTitle: string,
+    orderId: string,
+    canceledBy: 'buyer' | 'seller',
+    reason?: string
+  ) {
+    const message = reason
+      ? `Order "${listingTitle}" has been canceled by ${canceledBy}. Reason: ${reason}`
+      : `Order "${listingTitle}" has been canceled by ${canceledBy}.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'MARKETPLACE',
+      title: '❌ Order Canceled',
+      message,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'high',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_order_canceled',
+        orderId,
+        listingTitle,
+        canceledBy,
+        reason,
+      },
+    });
+  }
+
+  /**
+   * Notify seller about new review received
+   */
+  static async notifyNewReview(
+    sellerId: string,
+    reviewerName: string,
+    listingTitle: string,
+    rating: number,
+    reviewId: string
+  ) {
+    const stars = '⭐'.repeat(rating);
+    return await this.createNotification({
+      userId: sellerId,
+      type: 'MARKETPLACE',
+      title: '⭐ New Review Received!',
+      message: `${reviewerName} left a ${rating}-star review ${stars} for "${listingTitle}"`,
+      actionUrl: `/marketplace/reviews/${reviewId}`,
+      priority: 'normal',
+      relatedEntityId: reviewId,
+      relatedEntityType: 'marketplace_review',
+      metadata: {
+        event: 'marketplace_new_review',
+        reviewId,
+        reviewerName,
+        listingTitle,
+        rating,
+      },
+    });
+  }
+
+  /**
+   * Notify about item added to cart (seller notification for interest)
+   */
+  static async notifyItemAddedToCart(
+    sellerId: string,
+    listingTitle: string,
+    listingId: string
+  ) {
+    return await this.createNotification({
+      userId: sellerId,
+      type: 'MARKETPLACE',
+      title: '🛒 Someone Added Your Item to Cart',
+      message: `"${listingTitle}" was added to a buyer's cart!`,
+      actionUrl: `/marketplace/listings/${listingId}`,
+      priority: 'low',
+      relatedEntityId: listingId,
+      relatedEntityType: 'marketplace_listing',
+      metadata: {
+        event: 'marketplace_item_added_to_cart',
+        listingId,
+        listingTitle,
+      },
+    });
+  }
+
+  /**
+   * Notify seller about listing sold out
+   */
+  static async notifyListingSoldOut(
+    sellerId: string,
+    listingTitle: string,
+    listingId: string
+  ) {
+    return await this.createNotification({
+      userId: sellerId,
+      type: 'MARKETPLACE',
+      title: '🎊 Listing Sold Out!',
+      message: `Congratulations! "${listingTitle}" is now sold out.`,
+      actionUrl: `/marketplace/listings/${listingId}`,
+      priority: 'normal',
+      relatedEntityId: listingId,
+      relatedEntityType: 'marketplace_listing',
+      metadata: {
+        event: 'marketplace_listing_sold_out',
+        listingId,
+        listingTitle,
+      },
+    });
+  }
+
+  /**
+   * Notify about new dispute created
+   */
+  static async notifyDisputeCreated(
+    userId: string,
+    orderId: string,
+    listingTitle: string,
+    disputeId: string,
+    isInitiator: boolean
+  ) {
+    const message = isInitiator
+      ? `Your dispute for order "${listingTitle}" has been created. We'll review it shortly.`
+      : `A dispute has been opened for order "${listingTitle}". Please respond.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'MARKETPLACE',
+      title: isInitiator ? '📋 Dispute Created' : '⚠️ Dispute Opened',
+      message,
+      actionUrl: `/marketplace/disputes/${disputeId}`,
+      priority: 'high',
+      relatedEntityId: disputeId,
+      relatedEntityType: 'marketplace_dispute',
+      metadata: {
+        event: 'marketplace_dispute_created',
+        disputeId,
+        orderId,
+        listingTitle,
+        isInitiator,
+      },
+    });
+  }
+
+  /**
+   * Notify about dispute resolution
+   */
+  static async notifyDisputeResolved(
+    userId: string,
+    orderId: string,
+    listingTitle: string,
+    disputeId: string,
+    resolution: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'MARKETPLACE',
+      title: '✅ Dispute Resolved',
+      message: `The dispute for "${listingTitle}" has been resolved. Resolution: ${resolution}`,
+      actionUrl: `/marketplace/disputes/${disputeId}`,
+      priority: 'high',
+      relatedEntityId: disputeId,
+      relatedEntityType: 'marketplace_dispute',
+      metadata: {
+        event: 'marketplace_dispute_resolved',
+        disputeId,
+        orderId,
+        listingTitle,
+        resolution,
+      },
+    });
+  }
+
+  /**
+   * Notify about payment received (seller)
+   */
+  static async notifyPaymentReceived(
+    sellerId: string,
+    amount: number,
+    currency: string,
+    orderId: string,
+    listingTitle: string
+  ) {
+    return await this.createNotification({
+      userId: sellerId,
+      type: 'PAYMENT',
+      title: '💰 Payment Received!',
+      message: `You've received ${currency} ${amount.toFixed(2)} for "${listingTitle}"`,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'high',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_payment_received',
+        orderId,
+        listingTitle,
+        amount,
+        currency,
+      },
+    });
+  }
+
+  /**
+   * Notify buyer about payment failed
+   */
+  static async notifyPaymentFailed(
+    buyerId: string,
+    listingTitle: string,
+    orderId: string,
+    reason?: string
+  ) {
+    const message = reason
+      ? `Payment for "${listingTitle}" failed: ${reason}. Please try again.`
+      : `Payment for "${listingTitle}" failed. Please try again.`;
+
+    return await this.createNotification({
+      userId: buyerId,
+      type: 'PAYMENT',
+      title: '❌ Payment Failed',
+      message,
+      actionUrl: `/marketplace/orders/${orderId}`,
+      priority: 'urgent',
+      relatedEntityId: orderId,
+      relatedEntityType: 'marketplace_order',
+      metadata: {
+        event: 'marketplace_payment_failed',
+        orderId,
+        listingTitle,
+        reason,
+      },
+    });
+  }
+
+  /**
+   * Notify about low stock (seller)
+   */
+  static async notifyLowStock(
+    sellerId: string,
+    listingTitle: string,
+    listingId: string,
+    remainingQuantity: number
+  ) {
+    return await this.createNotification({
+      userId: sellerId,
+      type: 'MARKETPLACE',
+      title: '⚠️ Low Stock Alert',
+      message: `"${listingTitle}" is running low. Only ${remainingQuantity} left in stock.`,
+      actionUrl: `/marketplace/listings/${listingId}`,
+      priority: 'normal',
+      relatedEntityId: listingId,
+      relatedEntityType: 'marketplace_listing',
+      metadata: {
+        event: 'marketplace_low_stock',
+        listingId,
+        listingTitle,
+        remainingQuantity,
+      },
+    });
+  }
 }
