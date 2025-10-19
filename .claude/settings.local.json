@@ -61,7 +61,8 @@
       "Bash(railway variables:*)",
       "Bash(railway list:*)",
       "Bash(railway link:*)",
-      "Bash(railway run psql:*)"
+      "Bash(railway run psql:*)",
+      "Bash(/Users/mit06/Desktop/personal-projects/berse-app-backend/test-discover-endpoint.sh)"
     ]
   },
   "enableAllProjectMcpServers": true,

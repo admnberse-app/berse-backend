@@ -27,11 +27,11 @@ The Events API provides comprehensive endpoints for managing events, ticket sale
 3. [Ticket Purchase](#ticket-purchase)
    - [Purchase Ticket](#purchase-ticket)
    - [Get My Tickets](#get-my-tickets)
-4. [RSVP](#rsvp)
-   - [Create RSVP](#create-rsvp)
-   - [Cancel RSVP](#cancel-rsvp)
-   - [Get My RSVPs](#get-my-rsvps)
-   - [Generate QR Code](#generate-qr-code)
+4. [Event Registration](#event-registration)
+   - [Register for Event](#register-for-event)
+   - [Cancel Registration](#cancel-registration)
+   - [Get My Registrations](#get-my-registrations)
+   - [Generate Participant QR Code](#generate-participant-qr-code)
 5. [Attendance](#attendance)
    - [Check-In Attendee](#check-in-attendee)
    - [Get Event Attendees](#get-event-attendees)
@@ -418,19 +418,18 @@ Get detailed information about a specific event.
 - **Host & Community:** Full host and community details with images
 - **Ticket Tiers:** All active ticket tiers with availability status
 - **User-Specific Fields (when authenticated):**
-  - `hasRsvped` - Boolean indicating if user has RSVP'd
+  - `userParticipant` - User's EventParticipant record if registered
+  - `userTicket` - User's ticket details if purchased
   - `hasTicket` - Boolean indicating if user has purchased a ticket
-  - `isOwner` - Boolean indicating if authenticated user is the event creator (use this to show/hide edit/delete buttons)
-  - `userRsvp` - User's RSVP details if exists
-  - `userTicket` - User's ticket details if exists
-- **Attendees Preview:** First 5 attendees with profile info (use `GET /v2/events/:id/attendees` for full list)
-- **RSVPs Preview:** First 5 most recent RSVPs with profile info
+  - `isOwner` - Boolean indicating if authenticated user is the event creator
+- **Participants Preview:** Recent participants with profile info and status
+- **Attendees Preview:** Checked-in attendees with timestamps
 - **Event Statistics:**
-  - `totalAttendees` - Number of checked-in attendees
-  - `totalRsvps` - Number of RSVPs
+  - `totalParticipants` - Total registered participants (all statuses)
+  - `totalCheckedIn` - Number of checked-in participants
   - `totalTicketsSold` - Number of tickets sold
   - `totalTicketTiers` - Number of ticket tiers
-  - `attendanceRate` - Percentage of RSVPs who attended (0-100)
+  - `attendanceRate` - Percentage of participants who checked in (0-100)
 
 **Response:** `200 OK`
 ```json
@@ -506,16 +505,14 @@ Get detailed information about a specific event.
         "displayOrder": 2
       }
     ],
-    "userRsvp": null,
-    "userTicket": {
-      "id": "tkt_456",
-      "ticketNumber": "TKT-1729080000000-A3F9",
-      "status": "ACTIVE",
-      "quantity": 1,
-      "purchasedAt": "2025-10-15T10:00:00.000Z"
+    "userParticipant": {
+      "id": "cmgxe29zb0017cppi6ob1106q",
+      "status": "REGISTERED",
+      "createdAt": "2025-10-19T07:00:00.000Z",
+      "checkedInAt": null
     },
-    "hasRsvped": false,
-    "hasTicket": true,
+    "userTicket": null,
+    "hasTicket": false,
     "isOwner": false,
     "attendeesPreview": [
       {
@@ -523,28 +520,22 @@ Get detailed information about a specific event.
         "fullName": "Jane Smith",
         "username": "janesmith",
         "profilePicture": "https://cdn.berse.com/users/jane.jpg",
-        "checkedInAt": "2025-10-16T09:30:00.000Z"
-      },
+        "checkedInAt": "2025-08-15T10:30:00.000Z"
+      }
+    ],
+    "participantsPreview": [
       {
         "id": "usr_def456",
         "fullName": "Bob Johnson",
         "username": "bjohnson",
         "profilePicture": "https://cdn.berse.com/users/bob.jpg",
-        "checkedInAt": "2025-10-16T09:25:00.000Z"
-      }
-    ],
-    "rsvpsPreview": [
-      {
-        "id": "usr_ghi789",
-        "fullName": "Alice Williams",
-        "username": "awilliams",
-        "profilePicture": "https://cdn.berse.com/users/alice.jpg",
-        "rsvpedAt": "2025-10-14T15:20:00.000Z"
+        "createdAt": "2025-08-14T15:20:00.000Z",
+        "status": "REGISTERED"
       }
     ],
     "stats": {
-      "totalAttendees": 20,
-      "totalRsvps": 30,
+      "totalParticipants": 30,
+      "totalCheckedIn": 20,
       "totalTicketsSold": 38,
       "totalTicketTiers": 2,
       "attendanceRate": 67
@@ -1007,15 +998,15 @@ GET /v2/events/tickets/my-tickets?eventId=evt_cm123456789
 
 ---
 
-## RSVP
+## Event Registration
 
-> **⚠️ Database Schema Change:** Event registration now uses `EventParticipant` model instead of separate `EventRsvp` and `EventAttendance` tables. This provides unified participant tracking with status management.
+Event registration uses the `EventParticipant` model for unified participant tracking with status management. All participants (whether from free registration or paid ticket purchase) are tracked in this model.
 
-### Create RSVP
+### Register for Event
 
 Register for a free event. Creates an `EventParticipant` record with `status=REGISTERED`.
 
-**Endpoint:** `POST /v2/events/:id/rsvp`
+**Endpoint:** `POST /v2/events/:id/register`
 
 **Authentication:** Required
 
@@ -1024,31 +1015,26 @@ Register for a free event. Creates an `EventParticipant` record with `status=REG
 
 **Request Body:** None required
 
-**Database Changes:**
-- **Before:** Created `EventRsvp` record
-- **Now:** Creates `EventParticipant` record with:
-  - `status`: REGISTERED
-  - `qrCode`: Secure token for check-in
-  - `checkedInAt`: null (until check-in)
-
 **Response:** `201 Created`
 ```json
 {
-  "status": "success",
-  "message": "Participant registered successfully",
+  "success": true,
+  "message": "Successfully registered for event",
   "data": {
-    "id": "participant_456",
-    "userId": "usr_cm987654321",
-    "eventId": "evt_cm123456789",
+    "id": "cmgxe29zb0017cppi6ob1106q",
+    "userId": "e790aa8d-fe54-45b0-ad34-44f1913657cf",
+    "eventId": "cmgxe29nb0013cppi177xt4vo",
     "status": "REGISTERED",
-    "qrCode": "abc123def456...",
+    "qrCode": "a1b2c3d4e5f6...",
     "checkedInAt": null,
-    "createdAt": "2025-10-16T10:00:00.000Z",
+    "canceledAt": null,
+    "createdAt": "2025-10-19T07:00:00.000Z",
+    "updatedAt": "2025-10-19T07:00:00.000Z",
     "event": {
-      "id": "evt_cm123456789",
-      "title": "Bersemuka Summer Meetup 2025",
-      "date": "2025-08-15T10:00:00.000Z",
-      "location": "KLCC Convention Center, Kuala Lumpur",
+      "id": "cmgxe29nb0013cppi177xt4vo",
+      "title": "Free Tech Meetup",
+      "date": "2025-11-15T18:00:00.000Z",
+      "location": "Downtown Tech Hub",
       "type": "SOCIAL"
     }
   }
@@ -1061,35 +1047,28 @@ Register for a free event. Creates an `EventParticipant` record with `status=REG
 - `404 Not Found` - Event not found
 
 **Notes:**
-- Only available for free events
+- Only available for free events (where `isFree: true`)
 - For paid events, use the [Purchase Ticket](#purchase-ticket) endpoint
-- QR code token is included in response but QR image is generated on-demand via [Generate QR Code](#generate-qr-code) endpoint
-- Participant status can be: `REGISTERED`, `WAITLISTED`, `CONFIRMED`, `CHECKED_IN`, `CANCELED`
+- QR code token is included in response but QR image is generated on-demand via [Generate Participant QR Code](#generate-participant-qr-code)
+- Participant status can be: `REGISTERED`, `CONFIRMED`, `CHECKED_IN`, `CANCELED`, `NO_SHOW`
 
 ---
 
-### Cancel RSVP
+### Cancel Registration
 
 Cancel event registration. Updates `EventParticipant` status to `CANCELED` (soft delete preserves history).
 
-**Endpoint:** `DELETE /v2/events/:id/rsvp`
+**Endpoint:** `DELETE /v2/events/:id/register`
 
 **Authentication:** Required
 
 **Path Parameters:**
 - `id` (required): Event ID
 
-**Database Changes:**
-- **Before:** Deleted `EventRsvp` record
-- **Now:** Updates `EventParticipant`:
-  - `status`: CANCELED
-  - `canceledAt`: Current timestamp
-  - Record preserved for analytics and re-registration tracking
-
 **Response:** `200 OK`
 ```json
 {
-  "status": "success",
+  "success": true,
   "message": "Registration cancelled successfully",
   "data": null
 }
@@ -1099,65 +1078,123 @@ Cancel event registration. Updates `EventParticipant` status to `CANCELED` (soft
 - `404 Not Found` - Event or registration not found
 - `401 Unauthorized` - Invalid or missing token
 
-**Benefits of Soft Delete:**
-- Preserve registration history
-- Track cancellation rates
-- Allow re-registration with history
-- Analytics on user behavior
+**Implementation Details:**
+- Sets `EventParticipant.status` to `CANCELED`
+- Sets `EventParticipant.canceledAt` to current timestamp
+- Record is preserved (not deleted) for:
+  - Registration history tracking
+  - Cancellation rate analytics
+  - Re-registration with history
+  - User behavior analysis
 
 ---
 
-### Get My RSVPs
+### Get My Registrations
 
 Get all event registrations (EventParticipant records) for the authenticated user.
 
-**Endpoint:** `GET /v2/events/rsvps/my-rsvps`
+**Endpoint:** `GET /v2/events/participants/my-registrations`
 
 **Authentication:** Required
-
-**Database Changes:**
-- **Before:** Returned `EventRsvp` records
-- **Now:** Returns `EventParticipant` records with full status information
 
 **Response:** `200 OK`
 ```json
 {
-  "status": "success",
-  "message": "Participant records retrieved successfully",
+  "success": true,
+  "message": "Registrations retrieved successfully",
   "data": [
     {
-      "id": "participant_456",
-      "userId": "usr_cm987654321",
-      "eventId": "evt_cm123456789",
+      "id": "cmgxe29zb0017cppi6ob1106q",
+      "userId": "e790aa8d-fe54-45b0-ad34-44f1913657cf",
+      "eventId": "cmgxe29nb0013cppi177xt4vo",
       "status": "REGISTERED",
-      "qrCode": "abc123def456...",
+      "qrCode": "a1b2c3d4e5f6...",
       "checkedInAt": null,
       "canceledAt": null,
-      "createdAt": "2025-10-16T10:00:00.000Z",
+      "createdAt": "2025-10-19T07:00:00.000Z",
+      "updatedAt": "2025-10-19T07:00:00.000Z",
       "event": {
-        "id": "evt_cm123456789",
-        "title": "Bersemuka Summer Meetup 2025",
-        "date": "2025-08-15T10:00:00.000Z",
-        "location": "KLCC Convention Center, Kuala Lumpur",
+        "id": "cmgxe29nb0013cppi177xt4vo",
+        "title": "Free Tech Meetup",
+        "date": "2025-11-15T18:00:00.000Z",
+        "location": "Downtown Tech Hub",
         "type": "SOCIAL",
-        "images": ["https://cdn.berse.com/events/summer-2025.jpg"]
-      },
-      "user": {
-        "id": "usr_cm987654321",
-        "fullName": "John Doe",
-        "username": "johndoe",
-        "email": "john@example.com"
+        "images": []
       }
     },
     {
-      "id": "participant_457",
-      "userId": "usr_cm987654321",
-      "eventId": "evt_cm234567890",
+      "id": "cmgxe2a1c001acppi8xz9y2b3",
+      "userId": "e790aa8d-fe54-45b0-ad34-44f1913657cf",
+      "eventId": "cmgxe2a0x0018cppid4k8l1m5",
       "status": "CHECKED_IN",
-      "qrCode": "xyz789uvw012...",
-      "checkedInAt": "2025-09-01T07:15:00.000Z",
+      "qrCode": "x9y8z7w6v5u4...",
+      "checkedInAt": "2025-10-18T09:15:00.000Z",
       "canceledAt": null,
-      "createdAt": "2025-10-14T08:00:00.000Z",
+      "createdAt": "2025-10-17T14:00:00.000Z",
+      "updatedAt": "2025-10-18T09:15:00.000Z",
+      "event": {
+        "id": "cmgxe2a0x0018cppid4k8l1m5",
+        "title": "Morning Coffee Chat",
+        "date": "2025-10-18T09:00:00.000Z",
+        "location": "Cafe Lumiere",
+        "type": "CAFE_MEETUP"
+      }
+    }
+  ]
+}
+```
+
+**Filtering:**
+- Returns all registrations regardless of status
+- Includes REGISTERED, CHECKED_IN, CANCELED, etc.
+- Ordered by creation date (newest first)
+
+---
+
+### Generate Participant QR Code
+
+Generate a secure QR code for event check-in. The QR code contains a JWT token with participant and event information.
+
+**Endpoint:** `GET /v2/events/participants/:participantId/qr-code`
+
+**Authentication:** Required
+
+**Path Parameters:**
+- `participantId` (required): EventParticipant ID
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "message": "QR code generated successfully",
+  "data": {
+    "qrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+  }
+}
+```
+
+**Error Responses:**
+- `404 Not Found` - Participant record not found
+- `403 Forbidden` - QR code belongs to different user
+- `401 Unauthorized` - Invalid or missing token
+
+**QR Code Details:**
+- Format: Data URL (Base64-encoded PNG image)
+- Contains: JWT token with participant ID, event ID, user ID, and secure token
+- Token includes:
+  - `type`: "EVENT_CHECKIN"
+  - `participantId`: EventParticipant ID
+  - `eventId`: Event ID
+  - `userId`: User ID
+  - `token`: Secure random token from `EventParticipant.qrCode` field
+  - `iat`: Issued at timestamp
+  - `iss`: "bersemuka-api"
+  - `aud`: "bersemuka-checkin"
+
+**Usage:**
+- QR code can be scanned at event check-in
+- Token is verified server-side during check-in
+- Prevents QR code reuse or forgery
       "event": {
         "id": "evt_cm234567890",
         "title": "Community Hike",
@@ -1184,79 +1221,12 @@ Get all event registrations (EventParticipant records) for the authenticated use
 
 ---
 
-### Generate QR Code
-
-Generate a secure, time-limited QR code for event check-in.
-
-**Endpoint:** `GET /v2/events/rsvps/:rsvpId/qr-code`
-
-**Authentication:** Required
-
-**Path Parameters:**
-- `rsvpId` (required): Participant ID (formerly RSVP ID, now `EventParticipant.id`)
-
-**Database Changes:**
-- **Before:** Used `EventRsvp.id` and `EventRsvp.qrCode`
-- **Now:** Uses `EventParticipant.id` and `EventParticipant.qrCode`
-- QR code JWT payload includes `participantId` instead of `rsvpId`
-
-**Response:** `200 OK`
-```json
-{
-  "status": "success",
-  "message": "QR code generated successfully",
-  "data": {
-    "qrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-  }
-}
-```
-
-**Error Responses:**
-- `403 Forbidden` - Not authorized to access this participant record
-- `404 Not Found` - Participant record not found
-
-**QR Code Details:**
-- **Format**: Base64-encoded PNG image (Data URL)
-- **Size**: 300x300 pixels
-- **Content**: Signed JWT token containing participant details
-- **Expiration**: 30 days or 24 hours after event (whichever is later)
-- **Security**: Cryptographically signed, cannot be forged
-- **Usage**: Can be displayed in `<img>` tags or mobile apps
-
-**JWT Payload Structure:**
-```json
-{
-  "participantId": "participant_456",
-  "userId": "usr_cm987654321",
-  "eventId": "evt_cm123456789",
-  "token": "abc123def456...",
-  "type": "EVENT_CHECKIN",
-  "exp": 1723804800,
-  "iss": "bersemuka-api",
-  "aud": "bersemuka-checkin"
-}
-```
-
-**Security Features:**
-- JWT token with expiration
-- Cryptographic signature (HMAC-SHA256)
-- Event-specific binding
-- Double validation (JWT + database token from `EventParticipant.qrCode`)
-- Audience/issuer verification
-- Participant status verification
-
-**Example Usage:**
-```html
-<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." alt="Check-in QR Code" />
-```
-
-For complete security documentation, see [EVENT_QR_CODE_SECURITY.md](../../EVENT_QR_CODE_SECURITY.md).
 
 ---
 
 ## Attendance
 
-> **⚠️ Database Schema Change:** Check-in tracking now updates `EventParticipant.checkedInAt` and `status=CHECKED_IN` instead of creating separate `EventAttendance` records.
+Check-in tracking updates `EventParticipant.checkedInAt` and sets `status=CHECKED_IN`.
 
 ### Check-In Attendee
 
@@ -1272,7 +1242,7 @@ Check in a participant at the event (via user ID or QR code scan). Updates their
 **Request Body:**
 ```json
 {
-  "userId": "usr_cm987654321"
+  "userId": "e790aa8d-fe54-45b0-ad34-44f1913657cf"
 }
 ```
 

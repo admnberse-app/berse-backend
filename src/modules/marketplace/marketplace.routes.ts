@@ -219,4 +219,22 @@ router.get(
   marketplaceController.getBuyerStats.bind(marketplaceController)
 );
 
+// ============= DISCOVERY ROUTES =============
+
+router.get(
+  '/discovery/trending',
+  marketplaceController.getTrendingListings.bind(marketplaceController)
+);
+
+router.get(
+  '/discovery/recommended',
+  authenticateToken,
+  marketplaceController.getRecommendedListings.bind(marketplaceController)
+);
+
+router.get(
+  '/discovery/nearby',
+  marketplaceController.getNearbyListings.bind(marketplaceController)
+);
+
 export default router;

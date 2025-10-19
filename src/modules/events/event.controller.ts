@@ -235,65 +235,65 @@ export class EventController {
   // ============================================================================
 
   /**
-   * Create RSVP
-   * @route POST /v2/events/:id/rsvp
+   * Register for event
+   * @route POST /v2/events/:id/register
    */
-  static async createRsvp(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async registerForEvent(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
       const userId = req.user!.id;
 
-      const rsvp = await EventService.createRsvp(userId, id);
+      const participant = await EventService.createRsvp(userId, id);
 
-      logger.info(`RSVP created for event ${id} by user ${userId}`);
-      sendSuccess(res, rsvp, 'RSVP created successfully', 201);
+      logger.info(`User ${userId} registered for event ${id}`);
+      sendSuccess(res, participant, 'Successfully registered for event', 201);
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Cancel RSVP
-   * @route DELETE /v2/events/:id/rsvp
+   * Cancel registration
+   * @route DELETE /v2/events/:id/register
    */
-  static async cancelRsvp(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async cancelRegistration(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
       const userId = req.user!.id;
 
       await EventService.cancelRsvp(userId, id);
 
-      logger.info(`RSVP cancelled for event ${id} by user ${userId}`);
-      sendSuccess(res, null, 'RSVP cancelled successfully');
+      logger.info(`User ${userId} cancelled registration for event ${id}`);
+      sendSuccess(res, null, 'Registration cancelled successfully');
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Get user's RSVPs
-   * @route GET /v2/events/rsvps/my-rsvps
+   * Get user's event registrations
+   * @route GET /v2/events/participants/my-registrations
    */
-  static async getMyRsvps(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getMyRegistrations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;
 
-      const rsvps = await EventService.getUserRsvps(userId);
+      const participants = await EventService.getUserRsvps(userId);
 
-      sendSuccess(res, rsvps, 'RSVPs retrieved successfully');
+      sendSuccess(res, participants, 'Registrations retrieved successfully');
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Generate QR code for RSVP
-   * @route GET /v2/events/rsvps/:rsvpId/qr-code
+   * Generate QR code for participant
+   * @route GET /v2/events/participants/:participantId/qr-code
    */
-  static async getRsvpQrCode(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getParticipantQrCode(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { rsvpId } = req.params;
-      const qrCodeDataUrl = await EventService.generateRsvpQrCode(rsvpId, req.user!.id);
+      const { participantId } = req.params;
+      const qrCodeDataUrl = await EventService.generateRsvpQrCode(participantId, req.user!.id);
       sendSuccess(res, { qrCode: qrCodeDataUrl }, 'QR code generated successfully');
     } catch (error) {
       next(error);

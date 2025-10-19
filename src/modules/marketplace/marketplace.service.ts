@@ -1138,6 +1138,206 @@ export class MarketplaceService {
     return this.formatDisputeResponse(dispute);
   }
 
+  // ============= DISCOVERY METHODS =============
+
+  async getTrendingListings(
+    params: PaginationParams & { category?: string; location?: string }
+  ): Promise<PaginatedResponse<ListingResponse>> {
+    const { page = 1, limit = 20, category, location } = params;
+
+    const where: any = {
+      status: ListingStatus.ACTIVE
+    };
+
+    if (category) where.category = category;
+    if (location) where.location = { contains: location, mode: 'insensitive' };
+
+    // Get listings with view counts from saved items as proxy for views
+    // Rank by number of times added to cart + created recently
+    const [listings, total] = await Promise.all([
+      prisma.marketplaceListing.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustScore: true
+            }
+          },
+          _count: {
+            select: {
+              marketplaceCartItems: true
+            }
+          }
+        },
+        orderBy: [
+          // Prioritize listings with more cart adds and orders
+          { createdAt: 'desc' }
+        ],
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      prisma.marketplaceListing.count({ where })
+    ]);
+
+    // Sort by engagement (cart items as proxy for popularity)
+    const sortedListings = listings.sort((a, b) => {
+      const aEngagement = (a._count?.marketplaceCartItems || 0);
+      const bEngagement = (b._count?.marketplaceCartItems || 0);
+      return bEngagement - aEngagement;
+    });
+
+    const formattedListings = sortedListings.map(listing => this.formatListingResponse(listing));
+
+    return {
+      data: formattedListings,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
+    };
+  }
+
+  async getRecommendedListings(
+    userId: string,
+    params: PaginationParams & { category?: string }
+  ): Promise<PaginatedResponse<ListingResponse>> {
+    const { page = 1, limit = 20, category } = params;
+
+    // Get user profile to understand interests
+    const userProfile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { interests: true }
+    });
+
+    // Get user's community IDs (simple reference, no need for full data)
+    const userCommunityIds = await prisma.communityMember.findMany({
+      where: { userId },
+      select: { communityId: true }
+    });
+
+    const where: any = {
+      status: ListingStatus.ACTIVE,
+      userId: { not: userId } // Don't recommend own listings
+    };
+
+    if (category) where.category = category;
+
+    // Get listings matching user interests or community types
+    const [listings, total] = await Promise.all([
+      prisma.marketplaceListing.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustScore: true
+            }
+          },
+          _count: {
+            select: {
+              marketplaceCartItems: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit * 3 // Get more to filter/rank
+      }),
+      prisma.marketplaceListing.count({ where })
+    ]);
+
+    // Rank by relevance to user interests
+    const rankedListings = listings
+      .map(listing => {
+        let relevanceScore = 0;
+
+        // Match based on user interests
+        if (userProfile?.interests && Array.isArray(userProfile.interests)) {
+          const listingText = `${listing.title} ${listing.description} ${listing.category}`.toLowerCase();
+          userProfile.interests.forEach((interest: any) => {
+            if (listingText.includes(interest.toLowerCase())) {
+              relevanceScore += 2;
+            }
+          });
+        }
+
+        // Boost newer listings slightly
+        const daysSinceCreation = (Date.now() - new Date(listing.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceCreation < 7) relevanceScore += 1;
+
+        return { ...listing, relevanceScore };
+      })
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice((page - 1) * limit, page * limit);
+
+    const formattedListings = rankedListings.map(listing => this.formatListingResponse(listing));
+
+    return {
+      data: formattedListings,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
+    };
+  }
+
+  async getNearbyListings(
+    location: string,
+    params: PaginationParams & { category?: string }
+  ): Promise<PaginatedResponse<ListingResponse>> {
+    const { page = 1, limit = 20, category } = params;
+
+    const where: any = {
+      status: ListingStatus.ACTIVE,
+      location: { contains: location, mode: 'insensitive' }
+    };
+
+    if (category) where.category = category;
+
+    const [listings, total] = await Promise.all([
+      prisma.marketplaceListing.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustScore: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      prisma.marketplaceListing.count({ where })
+    ]);
+
+    const formattedListings = listings.map(listing => this.formatListingResponse(listing));
+
+    return {
+      data: formattedListings,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
+    };
+  }
+
   // ============= STATS METHODS =============
 
   async getSellerStats(sellerId: string): Promise<SellerStats> {

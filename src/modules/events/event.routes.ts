@@ -807,15 +807,13 @@ router.get(
 
 /**
  * @swagger
- * /v2/events/{id}/rsvp:
+ * /v2/events/{id}/register:
  *   post:
- *     summary: RSVP to event
+ *     summary: Register for event
  *     description: |
  *       Register for a free event. Creates an EventParticipant record with status=REGISTERED.
  *       For paid events, use the ticket purchase endpoint instead.
- *       
- *       **Database Change:** Now creates EventParticipant instead of EventRsvp.
- *     tags: [Events - RSVP]
+ *     tags: [Events - Participants]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -858,24 +856,22 @@ router.get(
  *         description: Already registered or event is at capacity
  */
 router.post(
-  '/:id/rsvp',
+  '/:id/register',
   authenticateToken,
   createRsvpValidators,
   handleValidationErrors,
-  EventController.createRsvp
+  EventController.registerForEvent
 );
 
 /**
  * @swagger
- * /v2/events/{id}/rsvp:
+ * /v2/events/{id}/register:
  *   delete:
- *     summary: Cancel RSVP
+ *     summary: Cancel registration
  *     description: |
  *       Cancel registration for an event. Updates EventParticipant status to CANCELED.
- *       
- *       **Database Change:** Now updates participant status instead of deleting EventRsvp record.
  *       This preserves history and allows for re-registration analytics.
- *     tags: [Events - RSVP]
+ *     tags: [Events - Participants]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -889,24 +885,22 @@ router.post(
  *         description: Participant registration cancelled successfully (status set to CANCELED)
  */
 router.delete(
-  '/:id/rsvp',
+  '/:id/register',
   authenticateToken,
   createRsvpValidators,
   handleValidationErrors,
-  EventController.cancelRsvp
+  EventController.cancelRegistration
 );
 
 /**
  * @swagger
- * /v2/events/rsvps/my-rsvps:
+ * /v2/events/participants/my-registrations:
  *   get:
- *     summary: Get my RSVPs
+ *     summary: Get my event registrations
  *     description: |
  *       Retrieve all event registrations (EventParticipant records) for the authenticated user.
  *       Includes status information (REGISTERED, CHECKED_IN, CANCELED, etc.).
- *       
- *       **Database Change:** Now returns EventParticipant records instead of EventRsvp.
- *     tags: [Events - RSVP]
+ *     tags: [Events - Participants]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -955,31 +949,29 @@ router.delete(
  *                             type: string
  */
 router.get(
-  '/rsvps/my-rsvps',
+  '/participants/my-registrations',
   authenticateToken,
-  EventController.getMyRsvps
+  EventController.getMyRegistrations
 );
 
 /**
  * @swagger
- * /v2/events/rsvps/{rsvpId}/qr-code:
+ * /v2/events/participants/{participantId}/qr-code:
  *   get:
  *     summary: Generate QR code for participant
  *     description: |
  *       Generate a secure, time-limited QR code for event check-in. QR codes are generated on-demand with JWT tokens.
- *       
- *       **Database Change:** Now uses EventParticipant.id instead of EventRsvp.id.
  *       The QR code contains the participantId and secure token from EventParticipant.qrCode field.
- *     tags: [Events - RSVP]
+ *     tags: [Events - Participants]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: rsvpId
+ *         name: participantId
  *         required: true
  *         schema:
  *           type: string
- *         description: Participant ID (was RSVP ID, now EventParticipant.id)
+ *         description: EventParticipant ID
  *     responses:
  *       200:
  *         description: QR code generated successfully
@@ -997,9 +989,9 @@ router.get(
  *         description: Participant record not found
  */
 router.get(
-  '/rsvps/:rsvpId/qr-code',
+  '/participants/:participantId/qr-code',
   authenticateToken,
-  EventController.getRsvpQrCode
+  EventController.getParticipantQrCode
 );
 
 // ============================================================================

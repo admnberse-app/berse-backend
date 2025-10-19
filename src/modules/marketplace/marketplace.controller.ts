@@ -715,6 +715,164 @@ export class MarketplaceController {
       throw error;
     }
   }
+
+  // ============= DISCOVERY ENDPOINTS =============
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/discovery/trending:
+   *   get:
+   *     summary: Get trending marketplace listings
+   *     tags: [Marketplace - Discovery]
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: category
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: location
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Trending listings retrieved successfully
+   */
+  async getTrendingListings(req: Request, res: Response) {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const category = req.query.category as string;
+      const location = req.query.location as string;
+
+      const result = await marketplaceService.getTrendingListings({
+        page,
+        limit,
+        category,
+        location
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/discovery/recommended:
+   *   get:
+   *     summary: Get recommended marketplace listings based on user interests
+   *     tags: [Marketplace - Discovery]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: category
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Recommended listings retrieved successfully
+   *       401:
+   *         description: Unauthorized
+   */
+  async getRecommendedListings(req: Request, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const category = req.query.category as string;
+
+      const result = await marketplaceService.getRecommendedListings(userId, {
+        page,
+        limit,
+        category
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/discovery/nearby:
+   *   get:
+   *     summary: Get nearby marketplace listings
+   *     tags: [Marketplace - Discovery]
+   *     parameters:
+   *       - in: query
+   *         name: location
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: category
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Nearby listings retrieved successfully
+   *       400:
+   *         description: Location parameter required
+   */
+  async getNearbyListings(req: Request, res: Response) {
+    try {
+      const location = req.query.location as string;
+
+      if (!location) {
+        throw new AppError('Location parameter is required', 400);
+      }
+
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const category = req.query.category as string;
+
+      const result = await marketplaceService.getNearbyListings(location, {
+        page,
+        limit,
+        category
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export const marketplaceController = new MarketplaceController();

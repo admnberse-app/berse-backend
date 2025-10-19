@@ -13,6 +13,7 @@ import notificationRoutes from '../../modules/user/notification.routes';
 import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
 import { paymentRoutes } from '../../modules/payments';
 import { PaymentController } from '../../modules/payments/payment.controller';
+import discoverRoutes from '../../modules/discover/discover.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -131,6 +132,12 @@ router.use('/marketplace', marketplaceRoutes);
  */
 router.use('/payments', paymentRoutes);
 
+/**
+ * Discover routes (Unified explore/discover feed)
+ * Base path: /v2/discover
+ */
+router.use('/discover', discoverRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -189,6 +196,7 @@ router.get('/health', (req, res) => {
       gamification: '/v2/gamification',
       marketplace: '/v2/marketplace',
       payments: '/v2/payments',
+      discover: '/v2/discover',
     },
   });
 });
@@ -433,6 +441,9 @@ router.get('/docs', (req, res) => {
         'GET /v2/payments/payouts': 'Get user payouts (auth required)',
         'POST /v2/payments/calculate-fees': 'Calculate transaction fees',
         'POST /v2/payments/webhooks/:provider': 'Handle payment provider webhooks',
+      },
+      discover: {
+        'GET /v2/discover/feed': 'Get unified discover feed with events, communities, and marketplace (personalized when authenticated)',
       },
     },
     authentication: {

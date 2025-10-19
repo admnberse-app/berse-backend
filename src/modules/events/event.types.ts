@@ -148,47 +148,13 @@ export interface ParticipantResponse {
 }
 
 // ============================================================================
-// RSVP TYPES (DEPRECATED - Use ParticipantResponse)
-// ============================================================================
-
-export interface CreateRsvpRequest {
-  eventId: string;
-}
-
-export interface RsvpResponse {
-  id: string;
-  eventId: string;
-  event: {
-    id: string;
-    title: string;
-    date: string;
-    location: string;
-    type: EventType;
-  };
-  createdAt: string;
-}
-
-// ============================================================================
-// ATTENDANCE TYPES (DEPRECATED - Use ParticipantResponse with checkedInAt)
+// CHECK-IN TYPES
 // ============================================================================
 
 export interface CheckInRequest {
   eventId: string;
   userId?: string;
   qrCode?: string;
-}
-
-export interface AttendanceRecord {
-  id: string;
-  eventId: string;
-  userId: string;
-  checkedInAt: Date;
-  user?: {
-    id: string;
-    fullName: string;
-    email: string;
-    profilePicture?: string;
-  };
 }
 
 // ============================================================================
@@ -240,8 +206,6 @@ export interface EventResponse {
   ticketTiers?: TicketTierResponse[];
   userParticipant?: ParticipantResponse;
   userTicket?: TicketResponse;
-  userRsvp?: RsvpResponse; // DEPRECATED: Use userParticipant
-  hasRsvped?: boolean; // DEPRECATED: Check userParticipant existence
   hasTicket?: boolean;
   isOwner?: boolean;
   attendeesPreview?: Array<{
@@ -259,21 +223,12 @@ export interface EventResponse {
     createdAt: Date;
     status: EventParticipantStatus;
   }>;
-  rsvpsPreview?: Array<{
-    id: string;
-    fullName: string;
-    username?: string;
-    profilePicture?: string;
-    rsvpedAt: Date;
-  }>; // DEPRECATED: Use participantsPreview
   stats?: {
     totalParticipants: number;
     totalCheckedIn: number;
     totalTicketsSold: number;
     totalTicketTiers: number;
     attendanceRate: number;
-    totalAttendees: number; // DEPRECATED: Use totalParticipants
-    totalRsvps: number; // DEPRECATED: Use totalParticipants
   };
 }
 

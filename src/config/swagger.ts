@@ -623,11 +623,22 @@ const swaggerDefinition = {
           },
         },
       },
-      EventRSVP: {
+      EventParticipant: {
         type: 'object',
         properties: {
-          id: { type: 'string', description: 'RSVP ID' },
+          id: { type: 'string', description: 'Participant ID' },
+          userId: { type: 'string', description: 'User ID' },
           eventId: { type: 'string', description: 'Event ID' },
+          status: { 
+            type: 'string', 
+            enum: ['REGISTERED', 'WAITLISTED', 'CONFIRMED', 'CHECKED_IN', 'CANCELED'],
+            description: 'Participant status' 
+          },
+          qrCode: { type: 'string', description: 'Secure token for QR code generation' },
+          checkedInAt: { type: 'string', format: 'date-time', description: 'Check-in timestamp', nullable: true },
+          canceledAt: { type: 'string', format: 'date-time', description: 'Cancellation timestamp', nullable: true },
+          createdAt: { type: 'string', format: 'date-time', description: 'Registration timestamp' },
+          updatedAt: { type: 'string', format: 'date-time', description: 'Last update timestamp' },
           event: {
             type: 'object',
             description: 'Event details',
@@ -639,25 +650,17 @@ const swaggerDefinition = {
               type: { type: 'string' },
             },
           },
-          createdAt: { type: 'string', format: 'date-time' },
-        },
-      },
-      EventAttendance: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Attendance record ID' },
-          eventId: { type: 'string', description: 'Event ID' },
-          userId: { type: 'string', description: 'User ID' },
           user: {
             type: 'object',
             description: 'User details',
             properties: {
               id: { type: 'string' },
-              displayName: { type: 'string' },
+              fullName: { type: 'string' },
+              username: { type: 'string' },
+              email: { type: 'string', format: 'email' },
               profilePicture: { type: 'string', format: 'uri' },
             },
           },
-          checkedInAt: { type: 'string', format: 'date-time', description: 'Check-in timestamp' },
         },
       },
       Community: {

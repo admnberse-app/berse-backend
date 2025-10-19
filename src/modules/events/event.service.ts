@@ -9,15 +9,12 @@ import {
   CreateTicketTierRequest,
   UpdateTicketTierRequest,
   PurchaseTicketRequest,
-  CreateRsvpRequest,
   CreateParticipantRequest,
   CheckInRequest,
   EventResponse,
   TicketTierResponse,
   TicketResponse,
-  RsvpResponse,
   ParticipantResponse,
-  AttendanceRecord,
   EventStatsResponse,
   EventAnalyticsResponse
 } from './event.types';
@@ -279,8 +276,6 @@ export class EventService {
         ticketTiers: event.tier ? event.tier.map(tier => this.transformTicketTierResponse(tier)) : [],
         userParticipant: userParticipant || undefined,
         userTicket: userTicket || undefined,
-        userRsvp: userParticipant || undefined, // Backward compatibility
-        hasRsvped: !!userParticipant, // Backward compatibility
         hasTicket: !!userTicket,
         isOwner: userId ? event.hostId === userId : false,
         attendeesPreview: participants.map(p => ({
@@ -298,13 +293,6 @@ export class EventService {
           createdAt: p.createdAt,
           status: p.status,
         })),
-        rsvpsPreview: allParticipants.map(p => ({ // Backward compatibility
-          id: p.user.id,
-          fullName: p.user.fullName,
-          username: p.user.username,
-          profilePicture: p.user.profile?.profilePicture,
-          rsvpedAt: p.createdAt,
-        })),
         stats: {
           totalParticipants: event._count.eventParticipants,
           totalCheckedIn: checkedInCount,
@@ -313,8 +301,6 @@ export class EventService {
           attendanceRate: event._count.eventParticipants > 0 
             ? Math.round((checkedInCount / event._count.eventParticipants) * 100) 
             : 0,
-          totalAttendees: checkedInCount, // Backward compatibility
-          totalRsvps: event._count.eventParticipants, // Backward compatibility
         },
       };
     } catch (error: any) {
@@ -1065,7 +1051,7 @@ export class EventService {
   /**
    * Check-in attendee
    */
-  static async checkInAttendee(eventId: string, data: CheckInRequest): Promise<AttendanceRecord> {
+  static async checkInAttendee(eventId: string, data: CheckInRequest): Promise<ParticipantResponse> {
     try {
       const event = await prisma.event.findUnique({
         where: { id: eventId },
@@ -1189,7 +1175,7 @@ export class EventService {
   /**
    * Get event attendees (checked-in participants)
    */
-  static async getEventAttendees(eventId: string): Promise<AttendanceRecord[]> {
+  static async getEventAttendees(eventId: string): Promise<ParticipantResponse[]> {
     try {
       const participants = await prisma.eventParticipant.findMany({
         where: { 
