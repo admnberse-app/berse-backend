@@ -14,6 +14,7 @@ import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
 import { paymentRoutes } from '../../modules/payments';
 import { PaymentController } from '../../modules/payments/payment.controller';
 import discoverRoutes from '../../modules/discover/discover.routes';
+import adminRevenueRoutes from '../../modules/admin/revenue.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -137,6 +138,12 @@ router.use('/payments', paymentRoutes);
  * Base path: /v2/discover
  */
 router.use('/discover', discoverRoutes);
+
+/**
+ * Admin Revenue routes
+ * Base path: /v2/admin/revenue
+ */
+router.use('/admin/revenue', adminRevenueRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION

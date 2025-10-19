@@ -20,14 +20,8 @@ const paymentService = new PaymentService();
 /**
  * @swagger
  * tags:
- *   - name: Payments
- *     description: Payment processing and transaction management
- *   - name: Payment Methods
- *     description: User payment method management
- *   - name: Payouts
- *     description: Payout distribution and tracking
- *   - name: Webhooks
- *     description: Payment gateway webhook handlers
+ *   name: Payments
+ *   description: Payment processing and transaction management
  */
 
 export class PaymentController {

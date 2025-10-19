@@ -1293,33 +1293,136 @@ export class PaymentService {
 
       const transaction = await prisma.paymentTransaction.findUnique({
         where: { id: transactionId },
+        include: {
+          provider: true,
+        },
       });
 
       if (!transaction) {
         throw new AppError('Transaction not found', 404);
       }
 
-      // For now, create a simple payout record
-      // In a real implementation, this would:
-      // 1. Check if this is a marketplace transaction
-      // 2. Calculate splits between seller, platform, affiliates, etc.
-      // 3. Create multiple payout records as needed
-      // 4. Set appropriate release dates based on business rules
-
-      // Simple implementation: Create single payout for the net amount
-      const payout = await prisma.payoutDistribution.create({
-        data: {
-          paymentTransactionId: transactionId,
-          recipientId: transaction.userId,
-          recipientType: 'user',
-          amount: transaction.netAmount,
-          currency: transaction.currency,
-          status: 'PENDING',
-          releaseDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-        },
+      // Check if payouts already created for this transaction
+      const existingPayouts = await prisma.payoutDistribution.count({
+        where: { paymentTransactionId: transactionId },
       });
 
-      logger.info(`[PaymentService] Created payout distribution: ${payout.id}`);
+      if (existingPayouts > 0) {
+        logger.info(`[PaymentService] Payouts already exist for transaction ${transactionId}`);
+        return;
+      }
+
+      // Determine recipient based on transaction type and reference
+      let recipientId: string;
+      let recipientType: string;
+      let metadata: any = {};
+
+      switch (transaction.transactionType) {
+        case 'EVENT_TICKET':
+          // Get event organizer from event
+          if (transaction.referenceId) {
+            const event = await prisma.event.findUnique({
+              where: { id: transaction.referenceId },
+              select: { hostId: true, title: true, date: true },
+            });
+            recipientId = event?.hostId || transaction.userId;
+            recipientType = 'event_organizer';
+            metadata = { eventId: transaction.referenceId, eventTitle: event?.title, eventDate: event?.date };
+          } else {
+            recipientId = transaction.userId;
+            recipientType = 'event_organizer';
+          }
+          break;
+
+        case 'MARKETPLACE_ORDER':
+          // Get seller from order
+          if (transaction.referenceId) {
+            const order = await prisma.marketplaceOrder.findUnique({
+              where: { id: transaction.referenceId },
+              select: { sellerId: true },
+            });
+            recipientId = order?.sellerId || transaction.userId;
+            recipientType = 'marketplace_seller';
+            metadata = { orderId: transaction.referenceId };
+          } else {
+            recipientId = transaction.userId;
+            recipientType = 'marketplace_seller';
+          }
+          break;
+
+        case 'SERVICE_BOOKING':
+          // Get service provider from booking
+          if (transaction.referenceId) {
+            const booking = await prisma.serviceBooking.findUnique({
+              where: { id: transaction.referenceId },
+              select: { providerId: true },
+            });
+            recipientId = booking?.providerId || transaction.userId;
+            recipientType = 'service_provider';
+            metadata = { bookingId: transaction.referenceId };
+          } else {
+            recipientId = transaction.userId;
+            recipientType = 'service_provider';
+          }
+          break;
+
+        default:
+          recipientId = transaction.userId;
+          recipientType = 'user';
+      }
+
+      // Calculate payout amounts
+      const sellerPayout = transaction.amount - (transaction.platformFee || 0) - (transaction.gatewayFee || 0);
+      const platformRevenue = transaction.platformFee || 0;
+
+      // Use EscrowService for recipient payout with proper hold logic
+      const { EscrowService } = await import('../../services/escrow.service');
+      
+      if (sellerPayout > 0) {
+        await EscrowService.createPayoutHold({
+          transactionId: transaction.id,
+          recipientId,
+          recipientType: recipientType as any,
+          amount: sellerPayout,
+          currency: transaction.currency,
+          transactionType: transaction.transactionType,
+          metadata: {
+            ...metadata,
+            ...((transaction.metadata as any) || {}),
+          },
+          requiresManualReview: false,
+        });
+      }
+
+      // Create platform revenue payout (released immediately)
+      if (platformRevenue > 0) {
+        await prisma.payoutDistribution.create({
+          data: {
+            paymentTransactionId: transaction.id,
+            recipientId: 'PLATFORM', // Special identifier for platform
+            recipientType: 'platform',
+            amount: platformRevenue,
+            currency: transaction.currency,
+            status: 'RELEASED', // Platform fee is collected immediately
+            releaseDate: new Date(),
+            canReleaseAt: new Date(),
+            releasedAt: new Date(),
+            holdReason: 'platform_fee_revenue',
+            autoReleaseEnabled: true,
+            requiresManualReview: false,
+            metadata: {
+              transactionType: transaction.transactionType,
+              originalTransactionId: transaction.id,
+              ...metadata,
+            },
+            notes: `Platform fee from ${transaction.transactionType}`,
+          },
+        });
+
+        logger.info(`[PaymentService] Created platform revenue payout: ${platformRevenue} ${transaction.currency}`);
+      }
+
+      logger.info(`[PaymentService] Payout distribution completed for transaction ${transactionId}`);
     } catch (error) {
       logger.error('[PaymentService] Failed to distribute payout:', error);
       throw error;

@@ -88,6 +88,20 @@ export class EscrowService {
         throw new AppError('Transaction not found', 404);
       }
 
+      // Check if payout already exists for this recipient
+      const existingPayout = await prisma.payoutDistribution.findFirst({
+        where: {
+          paymentTransactionId: input.transactionId,
+          recipientId: input.recipientId,
+          recipientType: input.recipientType,
+        },
+      });
+
+      if (existingPayout) {
+        logger.info(`[EscrowService] Payout already exists for transaction ${input.transactionId} and recipient ${input.recipientId}`);
+        return existingPayout;
+      }
+
       // Calculate hold period
       const holdPeriod = this.calculateHoldPeriod(input.transactionType, input.metadata);
 
@@ -112,6 +126,7 @@ export class EscrowService {
       logger.info(`[EscrowService] Created payout hold: ${payout.id}`, {
         transactionId: input.transactionId,
         recipientId: input.recipientId,
+        recipientType: input.recipientType,
         amount: input.amount,
         releaseDate: holdPeriod.releaseDate,
         holdReason: holdPeriod.holdReason
