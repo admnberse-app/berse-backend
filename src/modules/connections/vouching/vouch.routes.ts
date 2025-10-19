@@ -12,9 +12,6 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateToken);
-
 /**
  * @swagger
  * /v2/vouches/request:
@@ -74,6 +71,7 @@ router.use(authenticateToken);
  */
 router.post(
   '/request',
+  authenticateToken,
   requestVouchValidators,
   handleValidationErrors,
   VouchController.requestVouch
@@ -150,6 +148,7 @@ router.post(
  */
 router.post(
   '/:vouchId/respond',
+  authenticateToken,
   respondToVouchRequestValidators,
   handleValidationErrors,
   VouchController.respondToVouchRequest
@@ -187,6 +186,7 @@ router.post(
  */
 router.post(
   '/:vouchId/revoke',
+  authenticateToken,
   revokeVouchValidators,
   handleValidationErrors,
   VouchController.revokeVouch
@@ -225,6 +225,7 @@ router.post(
  */
 router.post(
   '/community',
+  authenticateToken,
   communityVouchValidators,
   handleValidationErrors,
   VouchController.createCommunityVouch
@@ -266,6 +267,7 @@ router.post(
  */
 router.get(
   '/auto-vouch/eligibility',
+  authenticateToken,
   VouchController.checkAutoVouchEligibility
 );
 
@@ -330,6 +332,7 @@ router.get(
  */
 router.get(
   '/received',
+  authenticateToken,
   vouchQueryValidators,
   handleValidationErrors,
   VouchController.getVouchesReceived
@@ -364,6 +367,7 @@ router.get(
  */
 router.get(
   '/given',
+  authenticateToken,
   vouchQueryValidators,
   handleValidationErrors,
   VouchController.getVouchesGiven
@@ -424,6 +428,7 @@ router.get(
  */
 router.get(
   '/limits',
+  authenticateToken,
   VouchController.getVouchLimits
 );
 
@@ -526,6 +531,7 @@ router.get(
  */
 router.get(
   '/summary',
+  authenticateToken,
   VouchController.getVouchSummary
 );
 

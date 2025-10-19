@@ -280,6 +280,106 @@ export class RecommendationsService {
   }
 
   /**
+   * Batch get mutual connections for multiple users (optimized to avoid N+1 queries)
+   */
+  static async getBatchMutualConnections(
+    currentUserId: string, 
+    targetUserIds: string[]
+  ): Promise<Map<string, any[]>> {
+    if (targetUserIds.length === 0) {
+      return new Map();
+    }
+
+    // Get current user's connections once
+    const currentUserConnections = await prisma.userConnection.findMany({
+      where: {
+        OR: [
+          { initiatorId: currentUserId, status: 'ACCEPTED' },
+          { receiverId: currentUserId, status: 'ACCEPTED' },
+        ],
+      },
+      select: {
+        initiatorId: true,
+        receiverId: true,
+      },
+    });
+
+    const currentUserConnectedIds = new Set(
+      currentUserConnections.map(c => 
+        c.initiatorId === currentUserId ? c.receiverId : c.initiatorId
+      )
+    );
+
+    // Get all target users' connections in one query
+    const allTargetConnections = await prisma.userConnection.findMany({
+      where: {
+        OR: [
+          { initiatorId: { in: targetUserIds }, status: 'ACCEPTED' },
+          { receiverId: { in: targetUserIds }, status: 'ACCEPTED' },
+        ],
+      },
+      select: {
+        initiatorId: true,
+        receiverId: true,
+      },
+    });
+
+    // Build a map of userId -> their connection IDs
+    const connectionMap = new Map<string, Set<string>>();
+    targetUserIds.forEach(userId => connectionMap.set(userId, new Set()));
+
+    allTargetConnections.forEach(conn => {
+      targetUserIds.forEach(userId => {
+        if (conn.initiatorId === userId) {
+          connectionMap.get(userId)!.add(conn.receiverId);
+        } else if (conn.receiverId === userId) {
+          connectionMap.get(userId)!.add(conn.initiatorId);
+        }
+      });
+    });
+
+    // Find mutual connection IDs for each target user
+    const mutualIdsMap = new Map<string, string[]>();
+    connectionMap.forEach((connIds, userId) => {
+      const mutualIds = Array.from(connIds).filter(id => currentUserConnectedIds.has(id));
+      mutualIdsMap.set(userId, mutualIds);
+    });
+
+    // Get all unique mutual connection user details in one query
+    const allMutualIds = new Set<string>();
+    mutualIdsMap.forEach(ids => ids.forEach(id => allMutualIds.add(id)));
+
+    const mutualUsers = await prisma.user.findMany({
+      where: {
+        id: { in: Array.from(allMutualIds) },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        profile: {
+          select: {
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    // Create a map of userId -> user details for quick lookup
+    const userDetailsMap = new Map(mutualUsers.map(u => [u.id, u]));
+
+    // Build final result map
+    const resultMap = new Map<string, any[]>();
+    mutualIdsMap.forEach((mutualIds, targetUserId) => {
+      const mutualDetails = mutualIds
+        .map(id => userDetailsMap.get(id))
+        .filter(u => u !== undefined);
+      resultMap.set(targetUserId, mutualDetails);
+    });
+
+    return resultMap;
+  }
+
+  /**
    * Get trending interests based on user activity
    */
   static async getTrendingInterests(limit: number = 10): Promise<{ interest: string; count: number }[]> {

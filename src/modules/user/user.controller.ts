@@ -383,8 +383,30 @@ export class UserController {
         }),
       ]);
 
+      // Transform to flat structure
+      const transformedUsers = users.map(user => ({
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        totalPoints: user.totalPoints,
+        profilePicture: user.profile?.profilePicture,
+        bio: user.profile?.bio || user.profile?.shortBio,
+        interests: user.profile?.interests || [],
+        profession: user.profile?.profession,
+        age: user.profile?.age,
+        personalityType: user.profile?.personalityType,
+        languages: user.profile?.languages || [],
+        location: {
+          city: user.location?.currentCity,
+          currentLocation: user.location?.currentLocation,
+          originallyFrom: user.location?.originallyFrom,
+        },
+        membershipId: user.metadata?.membershipId,
+      }));
+
       sendSuccess(res, {
-        users,
+        users: transformedUsers,
         pagination: {
           page: Number(page),
           limit: Number(limit),
@@ -421,6 +443,7 @@ export class UserController {
         hasHostedEvents,
         isVerified,
         excludeConnected = false,
+        includeMutualConnections,
         page = 1,
         limit = 20,
       }: any = req.query;
@@ -639,8 +662,32 @@ export class UserController {
         });
       }
 
+      // Get mutual connections for each user (if explicitly requested and user is authenticated)
+      let usersWithMutuals = filteredUsers;
+      if (currentUserId && includeMutualConnections === 'true') {
+        // Batch fetch all user IDs' connections to avoid N+1 queries
+        const userIds = filteredUsers.map((u: any) => u.id);
+        const mutualConnectionsMap = await RecommendationsService.getBatchMutualConnections(
+          currentUserId, 
+          userIds
+        );
+        
+        usersWithMutuals = filteredUsers.map((user: any) => {
+          const mutuals = mutualConnectionsMap.get(user.id) || [];
+          return {
+            ...user,
+            mutualConnectionsCount: mutuals.length,
+            mutualConnections: mutuals.slice(0, 3).map(mc => ({
+              id: mc.id,
+              fullName: mc.fullName,
+              profilePicture: mc.profile?.profilePicture,
+            })),
+          };
+        });
+      }
+
       // Transform response
-      const transformedUsers = filteredUsers.map((user: any) => ({
+      const transformedUsers = usersWithMutuals.map((user: any) => ({
         id: user.id,
         fullName: user.fullName,
         username: user.username,
@@ -663,6 +710,10 @@ export class UserController {
           attendedEvents: user.stats?.eventsAttended || 0,
         },
         ...(user.distance !== undefined && { distance: user.distance }),
+        ...(currentUserId && includeMutualConnections === 'true' && {
+          mutualConnectionsCount: user.mutualConnectionsCount || 0,
+          mutualConnections: user.mutualConnections || [],
+        }),
       }));
 
       sendSuccess(res, {
@@ -727,32 +778,64 @@ export class UserController {
   static async getUserRecommendations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const currentUserId = req.user?.id!;
-      const { limit = 10 } = req.query;
+      const { limit = 10, includeMutualConnections } = req.query;
 
       const recommendations = await RecommendationsService.getRecommendations(
         currentUserId,
         Number(limit)
       );
 
+      // Get mutual connections for each recommendation (if explicitly requested)
+      let recsWithMutuals = recommendations;
+      if (includeMutualConnections === 'true') {
+        const userIds = recommendations.map(rec => rec.userId);
+        const mutualConnectionsMap = await RecommendationsService.getBatchMutualConnections(
+          currentUserId,
+          userIds
+        );
+
+        recsWithMutuals = recommendations.map((rec) => {
+          const mutuals = mutualConnectionsMap.get(rec.userId) || [];
+          return {
+            ...rec,
+            mutualConnectionsCount: mutuals.length,
+            mutualConnections: mutuals.slice(0, 3).map(mc => ({
+              id: mc.id,
+              fullName: mc.fullName,
+              profilePicture: mc.profile?.profilePicture,
+            })),
+          };
+        });
+      }
+
       // Transform recommendations for response
-      const transformedRecommendations = recommendations.map(rec => ({
+      const transformedRecommendations = recsWithMutuals.map((rec: any) => ({
         id: rec.userId,
         fullName: rec.user.fullName,
         username: rec.user.username,
+        role: rec.user.role,
+        trustScore: rec.user.trustScore,
+        trustLevel: rec.user.trustLevel,
         score: rec.score,
         reasons: rec.reasons,
-        profile: {
-          profilePicture: rec.user.profile?.profilePicture,
-          bio: rec.user.profile?.bio,
-          shortBio: rec.user.profile?.shortBio,
-          interests: rec.user.profile?.interests || [],
-          profession: rec.user.profile?.profession,
-        },
+        profilePicture: rec.user.profile?.profilePicture,
+        bio: rec.user.profile?.bio || rec.user.profile?.shortBio,
+        interests: rec.user.profile?.interests || [],
+        profession: rec.user.profile?.profession,
+        gender: rec.user.profile?.gender,
         location: {
-          currentCity: rec.user.location?.currentCity,
-          originallyFrom: rec.user.location?.originallyFrom,
+          city: rec.user.location?.currentCity,
+          country: rec.user.location?.countryOfResidence,
         },
-        connectionStats: rec.user.connectionStats,
+        isVerified: !!rec.user.security?.emailVerifiedAt,
+        stats: {
+          totalConnections: rec.user.connectionStats?.totalConnections || 0,
+          connectionQuality: rec.user.connectionStats?.connectionQuality || 0,
+        },
+        ...(includeMutualConnections === 'true' && {
+          mutualConnectionsCount: rec.mutualConnectionsCount || 0,
+          mutualConnections: rec.mutualConnections || [],
+        }),
       }));
 
       sendSuccess(res, {
@@ -776,7 +859,7 @@ export class UserController {
   static async findNearbyUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const currentUserId = req.user?.id;
-      const { latitude, longitude, radius = 10, page = 1, limit = 20 } = req.query;
+      const { latitude, longitude, radius = 10, page = 1, limit = 20, includeMutualConnections } = req.query;
 
       // Validate required parameters
       if (!latitude || !longitude) {
@@ -919,10 +1002,60 @@ export class UserController {
         .sort((a, b) => a.distance - b.distance)
         .slice(skip, skip + Number(limit));
 
-      const total = nearbyUsers.length;
+      // Get mutual connections for each nearby user (if explicitly requested and authenticated)
+      let usersWithMutuals = nearbyUsers;
+      if (currentUserId && includeMutualConnections === 'true') {
+        const userIds = nearbyUsers.map((u: any) => u.id);
+        const mutualConnectionsMap = await RecommendationsService.getBatchMutualConnections(
+          currentUserId,
+          userIds
+        );
+
+        usersWithMutuals = nearbyUsers.map((user: any) => {
+          const mutuals = mutualConnectionsMap.get(user.id) || [];
+          return {
+            ...user,
+            mutualConnectionsCount: mutuals.length,
+            mutualConnections: mutuals.slice(0, 3).map(mc => ({
+              id: mc.id,
+              fullName: mc.fullName,
+              profilePicture: mc.profile?.profilePicture,
+            })),
+          };
+        });
+      }
+
+      // Transform to flat structure
+      const transformedUsers = usersWithMutuals.map((user: any) => ({
+        id: user.id,
+        fullName: user.fullName,
+        username: user.username,
+        distance: user.distance,
+        distanceFormatted: user.distanceFormatted,
+        profilePicture: user.profile?.profilePicture,
+        bio: user.profile?.bio || user.profile?.shortBio,
+        interests: user.profile?.interests || [],
+        profession: user.profile?.profession,
+        location: {
+          city: user.location?.currentCity,
+          currentLocation: user.location?.currentLocation,
+          lastLocationUpdate: user.location?.lastLocationUpdate,
+        },
+        stats: {
+          totalConnections: user.connectionStats?.totalConnections || 0,
+          connectionQuality: user.connectionStats?.connectionQuality || 0,
+        },
+        isConnected: user.isConnected,
+        ...(user.mutualConnectionsCount !== undefined && {
+          mutualConnectionsCount: user.mutualConnectionsCount,
+          mutualConnections: user.mutualConnections || [],
+        }),
+      }));
+
+      const total = transformedUsers.length;
 
       sendSuccess(res, {
-        users: nearbyUsers,
+        users: transformedUsers,
         center: { latitude: lat, longitude: lon },
         radius: radiusKm,
         pagination: {
@@ -1844,6 +1977,185 @@ export class UserController {
       await ActivityLoggerService.terminateSession(sessionToken, userId);
 
       sendSuccess(res, null, 'Session terminated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all trust levels configuration
+   * @route GET /v2/users/trust-levels
+   */
+  static async getTrustLevels(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const trustLevels = [
+        {
+          level: 'new',
+          label: 'New',
+          minScore: 0,
+          maxScore: 19,
+          color: '#9CA3AF',
+          description: 'Just getting started',
+          icon: '🌱',
+          benefits: [
+            'Create profile',
+            'Join events',
+            'Connect with others'
+          ]
+        },
+        {
+          level: 'starter',
+          label: 'Starter',
+          minScore: 20,
+          maxScore: 39,
+          color: '#60A5FA',
+          description: 'Building connections',
+          icon: '🌿',
+          benefits: [
+            'All New benefits',
+            'Host small events',
+            'Request vouches'
+          ]
+        },
+        {
+          level: 'growing',
+          label: 'Growing',
+          minScore: 40,
+          maxScore: 59,
+          color: '#34D399',
+          description: 'Active community member',
+          icon: '🌳',
+          benefits: [
+            'All Starter benefits',
+            'Host medium events',
+            'Vouch for others',
+            'Access to premium events'
+          ]
+        },
+        {
+          level: 'established',
+          label: 'Established',
+          minScore: 60,
+          maxScore: 74,
+          color: '#FBBF24',
+          description: 'Trusted community member',
+          icon: '⭐',
+          benefits: [
+            'All Growing benefits',
+            'Host large events',
+            'Priority support',
+            'Special badges'
+          ]
+        },
+        {
+          level: 'trusted',
+          label: 'Trusted',
+          minScore: 75,
+          maxScore: 89,
+          color: '#F59E0B',
+          description: 'Highly trusted member',
+          icon: '🏆',
+          benefits: [
+            'All Established benefits',
+            'Featured profile',
+            'Verification fast-track',
+            'Community moderator eligibility'
+          ]
+        },
+        {
+          level: 'elite',
+          label: 'Elite',
+          minScore: 90,
+          maxScore: 100,
+          color: '#8B5CF6',
+          description: 'Top tier community leader',
+          icon: '👑',
+          benefits: [
+            'All Trusted benefits',
+            'VIP event access',
+            'Leadership opportunities',
+            'Exclusive community features',
+            'Revenue sharing eligibility'
+          ]
+        }
+      ];
+
+      sendSuccess(res, { trustLevels });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get available gender options
+   * @route GET /v2/users/gender-options
+   */
+  static async getGenderOptions(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const genderOptions = [
+        { value: 'MALE', label: 'Male' },
+        { value: 'FEMALE', label: 'Female' },
+        { value: 'NON_BINARY', label: 'Non-binary' },
+        { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
+        { value: 'OTHER', label: 'Other' }
+      ];
+
+      sendSuccess(res, { genderOptions });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get available interest categories
+   * @route GET /v2/users/interest-categories
+   */
+  static async getInterestCategories(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const interestCategories = [
+        {
+          category: 'Adventure',
+          interests: ['Hiking', 'Camping', 'Rock Climbing', 'Surfing', 'Skiing', 'Scuba Diving']
+        },
+        {
+          category: 'Arts & Culture',
+          interests: ['Museums', 'Art Galleries', 'Theater', 'Music Concerts', 'Photography', 'Dance']
+        },
+        {
+          category: 'Food & Drink',
+          interests: ['Cooking', 'Fine Dining', 'Street Food', 'Wine Tasting', 'Coffee', 'Craft Beer']
+        },
+        {
+          category: 'Sports & Fitness',
+          interests: ['Running', 'Yoga', 'Gym', 'Cycling', 'Swimming', 'Martial Arts', 'Team Sports']
+        },
+        {
+          category: 'Technology',
+          interests: ['Coding', 'Gaming', 'AI/ML', 'Startups', 'Cryptocurrency', 'Web3']
+        },
+        {
+          category: 'Social Impact',
+          interests: ['Volunteering', 'Environment', 'Education', 'Community Service', 'Sustainability']
+        },
+        {
+          category: 'Learning',
+          interests: ['Languages', 'Reading', 'Writing', 'History', 'Science', 'Philosophy']
+        },
+        {
+          category: 'Entertainment',
+          interests: ['Movies', 'TV Shows', 'Anime', 'Board Games', 'Comedy', 'Podcasts']
+        },
+        {
+          category: 'Lifestyle',
+          interests: ['Fashion', 'Beauty', 'Wellness', 'Meditation', 'Personal Development', 'Travel']
+        },
+        {
+          category: 'Business',
+          interests: ['Entrepreneurship', 'Investing', 'Marketing', 'Networking', 'Real Estate']
+        }
+      ];
+
+      sendSuccess(res, { interestCategories });
     } catch (error) {
       next(error);
     }

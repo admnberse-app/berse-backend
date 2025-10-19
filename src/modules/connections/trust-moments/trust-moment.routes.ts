@@ -15,7 +15,7 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 /**
  * @swagger
@@ -89,6 +89,7 @@ router.use(authenticateToken);
  */
 router.post(
   '/connections/:connectionId/trust-moments',
+  authenticateToken,
   createTrustMomentValidators,
   handleValidationErrors,
   TrustMomentController.createTrustMoment
@@ -120,6 +121,7 @@ router.post(
  */
 router.get(
   '/trust-moments/:momentId',
+  authenticateToken,
   getTrustMomentValidators,
   handleValidationErrors,
   TrustMomentController.getTrustMoment
@@ -176,6 +178,7 @@ router.get(
  */
 router.patch(
   '/trust-moments/:momentId',
+  authenticateToken,
   updateTrustMomentValidators,
   handleValidationErrors,
   TrustMomentController.updateTrustMoment
@@ -207,6 +210,7 @@ router.patch(
  */
 router.delete(
   '/trust-moments/:momentId',
+  authenticateToken,
   deleteTrustMomentValidators,
   handleValidationErrors,
   TrustMomentController.deleteTrustMoment
@@ -283,6 +287,7 @@ router.delete(
  */
 router.get(
   '/users/:userId/trust-moments/received',
+  authenticateToken,
   [...userIdParamValidator, ...trustMomentQueryValidators],
   handleValidationErrors,
   TrustMomentController.getTrustMomentsReceived
@@ -359,6 +364,7 @@ router.get(
  */
 router.get(
   '/users/:userId/trust-moments/given',
+  authenticateToken,
   [...userIdParamValidator, ...trustMomentQueryValidators],
   handleValidationErrors,
   TrustMomentController.getTrustMomentsGiven
@@ -422,6 +428,7 @@ router.get(
  */
 router.get(
   '/events/:eventId/trust-moments',
+  authenticateToken,
   [...eventIdParamValidator, ...trustMomentQueryValidators],
   handleValidationErrors,
   TrustMomentController.getTrustMomentsForEvent
@@ -481,6 +488,7 @@ router.get(
  */
 router.get(
   '/users/:userId/trust-moments/stats',
+  authenticateToken,
   userIdParamValidator,
   handleValidationErrors,
   TrustMomentController.getTrustMomentStats

@@ -23,7 +23,7 @@ import {
 const router = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 // ================== Dashboard ==================
 
@@ -42,7 +42,7 @@ router.use(authenticateToken);
  *       401:
  *         description: Unauthorized
  */
-router.get('/dashboard', GamificationController.getDashboard);
+router.get('/dashboard', authenticateToken, GamificationController.getDashboard);
 
 /**
  * @swagger
@@ -66,6 +66,7 @@ router.get('/dashboard', GamificationController.getDashboard);
  */
 router.get(
   '/dashboard/user/:userId',
+  authenticateToken,
   userIdParamValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -87,7 +88,7 @@ router.get(
  *       200:
  *         description: Badges retrieved successfully
  */
-router.get('/badges', GamificationController.getAllBadges);
+router.get('/badges', authenticateToken, GamificationController.getAllBadges);
 
 /**
  * @swagger
@@ -101,7 +102,7 @@ router.get('/badges', GamificationController.getAllBadges);
  *       200:
  *         description: User badges retrieved successfully
  */
-router.get('/badges/my', GamificationController.getMyBadges);
+router.get('/badges/my', authenticateToken, GamificationController.getMyBadges);
 
 /**
  * @swagger
@@ -116,7 +117,7 @@ router.get('/badges/my', GamificationController.getMyBadges);
  *       200:
  *         description: Badge progress retrieved successfully
  */
-router.get('/badges/progress', GamificationController.getBadgeProgress);
+router.get('/badges/progress', authenticateToken, GamificationController.getBadgeProgress);
 
 /**
  * @swagger
@@ -140,6 +141,7 @@ router.get('/badges/progress', GamificationController.getBadgeProgress);
  */
 router.get(
   '/badges/:id',
+  authenticateToken,
   getBadgeByIdValidator,
   handleValidationErrors,
   GamificationController.getBadgeById
@@ -165,6 +167,7 @@ router.get(
  */
 router.get(
   '/badges/user/:userId',
+  authenticateToken,
   userIdParamValidator,
   handleValidationErrors,
   GamificationController.getUserBadges
@@ -201,6 +204,7 @@ router.get(
  */
 router.post(
   '/badges/award',
+  authenticateToken,
   awardBadgeValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -236,6 +240,7 @@ router.post(
  */
 router.delete(
   '/badges/:badgeId/revoke/:userId',
+  authenticateToken,
   revokeBadgeValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -256,7 +261,7 @@ router.delete(
  *       200:
  *         description: Points retrieved successfully
  */
-router.get('/points', GamificationController.getMyPoints);
+router.get('/points', authenticateToken, GamificationController.getMyPoints);
 
 /**
  * @swagger
@@ -301,6 +306,7 @@ router.get('/points', GamificationController.getMyPoints);
  */
 router.get(
   '/points/history',
+  authenticateToken,
   pointHistoryValidator,
   handleValidationErrors,
   GamificationController.getPointsHistory
@@ -319,7 +325,7 @@ router.get(
  *       200:
  *         description: Point actions retrieved successfully
  */
-router.get('/points/actions', GamificationController.getPointActions);
+router.get('/points/actions', authenticateToken, GamificationController.getPointActions);
 
 /**
  * @swagger
@@ -343,6 +349,7 @@ router.get('/points/actions', GamificationController.getPointActions);
  */
 router.get(
   '/points/user/:userId',
+  authenticateToken,
   userIdParamValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -385,6 +392,7 @@ router.get(
  */
 router.post(
   '/points/award',
+  authenticateToken,
   awardPointsValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -425,6 +433,7 @@ router.post(
  */
 router.post(
   '/points/deduct',
+  authenticateToken,
   deductPointsValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -464,6 +473,7 @@ router.post(
  */
 router.get(
   '/rewards',
+  authenticateToken,
   getRewardsValidator,
   handleValidationErrors,
   GamificationController.getRewards
@@ -481,7 +491,7 @@ router.get(
  *       200:
  *         description: Categories retrieved successfully
  */
-router.get('/rewards/categories', GamificationController.getRewardCategories);
+router.get('/rewards/categories', authenticateToken, GamificationController.getRewardCategories);
 
 /**
  * @swagger
@@ -495,7 +505,7 @@ router.get('/rewards/categories', GamificationController.getRewardCategories);
  *       200:
  *         description: Redemptions retrieved successfully
  */
-router.get('/rewards/redemptions', GamificationController.getMyRedemptions);
+router.get('/rewards/redemptions', authenticateToken, GamificationController.getMyRedemptions);
 
 /**
  * @swagger
@@ -519,6 +529,7 @@ router.get('/rewards/redemptions', GamificationController.getMyRedemptions);
  */
 router.get(
   '/rewards/:id',
+  authenticateToken,
   idParamValidator,
   handleValidationErrors,
   GamificationController.getRewardById
@@ -568,6 +579,7 @@ router.get(
  */
 router.post(
   '/rewards',
+  authenticateToken,
   createRewardValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -619,6 +631,7 @@ router.post(
  */
 router.put(
   '/rewards/:id',
+  authenticateToken,
   updateRewardValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -647,6 +660,7 @@ router.put(
  */
 router.delete(
   '/rewards/:id',
+  authenticateToken,
   idParamValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -680,6 +694,7 @@ router.delete(
  */
 router.post(
   '/rewards/redeem',
+  authenticateToken,
   redeemRewardValidator,
   handleValidationErrors,
   GamificationController.redeemReward
@@ -707,6 +722,7 @@ router.post(
  */
 router.get(
   '/rewards/redemptions/:id',
+  authenticateToken,
   idParamValidator,
   handleValidationErrors,
   GamificationController.getRedemptionById
@@ -748,6 +764,7 @@ router.get(
  */
 router.put(
   '/rewards/redemptions/:id',
+  authenticateToken,
   updateRedemptionStatusValidator,
   handleValidationErrors,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
@@ -784,6 +801,7 @@ router.put(
  */
 router.get(
   '/leaderboard/points',
+  authenticateToken,
   leaderboardValidator,
   handleValidationErrors,
   GamificationController.getPointsLeaderboard
@@ -814,6 +832,7 @@ router.get(
  */
 router.get(
   '/leaderboard/trust',
+  authenticateToken,
   leaderboardValidator,
   handleValidationErrors,
   GamificationController.getTrustScoreLeaderboard
@@ -844,6 +863,7 @@ router.get(
  */
 router.get(
   '/leaderboard/badges',
+  authenticateToken,
   leaderboardValidator,
   handleValidationErrors,
   GamificationController.getBadgesLeaderboard
@@ -874,6 +894,7 @@ router.get(
  */
 router.get(
   '/leaderboard/events',
+  authenticateToken,
   leaderboardValidator,
   handleValidationErrors,
   GamificationController.getEventsLeaderboard
@@ -904,6 +925,7 @@ router.get(
  */
 router.get(
   '/leaderboard/connections',
+  authenticateToken,
   leaderboardValidator,
   handleValidationErrors,
   GamificationController.getConnectionsLeaderboard
@@ -934,6 +956,7 @@ router.get(
  */
 router.get(
   '/leaderboard/referrals',
+  authenticateToken,
   leaderboardValidator,
   handleValidationErrors,
   GamificationController.getReferralsLeaderboard
@@ -957,6 +980,7 @@ router.get(
  */
 router.get(
   '/stats',
+  authenticateToken,
   // authorize(UserRole.ADMIN), // Uncomment if you want admin-only access
   GamificationController.getPlatformStats
 );

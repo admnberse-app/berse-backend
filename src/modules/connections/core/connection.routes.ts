@@ -17,9 +17,6 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateToken);
-
 // ============================================================================
 // CONNECTION REQUEST ROUTES
 // ============================================================================
@@ -102,6 +99,7 @@ router.use(authenticateToken);
  */
 router.post(
   '/request',
+  authenticateToken,
   sendConnectionRequestValidators,
   handleValidationErrors,
   ConnectionController.sendConnectionRequest
@@ -195,6 +193,7 @@ router.post(
  */
 router.post(
   '/scan-qr',
+  authenticateToken,
   scanQRCodeValidators,
   handleValidationErrors,
   ConnectionController.scanQRCodeForConnection
@@ -249,6 +248,7 @@ router.post(
  */
 router.post(
   '/:connectionId/respond',
+  authenticateToken,
   respondToConnectionRequestValidators,
   handleValidationErrors,
   ConnectionController.respondToConnectionRequest
@@ -279,6 +279,7 @@ router.post(
  */
 router.delete(
   '/:connectionId/withdraw',
+  authenticateToken,
   connectionIdValidator,
   handleValidationErrors,
   ConnectionController.withdrawConnectionRequest
@@ -330,6 +331,7 @@ router.delete(
  */
 router.delete(
   '/:connectionId',
+  authenticateToken,
   connectionIdValidator,
   handleValidationErrors,
   ConnectionController.removeConnection
@@ -374,6 +376,7 @@ router.delete(
  */
 router.put(
   '/:connectionId',
+  authenticateToken,
   updateConnectionValidators,
   handleValidationErrors,
   ConnectionController.updateConnection
@@ -422,6 +425,7 @@ router.put(
  */
 router.get(
   '/stats',
+  authenticateToken,
   ConnectionController.getConnectionStats
 );
 
@@ -479,6 +483,7 @@ router.get(
  */
 router.get(
   '/suggestions',
+  authenticateToken,
   connectionSuggestionsValidators,
   handleValidationErrors,
   ConnectionController.getConnectionSuggestions
@@ -522,6 +527,7 @@ router.get(
  */
 router.get(
   '/mutual/:userId',
+  authenticateToken,
   mutualConnectionsValidators,
   handleValidationErrors,
   ConnectionController.getMutualConnections
@@ -540,16 +546,17 @@ router.get(
  *       - in: path
  *         name: connectionId
  *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Connection retrieved successfully
- *       404:
- *         $ref: '#/components/responses/NotFoundError'
- */
+*         schema:
+*           type: string
+* //     responses:
+* //       200:
+* //         description: Connection retrieved successfully
+* //       404:
+* //         $ref: '#/components/responses/NotFoundError'
+*/
 router.get(
   '/:connectionId',
+  authenticateToken,
   connectionIdValidator,
   handleValidationErrors,
   ConnectionController.getConnectionById
@@ -636,6 +643,7 @@ router.get(
  */
 router.get(
   '/',
+  authenticateToken,
   connectionQueryValidators,
   handleValidationErrors,
   ConnectionController.getConnections
@@ -678,6 +686,7 @@ router.get(
  */
 router.post(
   '/block',
+  authenticateToken,
   blockUserValidators,
   handleValidationErrors,
   ConnectionController.blockUser
@@ -706,6 +715,7 @@ router.post(
  */
 router.delete(
   '/block/:userId',
+  authenticateToken,
   unblockUserValidators,
   handleValidationErrors,
   ConnectionController.unblockUser
@@ -742,6 +752,7 @@ router.delete(
  */
 router.get(
   '/blocked',
+  authenticateToken,
   ConnectionController.getBlockedUsers
 );
 

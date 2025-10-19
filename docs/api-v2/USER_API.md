@@ -90,6 +90,10 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
   - [Search Users](#search-users)
   - [Find Nearby Users (Geospatial)](#find-nearby-users-geospatial)
   - [Get User by ID](#get-user-by-id)
+- [Metadata Endpoints](#metadata-endpoints)
+  - [Get Trust Levels](#get-trust-levels)
+  - [Get Gender Options](#get-gender-options)
+  - [Get Interest Categories](#get-interest-categories)
 - [Location & Privacy](#location--privacy)
   - [Location Privacy Settings](#location-privacy-settings)
   - [Update Location with Coordinates](#update-location-with-coordinates)
@@ -375,24 +379,19 @@ GET /v2/users/all?page=1&limit=20
         "email": "jane@example.com",
         "role": "GENERAL_USER",
         "totalPoints": 250,
-        "profile": {
-          "profilePicture": "https://...",
-          "bio": "Travel enthusiast...",
-          "shortBio": "Traveler | Artist",
-          "age": 28,
-          "profession": "Graphic Designer",
-          "interests": ["art", "travel", "food"],
-          "languages": ["English", "French"],
-          "personalityType": "INFP"
-        },
+        "profilePicture": "https://...",
+        "bio": "Travel enthusiast and creative soul exploring the world",
+        "interests": ["art", "travel", "food"],
+        "profession": "Graphic Designer",
+        "age": 28,
+        "personalityType": "INFP",
+        "languages": ["English", "French"],
         "location": {
-          "currentCity": "Penang",
+          "city": "Penang",
           "currentLocation": "Georgetown",
           "originallyFrom": "Paris"
         },
-        "metadata": {
-          "membershipId": "BM-789012"
-        }
+        "membershipId": "BM-789012"
       }
     ],
     "pagination": {
@@ -466,6 +465,9 @@ GET /v2/users/recommendations?limit=5
         "id": "user_uuid",
         "fullName": "Sarah Host",
         "username": "host1",
+        "role": "GENERAL_USER",
+        "trustScore": 65,
+        "trustLevel": "established",
         "score": 53,
         "reasons": [
           "1 shared interest: food",
@@ -473,22 +475,45 @@ GET /v2/users/recommendations?limit=5
           "Complete profile",
           "Getting started in community"
         ],
-        "profile": {
-          "profilePicture": null,
-          "bio": "Certified event host in KL. Love bringing people together!",
-          "interests": ["events", "networking", "social", "food"],
-          "profession": "Event Coordinator"
-        },
+        "profilePicture": null,
+        "bio": "Certified event host in KL. Love bringing people together!",
+        "interests": ["events", "networking", "social", "food"],
+        "profession": "Event Coordinator",
+        "gender": "FEMALE",
         "location": {
-          "currentCity": "Kuala Lumpur",
-          "originallyFrom": "Penang"
-        }
+          "city": "Kuala Lumpur",
+          "country": "Malaysia"
+        },
+        "isVerified": true,
+        "stats": {
+          "totalConnections": 12,
+          "connectionQuality": 78
+        },
+        "mutualConnectionsCount": 2,
+        "mutualConnections": [
+          {
+            "id": "mutual_user_1",
+            "fullName": "John Doe",
+            "profilePicture": "https://..."
+          },
+          {
+            "id": "mutual_user_2",
+            "fullName": "Jane Smith",
+            "profilePicture": "https://..."
+          }
+        ]
       }
     ],
     "total": 5
   }
 }
 ```
+
+**Response Structure:**
+- **Recommendation Score** (`score`): 0-100 points based on algorithm
+- **Reasons** (`reasons`): Array of explanations for recommendation
+- **Flat Structure**: Same format as search endpoint for consistency
+- **Mutual Connections**: Optional field (when `includeMutualConnections=true`)
 
 **Recommendation Algorithm:**
 The AI recommendation system considers:
@@ -596,6 +621,7 @@ Authorization: Bearer <access_token>
 - `connectionType` (optional, enum): Filter by connection status (`all`, `connected`, `not_connected`)
 - `hasMutualFriends` (optional, boolean): Filter users with mutual connections (requires authentication)
 - `excludeConnected` (optional, boolean): Exclude already connected users
+- `includeMutualConnections` (optional, boolean): Include mutual connections data in response (default: false, opt-in for performance)
 
 #### Sorting & Pagination
 - `sortBy` (optional, enum): Sort field (`relevance`, `trustScore`, `distance`, `eventsAttended`)
@@ -623,6 +649,11 @@ GET /v2/users/search?hasHostedEvents=true&minEventsAttended=5&excludeConnected=t
 4. **Location-Based with Interest:**
 ```
 GET /v2/users/search?nearby=true&latitude=1.3521&longitude=103.8198&interest=food&city=singapore
+```
+
+5. **Include Mutual Connections (Social Discovery):**
+```
+GET /v2/users/search?interest=travel&includeMutualConnections=true&minTrustScore=50
 ```
 
 **Success Response (200):**
@@ -656,7 +687,24 @@ GET /v2/users/search?nearby=true&latitude=1.3521&longitude=103.8198&interest=foo
         },
         "distance": 2.5,
         "connectionStatus": "not_connected",
-        "mutualConnections": 3
+        "mutualConnectionsCount": 3,
+        "mutualConnections": [
+          {
+            "id": "mutual_user_id_1",
+            "fullName": "Sarah Johnson",
+            "profilePicture": "https://..."
+          },
+          {
+            "id": "mutual_user_id_2",
+            "fullName": "Mike Chen",
+            "profilePicture": "https://..."
+          },
+          {
+            "id": "mutual_user_id_3",
+            "fullName": "Emma Wilson",
+            "profilePicture": "https://..."
+          }
+        ]
       }
     ],
     "pagination": {
@@ -672,8 +720,15 @@ GET /v2/users/search?nearby=true&latitude=1.3521&longitude=103.8198&interest=foo
 **Response Fields:**
 - `distance` (number, optional): Distance in kilometers (only when latitude/longitude provided)
 - `connectionStatus` (string): User's connection relationship (`connected`, `pending`, `not_connected`)
-- `mutualConnections` (number, optional): Count of mutual connections (authenticated requests only)
+- `mutualConnectionsCount` (number, optional): Total count of mutual connections (only when `includeMutualConnections=true`)
+- `mutualConnections` (array, optional): Top 3 mutual connections with id, fullName, profilePicture (only when `includeMutualConnections=true`)
 - `stats`: Activity statistics including events hosted/attended and trust score
+
+**Performance Optimization:**
+- Mutual connections are **opt-in** via `includeMutualConnections=true` parameter
+- Uses batch fetching to avoid N+1 queries (only 3 DB queries regardless of result count)
+- Default behavior (without parameter): No mutual connections data, zero overhead
+- With parameter: ~50-100ms overhead for 20 users vs ~500-1000ms+ with naive implementation
 
 **Search Logic:**
 - All text filters are case-insensitive
@@ -715,81 +770,90 @@ curl -X GET "https://api.berse.app/v2/users/nearby?latitude=3.1390&longitude=101
 
 ```json
 {
-  "status": "success",
+  "success": true,
   "data": {
     "users": [
       {
-        "userId": "user_123",
-        "displayName": "Sarah Chen",
-        "profilePhotoUrl": "https://storage.berse.app/photos/user_123.jpg",
-        "age": 28,
-        "currentCity": "Kuala Lumpur",
-        "countryOfResidence": "Malaysia",
-        "travelBio": "Digital nomad exploring Southeast Asia",
-        "travelInterests": ["food", "culture", "hiking"],
-        "travelStyle": "budget",
-        "coordinates": {
-          "latitude": 3.1420,
-          "longitude": 101.6880
+        "id": "user_123",
+        "fullName": "Sarah Chen",
+        "username": "sarahchen",
+        "distance": 0.38,
+        "distanceFormatted": "0.38 km",
+        "profilePicture": "https://storage.berse.app/photos/user_123.jpg",
+        "bio": "Digital nomad exploring Southeast Asia",
+        "interests": ["food", "culture", "hiking"],
+        "profession": "Software Developer",
+        "location": {
+          "city": "Kuala Lumpur",
+          "currentLocation": "KLCC Area",
+          "lastLocationUpdate": "2024-01-15T09:45:00.000Z"
         },
-        "distance": {
-          "value": 0.38,
-          "formatted": "0.38 km",
-          "unit": "km"
+        "stats": {
+          "totalConnections": 42,
+          "connectionQuality": 85
         },
-        "lastLocationUpdate": "2024-01-15T09:45:00.000Z",
-        "connectionStatus": "connected"
+        "isConnected": true,
+        "mutualConnectionsCount": 3,
+        "mutualConnections": [
+          {
+            "id": "mutual_user_1",
+            "fullName": "John Doe",
+            "profilePicture": "https://..."
+          },
+          {
+            "id": "mutual_user_2",
+            "fullName": "Jane Smith",
+            "profilePicture": "https://..."
+          },
+          {
+            "id": "mutual_user_3",
+            "fullName": "Mike Wilson",
+            "profilePicture": "https://..."
+          }
+        ]
       },
       {
-        "userId": "user_456",
-        "displayName": "Mike Johnson",
-        "profilePhotoUrl": "https://storage.berse.app/photos/user_456.jpg",
-        "age": 32,
-        "currentCity": "Kuala Lumpur",
-        "countryOfResidence": "Australia",
-        "travelBio": "Adventure seeker and foodie",
-        "travelInterests": ["adventure", "food"],
-        "travelStyle": "moderate",
-        "coordinates": {
-          "latitude": 3.1450,
-          "longitude": 101.6910
+        "id": "user_456",
+        "fullName": "Mike Johnson",
+        "username": "mikej",
+        "distance": 1.02,
+        "distanceFormatted": "1.0 km",
+        "profilePicture": "https://storage.berse.app/photos/user_456.jpg",
+        "bio": "Adventure seeker and foodie",
+        "interests": ["adventure", "food"],
+        "profession": "Photographer",
+        "location": {
+          "city": "Kuala Lumpur",
+          "currentLocation": "Bukit Bintang",
+          "lastLocationUpdate": "2024-01-15T08:30:00.000Z"
         },
-        "distance": {
-          "value": 1.02,
-          "formatted": "1.0 km",
-          "unit": "km"
+        "stats": {
+          "totalConnections": 18,
+          "connectionQuality": 72
         },
-        "lastLocationUpdate": "2024-01-15T08:30:00.000Z",
-        "connectionStatus": "not_connected"
+        "isConnected": false
       }
     ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 3,
-      "totalResults": 54,
-      "resultsPerPage": 20,
-      "hasNextPage": true,
-      "hasPreviousPage": false
+    "center": {
+      "latitude": 3.1390,
+      "longitude": 101.6869
     },
-    "searchMetadata": {
-      "centerPoint": {
-        "latitude": 3.1390,
-        "longitude": 101.6869
-      },
-      "radius": {
-        "value": 5,
-        "unit": "km"
-      },
-      "boundingBox": {
-        "minLat": 3.0940,
-        "maxLat": 3.1840,
-        "minLon": 101.6198,
-        "maxLon": 101.7540
-      }
+    "radius": 5,
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 54,
+      "pages": 3
     }
   }
 }
 ```
+
+**Response Structure:**
+- **Flat Format**: Consistent with search and recommendations endpoints
+- **Distance Fields**: Both numeric (km) and formatted string
+- **Mutual Connections**: Optional (only when `includeMutualConnections=true`)
+- **Location Privacy**: Respects user privacy settings
 
 **Privacy Filtering Logic:**
 
@@ -803,52 +867,43 @@ The endpoint respects location privacy settings and only returns users based on 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| userId | string | Unique user identifier |
-| displayName | string | User's display name |
-| profilePhotoUrl | string | URL to profile photo |
-| age | number | User's age |
-| currentCity | string | Current city location |
-| countryOfResidence | string | Country of residence |
-| travelBio | string | User's travel bio |
-| travelInterests | string[] | Array of travel interests |
-| travelStyle | string | Travel style (budget/moderate/luxury/backpacker) |
-| coordinates.latitude | number | User's latitude coordinate |
-| coordinates.longitude | number | User's longitude coordinate |
-| distance.value | number | Distance from search center in km |
-| distance.formatted | string | Formatted distance string |
-| distance.unit | string | Distance unit (km) |
-| lastLocationUpdate | string | ISO 8601 timestamp of last location update |
-| connectionStatus | string | Connection status with requesting user |
+| id | string | Unique user identifier |
+| fullName | string | User's full name |
+| username | string | User's username |
+| distance | number | Distance from search center in km |
+| distanceFormatted | string | Formatted distance string (e.g., "1.5 km") |
+| profilePicture | string | URL to profile photo |
+| bio | string | User's bio |
+| interests | string[] | Array of interests |
+| profession | string | User's profession |
+| location.city | string | Current city location |
+| location.currentLocation | string | Specific location description |
+| location.lastLocationUpdate | string | ISO 8601 timestamp of last location update |
+| stats.totalConnections | number | Total number of connections |
+| stats.connectionQuality | number | Connection quality score (0-100) |
+| isConnected | boolean | Whether user is connected to requester |
+| mutualConnectionsCount | number | Count of mutual connections (optional) |
+| mutualConnections | array | Top 3 mutual connections (optional) |
 
 **Error Responses:**
 
 ```json
 // 400 Bad Request - Invalid coordinates
 {
-  "status": "error",
-  "error": {
-    "code": "INVALID_COORDINATES",
-    "message": "Invalid coordinates provided",
-    "details": "Latitude must be between -90 and 90, longitude must be between -180 and 180"
-  }
+  "success": false,
+  "error": "Invalid coordinates provided. Latitude must be between -90 and 90, longitude must be between -180 and 180"
 }
 
 // 400 Bad Request - Invalid radius
 {
-  "status": "error",
-  "error": {
-    "code": "INVALID_RADIUS",
-    "message": "Radius must be between 1 and 500 km"
-  }
+  "success": false,
+  "error": "Radius must be between 1 and 500 km"
 }
 
 // 401 Unauthorized
 {
-  "status": "error",
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "Authentication required"
-  }
+  "success": false,
+  "error": "Unauthorized - Authentication required"
 }
 ```
 
@@ -1086,6 +1141,240 @@ GET /v2/users/550e8400-e29b-41d4-a716-446655440000
 **Notes:**
 - Returns limited public profile information
 - Excludes sensitive data (email, phone, etc.)
+
+---
+
+## Metadata Endpoints
+
+These public endpoints provide configuration data for building filter UIs and forms. No authentication required.
+
+### Get Trust Levels
+
+Get all available trust levels with their configurations, score ranges, colors, and benefits.
+
+**Endpoint:** `GET /v2/users/metadata/trust-levels`
+
+**Authentication:** Not required (public endpoint)
+
+**Example:**
+```bash
+curl http://localhost:3001/v2/users/metadata/trust-levels
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "trustLevels": [
+      {
+        "level": "new",
+        "label": "New",
+        "minScore": 0,
+        "maxScore": 19,
+        "color": "#9CA3AF",
+        "description": "Just getting started",
+        "icon": "🌱",
+        "benefits": [
+          "Create profile",
+          "Join events",
+          "Connect with others"
+        ]
+      },
+      {
+        "level": "starter",
+        "label": "Starter",
+        "minScore": 20,
+        "maxScore": 39,
+        "color": "#60A5FA",
+        "description": "Building connections",
+        "icon": "🌿",
+        "benefits": [
+          "All New benefits",
+          "Host small events",
+          "Request vouches"
+        ]
+      },
+      {
+        "level": "growing",
+        "label": "Growing",
+        "minScore": 40,
+        "maxScore": 59,
+        "color": "#34D399",
+        "description": "Active community member",
+        "icon": "🌳",
+        "benefits": [
+          "All Starter benefits",
+          "Host medium events",
+          "Vouch for others",
+          "Access to premium events"
+        ]
+      },
+      {
+        "level": "established",
+        "label": "Established",
+        "minScore": 60,
+        "maxScore": 74,
+        "color": "#FBBF24",
+        "description": "Trusted community member",
+        "icon": "⭐",
+        "benefits": [
+          "All Growing benefits",
+          "Host large events",
+          "Priority support",
+          "Special badges"
+        ]
+      },
+      {
+        "level": "trusted",
+        "label": "Trusted",
+        "minScore": 75,
+        "maxScore": 89,
+        "color": "#F59E0B",
+        "description": "Highly trusted member",
+        "icon": "🏆",
+        "benefits": [
+          "All Established benefits",
+          "Featured profile",
+          "Verification fast-track",
+          "Community moderator eligibility"
+        ]
+      },
+      {
+        "level": "elite",
+        "label": "Elite",
+        "minScore": 90,
+        "maxScore": 100,
+        "color": "#8B5CF6",
+        "description": "Top tier community leader",
+        "icon": "👑",
+        "benefits": [
+          "All Trusted benefits",
+          "VIP event access",
+          "Leadership opportunities",
+          "Exclusive community features",
+          "Revenue sharing eligibility"
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Use Cases:**
+- Filter modal dropdowns for trust level selection
+- Display trust level badges in UI
+- Show trust level benefits on profile pages
+- Calculate progress to next level
+
+---
+
+### Get Gender Options
+
+Get all available gender options for user profiles.
+
+**Endpoint:** `GET /v2/users/metadata/gender-options`
+
+**Authentication:** Not required (public endpoint)
+
+**Example:**
+```bash
+curl http://localhost:3001/v2/users/metadata/gender-options
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "genderOptions": [
+      { "value": "MALE", "label": "Male" },
+      { "value": "FEMALE", "label": "Female" },
+      { "value": "NON_BINARY", "label": "Non-binary" },
+      { "value": "PREFER_NOT_TO_SAY", "label": "Prefer not to say" },
+      { "value": "OTHER", "label": "Other" }
+    ]
+  }
+}
+```
+
+**Use Cases:**
+- Profile setup forms
+- Gender filter dropdowns
+- User preferences
+
+---
+
+### Get Interest Categories
+
+Get all available interest categories with their specific interests.
+
+**Endpoint:** `GET /v2/users/metadata/interest-categories`
+
+**Authentication:** Not required (public endpoint)
+
+**Example:**
+```bash
+curl http://localhost:3001/v2/users/metadata/interest-categories
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "interestCategories": [
+      {
+        "category": "Adventure",
+        "interests": ["Hiking", "Camping", "Rock Climbing", "Surfing", "Skiing", "Scuba Diving"]
+      },
+      {
+        "category": "Arts & Culture",
+        "interests": ["Museums", "Art Galleries", "Theater", "Music Concerts", "Photography", "Dance"]
+      },
+      {
+        "category": "Food & Drink",
+        "interests": ["Cooking", "Fine Dining", "Street Food", "Wine Tasting", "Coffee", "Craft Beer"]
+      },
+      {
+        "category": "Sports & Fitness",
+        "interests": ["Running", "Yoga", "Gym", "Cycling", "Swimming", "Martial Arts", "Team Sports"]
+      },
+      {
+        "category": "Technology",
+        "interests": ["Coding", "Gaming", "AI/ML", "Startups", "Cryptocurrency", "Web3"]
+      },
+      {
+        "category": "Social Impact",
+        "interests": ["Volunteering", "Environment", "Education", "Community Service", "Sustainability"]
+      },
+      {
+        "category": "Learning",
+        "interests": ["Languages", "Reading", "Writing", "History", "Science", "Philosophy"]
+      },
+      {
+        "category": "Entertainment",
+        "interests": ["Movies", "TV Shows", "Anime", "Board Games", "Comedy", "Podcasts"]
+      },
+      {
+        "category": "Lifestyle",
+        "interests": ["Fashion", "Beauty", "Wellness", "Meditation", "Personal Development", "Travel"]
+      },
+      {
+        "category": "Business",
+        "interests": ["Entrepreneurship", "Investing", "Marketing", "Networking", "Real Estate"]
+      }
+    ]
+  }
+}
+```
+
+**Use Cases:**
+- Interest picker UI with categories
+- Filter modal interest dropdowns
+- Profile setup with grouped interests
+- Search autocomplete suggestions
+- Recommendation algorithm inputs
 
 ---
 

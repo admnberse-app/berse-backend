@@ -11,7 +11,7 @@ import { uploadLimiter } from '../../middleware/rateLimiter';
 const router = Router();
 
 // All routes require authentication
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 // ============================================================================
 // PROFILE ROUTES
@@ -49,7 +49,7 @@ router.use(authenticateToken);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/profile', UserController.getProfile);
+router.get('/profile', authenticateToken, UserController.getProfile);
 
 /**
  * @swagger
@@ -144,6 +144,7 @@ router.get('/profile', UserController.getProfile);
  */
 router.put(
   '/profile',
+  authenticateToken,
   updateProfileValidators,
   handleValidationErrors,
   UserController.updateProfile
@@ -200,6 +201,7 @@ router.put(
  */
 router.post(
   '/upload-avatar',
+  authenticateToken,
   uploadLimiter,
   uploadImage.single('avatar'),
   UserController.uploadAvatar
@@ -263,7 +265,7 @@ router.post(
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/all', UserController.getAllUsers);
+router.get('/all', authenticateToken, UserController.getAllUsers);
 
 /**
  * @swagger
@@ -322,7 +324,7 @@ router.get('/all', UserController.getAllUsers);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/recommendations', UserController.getUserRecommendations);
+router.get('/recommendations', authenticateToken, UserController.getUserRecommendations);
 
 /**
  * @swagger
@@ -369,7 +371,7 @@ router.get('/recommendations', UserController.getUserRecommendations);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/trending-interests', UserController.getTrendingInterests);
+router.get('/trending-interests', authenticateToken, UserController.getTrendingInterests);
 
 /**
  * @swagger
@@ -535,6 +537,7 @@ router.get('/trending-interests', UserController.getTrendingInterests);
  */
 router.get(
   '/search',
+  authenticateToken,
   searchUsersValidators,
   handleValidationErrors,
   UserController.searchUsers
@@ -637,7 +640,7 @@ router.get(
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/nearby', UserController.findNearbyUsers);
+router.get('/nearby', authenticateToken, UserController.findNearbyUsers);
 
 // ============================================================================
 // CONNECTIONS ROUTES
@@ -692,7 +695,7 @@ router.get('/nearby', UserController.findNearbyUsers);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/connections', UserController.getConnections);
+router.get('/connections', authenticateToken, UserController.getConnections);
 
 /**
  * @swagger
@@ -734,7 +737,7 @@ router.get('/connections', UserController.getConnections);
  *       404:
  *         description: User not found
  */
-router.post('/connections/:id/request', UserController.sendConnectionRequest);
+router.post('/connections/:id/request', authenticateToken, UserController.sendConnectionRequest);
 
 /**
  * @swagger
@@ -776,7 +779,7 @@ router.post('/connections/:id/request', UserController.sendConnectionRequest);
  *       404:
  *         description: Connection request not found
  */
-router.post('/connections/:id/accept', UserController.acceptConnectionRequest);
+router.post('/connections/:id/accept', authenticateToken, UserController.acceptConnectionRequest);
 
 /**
  * @swagger
@@ -816,7 +819,7 @@ router.post('/connections/:id/accept', UserController.acceptConnectionRequest);
  *       404:
  *         description: Connection request not found
  */
-router.post('/connections/:id/reject', UserController.rejectConnectionRequest);
+router.post('/connections/:id/reject', authenticateToken, UserController.rejectConnectionRequest);
 
 /**
  * @swagger
@@ -856,7 +859,7 @@ router.post('/connections/:id/reject', UserController.rejectConnectionRequest);
  *       404:
  *         description: Connection request not found
  */
-router.post('/connections/:id/cancel', UserController.cancelConnectionRequest);
+router.post('/connections/:id/cancel', authenticateToken, UserController.cancelConnectionRequest);
 
 /**
  * @swagger
@@ -896,7 +899,7 @@ router.post('/connections/:id/cancel', UserController.cancelConnectionRequest);
  *       404:
  *         description: Connection not found
  */
-router.delete('/connections/:id', UserController.removeConnection);
+router.delete('/connections/:id', authenticateToken, UserController.removeConnection);
 
 // ============================================================================
 // ACTIVITY & SECURITY ROUTES (Must be BEFORE /:id route)
@@ -930,7 +933,7 @@ router.delete('/connections/:id', UserController.removeConnection);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/activity', UserController.getUserActivity);
+router.get('/activity', authenticateToken, UserController.getUserActivity);
 
 /**
  * @swagger
@@ -960,7 +963,7 @@ router.get('/activity', UserController.getUserActivity);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/security-events', UserController.getUserSecurityEvents);
+router.get('/security-events', authenticateToken, UserController.getUserSecurityEvents);
 
 /**
  * @swagger
@@ -977,7 +980,7 @@ router.get('/security-events', UserController.getUserSecurityEvents);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/sessions', UserController.getUserSessions);
+router.get('/sessions', authenticateToken, UserController.getUserSessions);
 
 /**
  * @swagger
@@ -1007,7 +1010,7 @@ router.get('/sessions', UserController.getUserSessions);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/login-history', UserController.getUserLoginHistory);
+router.get('/login-history', authenticateToken, UserController.getUserLoginHistory);
 
 /**
  * @swagger
@@ -1033,7 +1036,7 @@ router.get('/login-history', UserController.getUserLoginHistory);
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
-router.delete('/sessions/:sessionToken', UserController.terminateSession);
+router.delete('/sessions/:sessionToken', authenticateToken, UserController.terminateSession);
 
 // ============================================================================
 // QR CODE ROUTES (Must be before /:id route)
@@ -1124,6 +1127,7 @@ router.delete('/sessions/:sessionToken', UserController.terminateSession);
  */
 router.post(
   '/me/qr-code',
+  authenticateToken,
   generateQRCodeValidators,
   handleValidationErrors,
   QRCodeController.generateQRCode
@@ -1131,7 +1135,7 @@ router.post(
 
 /**
  * @swagger
- * /v2/users/me/qr-code/image:
+ * /v3/users/me/qr-code/image:
  *   post:
  *     summary: Generate QR code as PNG image
  *     description: |
@@ -1215,6 +1219,7 @@ router.post(
  */
 router.post(
   '/me/qr-code/image',
+  authenticateToken,
   generateQRCodeValidators,
   handleValidationErrors,
   QRCodeController.generateQRCodeImage
@@ -1304,6 +1309,7 @@ router.post(
  */
 router.post(
   '/qr-code/validate',
+  authenticateToken,
   scanQRCodeValidators,
   handleValidationErrors,
   QRCodeController.validateQRCode
@@ -1348,7 +1354,7 @@ router.post(
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
-router.get('/:id', UserController.getUserById);
+router.get('/:id', authenticateToken, UserController.getUserById);
 
 // ============================================================================
 // ADMIN ROUTES
@@ -1392,6 +1398,136 @@ router.get('/:id', UserController.getUserById);
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
-router.delete('/:id', UserController.deleteUser);
+router.delete('/:id', authenticateToken, UserController.deleteUser);
+
+// ============================================================================
+// METADATA ROUTES (Public)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/metadata/trust-levels:
+ *   get:
+ *     summary: Get trust levels configuration
+ *     description: Get all available trust levels with their score ranges, colors, and benefits
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Trust levels retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     trustLevels:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           level:
+ *                             type: string
+ *                             example: "trusted"
+ *                           label:
+ *                             type: string
+ *                             example: "Trusted"
+ *                           minScore:
+ *                             type: number
+ *                             example: 75
+ *                           maxScore:
+ *                             type: number
+ *                             example: 89
+ *                           color:
+ *                             type: string
+ *                             example: "#F59E0B"
+ *                           description:
+ *                             type: string
+ *                             example: "Highly trusted member"
+ *                           icon:
+ *                             type: string
+ *                             example: "🏆"
+ *                           benefits:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ */
+router.get('/metadata/trust-levels', UserController.getTrustLevels);
+
+/**
+ * @swagger
+ * /v2/users/metadata/gender-options:
+ *   get:
+ *     summary: Get gender options
+ *     description: Get all available gender options for user profiles
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Gender options retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     genderOptions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           value:
+ *                             type: string
+ *                             example: "FEMALE"
+ *                           label:
+ *                             type: string
+ *                             example: "Female"
+ */
+router.get('/metadata/gender-options', UserController.getGenderOptions);
+
+/**
+ * @swagger
+ * /v2/users/metadata/interest-categories:
+ *   get:
+ *     summary: Get interest categories
+ *     description: Get all available interest categories and their options
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: Interest categories retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     interestCategories:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           category:
+ *                             type: string
+ *                             example: "Adventure"
+ *                           interests:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             example: ["Hiking", "Camping", "Rock Climbing"]
+ */
+router.get('/metadata/interest-categories', UserController.getInterestCategories);
 
 export default router;
