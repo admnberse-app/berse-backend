@@ -24,6 +24,7 @@ import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { cacheService, CacheKeys, CacheTTL } from '../../services/cache.service';
 import { NotificationService } from '../../services/notification.service';
+import { ActivityLoggerService } from '../../services/activityLogger.service';
 
 export class EventService {
   
@@ -1158,6 +1159,15 @@ export class EventService {
         // Non-critical error - log but don't fail the check-in
         logger.error('Failed to trigger trust score update after event check-in:', error);
       }
+
+      // Log check-in activity
+      await ActivityLoggerService.logEventCheckIn(
+        targetUserId,
+        eventId,
+        event.title
+      ).catch((error) => {
+        logger.error('Failed to log event check-in:', error);
+      });
 
       return {
         id: participant.id,

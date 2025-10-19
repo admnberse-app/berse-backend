@@ -12,6 +12,16 @@ import {
   CampaignEmailData,
   NotificationEmailData,
 } from '../types/email.types';
+import {
+  MarketplaceOrderReceiptData,
+  MarketplaceOrderConfirmationData,
+  MarketplaceShippingNotificationData,
+  EventTicketReceiptData,
+  EventTicketConfirmationData,
+  EventReminderWithTicketData,
+  RefundConfirmationData,
+  PayoutNotificationData,
+} from '../types/payment-email.types';
 
 const APP_NAME = 'Berse App';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
@@ -819,6 +829,487 @@ ${APP_NAME}
 };
 
 /**
+ * Marketplace Order Receipt Template
+ */
+const marketplaceOrderReceiptTemplate = (data: MarketplaceOrderReceiptData): TemplateRenderResult => {
+  const itemRows = data.items.map(item => `
+    <tr>
+      <td style="padding: 15px; border-bottom: 1px solid #eee;">
+        ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.title}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 12px; float: left;">` : ''}
+        <div style="overflow: hidden;">
+          <strong style="display: block; margin-bottom: 4px;">${item.title}</strong>
+          <span style="color: #666; font-size: 14px;">Qty: ${item.quantity} × ${item.currency} ${item.price.toFixed(2)}</span>
+        </div>
+      </td>
+      <td style="padding: 15px; border-bottom: 1px solid #eee; text-align: right; font-weight: 600;">
+        ${item.currency} ${item.subtotal.toFixed(2)}
+      </td>
+    </tr>
+  `).join('');
+
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">Order Confirmation</h2>
+    <p>Hi ${data.buyerName},</p>
+    <p>Thank you for your purchase! Your order has been confirmed and we're preparing it for shipment.</p>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+      <table style="width: 100%; margin-bottom: 10px;">
+        <tr>
+          <td><strong>Order Number:</strong></td>
+          <td style="text-align: right;">#${data.orderId.slice(0, 8).toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td><strong>Order Date:</strong></td>
+          <td style="text-align: right;">${new Date(data.orderDate).toLocaleDateString()}</td>
+        </tr>
+        <tr>
+          <td><strong>Seller:</strong></td>
+          <td style="text-align: right;">${data.sellerName}</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3 style="margin-top: 30px; margin-bottom: 15px;">Order Items</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      ${itemRows}
+      <tr>
+        <td style="padding: 15px; text-align: right;"><strong>Subtotal:</strong></td>
+        <td style="padding: 15px; text-align: right;">${data.currency} ${data.subtotal.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 15px; text-align: right;"><strong>Platform Fee:</strong></td>
+        <td style="padding: 15px; text-align: right;">${data.currency} ${data.platformFee.toFixed(2)}</td>
+      </tr>
+      <tr style="background: #f8f9fa;">
+        <td style="padding: 15px; text-align: right;"><strong style="font-size: 16px;">Total:</strong></td>
+        <td style="padding: 15px; text-align: right;"><strong style="font-size: 16px; color: ${PRIMARY_COLOR};">${data.currency} ${data.totalAmount.toFixed(2)}</strong></td>
+      </tr>
+    </table>
+
+    <h3 style="margin-top: 30px; margin-bottom: 15px;">Shipping Address</h3>
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 24px;">
+      <p style="margin: 0;"><strong>${data.shippingAddress.fullName}</strong></p>
+      <p style="margin: 5px 0 0 0; color: #666;">
+        ${data.shippingAddress.addressLine1}<br>
+        ${data.shippingAddress.addressLine2 ? data.shippingAddress.addressLine2 + '<br>' : ''}
+        ${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}<br>
+        ${data.shippingAddress.country}<br>
+        Phone: ${data.shippingAddress.phone}
+      </p>
+    </div>
+
+    <h3 style="margin-top: 30px; margin-bottom: 15px;">Payment Information</h3>
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 24px;">
+      <table style="width: 100%;">
+        <tr>
+          <td><strong>Payment Method:</strong></td>
+          <td style="text-align: right;">${data.paymentMethod}</td>
+        </tr>
+        <tr>
+          <td><strong>Transaction ID:</strong></td>
+          <td style="text-align: right; font-family: monospace; font-size: 12px;">${data.transactionId}</td>
+        </tr>
+        <tr>
+          <td><strong>Paid At:</strong></td>
+          <td style="text-align: right;">${new Date(data.paidAt).toLocaleString()}</td>
+        </tr>
+      </table>
+    </div>
+
+    <a href="${APP_URL}/marketplace/orders/${data.orderId}" class="button">View Order Details</a>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;">You will receive a shipping notification once your order is on its way.</p>
+    <p style="font-size: 14px; color: #666;">If you have any questions, please contact the seller or our support team at ${SUPPORT_EMAIL}.</p>
+  `, 'Order Confirmation - Thank you for your purchase!');
+
+  const text = `
+Order Confirmation
+
+Hi ${data.buyerName},
+
+Thank you for your purchase! Order #${data.orderId.slice(0, 8).toUpperCase()}
+
+Items:
+${data.items.map(item => `- ${item.title} (${item.quantity}x) - ${item.currency} ${item.subtotal.toFixed(2)}`).join('\n')}
+
+Total: ${data.currency} ${data.totalAmount.toFixed(2)}
+
+Shipping to:
+${data.shippingAddress.fullName}
+${data.shippingAddress.addressLine1}
+${data.shippingAddress.city}, ${data.shippingAddress.state} ${data.shippingAddress.postalCode}
+
+View order: ${APP_URL}/marketplace/orders/${data.orderId}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Marketplace New Order Notification (Seller)
+ */
+const marketplaceNewOrderTemplate = (data: MarketplaceOrderConfirmationData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">🎉 New Order Received!</h2>
+    <p>Hi ${data.sellerName},</p>
+    <p>Great news! You have received a new order.</p>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+      <h3 style="margin-top: 0; color: ${PRIMARY_COLOR};">${data.itemTitle}</h3>
+      <table style="width: 100%;">
+        <tr>
+          <td><strong>Order Number:</strong></td>
+          <td style="text-align: right;">#${data.orderId.slice(0, 8).toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td><strong>Buyer:</strong></td>
+          <td style="text-align: right;">${data.buyerName}</td>
+        </tr>
+        <tr>
+          <td><strong>Quantity:</strong></td>
+          <td style="text-align: right;">${data.quantity}</td>
+        </tr>
+        <tr>
+          <td><strong>Amount:</strong></td>
+          <td style="text-align: right; font-size: 18px; color: ${PRIMARY_COLOR};"><strong>${data.currency} ${data.totalAmount.toFixed(2)}</strong></td>
+        </tr>
+      </table>
+    </div>
+
+    <a href="${data.orderUrl}" class="button">Manage Order</a>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;">Please prepare the item for shipment and update the order status once it's shipped.</p>
+  `, 'New Order Received!');
+
+  const text = `
+New Order Received!
+
+Hi ${data.sellerName},
+
+You have a new order for: ${data.itemTitle}
+Order #${data.orderId.slice(0, 8).toUpperCase()}
+Buyer: ${data.buyerName}
+Amount: ${data.currency} ${data.totalAmount.toFixed(2)}
+
+Manage order: ${data.orderUrl}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Marketplace Shipping Notification
+ */
+const marketplaceShippingTemplate = (data: MarketplaceShippingNotificationData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">📦 Your Order Has Shipped!</h2>
+    <p>Hi ${data.buyerName},</p>
+    <p>Good news! Your order is on its way.</p>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+      <h3 style="margin-top: 0;">${data.itemTitle}</h3>
+      <table style="width: 100%; margin-top: 15px;">
+        <tr>
+          <td><strong>Order Number:</strong></td>
+          <td style="text-align: right;">#${data.orderId.slice(0, 8).toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td><strong>Carrier:</strong></td>
+          <td style="text-align: right;">${data.carrier}</td>
+        </tr>
+        <tr>
+          <td><strong>Tracking Number:</strong></td>
+          <td style="text-align: right; font-family: monospace;">${data.trackingNumber}</td>
+        </tr>
+        <tr>
+          <td><strong>Est. Delivery:</strong></td>
+          <td style="text-align: right;">${new Date(data.estimatedDelivery).toLocaleDateString()}</td>
+        </tr>
+      </table>
+    </div>
+
+    <a href="${data.trackingUrl}" class="button">Track Package</a>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;">You can track your package using the tracking number above.</p>
+  `, 'Your order has shipped!');
+
+  const text = `
+Your Order Has Shipped!
+
+Hi ${data.buyerName},
+
+Your order for "${data.itemTitle}" is on its way!
+
+Tracking: ${data.trackingNumber}
+Carrier: ${data.carrier}
+Est. Delivery: ${new Date(data.estimatedDelivery).toLocaleDateString()}
+
+Track: ${data.trackingUrl}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Event Ticket Receipt Template
+ */
+const eventTicketReceiptTemplate = (data: EventTicketReceiptData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">🎟️ Your Event Ticket</h2>
+    <p>Hi ${data.attendeeName},</p>
+    <p>Your ticket for <strong>${data.eventTitle}</strong> is confirmed!</p>
+    
+    ${data.eventImage ? `<img src="${data.eventImage}" alt="${data.eventTitle}" style="width: 100%; border-radius: 8px; margin: 20px 0;">` : ''}
+
+    <div style="background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, ${PRIMARY_DARK} 100%); color: white; padding: 25px; border-radius: 8px; margin: 24px 0;">
+      <h3 style="margin-top: 0; color: white; font-size: 22px;">${data.eventTitle}</h3>
+      <p style="margin: 8px 0; font-size: 16px;">📅 ${new Date(data.eventDate).toLocaleDateString()} at ${data.eventTime}</p>
+      <p style="margin: 8px 0; font-size: 16px;">📍 ${data.eventLocation}</p>
+      ${data.ticketTier ? `<p style="margin: 8px 0; font-size: 14px; opacity: 0.9;">Ticket: ${data.ticketTier}</p>` : ''}
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <img src="${data.qrCodeUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 4px solid ${PRIMARY_COLOR}; border-radius: 8px; padding: 10px; background: white;">
+      <p style="font-family: monospace; font-size: 18px; font-weight: 600; margin-top: 15px; letter-spacing: 2px;">${data.checkInCode}</p>
+      <p style="font-size: 14px; color: #666; margin-top: 5px;">Show this QR code at check-in</p>
+    </div>
+
+    <h3 style="margin-top: 30px; margin-bottom: 15px;">Ticket Details</h3>
+    <table style="width: 100%; background: #f8f9fa; border-radius: 8px; padding: 15px;">
+      <tr>
+        <td><strong>Ticket ID:</strong></td>
+        <td style="text-align: right; font-family: monospace; font-size: 12px;">${data.ticketId}</td>
+      </tr>
+      <tr>
+        <td><strong>Quantity:</strong></td>
+        <td style="text-align: right;">${data.quantity} ticket(s)</td>
+      </tr>
+      <tr>
+        <td><strong>Price:</strong></td>
+        <td style="text-align: right;">${data.currency} ${data.price.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td><strong>Platform Fee:</strong></td>
+        <td style="text-align: right;">${data.currency} ${data.platformFee.toFixed(2)}</td>
+      </tr>
+      <tr style="font-size: 16px;">
+        <td><strong>Total:</strong></td>
+        <td style="text-align: right;"><strong style="color: ${PRIMARY_COLOR};">${data.currency} ${data.totalAmount.toFixed(2)}</strong></td>
+      </tr>
+    </table>
+
+    <div style="margin-top: 30px;">
+      <a href="${APP_URL}/events/${data.eventId}" class="button" style="margin-right: 10px;">View Event</a>
+      ${data.eventMapLink ? `<a href="${data.eventMapLink}" class="button button-secondary">Get Directions</a>` : ''}
+    </div>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;"><strong>Hosted by:</strong> ${data.hostName}</p>
+    <p style="font-size: 14px; color: #666;">Please arrive 15 minutes early for check-in. Bring this email or have your QR code ready on your phone.</p>
+  `, `Your Ticket for ${data.eventTitle}`);
+
+  const text = `
+Your Event Ticket
+
+Hi ${data.attendeeName},
+
+Event: ${data.eventTitle}
+Date: ${new Date(data.eventDate).toLocaleDateString()} at ${data.eventTime}
+Location: ${data.eventLocation}
+
+Check-in Code: ${data.checkInCode}
+
+Ticket ID: ${data.ticketId}
+Total: ${data.currency} ${data.totalAmount.toFixed(2)}
+
+View event: ${APP_URL}/events/${data.eventId}
+${data.eventMapLink ? `Directions: ${data.eventMapLink}` : ''}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Event Reminder with Ticket
+ */
+const eventReminderWithTicketTemplate = (data: EventReminderWithTicketData): TemplateRenderResult => {
+  const timeframe = data.hoursUntilEvent <= 24 ? 'Tomorrow' : `in ${Math.ceil(data.hoursUntilEvent / 24)} days`;
+  
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">⏰ Event Reminder</h2>
+    <p>Hi ${data.attendeeName},</p>
+    <p><strong>${data.eventTitle}</strong> is coming up ${timeframe}!</p>
+    
+    <div style="background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, ${PRIMARY_DARK} 100%); color: white; padding: 25px; border-radius: 8px; margin: 24px 0; text-align: center;">
+      <h3 style="margin: 0; color: white; font-size: 24px;">${data.eventTitle}</h3>
+      <p style="margin: 15px 0 0 0; font-size: 18px;">📅 ${new Date(data.eventDate).toLocaleDateString()}</p>
+      <p style="margin: 8px 0 0 0; font-size: 18px;">⏰ ${data.eventTime}</p>
+      <p style="margin: 8px 0 0 0; font-size: 16px;">📍 ${data.eventLocation}</p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <p style="font-weight: 600; margin-bottom: 15px;">Your QR Code for Check-in:</p>
+      <img src="${data.qrCodeUrl}" alt="QR Code" style="width: 180px; height: 180px; border: 4px solid ${PRIMARY_COLOR}; border-radius: 8px; padding: 10px; background: white;">
+      <p style="font-size: 13px; color: #666; margin-top: 10px;">Save this to your phone for easy access</p>
+    </div>
+
+    <div style="margin-top: 30px;">
+      ${data.mapLink ? `<a href="${data.mapLink}" class="button">Get Directions</a>` : ''}
+    </div>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;">See you there! Please arrive 15 minutes early for check-in.</p>
+  `, `Reminder: ${data.eventTitle} is ${timeframe}`);
+
+  const text = `
+Event Reminder
+
+Hi ${data.attendeeName},
+
+${data.eventTitle} is ${timeframe}!
+
+Date: ${new Date(data.eventDate).toLocaleDateString()}
+Time: ${data.eventTime}
+Location: ${data.eventLocation}
+
+${data.mapLink ? `Directions: ${data.mapLink}` : ''}
+
+Please arrive 15 minutes early for check-in.
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Refund Confirmation Template
+ */
+const refundConfirmationTemplate = (data: RefundConfirmationData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">💳 Refund Processed</h2>
+    <p>Hi ${data.customerName},</p>
+    <p>Your refund has been processed successfully.</p>
+    
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+      <table style="width: 100%;">
+        <tr>
+          <td><strong>Refund ID:</strong></td>
+          <td style="text-align: right; font-family: monospace; font-size: 12px;">${data.refundId}</td>
+        </tr>
+        <tr>
+          <td><strong>Original Order:</strong></td>
+          <td style="text-align: right;">${data.orderId ? '#' + data.orderId.slice(0, 8).toUpperCase() : 'N/A'}</td>
+        </tr>
+        <tr>
+          <td><strong>Refund Amount:</strong></td>
+          <td style="text-align: right; font-size: 18px; color: ${PRIMARY_COLOR};"><strong>${data.currency} ${data.refundAmount.toFixed(2)}</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Refund Date:</strong></td>
+          <td style="text-align: right;">${new Date(data.refundDate).toLocaleDateString()}</td>
+        </tr>
+        <tr>
+          <td><strong>Refund Method:</strong></td>
+          <td style="text-align: right;">${data.refundMethod}</td>
+        </tr>
+        <tr>
+          <td><strong>Reason:</strong></td>
+          <td style="text-align: right;">${data.refundReason}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background: #fff9e6; border-left: 4px solid #ffc107; padding: 15px; margin: 24px 0;">
+      <p style="margin: 0; color: #856404;">
+        <strong>⏱️ Processing Time:</strong> Please allow ${data.estimatedProcessingDays} business days for the refund to appear in your account.
+      </p>
+    </div>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;">If you have any questions, please contact us at ${SUPPORT_EMAIL}.</p>
+  `, 'Refund Processed Successfully');
+
+  const text = `
+Refund Processed
+
+Hi ${data.customerName},
+
+Your refund of ${data.currency} ${data.refundAmount.toFixed(2)} has been processed.
+
+Refund ID: ${data.refundId}
+Processing Time: ${data.estimatedProcessingDays} business days
+
+Questions? Contact: ${SUPPORT_EMAIL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Payout Notification Template
+ */
+const payoutNotificationTemplate = (data: PayoutNotificationData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2 style="color: ${PRIMARY_COLOR};">💰 Payout Received!</h2>
+    <p>Hi ${data.recipientName},</p>
+    <p>Great news! Your payout has been processed.</p>
+    
+    <div style="background: linear-gradient(135deg, ${PRIMARY_LIGHT} 0%, ${PRIMARY_COLOR} 100%); color: white; padding: 30px; border-radius: 8px; margin: 24px 0; text-align: center;">
+      <p style="margin: 0; font-size: 16px; opacity: 0.9;">Payout Amount</p>
+      <h1 style="margin: 10px 0; color: white; font-size: 42px;">${data.currency} ${data.amount.toFixed(2)}</h1>
+    </div>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+      <table style="width: 100%;">
+        <tr>
+          <td><strong>From:</strong></td>
+          <td style="text-align: right;">${data.itemType === 'event' ? 'Event Ticket Sales' : 'Marketplace Order'}</td>
+        </tr>
+        <tr>
+          <td><strong>Item:</strong></td>
+          <td style="text-align: right;">${data.itemTitle}</td>
+        </tr>
+        <tr>
+          <td><strong>Payout Date:</strong></td>
+          <td style="text-align: right;">${new Date(data.payoutDate).toLocaleDateString()}</td>
+        </tr>
+        <tr>
+          <td><strong>Method:</strong></td>
+          <td style="text-align: right;">${data.payoutMethod}</td>
+        </tr>
+        <tr>
+          <td><strong>Est. Arrival:</strong></td>
+          <td style="text-align: right;">${data.estimatedArrival}</td>
+        </tr>
+        <tr>
+          <td><strong>Transaction ID:</strong></td>
+          <td style="text-align: right; font-family: monospace; font-size: 11px;">${data.transactionId}</td>
+        </tr>
+      </table>
+    </div>
+
+    <hr class="divider" />
+    <p style="font-size: 14px; color: #666;">The funds should arrive in your account within the estimated timeframe above.</p>
+  `, 'Payout Received');
+
+  const text = `
+Payout Received!
+
+Hi ${data.recipientName},
+
+Amount: ${data.currency} ${data.amount.toFixed(2)}
+From: ${data.itemTitle}
+Estimated Arrival: ${data.estimatedArrival}
+
+Transaction ID: ${data.transactionId}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
  * Main template renderer
  */
 export const renderEmailTemplate = (
@@ -846,6 +1337,25 @@ export const renderEmailTemplate = (
       return campaignTemplate(data);
     case EmailTemplate.NOTIFICATION:
       return notificationTemplate(data);
+    // Marketplace templates
+    case EmailTemplate.MARKETPLACE_ORDER_RECEIPT:
+      return marketplaceOrderReceiptTemplate(data);
+    case EmailTemplate.MARKETPLACE_NEW_ORDER:
+      return marketplaceNewOrderTemplate(data);
+    case EmailTemplate.MARKETPLACE_SHIPPED:
+      return marketplaceShippingTemplate(data);
+    // Event ticket templates
+    case EmailTemplate.EVENT_TICKET_RECEIPT:
+      return eventTicketReceiptTemplate(data);
+    case EmailTemplate.EVENT_TICKET_CONFIRMATION:
+      return eventTicketReceiptTemplate(data); // Use same template
+    case EmailTemplate.EVENT_REMINDER_WITH_TICKET:
+      return eventReminderWithTicketTemplate(data);
+    // Payment templates
+    case EmailTemplate.REFUND_CONFIRMATION:
+      return refundConfirmationTemplate(data);
+    case EmailTemplate.PAYOUT_NOTIFICATION:
+      return payoutNotificationTemplate(data);
     default:
       return notificationTemplate(data);
   }

@@ -57,9 +57,24 @@ export enum ActivityType {
   LISTING_DELETE = 'LISTING_DELETE',
   LISTING_VIEW = 'LISTING_VIEW',
   ORDER_CREATE = 'ORDER_CREATE',
+  ORDER_PAYMENT_SUCCESS = 'ORDER_PAYMENT_SUCCESS',
+  ORDER_PAYMENT_FAILED = 'ORDER_PAYMENT_FAILED',
   ORDER_CONFIRM = 'ORDER_CONFIRM',
+  ORDER_SHIP = 'ORDER_SHIP',
+  ORDER_DELIVER = 'ORDER_DELIVER',
   ORDER_CANCEL = 'ORDER_CANCEL',
   ORDER_COMPLETE = 'ORDER_COMPLETE',
+  ORDER_REFUND = 'ORDER_REFUND',
+  ORDER_DISPUTE = 'ORDER_DISPUTE',
+  ORDER_REVIEW = 'ORDER_REVIEW',
+  
+  // Payments
+  PAYMENT_INITIATED = 'PAYMENT_INITIATED',
+  PAYMENT_COMPLETED = 'PAYMENT_COMPLETED',
+  PAYMENT_FAILED = 'PAYMENT_FAILED',
+  PAYMENT_REFUNDED = 'PAYMENT_REFUNDED',
+  PAYOUT_RECEIVED = 'PAYOUT_RECEIVED',
+  PAYOUT_FAILED = 'PAYOUT_FAILED',
   
   // Points & Rewards
   POINTS_EARN = 'POINTS_EARN',
@@ -650,5 +665,157 @@ export class ActivityLoggerService {
     } catch (error) {
       logger.error('Failed to update last login', { error, userId });
     }
+  }
+
+  // ============= MARKETPLACE ACTIVITY HELPERS =============
+
+  static async logMarketplaceOrderCreated(
+    userId: string,
+    orderId: string,
+    listingId: string,
+    amount: number,
+    metadata?: Record<string, any>
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.ORDER_CREATE,
+      entityType: 'marketplace_order',
+      entityId: orderId,
+      metadata: {
+        listingId,
+        amount,
+        ...metadata,
+      },
+      visibility: ActivityVisibility.PRIVATE,
+    });
+  }
+
+  static async logMarketplacePaymentSuccess(
+    userId: string,
+    orderId: string,
+    transactionId: string,
+    amount: number
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.ORDER_PAYMENT_SUCCESS,
+      entityType: 'marketplace_order',
+      entityId: orderId,
+      metadata: {
+        transactionId,
+        amount,
+      },
+      visibility: ActivityVisibility.PRIVATE,
+    });
+  }
+
+  static async logMarketplaceOrderShipped(
+    sellerId: string,
+    orderId: string,
+    trackingNumber?: string
+  ): Promise<void> {
+    await this.logActivity({
+      userId: sellerId,
+      activityType: ActivityType.ORDER_SHIP,
+      entityType: 'marketplace_order',
+      entityId: orderId,
+      metadata: { trackingNumber },
+      visibility: ActivityVisibility.PRIVATE,
+    });
+  }
+
+  static async logMarketplaceOrderCancelled(
+    userId: string,
+    orderId: string,
+    reason?: string
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.ORDER_CANCEL,
+      entityType: 'marketplace_order',
+      entityId: orderId,
+      metadata: { reason },
+      visibility: ActivityVisibility.PRIVATE,
+    });
+  }
+
+  // ============= EVENT TICKET ACTIVITY HELPERS =============
+
+  static async logEventTicketPurchase(
+    userId: string,
+    eventId: string,
+    ticketId: string,
+    quantity: number,
+    amount: number
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.EVENT_TICKET_PURCHASE,
+      entityType: 'event_ticket',
+      entityId: ticketId,
+      metadata: {
+        eventId,
+        quantity,
+        amount,
+      },
+      visibility: ActivityVisibility.FRIENDS,
+    });
+  }
+
+  static async logEventCheckIn(
+    userId: string,
+    eventId: string,
+    ticketId: string
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.EVENT_CHECKIN,
+      entityType: 'event',
+      entityId: eventId,
+      metadata: { ticketId },
+      visibility: ActivityVisibility.FRIENDS,
+    });
+  }
+
+  // ============= PAYMENT ACTIVITY HELPERS =============
+
+  static async logPayoutReceived(
+    userId: string,
+    payoutId: string,
+    amount: number,
+    sourceType: 'event' | 'marketplace',
+    sourceId: string
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.PAYOUT_RECEIVED,
+      entityType: 'payout',
+      entityId: payoutId,
+      metadata: {
+        amount,
+        sourceType,
+        sourceId,
+      },
+      visibility: ActivityVisibility.PRIVATE,
+    });
+  }
+
+  static async logRefundProcessed(
+    userId: string,
+    refundId: string,
+    orderId: string,
+    amount: number
+  ): Promise<void> {
+    await this.logActivity({
+      userId,
+      activityType: ActivityType.ORDER_REFUND,
+      entityType: 'refund',
+      entityId: refundId,
+      metadata: {
+        orderId,
+        amount,
+      },
+      visibility: ActivityVisibility.PRIVATE,
+    });
   }
 }

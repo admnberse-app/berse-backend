@@ -11,6 +11,16 @@ import {
   EventEmailData,
   CampaignEmailData
 } from '../types/email.types';
+import {
+  MarketplaceOrderReceiptData,
+  MarketplaceOrderConfirmationData,
+  MarketplaceShippingNotificationData,
+  EventTicketReceiptData,
+  EventTicketConfirmationData,
+  EventReminderWithTicketData,
+  RefundConfirmationData,
+  PayoutNotificationData
+} from '../types/payment-email.types';
 import { renderEmailTemplate } from '../utils/emailTemplates';
 
 export class EmailService {
@@ -282,6 +292,126 @@ export class EmailService {
       subject: 'Test Email - Berse',
       html: '<h1>Test Email</h1><p>If you received this, email configuration is working correctly!</p>',
       text: 'Test Email - If you received this, email configuration is working correctly!',
+    });
+  }
+
+  // ============= MARKETPLACE ORDER EMAILS =============
+
+  /**
+   * Send marketplace order receipt/confirmation email to buyer
+   */
+  async sendMarketplaceOrderReceipt(to: string, data: MarketplaceOrderReceiptData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.MARKETPLACE_ORDER_RECEIPT, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `Order Confirmation - ${data.items[0]?.title} (Order #${data.orderId.slice(0, 8)})`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  /**
+   * Send order confirmation to seller
+   */
+  async sendNewOrderNotificationToSeller(to: string, data: MarketplaceOrderConfirmationData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.MARKETPLACE_NEW_ORDER, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `New Order Received - ${data.itemTitle}`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  /**
+   * Send shipping notification to buyer
+   */
+  async sendShippingNotification(to: string, data: MarketplaceShippingNotificationData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.MARKETPLACE_SHIPPED, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `Your order has shipped - ${data.itemTitle}`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  // ============= EVENT TICKET EMAILS =============
+
+  /**
+   * Send event ticket receipt/confirmation with QR code
+   */
+  async sendEventTicketReceipt(to: string, data: EventTicketReceiptData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.EVENT_TICKET_RECEIPT, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `Your Ticket for ${data.eventTitle}`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  /**
+   * Send event ticket confirmation (simplified version)
+   */
+  async sendEventTicketConfirmation(to: string, data: EventTicketConfirmationData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.EVENT_TICKET_CONFIRMATION, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `Ticket Confirmed - ${data.eventTitle}`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  /**
+   * Send event reminder with ticket QR code
+   */
+  async sendEventReminderWithTicket(to: string, data: EventReminderWithTicketData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.EVENT_REMINDER_WITH_TICKET, data);
+    
+    const timeframe = data.hoursUntilEvent <= 24 ? 'Tomorrow' : `in ${Math.ceil(data.hoursUntilEvent / 24)} days`;
+    
+    return this.sendEmail({
+      to,
+      subject: `Reminder: ${data.eventTitle} is ${timeframe}`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  // ============= PAYMENT & PAYOUT EMAILS =============
+
+  /**
+   * Send refund confirmation
+   */
+  async sendRefundConfirmation(to: string, data: RefundConfirmationData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.REFUND_CONFIRMATION, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `Refund Processed - ${data.refundAmount} ${data.currency}`,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  /**
+   * Send payout notification to seller/host
+   */
+  async sendPayoutNotification(to: string, data: PayoutNotificationData): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.PAYOUT_NOTIFICATION, data);
+    
+    return this.sendEmail({
+      to,
+      subject: `Payout Processed - ${data.amount} ${data.currency}`,
+      html: template.html,
+      text: template.text,
     });
   }
 }

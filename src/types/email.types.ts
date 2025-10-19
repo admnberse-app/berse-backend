@@ -31,6 +31,17 @@ export enum EmailTemplate {
   REWARD_AVAILABLE = 'reward_available',
   CAMPAIGN = 'campaign',
   NOTIFICATION = 'notification',
+  // Marketplace
+  MARKETPLACE_ORDER_RECEIPT = 'marketplace_order_receipt',
+  MARKETPLACE_NEW_ORDER = 'marketplace_new_order',
+  MARKETPLACE_SHIPPED = 'marketplace_shipped',
+  // Events/Tickets
+  EVENT_TICKET_RECEIPT = 'event_ticket_receipt',
+  EVENT_TICKET_CONFIRMATION = 'event_ticket_confirmation',
+  EVENT_REMINDER_WITH_TICKET = 'event_reminder_with_ticket',
+  // Payments
+  REFUND_CONFIRMATION = 'refund_confirmation',
+  PAYOUT_NOTIFICATION = 'payout_notification',
 }
 
 export enum EmailType {

@@ -28,6 +28,7 @@ import { AppError } from '../../middleware/error';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { PaymentService } from '../payments/payment.service';
 import { NotificationService } from '../../services/notification.service';
+import { emailService } from '../../services/email.service';
 
 const prisma = new PrismaClient();
 const paymentService = new PaymentService();
@@ -749,6 +750,7 @@ export class MarketplaceService {
             id: true,
             fullName: true,
             username: true,
+            email: true,
           }
         },
         users_marketplace_orders_sellerIdTousers: {
@@ -810,6 +812,35 @@ export class MarketplaceService {
         updatedOrder.id,
         data.trackingNumber
       );
+
+      // Log shipping activity
+      await ActivityLoggerService.logMarketplaceOrderShipped(
+        updatedOrder.sellerId,
+        updatedOrder.id,
+        data.trackingNumber
+      ).catch((error) => {
+        console.error('Failed to log order shipped:', error);
+      });
+
+      // Send shipping notification email
+      if (data.trackingNumber && updatedOrder.users_marketplace_orders_buyerIdTousers.email) {
+        try {
+          await emailService.sendShippingNotification(
+            updatedOrder.users_marketplace_orders_buyerIdTousers.email,
+            {
+              buyerName: updatedOrder.users_marketplace_orders_buyerIdTousers.fullName,
+              orderId: updatedOrder.id,
+              itemTitle: updatedOrder.marketplaceListings.title,
+              carrier: 'Standard Shipping', // TODO: Get from order data if available
+              trackingNumber: data.trackingNumber,
+              trackingUrl: `https://track.example.com/${data.trackingNumber}`, // TODO: Build actual tracking URL
+              estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            }
+          );
+        } catch (error) {
+          console.error('Failed to send shipping notification:', error);
+        }
+      }
     }
 
     // Log activity
@@ -878,7 +909,14 @@ export class MarketplaceService {
       canceledBy
     );
 
-    // Log activity
+    // Log cancellation activity
+    await ActivityLoggerService.logMarketplaceOrderCancelled(
+      userId,
+      updatedOrder.id,
+      `Cancelled by ${canceledBy}`
+    ).catch((error) => {
+      console.error('Failed to log order cancellation:', error);
+    });
 
     return this.formatOrderResponse(updatedOrder);
   }

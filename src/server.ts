@@ -7,6 +7,7 @@ import os from 'os';
 // TEMPORARILY DISABLED - Job needs schema compliance updates
 // import { initializeProfileReminderJob } from './jobs/profileCompletionReminders';
 import { MembershipService } from './services/membership.service';
+import { SchedulerService } from './services/scheduler.service';
 
 // Enable cluster mode for production
 const setupCluster = () => {
@@ -67,6 +68,16 @@ const startServer = async () => {
       logger.info(`📊 Environment: ${config.env}`);
       logger.info(`🔗 http://localhost:${config.port}`);
       logger.info(`👥 Worker ${process.pid} started`);
+      
+      // Initialize scheduler (only in primary process or single worker mode)
+      if (cluster.isPrimary || !config.isProduction) {
+        try {
+          SchedulerService.init();
+          logger.info('✅ Scheduler service initialized');
+        } catch (error) {
+          logger.error('Failed to initialize scheduler service:', error);
+        }
+      }
       
       // Initialize profile completion reminder job
       // TEMPORARILY DISABLED - Job needs schema compliance updates
@@ -138,6 +149,14 @@ const startServer = async () => {
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info(`${signal} signal received: closing HTTP server`);
+      
+      // Stop scheduled jobs
+      try {
+        SchedulerService.stop();
+        logger.info('Scheduler service stopped');
+      } catch (error) {
+        logger.error('Error stopping scheduler service:', error);
+      }
       
       server.close(async () => {
         logger.info('HTTP server closed');

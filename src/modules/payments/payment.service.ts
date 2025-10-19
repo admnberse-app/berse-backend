@@ -3,6 +3,7 @@ import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
 import { PaymentGatewayFactory } from './gateways/PaymentGatewayFactory';
 import { NotificationService } from '../../services/notification.service';
+import { ActivityLoggerService } from '../../services/activityLogger.service';
 import type {
   CreatePaymentIntentInput,
   ConfirmPaymentInput,
@@ -1126,16 +1127,248 @@ export class PaymentService {
 
         // Update marketplace order if payment succeeded
         if (newStatus === PaymentStatus.SUCCEEDED && transaction.referenceType === 'MARKETPLACE_ORDER') {
-          await prisma.marketplaceOrder.update({
+          const updatedOrder = await prisma.marketplaceOrder.update({
             where: { id: transaction.referenceId },
             data: {
               paymentStatus: PaymentStatus.SUCCEEDED,
               status: 'CONFIRMED' as any,
               confirmedAt: new Date(),
             },
+            include: {
+              marketplaceListings: {
+                select: {
+                  id: true,
+                  title: true,
+                  images: true,
+                  userId: true,
+                }
+              },
+              users_marketplace_orders_buyerIdTousers: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  email: true,
+                  username: true,
+                }
+              },
+              users_marketplace_orders_sellerIdTousers: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  email: true,
+                  username: true,
+                }
+              }
+            }
           }).catch((error) => {
             logger.error('[PaymentService] Failed to update marketplace order:', error);
+            throw error;
           });
+
+          // Log activity and send emails after payment success
+          if (updatedOrder) {
+            const { storageService } = require('../services/storage.service');
+            const { emailService } = require('../services/email.service');
+
+            // Log marketplace payment success
+            await ActivityLoggerService.logMarketplacePaymentSuccess(
+              updatedOrder.buyerId,
+              updatedOrder.id,
+              transaction.id,
+              updatedOrder.totalAmount
+            ).catch((error) => {
+              logger.error('[PaymentService] Failed to log marketplace payment:', error);
+            });
+
+            // Send order receipt to buyer
+            try {
+              const imageUrls = updatedOrder.marketplaceListings.images.map((key: string) =>
+                key.startsWith('http') ? key : storageService.getPublicUrl(key)
+              );
+
+              await emailService.sendMarketplaceOrderReceipt({
+                to: updatedOrder.users_marketplace_orders_buyerIdTousers.email,
+                buyerName: updatedOrder.users_marketplace_orders_buyerIdTousers.fullName,
+                orderId: updatedOrder.id,
+                orderDate: updatedOrder.createdAt,
+                sellerName: updatedOrder.users_marketplace_orders_sellerIdTousers.fullName,
+                items: [{
+                  title: updatedOrder.marketplaceListings.title,
+                  quantity: updatedOrder.quantity,
+                  price: updatedOrder.unitPrice,
+                  currency: updatedOrder.currency,
+                  subtotal: updatedOrder.subtotal,
+                  imageUrl: imageUrls[0] || undefined,
+                }],
+                subtotal: updatedOrder.subtotal,
+                platformFee: updatedOrder.platformFee,
+                totalAmount: updatedOrder.totalAmount,
+                currency: updatedOrder.currency,
+                shippingAddress: updatedOrder.shippingAddress,
+                paymentMethod: 'Card', // TODO: Get actual payment method from provider
+                transactionId: transaction.id,
+                paidAt: new Date(),
+              });
+            } catch (error) {
+              logger.error('[PaymentService] Failed to send order receipt:', error);
+            }
+
+            // Send new order notification to seller
+            try {
+              await emailService.sendNewOrderNotificationToSeller({
+                to: updatedOrder.users_marketplace_orders_sellerIdTousers.email,
+                sellerName: updatedOrder.users_marketplace_orders_sellerIdTousers.fullName,
+                buyerName: updatedOrder.users_marketplace_orders_buyerIdTousers.fullName,
+                orderId: updatedOrder.id,
+                itemTitle: updatedOrder.marketplaceListings.title,
+                quantity: updatedOrder.quantity,
+                totalAmount: updatedOrder.totalAmount,
+                currency: updatedOrder.currency,
+                orderUrl: `${process.env.APP_URL || 'https://berse.app'}/marketplace/orders/${updatedOrder.id}`,
+              });
+            } catch (error) {
+              logger.error('[PaymentService] Failed to send seller notification:', error);
+            }
+          }
+        }
+
+        // Update event ticket if payment succeeded
+        if (newStatus === PaymentStatus.SUCCEEDED && transaction.referenceType === 'EVENT_TICKET') {
+          try {
+            const updatedTicket = await prisma.eventTicket.update({
+              where: { id: transaction.referenceId },
+              data: {
+                paymentStatus: PaymentStatus.SUCCEEDED,
+                status: 'CONFIRMED' as any,
+              },
+              include: {
+                tier: {
+                  select: {
+                    tierName: true,
+                  }
+                },
+                user: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                  }
+                },
+                participant: {
+                  select: {
+                    id: true,
+                    qrCode: true,
+                  }
+                }
+              }
+            });
+
+            // Update participant status to CONFIRMED
+            if (updatedTicket.participantId) {
+              await prisma.eventParticipant.update({
+                where: { id: updatedTicket.participantId },
+                data: { status: 'CONFIRMED' as any },
+              });
+            }
+
+            // Log activity and send emails after payment success
+            if (updatedTicket) {
+              const { storageService } = require('../services/storage.service');
+              const { emailService } = require('../services/email.service');
+              const QRCode = require('qrcode');
+
+              // Fetch event details separately since include doesn't work with events relation
+              const eventDetails = await prisma.event.findUnique({
+                where: { id: updatedTicket.eventId },
+                select: {
+                  id: true,
+                  title: true,
+                  date: true,
+                  location: true,
+                  images: true,
+                  user: {
+                    select: {
+                      id: true,
+                      fullName: true,
+                    }
+                  }
+                }
+              });
+
+              if (!eventDetails) {
+                logger.error('[PaymentService] Event not found for ticket');
+                return;
+              }
+
+              // Log event ticket purchase
+              await ActivityLoggerService.logEventTicketPurchase(
+                updatedTicket.userId,
+                updatedTicket.eventId,
+                updatedTicket.id,
+                1,
+                updatedTicket.price
+              ).catch((error) => {
+                logger.error('[PaymentService] Failed to log event ticket purchase:', error);
+              });
+
+              // Generate QR code URL
+              const qrToken = updatedTicket.participant?.qrCode || updatedTicket.ticketNumber;
+              const checkInUrl = `${process.env.APP_URL || 'https://berse.app'}/events/${updatedTicket.eventId}/check-in/${qrToken}`;
+              let qrCodeDataUrl = '';
+              
+              try {
+                qrCodeDataUrl = await QRCode.toDataURL(checkInUrl, {
+                  width: 300,
+                  margin: 2,
+                  color: {
+                    dark: '#00B14F',
+                    light: '#FFFFFF'
+                  }
+                });
+              } catch (qrError) {
+                logger.error('[PaymentService] Failed to generate QR code:', qrError);
+                qrCodeDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkInUrl)}`;
+              }
+
+              // Get event image URL
+              const eventImageUrl = eventDetails.images && eventDetails.images.length > 0
+                ? (eventDetails.images[0].startsWith('http') 
+                    ? eventDetails.images[0] 
+                    : storageService.getPublicUrl(eventDetails.images[0]))
+                : undefined;
+
+              // Send ticket receipt to attendee
+              try {
+                await emailService.sendEventTicketReceipt(
+                  updatedTicket.user.email,
+                  {
+                    attendeeName: updatedTicket.attendeeName || updatedTicket.user.fullName,
+                    eventTitle: eventDetails.title,
+                    eventDate: eventDetails.date.toISOString(),
+                    eventTime: '00:00', // Default time since startTime doesn't exist
+                    eventLocation: eventDetails.location,
+                    eventImage: eventImageUrl,
+                    ticketTier: updatedTicket.tier?.tierName,
+                    ticketId: updatedTicket.id,
+                    quantity: 1,
+                    price: updatedTicket.price,
+                    platformFee: transaction.platformFee || 0,
+                    totalAmount: transaction.amount,
+                    currency: updatedTicket.currency,
+                    qrCodeUrl: qrCodeDataUrl,
+                    checkInCode: updatedTicket.ticketNumber,
+                    hostName: eventDetails.user?.fullName || 'Event Host',
+                    eventId: updatedTicket.eventId,
+                    eventMapLink: `https://maps.google.com/?q=${encodeURIComponent(eventDetails.location)}`,
+                  }
+                );
+              } catch (error) {
+                logger.error('[PaymentService] Failed to send event ticket receipt:', error);
+              }
+            }
+          } catch (error) {
+            logger.error('[PaymentService] Failed to update event ticket:', error);
+          }
         }
 
         // Trigger payout if payment succeeded
