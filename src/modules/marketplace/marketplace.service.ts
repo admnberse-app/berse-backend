@@ -1,4 +1,4 @@
-import { PrismaClient, ListingStatus, OrderStatus, DisputeStatus, PaymentStatus } from '@prisma/client';
+import { PrismaClient, ListingStatus, OrderStatus, DisputeStatus, PaymentStatus, TransactionType } from '@prisma/client';
 import {
   CreateListingRequest,
   UpdateListingRequest,
@@ -26,8 +26,10 @@ import {
 } from './marketplace.types';
 import { AppError } from '../../middleware/error';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
+import { PaymentService } from '../payments/payment.service';
 
 const prisma = new PrismaClient();
+const paymentService = new PaymentService();
 
 export class MarketplaceService {
   // ============= LISTING METHODS =============
@@ -472,6 +474,22 @@ export class MarketplaceService {
     const sellerPayout = subtotal - platformFee;
     const totalAmount = subtotal + shippingFee;
 
+    // Create payment intent
+    const paymentIntent = await paymentService.createPaymentIntent(userId, {
+      amount: totalAmount,
+      currency: listing.currency,
+      transactionType: TransactionType.MARKETPLACE_ORDER,
+      referenceType: 'MARKETPLACE_ORDER',
+      referenceId: '', // Will be updated with order ID
+      providerId: data.providerId,
+      description: `Purchase: ${listing.title}`,
+      metadata: {
+        listingId: data.listingId,
+        quantity: data.quantity,
+        sellerId: listing.userId,
+      },
+    });
+
     // Create order
     const order = await prisma.marketplaceOrder.create({
       data: {
@@ -489,7 +507,8 @@ export class MarketplaceService {
         shippingAddress: data.shippingAddress,
         notes: data.notes,
         status: OrderStatus.PENDING,
-        paymentStatus: PaymentStatus.PENDING
+        paymentStatus: PaymentStatus.PENDING,
+        paymentTransactionId: paymentIntent.transactionId,
       },
       include: {
         marketplaceListings: {
@@ -516,6 +535,12 @@ export class MarketplaceService {
       }
     });
 
+    // Update payment transaction with order ID
+    await prisma.paymentTransaction.update({
+      where: { id: paymentIntent.transactionId },
+      data: { referenceId: order.id },
+    });
+
     // Remove from cart if exists
     await prisma.marketplaceCartItem.deleteMany({
       where: {
@@ -526,7 +551,16 @@ export class MarketplaceService {
 
     // Log activity
 
-    return this.formatOrderResponse(order);
+    // Return order with payment intent details
+    const orderResponse = this.formatOrderResponse(order);
+    return {
+      ...orderResponse,
+      paymentIntent: {
+        transactionId: paymentIntent.transactionId,
+        clientSecret: paymentIntent.clientSecret,
+        expiresAt: paymentIntent.expiresAt,
+      },
+    };
   }
 
   async getOrder(orderId: string, userId: string): Promise<OrderResponse> {
@@ -1507,6 +1541,72 @@ export class MarketplaceService {
         400
       );
     }
+  }
+
+  // ============= METADATA METHODS =============
+
+  getCategories() {
+    return MARKETPLACE_CONSTANTS.LISTING_CATEGORIES.map(category => ({
+      value: category,
+      label: category
+    }));
+  }
+
+  getListingStatuses() {
+    return [
+      { value: 'DRAFT', label: 'Draft', description: 'Listing is being prepared' },
+      { value: 'ACTIVE', label: 'Active', description: 'Listing is live and available for purchase' },
+      { value: 'SOLD', label: 'Sold', description: 'Listing has been sold' },
+      { value: 'EXPIRED', label: 'Expired', description: 'Listing has expired' },
+      { value: 'REMOVED', label: 'Removed', description: 'Listing has been removed by user or admin' }
+    ];
+  }
+
+  getOrderStatuses() {
+    return [
+      { value: 'CART', label: 'In Cart', description: 'Item is in shopping cart' },
+      { value: 'PENDING', label: 'Pending', description: 'Order placed, awaiting payment confirmation' },
+      { value: 'CONFIRMED', label: 'Confirmed', description: 'Payment confirmed, awaiting shipment' },
+      { value: 'SHIPPED', label: 'Shipped', description: 'Order has been shipped' },
+      { value: 'DELIVERED', label: 'Delivered', description: 'Order has been delivered' },
+      { value: 'CANCELED', label: 'Canceled', description: 'Order has been canceled' },
+      { value: 'REFUNDED', label: 'Refunded', description: 'Order has been refunded' },
+      { value: 'DISPUTED', label: 'Disputed', description: 'Order is under dispute' }
+    ];
+  }
+
+  getPaymentStatuses() {
+    return [
+      { value: 'PENDING', label: 'Pending', description: 'Payment is pending' },
+      { value: 'PROCESSING', label: 'Processing', description: 'Payment is being processed' },
+      { value: 'SUCCEEDED', label: 'Succeeded', description: 'Payment completed successfully' },
+      { value: 'FAILED', label: 'Failed', description: 'Payment failed' },
+      { value: 'CANCELED', label: 'Canceled', description: 'Payment was canceled' },
+      { value: 'REFUNDED', label: 'Refunded', description: 'Payment has been refunded' },
+      { value: 'PARTIALLY_REFUNDED', label: 'Partially Refunded', description: 'Payment has been partially refunded' }
+    ];
+  }
+
+  getCurrencies() {
+    return [
+      { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', isDefault: true },
+      { code: 'USD', symbol: '$', name: 'US Dollar', isDefault: false },
+      { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', isDefault: false },
+      { code: 'EUR', symbol: '€', name: 'Euro', isDefault: false }
+    ];
+  }
+
+  getConstants() {
+    return {
+      maxImagesPerListing: MARKETPLACE_CONSTANTS.MAX_IMAGES_PER_LISTING,
+      maxCartItems: MARKETPLACE_CONSTANTS.MAX_CART_ITEMS,
+      maxQuantityPerItem: MARKETPLACE_CONSTANTS.MAX_QUANTITY_PER_ITEM,
+      minRating: MARKETPLACE_CONSTANTS.MIN_RATING,
+      maxRating: MARKETPLACE_CONSTANTS.MAX_RATING,
+      orderExpiryDays: MARKETPLACE_CONSTANTS.ORDER_EXPIRY_DAYS,
+      platformFeePercentage: MARKETPLACE_CONSTANTS.PLATFORM_FEE_PERCENTAGE,
+      defaultCurrency: MARKETPLACE_CONSTANTS.CURRENCY
+    };
   }
 }
 

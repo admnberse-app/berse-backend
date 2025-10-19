@@ -70,6 +70,8 @@ export interface CreateOrderRequest {
     phone: string;
   };
   notes?: string;
+  providerId?: string; // Payment provider ID (optional, will auto-select if not provided)
+  paymentMethodId?: string; // Saved payment method ID (optional)
 }
 
 export interface UpdateOrderRequest {
@@ -139,6 +141,12 @@ export interface OrderResponse extends MarketplaceOrder {
   };
   review?: MarketplaceReview;
   disputes?: MarketplaceDispute[];
+  // Payment details (only present on creation)
+  paymentIntent?: {
+    transactionId: string;
+    clientSecret?: string;
+    expiresAt?: string;
+  };
 }
 
 export interface CartItemResponse extends MarketplaceCartItem {

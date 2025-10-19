@@ -873,6 +873,285 @@ export class MarketplaceController {
       throw error;
     }
   }
+
+  // ============= METADATA ENDPOINTS =============
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/metadata/categories:
+   *   get:
+   *     summary: Get all marketplace listing categories
+   *     description: Returns list of all available product categories for filtering and listing creation
+   *     tags: [Marketplace - Metadata]
+   *     responses:
+   *       200:
+   *         description: List of listing categories
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       value:
+   *                         type: string
+   *                         example: "Electronics"
+   *                       label:
+   *                         type: string
+   *                         example: "Electronics"
+   */
+  async getCategories(req: Request, res: Response) {
+    try {
+      res.json({
+        success: true,
+        data: marketplaceService.getCategories()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/metadata/listing-statuses:
+   *   get:
+   *     summary: Get all listing status options
+   *     description: Returns all possible listing statuses with descriptions
+   *     tags: [Marketplace - Metadata]
+   *     responses:
+   *       200:
+   *         description: List of listing statuses
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       value:
+   *                         type: string
+   *                         example: "ACTIVE"
+   *                       label:
+   *                         type: string
+   *                         example: "Active"
+   *                       description:
+   *                         type: string
+   *                         example: "Listing is live and available for purchase"
+   */
+  async getListingStatuses(req: Request, res: Response) {
+    try {
+      res.json({
+        success: true,
+        data: marketplaceService.getListingStatuses()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/metadata/order-statuses:
+   *   get:
+   *     summary: Get all order status options
+   *     description: Returns all possible order statuses with descriptions for tracking
+   *     tags: [Marketplace - Metadata]
+   *     responses:
+   *       200:
+   *         description: List of order statuses
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       value:
+   *                         type: string
+   *                         example: "DELIVERED"
+   *                       label:
+   *                         type: string
+   *                         example: "Delivered"
+   *                       description:
+   *                         type: string
+   *                         example: "Order has been delivered"
+   */
+  async getOrderStatuses(req: Request, res: Response) {
+    try {
+      res.json({
+        success: true,
+        data: marketplaceService.getOrderStatuses()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/metadata/payment-statuses:
+   *   get:
+   *     summary: Get all payment status options
+   *     description: Returns all possible payment statuses for transaction tracking
+   *     tags: [Marketplace - Metadata]
+   *     responses:
+   *       200:
+   *         description: List of payment statuses
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       value:
+   *                         type: string
+   *                         example: "SUCCEEDED"
+   *                       label:
+   *                         type: string
+   *                         example: "Succeeded"
+   *                       description:
+   *                         type: string
+   *                         example: "Payment completed successfully"
+   */
+  async getPaymentStatuses(req: Request, res: Response) {
+    try {
+      res.json({
+        success: true,
+        data: marketplaceService.getPaymentStatuses()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/metadata/currencies:
+   *   get:
+   *     summary: Get supported currencies
+   *     description: Returns all currencies supported for marketplace transactions
+   *     tags: [Marketplace - Metadata]
+   *     responses:
+   *       200:
+   *         description: List of supported currencies
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                         example: "MYR"
+   *                       symbol:
+   *                         type: string
+   *                         example: "RM"
+   *                       name:
+   *                         type: string
+   *                         example: "Malaysian Ringgit"
+   *                       isDefault:
+   *                         type: boolean
+   *                         example: true
+   */
+  async getCurrencies(req: Request, res: Response) {
+    try {
+      res.json({
+        success: true,
+        data: marketplaceService.getCurrencies()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/metadata/constants:
+   *   get:
+   *     summary: Get marketplace constants (limits, fees, etc)
+   *     description: Returns marketplace configuration including limits, fees, and default values
+   *     tags: [Marketplace - Metadata]
+   *     responses:
+   *       200:
+   *         description: Marketplace configuration constants
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     maxImagesPerListing:
+   *                       type: number
+   *                       example: 10
+   *                     maxCartItems:
+   *                       type: number
+   *                       example: 50
+   *                     maxQuantityPerItem:
+   *                       type: number
+   *                       example: 100
+   *                     minRating:
+   *                       type: number
+   *                       example: 1
+   *                     maxRating:
+   *                       type: number
+   *                       example: 5
+   *                     orderExpiryDays:
+   *                       type: number
+   *                       example: 30
+   *                     platformFeePercentage:
+   *                       type: number
+   *                       example: 5
+   *                     defaultCurrency:
+   *                       type: string
+   *                       example: "MYR"
+   */
+  async getConstants(req: Request, res: Response) {
+    try {
+      res.json({
+        success: true,
+        data: marketplaceService.getConstants()
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 export const marketplaceController = new MarketplaceController();

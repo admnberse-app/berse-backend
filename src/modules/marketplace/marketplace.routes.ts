@@ -237,4 +237,36 @@ router.get(
   marketplaceController.getNearbyListings.bind(marketplaceController)
 );
 
+// ============= METADATA ROUTES =============
+
+router.get(
+  '/metadata/categories',
+  marketplaceController.getCategories.bind(marketplaceController)
+);
+
+router.get(
+  '/metadata/listing-statuses',
+  marketplaceController.getListingStatuses.bind(marketplaceController)
+);
+
+router.get(
+  '/metadata/order-statuses',
+  marketplaceController.getOrderStatuses.bind(marketplaceController)
+);
+
+router.get(
+  '/metadata/payment-statuses',
+  marketplaceController.getPaymentStatuses.bind(marketplaceController)
+);
+
+router.get(
+  '/metadata/currencies',
+  marketplaceController.getCurrencies.bind(marketplaceController)
+);
+
+router.get(
+  '/metadata/constants',
+  marketplaceController.getConstants.bind(marketplaceController)
+);
+
 export default router;

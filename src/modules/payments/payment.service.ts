@@ -1124,6 +1124,20 @@ export class PaymentService {
           },
         });
 
+        // Update marketplace order if payment succeeded
+        if (newStatus === PaymentStatus.SUCCEEDED && transaction.referenceType === 'MARKETPLACE_ORDER') {
+          await prisma.marketplaceOrder.update({
+            where: { id: transaction.referenceId },
+            data: {
+              paymentStatus: PaymentStatus.SUCCEEDED,
+              status: 'CONFIRMED' as any,
+              confirmedAt: new Date(),
+            },
+          }).catch((error) => {
+            logger.error('[PaymentService] Failed to update marketplace order:', error);
+          });
+        }
+
         // Trigger payout if payment succeeded
         if (newStatus === PaymentStatus.SUCCEEDED) {
           await this.distributePayout(transaction.id).catch((error) => {

@@ -279,7 +279,17 @@ export const createOrderValidator: ValidationChain[] = [
     .optional()
     .trim()
     .isLength({ max: 1000 })
-    .withMessage('Notes must not exceed 1000 characters')
+    .withMessage('Notes must not exceed 1000 characters'),
+  
+  body('providerId')
+    .optional()
+    .isString()
+    .withMessage('Provider ID must be a string'),
+  
+  body('paymentMethodId')
+    .optional()
+    .isString()
+    .withMessage('Payment method ID must be a string')
 ];
 
 export const updateOrderValidator: ValidationChain[] = [
