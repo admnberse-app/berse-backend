@@ -1009,9 +1009,11 @@ GET /v2/events/tickets/my-tickets?eventId=evt_cm123456789
 
 ## RSVP
 
+> **⚠️ Database Schema Change:** Event registration now uses `EventParticipant` model instead of separate `EventRsvp` and `EventAttendance` tables. This provides unified participant tracking with status management.
+
 ### Create RSVP
 
-RSVP to a free event.
+Register for a free event. Creates an `EventParticipant` record with `status=REGISTERED`.
 
 **Endpoint:** `POST /v2/events/:id/rsvp`
 
@@ -1022,41 +1024,53 @@ RSVP to a free event.
 
 **Request Body:** None required
 
+**Database Changes:**
+- **Before:** Created `EventRsvp` record
+- **Now:** Creates `EventParticipant` record with:
+  - `status`: REGISTERED
+  - `qrCode`: Secure token for check-in
+  - `checkedInAt`: null (until check-in)
+
 **Response:** `201 Created`
 ```json
 {
   "status": "success",
-  "message": "RSVP created successfully",
+  "message": "Participant registered successfully",
   "data": {
-    "id": "rsvp_456",
+    "id": "participant_456",
+    "userId": "usr_cm987654321",
     "eventId": "evt_cm123456789",
+    "status": "REGISTERED",
+    "qrCode": "abc123def456...",
+    "checkedInAt": null,
+    "createdAt": "2025-10-16T10:00:00.000Z",
     "event": {
       "id": "evt_cm123456789",
       "title": "Bersemuka Summer Meetup 2025",
       "date": "2025-08-15T10:00:00.000Z",
       "location": "KLCC Convention Center, Kuala Lumpur",
       "type": "SOCIAL"
-    },
-    "createdAt": "2025-10-16T10:00:00.000Z"
+    }
   }
 }
 ```
 
 **Error Responses:**
-- `400 Bad Request` - Already RSVP'd, event is paid, event at capacity, event not published
+- `400 Bad Request` - Already registered, event is paid, event at capacity, event not published
 - `401 Unauthorized` - Invalid or missing token
 - `404 Not Found` - Event not found
 
 **Notes:**
 - Only available for free events
 - For paid events, use the [Purchase Ticket](#purchase-ticket) endpoint
-- Check-in QR code is generated separately via the [Generate QR Code](#generate-qr-code) endpoint
+- QR code token is included in response but QR image is generated on-demand via [Generate QR Code](#generate-qr-code) endpoint
+- Participant status can be: `REGISTERED`, `WAITLISTED`, `CONFIRMED`, `CHECKED_IN`, `CANCELED`
 
 ---
 
 ### Cancel RSVP
 
-Cancel an existing RSVP.
+Cancel event registration. Updates `EventParticipant` status to `CANCELED` (soft delete preserves history).
 
 **Endpoint:** `DELETE /v2/events/:id/rsvp`
 
@@ -1065,62 +1079,108 @@ Cancel an existing RSVP.
 **Path Parameters:**
 - `id` (required): Event ID
 
+**Database Changes:**
+- **Before:** Deleted `EventRsvp` record
+- **Now:** Updates `EventParticipant`:
+  - `status`: CANCELED
+  - `canceledAt`: Current timestamp
+  - Record preserved for analytics and re-registration tracking
+
 **Response:** `200 OK`
 ```json
 {
   "status": "success",
-  "message": "RSVP cancelled successfully",
+  "message": "Registration cancelled successfully",
   "data": null
 }
 ```
 
 **Error Responses:**
-- `404 Not Found` - Event or RSVP not found
+- `404 Not Found` - Event or registration not found
 - `401 Unauthorized` - Invalid or missing token
+
+**Benefits of Soft Delete:**
+- Preserve registration history
+- Track cancellation rates
+- Allow re-registration with history
+- Analytics on user behavior
 
 ---
 
 ### Get My RSVPs
 
-Get all RSVPs made by the authenticated user.
+Get all event registrations (EventParticipant records) for the authenticated user.
 
 **Endpoint:** `GET /v2/events/rsvps/my-rsvps`
 
 **Authentication:** Required
 
+**Database Changes:**
+- **Before:** Returned `EventRsvp` records
+- **Now:** Returns `EventParticipant` records with full status information
+
 **Response:** `200 OK`
 ```json
 {
   "status": "success",
-  "message": "RSVPs retrieved successfully",
+  "message": "Participant records retrieved successfully",
   "data": [
     {
-      "id": "rsvp_456",
+      "id": "participant_456",
+      "userId": "usr_cm987654321",
       "eventId": "evt_cm123456789",
+      "status": "REGISTERED",
+      "qrCode": "abc123def456...",
+      "checkedInAt": null,
+      "canceledAt": null,
+      "createdAt": "2025-10-16T10:00:00.000Z",
       "event": {
         "id": "evt_cm123456789",
         "title": "Bersemuka Summer Meetup 2025",
         "date": "2025-08-15T10:00:00.000Z",
         "location": "KLCC Convention Center, Kuala Lumpur",
-        "type": "SOCIAL"
+        "type": "SOCIAL",
+        "images": ["https://cdn.berse.com/events/summer-2025.jpg"]
       },
-      "createdAt": "2025-10-16T10:00:00.000Z"
+      "user": {
+        "id": "usr_cm987654321",
+        "fullName": "John Doe",
+        "username": "johndoe",
+        "email": "john@example.com"
+      }
     },
     {
-      "id": "rsvp_457",
+      "id": "participant_457",
+      "userId": "usr_cm987654321",
       "eventId": "evt_cm234567890",
+      "status": "CHECKED_IN",
+      "qrCode": "xyz789uvw012...",
+      "checkedInAt": "2025-09-01T07:15:00.000Z",
+      "canceledAt": null,
+      "createdAt": "2025-10-14T08:00:00.000Z",
       "event": {
         "id": "evt_cm234567890",
         "title": "Community Hike",
         "date": "2025-09-01T07:00:00.000Z",
         "location": "Bukit Tabur",
-        "type": "OUTDOOR"
-      },
-      "createdAt": "2025-10-14T08:00:00.000Z"
+        "type": "TRIP"
+      }
     }
   ]
 }
 ```
+
+**Participant Status Values:**
+- `REGISTERED` - Initial registration, not yet checked in
+- `WAITLISTED` - On waiting list (if event at capacity)
+- `CONFIRMED` - Registration confirmed (for paid events after payment)
+- `CHECKED_IN` - Attended the event
+- `CANCELED` - Registration cancelled by user
+
+**Additional Fields:**
+- `qrCode`: Secure token for QR code generation (use with [Generate QR Code](#generate-qr-code) endpoint)
+- `checkedInAt`: Timestamp when user checked in (null if not attended)
+- `canceledAt`: Timestamp when registration was cancelled (null if active)
 
 ---
 
@@ -1133,7 +1193,12 @@ Generate a secure, time-limited QR code for event check-in.
 **Authentication:** Required
 
 **Path Parameters:**
-- `rsvpId` (required): RSVP ID
+- `rsvpId` (required): Participant ID (formerly RSVP ID, now `EventParticipant.id`)
+
+**Database Changes:**
+- **Before:** Used `EventRsvp.id` and `EventRsvp.qrCode`
+- **Now:** Uses `EventParticipant.id` and `EventParticipant.qrCode`
+- QR code JWT payload includes `participantId` instead of `rsvpId`
 
 **Response:** `200 OK`
 ```json
@@ -1147,23 +1212,38 @@ Generate a secure, time-limited QR code for event check-in.
 ```
 
 **Error Responses:**
-- `403 Forbidden` - Not authorized to access this RSVP
-- `404 Not Found` - RSVP not found
+- `403 Forbidden` - Not authorized to access this participant record
+- `404 Not Found` - Participant record not found
 
 **QR Code Details:**
 - **Format**: Base64-encoded PNG image (Data URL)
 - **Size**: 300x300 pixels
-- **Content**: Signed JWT token containing RSVP details
+- **Content**: Signed JWT token containing participant details
 - **Expiration**: 30 days or 24 hours after event (whichever is later)
 - **Security**: Cryptographically signed, cannot be forged
 - **Usage**: Can be displayed in `<img>` tags or mobile apps
+
+**JWT Payload Structure:**
+```json
+{
+  "participantId": "participant_456",
+  "userId": "usr_cm987654321",
+  "eventId": "evt_cm123456789",
+  "token": "abc123def456...",
+  "type": "EVENT_CHECKIN",
+  "exp": 1723804800,
+  "iss": "bersemuka-api",
+  "aud": "bersemuka-checkin"
+}
+```
 
 **Security Features:**
 - JWT token with expiration
 - Cryptographic signature (HMAC-SHA256)
 - Event-specific binding
-- Double validation (JWT + database token)
+- Double validation (JWT + database token from `EventParticipant.qrCode`)
 - Audience/issuer verification
+- Participant status verification
 
 **Example Usage:**
 ```html
@@ -1176,9 +1256,11 @@ For complete security documentation, see [EVENT_QR_CODE_SECURITY.md](../../EVENT
 
 ## Attendance
 
+> **⚠️ Database Schema Change:** Check-in tracking now updates `EventParticipant.checkedInAt` and `status=CHECKED_IN` instead of creating separate `EventAttendance` records.
+
 ### Check-In Attendee
 
-Check in an attendee at the event (via user ID or QR code scan).
+Check in a participant at the event (via user ID or QR code scan). Updates their EventParticipant record.
 
 **Endpoint:** `POST /v2/events/:id/check-in`
 
@@ -1206,21 +1288,30 @@ Check in an attendee at the event (via user ID or QR code scan).
 - Must provide either `userId` or `qrCode` (not both)
 - If using QR code: Must be valid JWT token from [Generate QR Code](#generate-qr-code) endpoint
 
+**Database Changes:**
+- **Before:** Created `EventAttendance` record
+- **Now:** Updates `EventParticipant`:
+  - `checkedInAt`: Current timestamp
+  - `status`: CHECKED_IN
+  - No separate attendance table needed
+
 **Response:** `201 Created`
 ```json
 {
   "status": "success",
-  "message": "Attendee checked in successfully",
+  "message": "Participant checked in successfully",
   "data": {
-    "id": "att_123",
+    "id": "participant_123",
     "eventId": "evt_cm123456789",
     "userId": "usr_cm987654321",
+    "checkedInAt": "2025-08-15T10:15:00.000Z",
+    "status": "CHECKED_IN",
     "user": {
       "id": "usr_cm987654321",
-      "displayName": "John Doe",
+      "fullName": "John Doe",
+      "email": "john@example.com",
       "profilePicture": "https://cdn.berse.com/users/john.jpg"
-    },
-    "checkedInAt": "2025-08-15T10:15:00.000Z"
+    }
   }
 }
 ```
@@ -1228,21 +1319,25 @@ Check in an attendee at the event (via user ID or QR code scan).
 **Error Responses:**
 - `400 Bad Request` - User ID or QR code required, invalid QR code, already checked in, QR code for different event
 - `401 Unauthorized` - Invalid or missing token
-- `404 Not Found` - Event not found, RSVP/ticket not found
+- `404 Not Found` - Event not found, participant record/ticket not found
 
 **Check-In Flow:**
 1. Event staff scans attendee's QR code or enters user ID
-2. System verifies QR code JWT signature and expiration
-3. System validates RSVP/ticket exists and matches event
-4. System checks for duplicate check-ins
-5. System creates attendance record
-6. Returns confirmation with attendee details
+2. System verifies QR code JWT signature and expiration (if QR method)
+3. System validates EventParticipant or EventTicket exists for this event
+4. System checks participant not already checked in (`checkedInAt` is null)
+5. System updates EventParticipant: `checkedInAt = now()`, `status = CHECKED_IN`
+6. System triggers trust score update for the user (event attendance component)
+7. Returns confirmation with participant details
+
+**Automatic Trust Score Update:**
+After successful check-in, the attendee's trust score is automatically recalculated to include their event attendance in the activity component (30% of total trust score). This happens asynchronously and doesn't block the check-in response.
 
 ---
 
 ### Get Event Attendees
 
-Get list of all attendees who have checked in to an event.
+Get list of all participants who have checked in to an event (EventParticipant records where `checkedInAt IS NOT NULL`).
 
 **Endpoint:** `GET /v2/events/:id/attendees`
 
@@ -1251,33 +1346,42 @@ Get list of all attendees who have checked in to an event.
 **Path Parameters:**
 - `id` (required): Event ID
 
+**Database Changes:**
+- **Before:** Queried `EventAttendance` table
+- **Now:** Queries `EventParticipant` WHERE `checkedInAt IS NOT NULL`
+- Returns same data structure for compatibility
+
 **Response:** `200 OK`
 ```json
 {
   "status": "success",
-  "message": "Attendees retrieved successfully",
+  "message": "Checked-in participants retrieved successfully",
   "data": [
     {
-      "id": "att_123",
+      "id": "participant_123",
       "eventId": "evt_cm123456789",
       "userId": "usr_cm987654321",
+      "checkedInAt": "2025-08-15T10:15:00.000Z",
+      "status": "CHECKED_IN",
       "user": {
         "id": "usr_cm987654321",
-        "displayName": "John Doe",
+        "fullName": "John Doe",
+        "email": "john@example.com",
         "profilePicture": "https://cdn.berse.com/users/john.jpg"
-      },
-      "checkedInAt": "2025-08-15T10:15:00.000Z"
+      }
     },
     {
-      "id": "att_124",
+      "id": "participant_124",
       "eventId": "evt_cm123456789",
       "userId": "usr_cm876543210",
+      "checkedInAt": "2025-08-15T10:20:00.000Z",
+      "status": "CHECKED_IN",
       "user": {
         "id": "usr_cm876543210",
-        "displayName": "Jane Smith",
+        "fullName": "Jane Smith",
+        "email": "jane@example.com",
         "profilePicture": "https://cdn.berse.com/users/jane.jpg"
-      },
-      "checkedInAt": "2025-08-15T10:20:00.000Z"
+      }
     }
   ]
 }
@@ -1287,6 +1391,12 @@ Get list of all attendees who have checked in to an event.
 - `401 Unauthorized` - Invalid or missing token
 - `403 Forbidden` - Not authorized to view attendees
 - `404 Not Found` - Event not found
+
+**Additional Information:**
+- Results sorted by `checkedInAt` descending (most recent first)
+- Only shows participants who actually checked in (not just registered)
+- Use `GET /v2/events/:id` to see all registrations (participantsPreview field)
+- For analytics, compare `totalParticipants` vs `totalCheckedIn` in event stats
 
 ---
 

@@ -324,9 +324,30 @@ router.post(
  *                               checkedInAt:
  *                                 type: string
  *                                 format: date-time
+ *                         participantsPreview:
+ *                           type: array
+ *                           description: Preview of first 5 participants (most recent registrations)
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               fullName:
+ *                                 type: string
+ *                               username:
+ *                                 type: string
+ *                               profilePicture:
+ *                                 type: string
+ *                               createdAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                               status:
+ *                                 type: string
+ *                                 enum: [REGISTERED, WAITLISTED, CONFIRMED, CHECKED_IN, CANCELED]
  *                         rsvpsPreview:
  *                           type: array
- *                           description: Preview of first 5 RSVPs (most recent)
+ *                           description: (DEPRECATED - Use participantsPreview) Preview of first 5 RSVPs
+ *                           deprecated: true
  *                           items:
  *                             type: object
  *                             properties:
@@ -344,17 +365,27 @@ router.post(
  *                         stats:
  *                           type: object
  *                           properties:
- *                             totalAttendees:
+ *                             totalParticipants:
  *                               type: integer
- *                             totalRsvps:
+ *                               description: Total number of registered participants
+ *                             totalCheckedIn:
  *                               type: integer
+ *                               description: Total number of participants who checked in
  *                             totalTicketsSold:
  *                               type: integer
  *                             totalTicketTiers:
  *                               type: integer
  *                             attendanceRate:
  *                               type: integer
- *                               description: Percentage of RSVPs who actually attended (0-100)
+ *                               description: Percentage of participants who actually checked in (0-100)
+ *                             totalAttendees:
+ *                               type: integer
+ *                               description: (DEPRECATED - Use totalCheckedIn) Total checked-in attendees
+ *                               deprecated: true
+ *                             totalRsvps:
+ *                               type: integer
+ *                               description: (DEPRECATED - Use totalParticipants) Total registrations
+ *                               deprecated: true
  *       404:
  *         description: Event not found
  */
@@ -779,7 +810,11 @@ router.get(
  * /v2/events/{id}/rsvp:
  *   post:
  *     summary: RSVP to event
- *     description: RSVP to a free event
+ *     description: |
+ *       Register for a free event. Creates an EventParticipant record with status=REGISTERED.
+ *       For paid events, use the ticket purchase endpoint instead.
+ *       
+ *       **Database Change:** Now creates EventParticipant instead of EventRsvp.
  *     tags: [Events - RSVP]
  *     security:
  *       - bearerAuth: []
@@ -791,9 +826,36 @@ router.get(
  *           type: string
  *     responses:
  *       201:
- *         description: RSVP created successfully
+ *         description: |
+ *           Participant record created successfully. Response includes participant status and QR code token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Participant ID
+ *                     userId:
+ *                       type: string
+ *                     eventId:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [REGISTERED, WAITLISTED, CONFIRMED, CHECKED_IN, CANCELED]
+ *                     qrCode:
+ *                       type: string
+ *                       description: Secure token for QR code generation
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
  *       400:
- *         description: Already RSVP'd or event is at capacity
+ *         description: Already registered or event is at capacity
  */
 router.post(
   '/:id/rsvp',
@@ -808,7 +870,11 @@ router.post(
  * /v2/events/{id}/rsvp:
  *   delete:
  *     summary: Cancel RSVP
- *     description: Cancel RSVP to an event
+ *     description: |
+ *       Cancel registration for an event. Updates EventParticipant status to CANCELED.
+ *       
+ *       **Database Change:** Now updates participant status instead of deleting EventRsvp record.
+ *       This preserves history and allows for re-registration analytics.
  *     tags: [Events - RSVP]
  *     security:
  *       - bearerAuth: []
@@ -820,7 +886,7 @@ router.post(
  *           type: string
  *     responses:
  *       200:
- *         description: RSVP cancelled successfully
+ *         description: Participant registration cancelled successfully (status set to CANCELED)
  */
 router.delete(
   '/:id/rsvp',
@@ -835,13 +901,58 @@ router.delete(
  * /v2/events/rsvps/my-rsvps:
  *   get:
  *     summary: Get my RSVPs
- *     description: Retrieve all RSVPs made by the authenticated user
+ *     description: |
+ *       Retrieve all event registrations (EventParticipant records) for the authenticated user.
+ *       Includes status information (REGISTERED, CHECKED_IN, CANCELED, etc.).
+ *       
+ *       **Database Change:** Now returns EventParticipant records instead of EventRsvp.
  *     tags: [Events - RSVP]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: RSVPs retrieved successfully
+ *         description: Participant records retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       userId:
+ *                         type: string
+ *                       eventId:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [REGISTERED, WAITLISTED, CONFIRMED, CHECKED_IN, CANCELED]
+ *                       qrCode:
+ *                         type: string
+ *                       checkedInAt:
+ *                         type: string
+ *                         format: date-time
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       event:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           location:
+ *                             type: string
  */
 router.get(
   '/rsvps/my-rsvps',
@@ -853,8 +964,12 @@ router.get(
  * @swagger
  * /v2/events/rsvps/{rsvpId}/qr-code:
  *   get:
- *     summary: Generate QR code for RSVP
- *     description: Generate a secure, time-limited QR code for event check-in. QR codes are generated on-demand with JWT tokens.
+ *     summary: Generate QR code for participant
+ *     description: |
+ *       Generate a secure, time-limited QR code for event check-in. QR codes are generated on-demand with JWT tokens.
+ *       
+ *       **Database Change:** Now uses EventParticipant.id instead of EventRsvp.id.
+ *       The QR code contains the participantId and secure token from EventParticipant.qrCode field.
  *     tags: [Events - RSVP]
  *     security:
  *       - bearerAuth: []
@@ -864,7 +979,7 @@ router.get(
  *         required: true
  *         schema:
  *           type: string
- *         description: RSVP ID
+ *         description: Participant ID (was RSVP ID, now EventParticipant.id)
  *     responses:
  *       200:
  *         description: QR code generated successfully
@@ -875,11 +990,11 @@ router.get(
  *               properties:
  *                 qrCode:
  *                   type: string
- *                   description: Base64 encoded QR code image (Data URL)
+ *                   description: Base64 encoded QR code image (Data URL) containing JWT with participantId
  *       403:
- *         description: Not authorized to access this RSVP
+ *         description: Not authorized to access this participant record
  *       404:
- *         description: RSVP not found
+ *         description: Participant record not found
  */
 router.get(
   '/rsvps/:rsvpId/qr-code',
@@ -904,9 +1019,12 @@ router.get(
  *       to include their event attendance in the activity component (30% of total trust score).
  *       
  *       **Requirements:**
- *       - User must have an active RSVP or valid ticket
+ *       - User must have an active EventParticipant record or valid ticket
  *       - QR code must be valid JWT token (if using QR method)
  *       - User cannot check in twice to the same event
+ *       
+ *       **Database Change:** Now updates EventParticipant.checkedInAt and status=CHECKED_IN
+ *       instead of creating separate EventAttendance record.
  *     tags: [Events - Attendance]
  *     security:
  *       - bearerAuth: []
@@ -947,7 +1065,11 @@ router.post(
  * /v2/events/{id}/attendees:
  *   get:
  *     summary: Get event attendees
- *     description: Retrieve all attendees who have checked in to an event
+ *     description: |
+ *       Retrieve all participants who have checked in to an event.
+ *       
+ *       **Database Change:** Now queries EventParticipant records where checkedInAt IS NOT NULL
+ *       instead of querying EventAttendance table.
  *     tags: [Events - Attendance]
  *     security:
  *       - bearerAuth: []
@@ -959,7 +1081,40 @@ router.post(
  *           type: string
  *     responses:
  *       200:
- *         description: Attendees retrieved successfully
+ *         description: Checked-in participants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: Participant ID
+ *                       eventId:
+ *                         type: string
+ *                       userId:
+ *                         type: string
+ *                       checkedInAt:
+ *                         type: string
+ *                         format: date-time
+ *                       user:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           profilePicture:
+ *                             type: string
  */
 router.get(
   '/:id/attendees',
