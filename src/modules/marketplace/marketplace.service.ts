@@ -150,7 +150,7 @@ export class MarketplaceService {
     return this.formatListingResponse(listing);
   }
 
-  async getListing(listingId: string): Promise<ListingResponse> {
+  async getListing(listingId: string, userId?: string): Promise<ListingResponse> {
     const listing = await prisma.marketplaceListing.findUnique({
       where: { id: listingId },
       include: {
@@ -183,10 +183,81 @@ export class MarketplaceService {
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : undefined;
 
+    // Check if listing is in user's cart
+    let isInCart = false;
+    if (userId) {
+      const cartItem = await prisma.marketplaceCartItem.findFirst({
+        where: {
+          userId,
+          listingId
+        }
+      });
+      isInCart = !!cartItem;
+    }
+
+    // Get other listings from same seller (max 6)
+    const otherListingsFromSeller = await prisma.marketplaceListing.findMany({
+      where: {
+        userId: listing.userId,
+        id: { not: listingId },
+        status: ListingStatus.ACTIVE
+      },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        images: true,
+        status: true,
+        location: true,
+        category: true,
+        createdAt: true
+      },
+      take: 6,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Get similar listings (same category, different seller, exclude current user)
+    const similarWhere: any = {
+      category: listing.category,
+      id: { not: listingId },
+      userId: { not: listing.userId },
+      status: ListingStatus.ACTIVE
+    };
+    
+    // Also exclude authenticated user's own listings from similar listings
+    if (userId && userId !== listing.userId) {
+      similarWhere.AND = [
+        { userId: { not: listing.userId } },
+        { userId: { not: userId } }
+      ];
+      delete similarWhere.userId;
+    }
+
+    const similarListings = await prisma.marketplaceListing.findMany({
+      where: similarWhere,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        images: true,
+        status: true,
+        location: true,
+        category: true,
+        createdAt: true
+      },
+      take: 6,
+      orderBy: { createdAt: 'desc' }
+    });
+
     return {
       ...this.formatListingResponse(listing),
       averageRating,
-      totalReviews: reviews.length
+      totalReviews: reviews.length,
+      isInCart,
+      otherListingsFromSeller: otherListingsFromSeller.map(l => this.formatListingPreview(l)),
+      similarListings: similarListings.map(l => this.formatListingPreview(l))
     };
   }
 
@@ -199,6 +270,7 @@ export class MarketplaceService {
       location,
       status,
       sellerId,
+      excludeUserId,
       page = 1,
       limit = 20,
       sortBy = 'createdAt',
@@ -218,6 +290,7 @@ export class MarketplaceService {
 
     if (category) where.category = category;
     if (sellerId) where.userId = sellerId;
+    if (excludeUserId) where.userId = { not: excludeUserId };
     if (location) where.location = { contains: location, mode: 'insensitive' };
     
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -1640,6 +1713,19 @@ export class MarketplaceService {
       ...listing,
       images,
       seller: listing.user
+    };
+  }
+
+  private formatListingPreview(listing: any): any {
+    // Convert image keys to full URLs
+    const { storageService } = require('../../services/storage.service');
+    const images = listing.images?.map((key: string) => 
+      key.startsWith('http') ? key : storageService.getPublicUrl(key)
+    ) || [];
+
+    return {
+      ...listing,
+      images
     };
   }
 

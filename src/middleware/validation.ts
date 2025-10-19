@@ -32,8 +32,30 @@ export const xssProtection = (
   _res: Response,
   next: NextFunction
 ): void => {
+  // Fields that should NOT be HTML-encoded (storage keys, paths, URLs, etc.)
+  const skipFields = new Set([
+    'images',
+    'image',
+    'imageUrl',
+    'imageUrls',
+    'imageKey',
+    'imageKeys',
+    'filePath',
+    'fileKey',
+    'avatar',
+    'profilePicture',
+    'coverImage',
+    'qrCode',
+    'qrCodeUrl',
+  ]);
+
   // Sanitize common fields susceptible to XSS
-  const sanitizeValue = (value: any): any => {
+  const sanitizeValue = (value: any, fieldName?: string): any => {
+    // Skip sanitization for storage-related fields
+    if (fieldName && skipFields.has(fieldName)) {
+      return value;
+    }
+
     if (typeof value === 'string') {
       return value
         .replace(/</g, '&lt;')
@@ -44,12 +66,16 @@ export const xssProtection = (
         .trim();
     }
     if (Array.isArray(value)) {
-      return value.map(sanitizeValue);
+      // If this is a storage-related array, skip sanitization for its items
+      if (fieldName && skipFields.has(fieldName)) {
+        return value;
+      }
+      return value.map((item) => sanitizeValue(item));
     }
     if (typeof value === 'object' && value !== null) {
       const sanitized: any = {};
       for (const key in value) {
-        sanitized[key] = sanitizeValue(value[key]);
+        sanitized[key] = sanitizeValue(value[key], key);
       }
       return sanitized;
     }

@@ -132,7 +132,8 @@ export class MarketplaceController {
   async getListing(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const listing = await marketplaceService.getListing(id);
+      const userId = (req as any).user?.userId;
+      const listing = await marketplaceService.getListing(id, userId);
 
       res.json({
         success: true,
@@ -152,6 +153,7 @@ export class MarketplaceController {
    */
   async searchListings(req: Request, res: Response) {
     try {
+      const userId = (req as any).user?.userId;
       const params: SearchListingsParams = {
         query: req.query.query as string,
         category: req.query.category as string,
@@ -160,6 +162,7 @@ export class MarketplaceController {
         location: req.query.location as string,
         status: req.query.status as any,
         sellerId: req.query.sellerId as string,
+        excludeUserId: userId,
         page: req.query.page ? parseInt(req.query.page as string) : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
         sortBy: req.query.sortBy as any,

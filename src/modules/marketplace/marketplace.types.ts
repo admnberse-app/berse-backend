@@ -109,6 +109,18 @@ export interface OrderFilters {
 
 // ============= RESPONSE TYPES =============
 
+export interface ListingPreview {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+  images: string[];
+  status: ListingStatus;
+  location?: string;
+  category?: string;
+  createdAt: Date;
+}
+
 export interface ListingResponse extends MarketplaceListing {
   seller: {
     id: string;
@@ -119,6 +131,9 @@ export interface ListingResponse extends MarketplaceListing {
   priceHistory?: ListingPriceHistory[];
   averageRating?: number;
   totalReviews?: number;
+  isInCart?: boolean;
+  otherListingsFromSeller?: ListingPreview[];
+  similarListings?: ListingPreview[];
 }
 
 export interface OrderResponse extends MarketplaceOrder {
@@ -276,6 +291,7 @@ export interface SearchListingsParams extends PaginationParams {
   location?: string;
   status?: ListingStatus;
   sellerId?: string;
+  excludeUserId?: string;
 }
 
 // ============= NOTIFICATIONS =============
