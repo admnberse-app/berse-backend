@@ -1700,6 +1700,102 @@ export class MarketplaceService {
     };
   }
 
+  /**
+   * Get general marketplace statistics
+   */
+  async getMarketplaceStats(userId?: string): Promise<MarketplaceStats> {
+    // Get total listings count
+    const totalListings = await prisma.marketplaceListing.count();
+
+    // Get active listings count
+    const activeListings = await prisma.marketplaceListing.count({
+      where: { status: ListingStatus.ACTIVE }
+    });
+
+    // Get total orders count
+    const totalOrders = await prisma.marketplaceOrder.count();
+
+    // Get total revenue (successful payments only)
+    const revenueData = await prisma.marketplaceOrder.aggregate({
+      where: {
+        paymentStatus: PaymentStatus.SUCCEEDED
+      },
+      _sum: {
+        totalAmount: true
+      },
+      _avg: {
+        totalAmount: true
+      }
+    });
+
+    const totalRevenue = revenueData._sum.totalAmount || 0;
+    const averageOrderValue = revenueData._avg.totalAmount || 0;
+
+    // Get top categories
+    const categoryStats = await prisma.marketplaceListing.groupBy({
+      by: ['category'],
+      where: {
+        category: { not: null },
+        status: { in: [ListingStatus.ACTIVE, ListingStatus.SOLD] }
+      },
+      _count: {
+        category: true
+      },
+      orderBy: {
+        _count: {
+          category: 'desc'
+        }
+      },
+      take: 5
+    });
+
+    // Get revenue per category
+    const categoryRevenue = await prisma.marketplaceOrder.groupBy({
+      by: ['listingId'],
+      where: {
+        paymentStatus: PaymentStatus.SUCCEEDED
+      },
+      _sum: {
+        totalAmount: true
+      }
+    });
+
+    // Map listings to categories for revenue calculation
+    const listingCategories = await prisma.marketplaceListing.findMany({
+      where: {
+        id: { in: categoryRevenue.map(cr => cr.listingId) }
+      },
+      select: {
+        id: true,
+        category: true
+      }
+    });
+
+    const categoryRevenueMap = new Map<string, number>();
+    categoryRevenue.forEach(cr => {
+      const listing = listingCategories.find(l => l.id === cr.listingId);
+      if (listing?.category) {
+        const current = categoryRevenueMap.get(listing.category) || 0;
+        categoryRevenueMap.set(listing.category, current + (cr._sum.totalAmount || 0));
+      }
+    });
+
+    const topCategories = categoryStats.map(cat => ({
+      category: cat.category || 'Uncategorized',
+      count: cat._count.category,
+      revenue: categoryRevenueMap.get(cat.category || '') || 0
+    }));
+
+    return {
+      totalListings,
+      activeListings,
+      totalOrders,
+      totalRevenue,
+      averageOrderValue,
+      topCategories
+    };
+  }
+
   // ============= HELPER METHODS =============
 
   private formatListingResponse(listing: any): ListingResponse {

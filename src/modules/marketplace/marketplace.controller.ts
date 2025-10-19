@@ -693,6 +693,67 @@ export class MarketplaceController {
 
   /**
    * @swagger
+   * /v2/marketplace/stats:
+   *   get:
+   *     summary: Get general marketplace statistics
+   *     tags: [Marketplace]
+   *     responses:
+   *       200:
+   *         description: Marketplace statistics retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     totalListings:
+   *                       type: integer
+   *                       example: 1250
+   *                     activeListings:
+   *                       type: integer
+   *                       example: 856
+   *                     totalOrders:
+   *                       type: integer
+   *                       example: 523
+   *                     totalRevenue:
+   *                       type: number
+   *                       example: 125430.50
+   *                     averageOrderValue:
+   *                       type: number
+   *                       example: 239.75
+   *                     topCategories:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           category:
+   *                             type: string
+   *                           count:
+   *                             type: integer
+   *                           revenue:
+   *                             type: number
+   */
+  async getMarketplaceStats(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      const stats = await marketplaceService.getMarketplaceStats(userId);
+
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
    * /api/v2/marketplace/stats/seller:
    *   get:
    *     summary: Get seller statistics

@@ -761,10 +761,60 @@ curl -X POST "https://api.bersemuka.com/v2/marketplace/upload-images" \
 
 ## Stats
 
+### Get Marketplace Stats
+**GET** `/stats`
+- **Auth Required:** No
+- **Description:** Get general marketplace statistics (public endpoint)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalListings": 1250,
+    "activeListings": 856,
+    "totalOrders": 523,
+    "totalRevenue": 125430.50,
+    "averageOrderValue": 239.75,
+    "topCategories": [
+      {
+        "category": "Electronics",
+        "count": 230,
+        "revenue": 45230.50
+      },
+      {
+        "category": "Fashion",
+        "count": 180,
+        "revenue": 32450.75
+      },
+      {
+        "category": "Home & Living",
+        "count": 150,
+        "revenue": 28340.25
+      },
+      {
+        "category": "Books",
+        "count": 120,
+        "revenue": 8450.00
+      },
+      {
+        "category": "Sports",
+        "count": 95,
+        "revenue": 12960.00
+      }
+    ]
+  }
+}
+```
+
+**Use Case:** Display marketplace overview, dashboard widgets, admin analytics
+
+---
+
 ### Get Seller Stats
 **GET** `/stats/seller`
 - **Auth Required:** Yes
-- **Description:** Get seller statistics for dashboard
+- **Description:** Get seller statistics for seller dashboard
 
 **Response:**
 ```json
@@ -784,10 +834,14 @@ curl -X POST "https://api.bersemuka.com/v2/marketplace/upload-images" \
 }
 ```
 
+**Use Case:** Seller dashboard, performance tracking
+
+---
+
 ### Get Buyer Stats
 **GET** `/stats/buyer`
 - **Auth Required:** Yes
-- **Description:** Get buyer statistics for dashboard
+- **Description:** Get buyer statistics for buyer dashboard
 
 **Response:**
 ```json
@@ -802,6 +856,8 @@ curl -X POST "https://api.bersemuka.com/v2/marketplace/upload-images" \
   }
 }
 ```
+
+**Use Case:** Buyer dashboard, purchase history summary
 
 ---
 

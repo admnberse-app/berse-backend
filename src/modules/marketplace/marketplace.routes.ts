@@ -276,6 +276,22 @@ router.put(
 
 // ============= STATS ROUTES =============
 
+/**
+ * @swagger
+ * /v2/marketplace/stats:
+ *   get:
+ *     summary: Get general marketplace statistics
+ *     description: Returns overall marketplace statistics including total listings, orders, revenue, and top categories
+ *     tags: [Marketplace]
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ */
+router.get(
+  '/stats',
+  marketplaceController.getMarketplaceStats.bind(marketplaceController)
+);
+
 router.get(
   '/stats/seller',
   authenticateToken,
