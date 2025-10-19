@@ -1,4 +1,4 @@
-import { EventType, EventStatus, EventHostType, EventTicketStatus } from '@prisma/client';
+import { EventType, EventStatus, EventHostType, EventTicketStatus, EventParticipantStatus } from '@prisma/client';
 
 // ============================================================================
 // EVENT REQUEST TYPES
@@ -114,7 +114,41 @@ export interface TicketFilters {
 }
 
 // ============================================================================
-// RSVP TYPES
+// PARTICIPANT TYPES (Replaces RSVP + Attendance)
+// ============================================================================
+
+export interface CreateParticipantRequest {
+  eventId: string;
+}
+
+export interface ParticipantResponse {
+  id: string;
+  userId: string;
+  eventId: string;
+  status: EventParticipantStatus;
+  qrCode: string;
+  checkedInAt?: Date;
+  canceledAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  event?: {
+    id: string;
+    title: string;
+    date: Date;
+    location: string;
+    type: EventType;
+  };
+  user?: {
+    id: string;
+    fullName: string;
+    username?: string;
+    email: string;
+    profilePicture?: string;
+  };
+}
+
+// ============================================================================
+// RSVP TYPES (DEPRECATED - Use ParticipantResponse)
 // ============================================================================
 
 export interface CreateRsvpRequest {
@@ -135,7 +169,7 @@ export interface RsvpResponse {
 }
 
 // ============================================================================
-// ATTENDANCE TYPES
+// ATTENDANCE TYPES (DEPRECATED - Use ParticipantResponse with checkedInAt)
 // ============================================================================
 
 export interface CheckInRequest {
@@ -199,15 +233,15 @@ export interface EventResponse {
     imageUrl?: string;
   };
   _count?: {
-    eventRsvps: number;
-    eventAttendances: number;
+    eventParticipants: number;
     eventTickets: number;
     tier: number;
   };
   ticketTiers?: TicketTierResponse[];
-  userRsvp?: RsvpResponse;
+  userParticipant?: ParticipantResponse;
   userTicket?: TicketResponse;
-  hasRsvped?: boolean;
+  userRsvp?: RsvpResponse; // DEPRECATED: Use userParticipant
+  hasRsvped?: boolean; // DEPRECATED: Check userParticipant existence
   hasTicket?: boolean;
   isOwner?: boolean;
   attendeesPreview?: Array<{
@@ -217,19 +251,29 @@ export interface EventResponse {
     profilePicture?: string;
     checkedInAt: Date;
   }>;
+  participantsPreview?: Array<{
+    id: string;
+    fullName: string;
+    username?: string;
+    profilePicture?: string;
+    createdAt: Date;
+    status: EventParticipantStatus;
+  }>;
   rsvpsPreview?: Array<{
     id: string;
     fullName: string;
     username?: string;
     profilePicture?: string;
     rsvpedAt: Date;
-  }>;
+  }>; // DEPRECATED: Use participantsPreview
   stats?: {
-    totalAttendees: number;
-    totalRsvps: number;
+    totalParticipants: number;
+    totalCheckedIn: number;
     totalTicketsSold: number;
     totalTicketTiers: number;
     attendanceRate: number;
+    totalAttendees: number; // DEPRECATED: Use totalParticipants
+    totalRsvps: number; // DEPRECATED: Use totalParticipants
   };
 }
 
@@ -258,15 +302,14 @@ export interface TicketResponse {
   id: string;
   eventId: string;
   userId: string;
+  participantId: string;
   ticketTierId?: string;
   ticketType: string;
   price: number;
   currency: string;
   status: EventTicketStatus;
   ticketNumber: string;
-  quantity: number;
   purchasedAt: Date;
-  checkedInAt?: Date;
   canceledAt?: Date;
   refundedAt?: Date;
   attendeeName?: string;
@@ -275,6 +318,7 @@ export interface TicketResponse {
   
   // Relations (optional)
   event?: EventResponse;
+  participant?: ParticipantResponse;
   tier?: TicketTierResponse;
   user?: {
     id: string;

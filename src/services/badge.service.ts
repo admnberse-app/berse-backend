@@ -16,7 +16,7 @@ export class BadgeService {
       include: { badges: true },
     });
 
-    const eventRsvps = await prisma.eventRsvp.findMany({
+    const eventParticipants = await prisma.eventParticipant.findMany({
       where: { userId },
       include: { events: true },
     });
@@ -50,34 +50,34 @@ export class BadgeService {
     const earnedBadgeTypes = userBadges.map((ub: any) => ub.badges.type);
 
     // Check for First Face badge - First event attended
-    if (!earnedBadgeTypes.includes(BadgeType.FIRST_FACE) && eventRsvps.length >= 1) {
+    if (!earnedBadgeTypes.includes(BadgeType.FIRST_FACE) && eventParticipants.length >= 1) {
       await this.awardBadge(userId, BadgeType.FIRST_FACE);
     }
 
     // Check for Cafe Friend badge - Attend 3+ cafe meetups
-    const cafeEvents = eventRsvps.filter((rsvp: any) => rsvp.events.type === 'CAFE_MEETUP');
+    const cafeEvents = eventParticipants.filter((p: any) => p.events.type === 'CAFE_MEETUP');
     if (!earnedBadgeTypes.includes(BadgeType.CAFE_FRIEND) && cafeEvents.length >= 3) {
       await this.awardBadge(userId, BadgeType.CAFE_FRIEND);
     }
 
         // Check for Sukan Squad MVP badge - Attend 5+ sports events
-    const sportsEvents = eventRsvps.filter((rsvp: any) =>
-      rsvp.events.type === 'SPORTS'
+    const sportsEvents = eventParticipants.filter((p: any) =>
+      p.events.type === 'SPORTS'
     );
     if (!earnedBadgeTypes.includes(BadgeType.SUKAN_SQUAD_MVP) && sportsEvents.length >= 5) {
       await this.awardBadge(userId, BadgeType.SUKAN_SQUAD_MVP);
     }
 
         // Check for Soul Nourisher badge - Attend 5+ spiritual events
-    const spiritualEvents = eventRsvps.filter((rsvp: any) =>
-      rsvp.events.type === 'ILM'
+    const spiritualEvents = eventParticipants.filter((p: any) =>
+      p.events.type === 'ILM'
     );
     if (!earnedBadgeTypes.includes(BadgeType.SOUL_NOURISHER) && spiritualEvents.length >= 5) {
       await this.awardBadge(userId, BadgeType.SOUL_NOURISHER);
     }
 
     // Check for Helpers Hand badge - Volunteer at 3+ events
-    const volunteerEvents = eventRsvps.filter((rsvp: any) => rsvp.events.type === 'VOLUNTEER');
+    const volunteerEvents = eventParticipants.filter((p: any) => p.events.type === 'VOLUNTEER');
     if (!earnedBadgeTypes.includes(BadgeType.HELPERS_HAND) && volunteerEvents.length >= 3) {
       await this.awardBadge(userId, BadgeType.HELPERS_HAND);
     }
@@ -111,7 +111,7 @@ export class BadgeService {
 
     // Check for Local Guide badge - Attend events in 5+ different locations
     const uniqueLocations = new Set(
-      eventRsvps.map((rsvp: any) => rsvp.events.location).filter(Boolean)
+      eventParticipants.map((p: any) => p.events.location).filter(Boolean)
     );
     if (!earnedBadgeTypes.includes(BadgeType.LOCAL_GUIDE) && uniqueLocations.size >= 5) {
       await this.awardBadge(userId, BadgeType.LOCAL_GUIDE);
@@ -150,10 +150,11 @@ export class BadgeService {
     const fourWeeksAgo = new Date();
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - (requiredWeeks * 7));
 
-    const attendances = await prisma.eventAttendance.findMany({
+    const participants = await prisma.eventParticipant.findMany({
       where: {
         userId,
         checkedInAt: {
+          not: null,
           gte: fourWeeksAgo,
         },
       },
@@ -162,12 +163,12 @@ export class BadgeService {
       },
     });
 
-    if (attendances.length < requiredWeeks) return false;
+    if (participants.length < requiredWeeks) return false;
 
     // Check for consecutive weeks
     const weekSet = new Set<number>();
-    attendances.forEach((attendance) => {
-      const weekNumber = this.getWeekNumber(attendance.checkedInAt);
+    participants.forEach((participant) => {
+      const weekNumber = this.getWeekNumber(participant.checkedInAt!);
       weekSet.add(weekNumber);
     });
 
@@ -299,17 +300,17 @@ export class BadgeService {
   ): Promise<{ current: number; required: number }> {
     switch (badgeType) {
       case BadgeType.FIRST_FACE: {
-        const count = await prisma.eventRsvp.count({ where: { userId } });
+        const count = await prisma.eventParticipant.count({ where: { userId } });
         return { current: count, required: 1 };
       }
       case BadgeType.CAFE_FRIEND: {
-        const count = await prisma.eventRsvp.count({
+        const count = await prisma.eventParticipant.count({
           where: { userId, events: { type: 'CAFE_MEETUP' } },
         });
         return { current: count, required: 3 };
       }
       case BadgeType.SUKAN_SQUAD_MVP: {
-        const count = await prisma.eventRsvp.count({
+        const count = await prisma.eventParticipant.count({
           where: {
             userId,
             events: { type: 'SPORTS' },
@@ -318,7 +319,7 @@ export class BadgeService {
         return { current: count, required: 5 };
       }
       case BadgeType.SOUL_NOURISHER: {
-        const count = await prisma.eventRsvp.count({
+        const count = await prisma.eventParticipant.count({
           where: {
             userId,
             events: { type: 'ILM' },
@@ -327,7 +328,7 @@ export class BadgeService {
         return { current: count, required: 5 };
       }
       case BadgeType.HELPERS_HAND: {
-        const count = await prisma.eventRsvp.count({
+        const count = await prisma.eventParticipant.count({
           where: { userId, events: { type: 'VOLUNTEER' } },
         });
         return { current: count, required: 3 };
@@ -364,14 +365,20 @@ export class BadgeService {
         // Simplified: check weeks with attendance
         const fourWeeksAgo = new Date();
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-        const attendances = await prisma.eventAttendance.findMany({
-          where: { userId, checkedInAt: { gte: fourWeeksAgo } },
+        const participants = await prisma.eventParticipant.findMany({
+          where: { 
+            userId, 
+            checkedInAt: { 
+              not: null,
+              gte: fourWeeksAgo 
+            } 
+          },
         });
-        const weekSet = new Set(attendances.map((a) => this.getWeekNumber(a.checkedInAt)));
+        const weekSet = new Set(participants.map((p) => this.getWeekNumber(p.checkedInAt!)));
         return { current: weekSet.size, required: 4 };
       }
       case BadgeType.LOCAL_GUIDE: {
-        const rsvps = await prisma.eventRsvp.findMany({
+        const rsvps = await prisma.eventParticipant.findMany({
           where: { userId },
           include: { events: { select: { location: true } } },
         });

@@ -111,7 +111,7 @@ export class UserController {
           _count: {
             select: {
               events: true,
-              eventRsvps: true,
+              eventParticipants: true,
               referralsAsReferrer: true,
               userBadges: true,
               connectionsInitiated: true,
@@ -959,36 +959,97 @@ export class UserController {
           username: true,
           role: true,
           totalPoints: true,
+          trustScore: true,
+          trustLevel: true,
           createdAt: true,
           profile: {
             select: {
               profilePicture: true,
               bio: true,
+              shortBio: true,
               interests: true,
               languages: true,
               profession: true,
+              occupation: true,
+              age: true,
+              gender: true,
+              personalityType: true,
+              travelStyle: true,
+              instagramHandle: true,
+              linkedinHandle: true,
             },
           },
           location: {
             select: {
               currentCity: true,
               originallyFrom: true,
+              countryOfResidence: true,
+              nationality: true,
             },
           },
-                      _count: {
-              select: {
-                events: true,
-                eventRsvps: true,
-                userBadges: true,
-                connectionsInitiated: true,
-                connectionsReceived: true,
-              },
+          _count: {
+            select: {
+              events: true,
+              eventParticipants: true,
+              userBadges: true,
+              connectionsInitiated: true,
+              connectionsReceived: true,
             },
+          },
           connectionStats: {
             select: {
               totalConnections: true,
               averageRating: true,
               connectionQuality: true,
+            },
+          },
+          // Include actual data for detailed display
+          eventParticipants: {
+            where: {
+              status: 'CHECKED_IN',
+            },
+            select: {
+              id: true,
+              eventId: true,
+              status: true,
+              qrCode: true,
+              checkedInAt: true,
+              events: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  type: true,
+                  images: true,
+                  date: true,
+                  location: true,
+                  mapLink: true,
+                },
+              },
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          userBadges: {
+            select: {
+              id: true,
+              badgeId: true,
+              badges: {
+                select: {
+                  id: true,
+                  type: true,
+                  name: true,
+                  description: true,
+                  criteria: true,
+                  imageUrl: true,
+                },
+              },
+              earnedAt: true,
+            },
+            orderBy: {
+              earnedAt: 'desc',
             },
           },
         },
@@ -998,15 +1059,133 @@ export class UserController {
         throw new AppError('User not found', 404);
       }
 
-      // Transform response to have cleaner count names
-      const transformedUser = UserController.transformUserResponse(user);
+      // Fetch communities the user is a member of
+      const communities = await prisma.communityMember.findMany({
+        where: {
+          userId: id,
+          isApproved: true,
+        },
+        select: {
+          id: true,
+          role: true,
+          joinedAt: true,
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              category: true,
+              imageUrl: true,
+              isVerified: true,
+            },
+          },
+        },
+        orderBy: {
+          joinedAt: 'desc',
+        },
+      });
 
-      sendSuccess(res, transformedUser);
+      // Fetch marketplace listings
+      const marketplaceListings = await prisma.marketplaceListing.findMany({
+        where: {
+          userId: id,
+          status: 'ACTIVE',
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          price: true,
+          currency: true,
+          quantity: true,
+          images: true,
+          status: true,
+          location: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Transform response with expanded details
+      const transformedUser = {
+        ...user,
+        // Events attended
+        eventsAttended: {
+          count: user.eventParticipants.length,
+          events: user.eventParticipants.map(participant => ({
+            id: participant.events.id,
+            title: participant.events.title,
+            description: participant.events.description,
+            type: participant.events.type,
+            eventImage: participant.events.images?.[0] || null,
+            date: participant.events.date,
+            location: participant.events.location,
+            mapLink: participant.events.mapLink,
+            participationDate: participant.createdAt,
+            checkedInAt: participant.checkedInAt,
+          })),
+        },
+        // Communities
+        communities: {
+          count: communities.length,
+          list: communities.map(member => ({
+            id: member.communities.id,
+            name: member.communities.name,
+            description: member.communities.description,
+            category: member.communities.category,
+            imageUrl: member.communities.imageUrl,
+            isVerified: member.communities.isVerified,
+            userRole: member.role,
+            joinedAt: member.joinedAt,
+          })),
+        },
+        // Marketplace listings
+        marketplaceListings: {
+          count: marketplaceListings.length,
+          listings: marketplaceListings.map(listing => ({
+            id: listing.id,
+            title: listing.title,
+            description: listing.description,
+            category: listing.category,
+            price: listing.price,
+            currency: listing.currency,
+            quantity: listing.quantity,
+            images: listing.images,
+            status: listing.status,
+            location: listing.location,
+            createdAt: listing.createdAt,
+          })),
+        },
+        // Badges
+        badges: {
+          count: user.userBadges.length,
+          list: user.userBadges.map(ub => ({
+            id: ub.badges.id,
+            type: ub.badges.type,
+            name: ub.badges.name,
+            description: ub.badges.description,
+            criteria: ub.badges.criteria,
+            imageUrl: ub.badges.imageUrl,
+            earnedAt: ub.earnedAt,
+          })),
+        },
+      };
+
+      // Remove raw eventParticipants and userBadges arrays (now in formatted sections)
+      delete (transformedUser as any).eventParticipants;
+      delete (transformedUser as any).userBadges;
+
+      // Apply URL transformations
+      const finalUser = UserController.transformUserResponse(transformedUser);
+
+      sendSuccess(res, finalUser);
     } catch (error) {
       next(error);
     }
   }
-
   /**
    * Send connection request to a user
    * @route POST /v2/users/connections/:id/request

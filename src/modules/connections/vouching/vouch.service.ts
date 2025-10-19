@@ -636,9 +636,10 @@ export class VouchService {
         );
 
         // Count events attended in this community
-        const eventsAttended = await prisma.eventAttendance.count({
+        const eventsAttended = await prisma.eventParticipant.count({
           where: {
             userId,
+            checkedInAt: { not: null },
             events: {
               communityId: membership.communityId,
             },

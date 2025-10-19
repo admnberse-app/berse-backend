@@ -292,9 +292,9 @@ const swaggerDefinition = {
                 type: 'number',
                 description: 'Number of events created by user',
               },
-              eventRsvps: { 
+              eventParticipants: {
                 type: 'number',
-                description: 'Number of event RSVPs',
+                description: 'Number of event participants',
               },
               userBadges: { 
                 type: 'number',

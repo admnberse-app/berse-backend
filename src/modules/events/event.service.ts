@@ -10,11 +10,13 @@ import {
   UpdateTicketTierRequest,
   PurchaseTicketRequest,
   CreateRsvpRequest,
+  CreateParticipantRequest,
   CheckInRequest,
   EventResponse,
   TicketTierResponse,
   TicketResponse,
   RsvpResponse,
+  ParticipantResponse,
   AttendanceRecord,
   EventStatsResponse,
   EventAnalyticsResponse
@@ -89,8 +91,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -197,8 +199,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -210,12 +212,12 @@ export class EventService {
         throw new AppError('Event not found', 404);
       }
 
-      // Check if user has RSVP'd or has ticket
-      let userRsvp = null;
+      // Check if user has participant record or ticket
+      let userParticipant = null;
       let userTicket = null;
       
       if (userId) {
-        userRsvp = await prisma.eventRsvp.findFirst({
+        userParticipant = await prisma.eventParticipant.findFirst({
           where: { eventId, userId },
         });
         
@@ -224,9 +226,9 @@ export class EventService {
         });
       }
 
-      // Get attendee preview (first 5 attendees with profiles)
-      const attendees = await prisma.eventAttendance.findMany({
-        where: { eventId },
+      // Get participant preview (first 5 checked-in participants)
+      const participants = await prisma.eventParticipant.findMany({
+        where: { eventId, checkedInAt: { not: null } },
         take: 5,
         orderBy: { checkedInAt: 'desc' },
         include: {
@@ -245,8 +247,8 @@ export class EventService {
         },
       });
 
-      // Get RSVP preview (first 5 RSVPs)
-      const rsvps = await prisma.eventRsvp.findMany({
+      // Get all participants preview (first 5)
+      const allParticipants = await prisma.eventParticipant.findMany({
         where: { eventId },
         take: 5,
         orderBy: { createdAt: 'desc' },
@@ -268,36 +270,51 @@ export class EventService {
 
       const transformed = this.transformEventResponse(event);
       
+      const checkedInCount = await prisma.eventParticipant.count({
+        where: { eventId, checkedInAt: { not: null } },
+      });
+
       return {
         ...transformed,
         ticketTiers: event.tier ? event.tier.map(tier => this.transformTicketTierResponse(tier)) : [],
-        userRsvp: userRsvp || undefined,
+        userParticipant: userParticipant || undefined,
         userTicket: userTicket || undefined,
-        hasRsvped: !!userRsvp,
+        userRsvp: userParticipant || undefined, // Backward compatibility
+        hasRsvped: !!userParticipant, // Backward compatibility
         hasTicket: !!userTicket,
         isOwner: userId ? event.hostId === userId : false,
-        attendeesPreview: attendees.map(a => ({
-          id: a.user.id,
-          fullName: a.user.fullName,
-          username: a.user.username,
-          profilePicture: a.user.profile?.profilePicture,
-          checkedInAt: a.checkedInAt,
+        attendeesPreview: participants.map(p => ({
+          id: p.user.id,
+          fullName: p.user.fullName,
+          username: p.user.username,
+          profilePicture: p.user.profile?.profilePicture,
+          checkedInAt: p.checkedInAt!,
         })),
-        rsvpsPreview: rsvps.map(r => ({
-          id: r.user.id,
-          fullName: r.user.fullName,
-          username: r.user.username,
-          profilePicture: r.user.profile?.profilePicture,
-          rsvpedAt: r.createdAt,
+        participantsPreview: allParticipants.map(p => ({
+          id: p.user.id,
+          fullName: p.user.fullName,
+          username: p.user.username,
+          profilePicture: p.user.profile?.profilePicture,
+          createdAt: p.createdAt,
+          status: p.status,
+        })),
+        rsvpsPreview: allParticipants.map(p => ({ // Backward compatibility
+          id: p.user.id,
+          fullName: p.user.fullName,
+          username: p.user.username,
+          profilePicture: p.user.profile?.profilePicture,
+          rsvpedAt: p.createdAt,
         })),
         stats: {
-          totalAttendees: event._count.eventAttendances,
-          totalRsvps: event._count.eventRsvps,
+          totalParticipants: event._count.eventParticipants,
+          totalCheckedIn: checkedInCount,
           totalTicketsSold: event._count.eventTickets,
           totalTicketTiers: event._count.tier,
-          attendanceRate: event._count.eventRsvps > 0 
-            ? Math.round((event._count.eventAttendances / event._count.eventRsvps) * 100) 
+          attendanceRate: event._count.eventParticipants > 0 
+            ? Math.round((checkedInCount / event._count.eventParticipants) * 100) 
             : 0,
+          totalAttendees: checkedInCount, // Backward compatibility
+          totalRsvps: event._count.eventParticipants, // Backward compatibility
         },
       };
     } catch (error: any) {
@@ -370,8 +387,7 @@ export class EventService {
         },
         _count: {
           select: {
-            eventRsvps: true,
-            eventAttendances: true,
+            eventParticipants: true,
             eventTickets: true,
             tier: true,
           },
@@ -476,8 +492,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -700,11 +716,31 @@ export class EventService {
 
       const ticketNumber = this.generateTicketNumber();
 
+      // First, create or get participant record
+      let participant = await prisma.eventParticipant.findFirst({
+        where: { eventId: data.eventId, userId },
+      });
+
+      if (!participant) {
+        // Generate QR code token for participant
+        const qrToken = crypto.randomBytes(32).toString('hex');
+        
+        participant = await prisma.eventParticipant.create({
+          data: {
+            eventId: data.eventId,
+            userId,
+            qrCode: qrToken,
+            status: 'REGISTERED', // Will be updated to CONFIRMED after payment
+          },
+        });
+      }
+
       // Create ticket (PENDING until payment is confirmed)
       const ticket = await prisma.eventTicket.create({
         data: {
           eventId: data.eventId,
           userId: userId,
+          participantId: participant.id,
           ticketTierId: data.ticketTierId,
           ticketType: tier ? tier.tierName : 'GENERAL',
           price: price,
@@ -712,7 +748,6 @@ export class EventService {
           status: EventTicketStatus.PENDING,
           paymentStatus: PaymentStatus.PENDING,
           ticketNumber: ticketNumber,
-          quantity: 1,
           attendeeName: data.attendeeName,
           attendeeEmail: data.attendeeEmail,
           attendeePhone: data.attendeePhone,
@@ -797,7 +832,7 @@ export class EventService {
   /**
    * Create RSVP
    */
-  static async createRsvp(userId: string, eventId: string): Promise<RsvpResponse> {
+  static async createRsvp(userId: string, eventId: string): Promise<ParticipantResponse> {
     try {
       const event = await prisma.event.findUnique({
         where: { id: eventId },
@@ -815,38 +850,35 @@ export class EventService {
         throw new AppError('Event is not available for RSVP', 400);
       }
 
-      // Check if already RSVP'd
-      const existingRsvp = await prisma.eventRsvp.findFirst({
+      // Check if already registered
+      const existingParticipant = await prisma.eventParticipant.findFirst({
         where: { eventId, userId },
       });
 
-      if (existingRsvp) {
+      if (existingParticipant) {
         throw new AppError('You have already RSVP\'d to this event', 400);
       }
 
       // Check max attendees
       if (event.maxAttendees) {
-        const rsvpCount = await prisma.eventRsvp.count({
+        const participantCount = await prisma.eventParticipant.count({
           where: { eventId },
         });
 
-        if (rsvpCount >= event.maxAttendees) {
+        if (participantCount >= event.maxAttendees) {
           throw new AppError('Event has reached maximum capacity', 400);
         }
       }
 
-      // Generate secure token for RSVP (valid for 30 days or until event date)
-      const eventDate = new Date(event.date);
-      const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      const tokenExpiry = eventDate > thirtyDaysFromNow ? eventDate : thirtyDaysFromNow;
-      
-      const rsvpToken = crypto.randomBytes(32).toString('hex');
+      // Generate secure token for QR code
+      const qrToken = crypto.randomBytes(32).toString('hex');
 
-      const rsvp = await prisma.eventRsvp.create({
+      const participant = await prisma.eventParticipant.create({
         data: {
           eventId,
           userId,
-          qrCode: rsvpToken, // Store secure token, not QR image
+          qrCode: qrToken,
+          status: 'REGISTERED',
         },
         include: {
           events: {
@@ -855,25 +887,29 @@ export class EventService {
               title: true,
               date: true,
               location: true,
+              type: true,
               hostId: true,
             },
           },
           user: {
             select: {
+              id: true,
               fullName: true,
               username: true,
+              email: true,
+              profile: { select: { profilePicture: true } },
             },
           },
         },
       });
 
       // Send notification to event host
-      const userName = rsvp.user?.fullName || rsvp.user?.username || 'Someone';
+      const userName = participant.user?.fullName || participant.user?.username || 'Someone';
       await NotificationService.createNotification({
-        userId: rsvp.events.hostId,
+        userId: participant.events.hostId,
         type: 'EVENT',
         title: 'New Event RSVP',
-        message: `${userName} RSVP'd to your event: ${rsvp.events.title}`,
+        message: `${userName} RSVP'd to your event: ${participant.events.title}`,
         actionUrl: `/events/${eventId}/attendees`,
         priority: 'normal',
         relatedEntityId: eventId,
@@ -881,11 +917,11 @@ export class EventService {
         metadata: {
           eventId,
           userId,
-          eventTitle: rsvp.events.title,
+          eventTitle: participant.events.title,
         },
       });
 
-      return rsvp as any;
+      return participant as any;
     } catch (error: any) {
       logger.error('Error creating RSVP:', error);
       throw error;
@@ -897,16 +933,20 @@ export class EventService {
    */
   static async cancelRsvp(userId: string, eventId: string): Promise<void> {
     try {
-      const rsvp = await prisma.eventRsvp.findFirst({
+      const participant = await prisma.eventParticipant.findFirst({
         where: { eventId, userId },
       });
 
-      if (!rsvp) {
+      if (!participant) {
         throw new AppError('RSVP not found', 404);
       }
 
-      await prisma.eventRsvp.delete({
-        where: { id: rsvp.id },
+      await prisma.eventParticipant.update({
+        where: { id: participant.id },
+        data: {
+          status: 'CANCELED',
+          canceledAt: new Date(),
+        },
       });
     } catch (error: any) {
       logger.error('Error canceling RSVP:', error);
@@ -915,12 +955,12 @@ export class EventService {
   }
 
   /**
-   * Generate QR code for RSVP (on-demand)
+   * Generate QR code for participant (on-demand)
    */
-  static async generateRsvpQrCode(rsvpId: string, userId: string): Promise<string> {
+  static async generateRsvpQrCode(participantId: string, userId: string): Promise<string> {
     try {
-      const rsvp = await prisma.eventRsvp.findUnique({
-        where: { id: rsvpId },
+      const participant = await prisma.eventParticipant.findUnique({
+        where: { id: participantId },
         include: {
           events: {
             select: {
@@ -931,27 +971,27 @@ export class EventService {
         },
       });
 
-      if (!rsvp) {
-        throw new AppError('RSVP not found', 404);
+      if (!participant) {
+        throw new AppError('Participant record not found', 404);
       }
 
-      if (rsvp.userId !== userId) {
-        throw new AppError('Not authorized to access this RSVP', 403);
+      if (participant.userId !== userId) {
+        throw new AppError('Not authorized to access this participant record', 403);
       }
 
       // Generate signed JWT token for QR code
-      const eventDate = new Date(rsvp.events.date);
+      const eventDate = new Date(participant.events.date);
       const expiryDate = new Date(Math.max(
         eventDate.getTime() + (24 * 60 * 60 * 1000), // 24 hours after event
         Date.now() + (30 * 24 * 60 * 60 * 1000) // or 30 days from now
       ));
 
       const qrPayload = {
-        rsvpId: rsvp.id,
-        userId: rsvp.userId,
-        eventId: rsvp.eventId,
-        token: rsvp.qrCode, // Include stored token for extra validation
-        type: 'EVENT_RSVP',
+        participantId: participant.id,
+        userId: participant.userId,
+        eventId: participant.eventId,
+        token: participant.qrCode, // Include stored token for extra validation
+        type: 'EVENT_CHECKIN',
       };
 
       // Generate JWT token with expiry
@@ -981,11 +1021,11 @@ export class EventService {
   }
 
   /**
-   * Get user's RSVPs
+   * Get user's participants/RSVPs
    */
-  static async getUserRsvps(userId: string): Promise<RsvpResponse[]> {
+  static async getUserRsvps(userId: string): Promise<ParticipantResponse[]> {
     try {
-      const rsvps = await prisma.eventRsvp.findMany({
+      const participants = await prisma.eventParticipant.findMany({
         where: { userId },
         include: {
           events: {
@@ -994,14 +1034,24 @@ export class EventService {
               title: true,
               date: true,
               location: true,
+              type: true,
               images: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              email: true,
+              profile: { select: { profilePicture: true } },
             },
           },
         },
         orderBy: { createdAt: 'desc' },
       });
 
-      return rsvps as any[];
+      return participants as any[];
     } catch (error: any) {
       logger.error('Error fetching user RSVPs:', error);
       throw error;
@@ -1026,9 +1076,9 @@ export class EventService {
       }
 
       let targetUserId: string;
-      let rsvpId: string | undefined;
+      let participantId: string | undefined;
 
-      // Verify user has RSVP or ticket
+      // Verify user has participant record or ticket
       if (data.userId) {
         targetUserId = data.userId;
       } else if (data.qrCode) {
@@ -1044,7 +1094,7 @@ export class EventService {
           ) as any;
           
           // Validate token type and event match
-          if (decoded.type !== 'EVENT_RSVP') {
+          if (decoded.type !== 'EVENT_CHECKIN') {
             throw new AppError('Invalid QR code type', 400);
           }
           
@@ -1052,22 +1102,22 @@ export class EventService {
             throw new AppError('QR code is not for this event', 400);
           }
 
-          // Verify RSVP exists and token matches
-          const rsvp = await prisma.eventRsvp.findFirst({
+          // Verify participant exists and token matches
+          const participant = await prisma.eventParticipant.findFirst({
             where: {
-              id: decoded.rsvpId,
+              id: decoded.participantId,
               userId: decoded.userId,
               eventId: eventId,
               qrCode: decoded.token, // Verify stored token matches
             },
           });
 
-          if (!rsvp) {
-            throw new AppError('Invalid or expired RSVP', 404);
+          if (!participant) {
+            throw new AppError('Invalid or expired participant record', 404);
           }
 
-          targetUserId = rsvp.userId;
-          rsvpId = rsvp.id;
+          targetUserId = participant.userId;
+          participantId = participant.id;
         } catch (error: any) {
           if (error instanceof AppError) throw error;
           logger.error('QR code verification failed:', error);
@@ -1077,19 +1127,26 @@ export class EventService {
         throw new AppError('User ID or QR code is required', 400);
       }
 
-      // Check if already checked in
-      const existingAttendance = await prisma.eventAttendance.findFirst({
+      // Get or create participant record
+      let participant = await prisma.eventParticipant.findFirst({
         where: { eventId, userId: targetUserId },
       });
 
-      if (existingAttendance) {
+      if (!participant) {
+        throw new AppError('No valid registration or ticket found for this event', 404);
+      }
+
+      // Check if already checked in
+      if (participant.checkedInAt) {
         throw new AppError('User has already checked in', 400);
       }
 
-      const attendance = await prisma.eventAttendance.create({
+      // Update participant with check-in
+      participant = await prisma.eventParticipant.update({
+        where: { id: participant.id },
         data: {
-          eventId,
-          userId: targetUserId,
+          checkedInAt: new Date(),
+          status: 'CHECKED_IN',
         },
         include: {
           user: {
@@ -1116,7 +1173,13 @@ export class EventService {
         logger.error('Failed to trigger trust score update after event check-in:', error);
       }
 
-      return attendance as any;
+      return {
+        id: participant.id,
+        eventId: participant.eventId,
+        userId: participant.userId,
+        checkedInAt: participant.checkedInAt!,
+        user: (participant as any).user,
+      } as any;
     } catch (error: any) {
       logger.error('Error checking in attendee:', error);
       throw error;
@@ -1124,12 +1187,15 @@ export class EventService {
   }
 
   /**
-   * Get event attendees
+   * Get event attendees (checked-in participants)
    */
   static async getEventAttendees(eventId: string): Promise<AttendanceRecord[]> {
     try {
-      const attendees = await prisma.eventAttendance.findMany({
-        where: { eventId },
+      const participants = await prisma.eventParticipant.findMany({
+        where: { 
+          eventId,
+          checkedInAt: { not: null },
+        },
         include: {
           user: {
             select: {
@@ -1143,7 +1209,13 @@ export class EventService {
         orderBy: { checkedInAt: 'desc' },
       });
 
-      return attendees as any[];
+      return participants.map(p => ({
+        id: p.id,
+        eventId: p.eventId,
+        userId: p.userId,
+        checkedInAt: p.checkedInAt!,
+        user: p.user,
+      })) as any[];
     } catch (error: any) {
       logger.error('Error fetching attendees:', error);
       throw error;
@@ -1254,8 +1326,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1265,7 +1337,7 @@ export class EventService {
 
       // Calculate trending score
       const scoredEvents = events.map(event => {
-        const rsvpCount = event._count?.eventRsvps || 0;
+        const rsvpCount = event._count?.eventParticipants || 0;
         const ticketCount = event._count?.eventTickets || 0;
         const totalEngagement = rsvpCount + ticketCount;
 
@@ -1343,8 +1415,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1398,7 +1470,7 @@ export class EventService {
 
       // Optimized: Fetch only event types, not full events
       const [userRsvps, userTickets, userCommunities] = await Promise.all([
-        prisma.eventRsvp.findMany({
+        prisma.eventParticipant.findMany({
           where: { userId },
           select: { events: { select: { type: true } } },
           take: 20,
@@ -1465,8 +1537,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1514,8 +1586,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1586,8 +1658,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1626,11 +1698,11 @@ export class EventService {
         dateFilter.gte = defaultStartDate;
       }
 
-      // Optimized: Single query joining attendances
+      // Optimized: Single query joining participants
       const events = await prisma.event.findMany({
         where: {
-          eventAttendances: {
-            some: { userId },
+          eventParticipants: {
+            some: { userId, checkedInAt: { not: null } },
           },
           ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
         },
@@ -1673,14 +1745,14 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
           },
-          eventAttendances: {
-            where: { userId },
+          eventParticipants: {
+            where: { userId, checkedInAt: { not: null } },
             select: {
               checkedInAt: true,
             },
@@ -1692,8 +1764,8 @@ export class EventService {
       return events.map(event => {
         const transformed = this.transformEventResponse(event);
         // Add check-in timestamp to response
-        if (event.eventAttendances.length > 0) {
-          (transformed as any).checkedInAt = event.eventAttendances[0].checkedInAt;
+        if (event.eventParticipants.length > 0) {
+          (transformed as any).checkedInAt = event.eventParticipants[0].checkedInAt;
         }
         return transformed;
       });
@@ -1789,8 +1861,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1893,8 +1965,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },
@@ -1993,8 +2065,8 @@ export class EventService {
           },
           _count: {
             select: {
-              eventRsvps: true,
-              eventAttendances: true,
+              eventParticipants: true,
+              
               eventTickets: true,
               tier: true,
             },

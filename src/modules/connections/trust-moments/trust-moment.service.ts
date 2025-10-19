@@ -122,16 +122,16 @@ export class TrustMomentService {
 
       // 3. If eventId provided, validate event participation
       if (eventId) {
-        const [giverAttendance, receiverAttendance] = await Promise.all([
-          prisma.eventAttendance.findFirst({
-            where: { userId: giverId, eventId },
+        const [giverParticipant, receiverParticipant] = await Promise.all([
+          prisma.eventParticipant.findFirst({
+            where: { userId: giverId, eventId, checkedInAt: { not: null } },
           }),
-          prisma.eventAttendance.findFirst({
-            where: { userId: receiverId, eventId },
+          prisma.eventParticipant.findFirst({
+            where: { userId: receiverId, eventId, checkedInAt: { not: null } },
           }),
         ]);
 
-        if (!giverAttendance || !receiverAttendance) {
+        if (!giverParticipant || !receiverParticipant) {
           throw new AppError('Both users must have attended the event to leave event-based feedback', 400);
         }
       }

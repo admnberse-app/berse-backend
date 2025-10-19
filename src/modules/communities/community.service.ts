@@ -262,7 +262,7 @@ export class CommunityService {
           price: true,
           _count: {
             select: {
-              eventRsvps: true,
+              eventParticipants: true,
             },
           },
         },
@@ -313,7 +313,7 @@ export class CommunityService {
           images: e.images,
           isFree: e.isFree,
           price: e.price,
-          rsvpCount: e._count.eventRsvps,
+          rsvpCount: e._count.eventParticipants,
         })),
         userStatus: {
           isMember,
@@ -1064,7 +1064,7 @@ export class CommunityService {
       );
 
       // Count events RSVP'd in this community
-      const eventsAttended = await prisma.eventRsvp.count({
+      const eventsAttended = await prisma.eventParticipant.count({
         where: {
           userId,
           events: {

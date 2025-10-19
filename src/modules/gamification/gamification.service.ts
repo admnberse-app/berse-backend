@@ -124,7 +124,7 @@ export class GamificationService {
 
   private static async getUserStats(userId: string) {
     const [eventsCount, connectionsCount, user, profileCompletion] = await Promise.all([
-      prisma.eventRsvp.count({ where: { userId } }),
+      prisma.eventParticipant.count({ where: { userId } }),
       prisma.userConnection.count({
         where: {
           OR: [{ initiatorId: userId }, { receiverId: userId }],
@@ -540,7 +540,7 @@ export class GamificationService {
     const limit = filters.limit || 50;
     const offset = filters.offset || 0;
 
-    const eventCounts = await prisma.eventRsvp.groupBy({
+    const eventCounts = await prisma.eventParticipant.groupBy({
       by: ['userId'],
       _count: {
         id: true,
@@ -588,7 +588,7 @@ export class GamificationService {
       })
       .filter((entry) => entry !== null) as LeaderboardEntry[];
 
-    const total = await prisma.eventRsvp.groupBy({
+    const total = await prisma.eventParticipant.groupBy({
       by: ['userId'],
     });
 

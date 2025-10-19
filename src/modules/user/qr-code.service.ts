@@ -66,8 +66,8 @@ export class QRCodeService {
           throw new AppError('Event is not published', 400);
         }
 
-        // Check if user has valid ticket or RSVP
-        const [ticket, rsvp] = await Promise.all([
+                // Check if user has valid ticket or participant record
+        const [ticket, participant] = await Promise.all([
           prisma.eventTicket.findFirst({
             where: {
               userId,
@@ -75,7 +75,7 @@ export class QRCodeService {
               status: { in: ['CONFIRMED', 'CHECKED_IN'] },
             },
           }),
-          prisma.eventRsvp.findFirst({
+          prisma.eventParticipant.findFirst({
             where: {
               userId,
               eventId,
@@ -83,8 +83,8 @@ export class QRCodeService {
           }),
         ]);
 
-        if (!ticket && !rsvp) {
-          throw new AppError('You do not have a valid ticket or RSVP for this event', 403);
+        if (!ticket && !participant) {
+          throw new AppError('You do not have a valid ticket or registration for this event', 403);
         }
       }
 

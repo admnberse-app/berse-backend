@@ -389,37 +389,28 @@ model EmailVerificationToken {
   @@map("email_verification_tokens")
 }
 
-model EventAttendance {
-  id          String   @id @default(cuid())
-  checkedInAt DateTime @default(now())
+model EventParticipant {
+  id          String                 @id @default(cuid())
   userId      String
   eventId     String
-  events      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      EventParticipantStatus @default(REGISTERED)
+  qrCode      String                 @unique
+  checkedInAt DateTime?
+  canceledAt  DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  events      Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTickets EventTicket[]
 
   @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
   @@index([checkedInAt])
-  @@index([eventId])
-  @@index([userId])
-
-  @@map("event_attendances")
-}
-
-model EventRsvp {
-  id        String   @id @default(cuid())
-  qrCode    String   @unique
-  createdAt DateTime @default(now())
-  userId    String
-  eventId   String
-  events    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, eventId])
   @@index([createdAt])
-  @@index([eventId])
-  @@index([userId])
 
-  @@map("event_rsvps")
+  @@map("event_participants")
 }
 
 model EventTicketTier {
@@ -452,6 +443,7 @@ model EventTicket {
   id                   String                @id @default(cuid())
   eventId              String
   userId               String
+  participantId        String
   ticketTierId         String?
   ticketType           String                @default("GENERAL")
   price                Float
@@ -460,21 +452,21 @@ model EventTicket {
   paymentTransactionId String?
   paymentStatus        PaymentStatus         @default(PENDING)
   ticketNumber         String                @unique
-  quantity             Int                   @default(1)
   purchasedAt          DateTime              @default(now())
-  checkedInAt          DateTime?
   canceledAt           DateTime?
   refundedAt           DateTime?
   attendeeName         String?
   attendeeEmail        String?
   attendeePhone        String?
-  events               Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  tier   EventTicketTier? @relation(fields: [ticketTierId], references: [id])
-  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events               Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant          EventParticipant      @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  paymentTransactions  PaymentTransaction?   @relation(fields: [paymentTransactionId], references: [id])
+  tier                 EventTicketTier?      @relation(fields: [ticketTierId], references: [id])
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, ticketNumber])
   @@index([eventId])
+  @@index([participantId])
   @@index([paymentTransactionId])
   @@index([purchasedAt])
   @@index([status])
@@ -510,13 +502,12 @@ model Event {
   status             EventStatus          @default(DRAFT)
   ticketsSold        Int                  @default(0)
   totalRevenue       Float?               @default(0.0)
-  eventAttendances  EventAttendance[]
-  eventRsvps        EventRsvp[]
-  tier EventTicketTier[]
-  eventTickets      EventTicket[]
+  eventParticipants  EventParticipant[]
+  tier               EventTicketTier[]
+  eventTickets       EventTicket[]
   trust_moments      TrustMoment[]
   communities        Community? @relation(fields: [communityId], references: [id])
-  user              User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  user               User @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   @@index([communityId, date])
   @@index([communityId])
@@ -2345,8 +2336,7 @@ model User {
   connectionStats                                          ConnectionStat?
   deviceRegistrations                                      DeviceRegistration[]
   emailVerificationTokens                                 EmailVerificationToken[]
-  eventAttendances                                         EventAttendance[]
-  eventRsvps                                               EventRsvp[]
+  eventParticipants                                        EventParticipant[]
   eventTickets                                             EventTicket[]
   events                                                    Event[]
   featureUsage                                             FeatureUsage[]
@@ -2600,6 +2590,14 @@ enum EventStatus {
   PUBLISHED
   CANCELED
   COMPLETED
+}
+
+enum EventParticipantStatus {
+  REGISTERED
+  CONFIRMED
+  CHECKED_IN
+  CANCELED
+  NO_SHOW
 }
 
 enum EventTicketStatus {
