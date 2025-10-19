@@ -31,6 +31,8 @@
     // Old unused files moved to backup
     "src/_old_unused/**/*",
     // Jobs temporarily disabled
-    "src/jobs/**/*"
+    "src/jobs/**/*",
+    // Old vouch service with compilation errors
+    "src/modules/connections/vouching/vouch.service-old.ts"
   ]
 }

@@ -17,6 +17,19 @@ import type {
 
 const paymentService = new PaymentService();
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Payments
+ *     description: Payment processing and transaction management
+ *   - name: Payment Methods
+ *     description: User payment method management
+ *   - name: Payouts
+ *     description: Payout distribution and tracking
+ *   - name: Webhooks
+ *     description: Payment gateway webhook handlers
+ */
+
 export class PaymentController {
   // ============================================================================
   // PAYMENT INTENT & TRANSACTIONS
@@ -729,16 +742,26 @@ export class PaymentController {
    *         description: Webhook processed successfully
    *       400:
    *         description: Invalid webhook signature or payload
-   *
+  /**
    * @route POST /v2/payments/webhooks/:provider
    * @desc Handle payment provider webhooks
    * @access Public (signature verified)
    */
   async handleWebhook(req: AuthRequest, res: Response): Promise<void> {
     const { provider } = req.params;
+    
+    // Extract webhook signature from headers
+    // Xendit: x-callback-token
+    // Stripe: stripe-signature
+    const signature = req.headers['x-callback-token'] || req.headers['stripe-signature'] || '';
+    
     const event: WebhookEvent = {
       provider,
-      ...req.body,
+      signature: signature as string,
+      eventType: req.body.event_type || req.body.type || 'unknown',
+      eventId: req.body.id || req.body.event_id || `evt_${Date.now()}`,
+      timestamp: req.body.created || req.body.timestamp || new Date().toISOString(),
+      data: req.body,
     };
 
     await paymentService.handleWebhook(event);

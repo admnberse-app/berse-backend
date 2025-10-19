@@ -12,8 +12,29 @@ import { communityRoutes } from '../../modules/communities';
 import notificationRoutes from '../../modules/user/notification.routes';
 import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
 import { paymentRoutes } from '../../modules/payments';
+import { PaymentController } from '../../modules/payments/payment.controller';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { param } from 'express-validator';
+import { handleValidationErrors } from '../../middleware/validation';
 
 const router = Router();
+const paymentController = new PaymentController();
+
+// ============================================================================
+// PUBLIC WEBHOOKS (Must be FIRST, before any auth middleware)
+// ============================================================================
+
+router.post(
+  '/payments/webhooks/:provider',
+  [
+    param('provider')
+      .trim()
+      .notEmpty()
+      .isIn(['xendit', 'stripe'])
+  ],
+  handleValidationErrors,
+  asyncHandler(paymentController.handleWebhook.bind(paymentController))
+);
 
 // ============================================================================
 // V2 API ROUTES

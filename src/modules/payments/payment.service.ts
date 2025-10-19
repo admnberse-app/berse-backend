@@ -184,13 +184,22 @@ export class PaymentService {
         return this.formatTransactionResponse(transaction);
       }
 
-      // 2. Get gateway and check payment status
+      // 2. If no gatewayTransactionId provided (mobile WebView flow), return current status
+      // Mobile should poll GET /v2/payments/:transactionId instead for webhook-updated status
+      if (!input.gatewayTransactionId && !transaction.gatewayTransactionId) {
+        logger.info(`[PaymentService] No gatewayTransactionId available, returning current status`);
+        return this.formatTransactionResponse(transaction);
+      }
+
+      // 3. Get gateway and check payment status
       const gateway = await PaymentGatewayFactory.getGatewayByProviderId(transaction.providerId);
-      const paymentStatus = await gateway.confirmPayment(transaction.gatewayTransactionId!);
+      const paymentStatus = await gateway.confirmPayment(
+        input.gatewayTransactionId || transaction.gatewayTransactionId!
+      );
 
       logger.info(`[PaymentService] Gateway payment status:`, paymentStatus);
 
-      // 3. Update transaction based on gateway status
+      // 4. Update transaction based on gateway status
       let newStatus: PaymentStatus;
       if (paymentStatus.status === 'PAID' || paymentStatus.status === 'SETTLED') {
         newStatus = PaymentStatus.SUCCEEDED;
@@ -216,7 +225,7 @@ export class PaymentService {
         include: { provider: true },
       });
 
-      // 4. Trigger payout distribution if payment completed
+      // 5. Trigger payout distribution if payment completed
       if (newStatus === PaymentStatus.SUCCEEDED) {
         logger.info(`[PaymentService] Payment completed, distributing payouts`);
         await this.distributePayout(transaction.id).catch((error) => {
@@ -956,7 +965,8 @@ export class PaymentService {
       }
 
       // 2. Get gateway fees
-      const gateway = await PaymentGatewayFactory.getGatewayByProviderId(input.providerId);
+      const providerId = input.providerId || (await this.selectProvider({ transactionType: input.transactionType, amount: input.amount } as any));
+      const gateway = await PaymentGatewayFactory.getGatewayByProviderId(providerId);
       const gatewayFees = await gateway.calculateFees(input.amount, 'MYR'); // TODO: Use proper currency
 
       // 3. Calculate totals

@@ -25,7 +25,7 @@ export const createPaymentIntentValidators = [
   body('referenceType')
     .trim()
     .notEmpty().withMessage('Reference type is required')
-    .isIn(['event_ticket', 'marketplace_order', 'service_booking', 'subscription'])
+    .isIn(['event_ticket', 'event', 'marketplace_order', 'service_booking', 'subscription', 'donation'])
     .withMessage('Invalid reference type'),
   
   body('referenceId')
@@ -55,8 +55,8 @@ export const confirmPaymentValidators = [
     .isString().withMessage('Transaction ID must be a string'),
   
   body('gatewayTransactionId')
+    .optional()
     .trim()
-    .notEmpty().withMessage('Gateway transaction ID is required')
     .isString().withMessage('Gateway transaction ID must be a string'),
   
   body('gatewayMetadata')
@@ -246,32 +246,8 @@ export const payoutQueryValidators = [
 // ============================================================================
 
 export const webhookValidators = [
-  body('provider')
+  param('provider')
     .trim()
     .notEmpty().withMessage('Provider is required')
-    .isString().withMessage('Provider must be a string'),
-  
-  body('eventType')
-    .trim()
-    .notEmpty().withMessage('Event type is required')
-    .isString().withMessage('Event type must be a string'),
-  
-  body('eventId')
-    .trim()
-    .notEmpty().withMessage('Event ID is required')
-    .isString().withMessage('Event ID must be a string'),
-  
-  body('data')
-    .notEmpty().withMessage('Event data is required')
-    .isObject().withMessage('Event data must be an object'),
-  
-  body('timestamp')
-    .trim()
-    .notEmpty().withMessage('Timestamp is required')
-    .isISO8601().withMessage('Invalid timestamp format'),
-  
-  body('signature')
-    .optional()
-    .trim()
-    .isString().withMessage('Signature must be a string'),
+    .isIn(['xendit', 'stripe']).withMessage('Invalid provider'),
 ];

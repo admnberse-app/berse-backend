@@ -20,13 +20,6 @@ import {
 const router = Router();
 const paymentController = new PaymentController();
 
-/**
- * @swagger
- * tags:
- *   name: Payments
- *   description: Payment processing and transaction management endpoints
- */
-
 // ============================================================================
 // PAYMENT INTENT & TRANSACTION ROUTES
 // ============================================================================
@@ -70,10 +63,37 @@ router.post(
  * @swagger
  * /v2/payments/confirm:
  *   post:
- *     summary: Confirm a payment
+ *     summary: Manually confirm a payment (Admin/Server use only)
+ *     description: |
+ *       Manually confirms a payment by checking status with the payment gateway.
+ *       
+ *       **⚠️ NOT for Mobile Apps:**
+ *       Mobile apps should NOT call this endpoint. Instead, use:
+ *       - GET /v2/payments/:transactionId for status polling
+ *       - Webhooks automatically update transaction status
+ *       
+ *       **Use Cases:**
+ *       - Manual payment verification by admin
+ *       - Server-side payment confirmation flows
+ *       - Non-hosted checkout integrations
  *     tags: [Payments]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - transactionId
+ *             properties:
+ *               transactionId:
+ *                 type: string
+ *                 description: Transaction ID to confirm
+ *               gatewayTransactionId:
+ *                 type: string
+ *                 description: Optional gateway transaction ID (if not already stored)
  *     responses:
  *       200:
  *         description: Payment confirmed successfully
@@ -150,13 +170,61 @@ router.get(
  * @swagger
  * /v2/payments/{transactionId}:
  *   get:
- *     summary: Get transaction details
+ *     summary: Get transaction details and status
+ *     description: |
+ *       Get detailed information about a payment transaction.
+ *       
+ *       **Mobile WebView Flow:**
+ *       After user completes payment in WebView, poll this endpoint to check status.
+ *       DO NOT use /v2/payments/confirm from mobile - that's for manual confirmation.
+ *       
+ *       **Polling Recommended:**
+ *       - Poll every 1 second for up to 30 seconds
+ *       - Stop when status is SUCCEEDED, FAILED, or CANCELED
+ *       - Continue polling if status is PENDING or PROCESSING
  *     tags: [Payments]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: transactionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Transaction ID from payment intent creation
  *     responses:
  *       200:
  *         description: Transaction retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [PENDING, PROCESSING, SUCCEEDED, FAILED, CANCELED]
+ *                     amount:
+ *                       type: number
+ *                     currency:
+ *                       type: string
+ *                     platformFee:
+ *                       type: number
+ *                     gatewayFee:
+ *                       type: number
+ *                     processedAt:
+ *                       type: string
+ *                       format: date-time
+ *       404:
+ *         description: Transaction not found
+ *       403:
+ *         description: Unauthorized access
  */
 router.get(
   '/:transactionId',
@@ -276,41 +344,10 @@ router.get(
 // FEE CALCULATION ROUTE
 // ============================================================================
 
-/**
- * @swagger
- * /v2/payments/calculate-fees:
- *   post:
- *     summary: Calculate transaction fees
- *     tags: [Payments]
- *     responses:
- *       200:
- *         description: Fees calculated successfully
- */
 router.post(
   '/calculate-fees',
   optionalAuth,
   asyncHandler(paymentController.calculateFees.bind(paymentController))
-);
-
-// ============================================================================
-// WEBHOOK ROUTES
-// ============================================================================
-
-/**
- * @swagger
- * /v2/payments/webhooks/{provider}:
- *   post:
- *     summary: Handle payment provider webhooks
- *     tags: [Payments]
- *     responses:
- *       200:
- *         description: Webhook processed successfully
- */
-router.post(
-  '/webhooks/:provider',
-  webhookValidators,
-  handleValidationErrors,
-  asyncHandler(paymentController.handleWebhook.bind(paymentController))
 );
 
 export const paymentRoutes = router;

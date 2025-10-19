@@ -412,6 +412,11 @@ export class XenditGateway extends AbstractPaymentGateway {
       // The callback token is sent in the x-callback-token header
       const callbackToken = data.signature;
       
+      logger.debug('[Xendit] Received callback token:', { 
+        token: callbackToken ? `${callbackToken.substring(0, 10)}...` : 'empty',
+        configuredToken: this.config.webhookSecret ? `${this.config.webhookSecret.substring(0, 10)}...` : 'not configured'
+      });
+      
       if (!this.config.webhookSecret) {
         logger.warn('[Xendit] No webhook secret configured, skipping verification');
         return true; // In dev, you might skip this
@@ -421,7 +426,10 @@ export class XenditGateway extends AbstractPaymentGateway {
       const isValid = callbackToken === this.config.webhookSecret;
 
       if (!isValid) {
-        logger.error('[Xendit] Invalid webhook signature');
+        logger.error('[Xendit] Invalid webhook signature', {
+          receivedLength: callbackToken?.length || 0,
+          expectedLength: this.config.webhookSecret.length
+        });
         return false;
       }
 
