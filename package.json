@@ -48,7 +48,8 @@
     "migrate:latest": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
     "test:email": "ts-node scripts/test-email.ts",
-    "setup:email-logo": "bash scripts/setup-email-logo.sh"
+    "setup:email-logo": "bash scripts/setup-email-logo.sh",
+    "fix:image-keys": "ts-node scripts/fix-encoded-image-keys.ts"
   },
   "keywords": [],
   "author": "",

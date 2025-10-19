@@ -1316,6 +1316,103 @@ router.post(
 );
 
 // ============================================================================
+// MUTUAL CONNECTIONS
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/{userId}/mutual-connections:
+ *   get:
+ *     summary: Get all mutual connections with another user
+ *     description: |
+ *       Get a paginated list of all mutual connections between the authenticated user
+ *       and the specified user. Only works when both users are authenticated and not
+ *       viewing their own profile.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to find mutual connections with
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of results per page
+ *     responses:
+ *       200:
+ *         description: List of mutual connections retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     mutualConnections:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           profilePicture:
+ *                             type: string
+ *                           trustScore:
+ *                             type: number
+ *                           trustLevel:
+ *                             type: string
+ *                           currentCity:
+ *                             type: string
+ *                           connectedSince:
+ *                             type: string
+ *                             format: date-time
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                         hasMore:
+ *                           type: boolean
+ *       400:
+ *         description: Cannot get mutual connections with yourself
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: User not found
+ */
+router.get(
+  '/:userId/mutual-connections',
+  authenticateToken,
+  UserController.getMutualConnections
+);
+
+// ============================================================================
 // GET USER BY ID (Must be after all specific routes)
 // ============================================================================
 

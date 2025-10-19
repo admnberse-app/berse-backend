@@ -15,6 +15,7 @@ import { paymentRoutes } from '../../modules/payments';
 import { PaymentController } from '../../modules/payments/payment.controller';
 import discoverRoutes from '../../modules/discover/discover.routes';
 import adminRevenueRoutes from '../../modules/admin/revenue.routes';
+import constantsRoutes from '../../modules/app-constants/constants.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -140,6 +141,12 @@ router.use('/payments', paymentRoutes);
 router.use('/discover', discoverRoutes);
 
 /**
+ * App Constants routes (Enums, validation rules, config)
+ * Base path: /v2/app-constants
+ */
+router.use('/app-constants', constantsRoutes);
+
+/**
  * Admin Revenue routes
  * Base path: /v2/admin/revenue
  */
@@ -204,6 +211,7 @@ router.get('/health', (req, res) => {
       marketplace: '/v2/marketplace',
       payments: '/v2/payments',
       discover: '/v2/discover',
+      appConstants: '/v2/app-constants',
     },
   });
 });
@@ -451,6 +459,12 @@ router.get('/docs', (req, res) => {
       },
       discover: {
         'GET /v2/discover/feed': 'Get unified discover feed with events, communities, and marketplace (personalized when authenticated)',
+      },
+      appConstants: {
+        'GET /v2/app-constants/enums': 'Get all application enums',
+        'GET /v2/app-constants/validation-rules': 'Get validation rules for fields',
+        'GET /v2/app-constants/config': 'Get app configuration and limits',
+        'GET /v2/app-constants/all': 'Get all constants (enums + validation + config)',
       },
     },
     authentication: {

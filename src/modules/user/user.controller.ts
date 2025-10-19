@@ -1083,6 +1083,7 @@ export class UserController {
   static async getUserById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+      const currentUserId = req.user?.id;
 
       const user = await prisma.user.findUnique({
         where: { id },
@@ -1091,7 +1092,6 @@ export class UserController {
           fullName: true,
           username: true,
           role: true,
-          totalPoints: true,
           trustScore: true,
           trustLevel: true,
           createdAt: true,
@@ -1242,9 +1242,125 @@ export class UserController {
         },
       });
 
+      // Count connections (accepted status)
+      const connectionsCount = await prisma.userConnection.count({
+        where: {
+          OR: [
+            { initiatorId: id, status: 'ACCEPTED' },
+            { receiverId: id, status: 'ACCEPTED' }
+          ]
+        }
+      });
+
+      // Count trust moments received (public only)
+      const trustMomentsReceived = await prisma.trustMoment.count({
+        where: {
+          receiverId: id,
+          isPublic: true
+        }
+      });
+
+      // Count trust moments given (public only)
+      const trustMomentsGiven = await prisma.trustMoment.count({
+        where: {
+          giverId: id,
+          isPublic: true
+        }
+      });
+
+      // Calculate mutual connections if viewing user is authenticated
+      let mutualConnectionsCount = 0;
+      let mutualConnections: any[] = [];
+      if (currentUserId && currentUserId !== id) {
+        // Get viewing user's connections
+        const viewerConnections = await prisma.userConnection.findMany({
+          where: {
+            OR: [
+              { initiatorId: currentUserId, status: 'ACCEPTED' },
+              { receiverId: currentUserId, status: 'ACCEPTED' }
+            ]
+          },
+          select: {
+            initiatorId: true,
+            receiverId: true
+          }
+        });
+
+        const viewerConnectionIds = viewerConnections.map(conn => 
+          conn.initiatorId === currentUserId ? conn.receiverId : conn.initiatorId
+        );
+
+        // Get profile user's connections
+        const profileConnections = await prisma.userConnection.findMany({
+          where: {
+            OR: [
+              { initiatorId: id, status: 'ACCEPTED' },
+              { receiverId: id, status: 'ACCEPTED' }
+            ]
+          },
+          select: {
+            initiatorId: true,
+            receiverId: true
+          }
+        });
+
+        const profileConnectionIds = profileConnections.map(conn => 
+          conn.initiatorId === id ? conn.receiverId : conn.initiatorId
+        );
+
+        // Find mutual connections
+        const mutualIds = viewerConnectionIds.filter(connId => 
+          profileConnectionIds.includes(connId)
+        );
+
+        mutualConnectionsCount = mutualIds.length;
+
+        // Optionally fetch mutual connection details (first 5)
+        if (mutualIds.length > 0) {
+          mutualConnections = await prisma.user.findMany({
+            where: {
+              id: { in: mutualIds.slice(0, 5) }
+            },
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: {
+                select: {
+                  profilePicture: true
+                }
+              }
+            }
+          });
+        }
+      }
+
       // Transform response with expanded details
       const transformedUser = {
         ...user,
+        // Member since (month and year only)
+        memberSince: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
+          month: 'long', 
+          year: 'numeric' 
+        }) : null,
+        // Connection and trust metrics
+        connections: {
+          count: connectionsCount,
+          mutualConnections: currentUserId && currentUserId !== id ? {
+            count: mutualConnectionsCount,
+            users: mutualConnections.map(u => ({
+              id: u.id,
+              fullName: u.fullName,
+              username: u.username,
+              profilePicture: u.profile?.profilePicture || null
+            }))
+          } : undefined
+        },
+        trustMoments: {
+          received: trustMomentsReceived,
+          given: trustMomentsGiven,
+          total: trustMomentsReceived + trustMomentsGiven
+        },
         // Events attended
         eventsAttended: {
           count: user.eventParticipants.length,
@@ -1319,6 +1435,144 @@ export class UserController {
       next(error);
     }
   }
+
+  /**
+   * Get all mutual connections between current user and another user
+   * @route GET /v2/users/:userId/mutual-connections
+   */
+  static async getMutualConnections(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const currentUserId = req.user?.id;
+      const { userId: targetUserId } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      if (!currentUserId) {
+        throw new AppError('Authentication required', 401);
+      }
+
+      if (currentUserId === targetUserId) {
+        throw new AppError('Cannot get mutual connections with yourself', 400);
+      }
+
+      // Check if target user exists
+      const targetUser = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true }
+      });
+
+      if (!targetUser) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Get viewing user's connections
+      const viewerConnections = await prisma.userConnection.findMany({
+        where: {
+          OR: [
+            { initiatorId: currentUserId, status: 'ACCEPTED' },
+            { receiverId: currentUserId, status: 'ACCEPTED' }
+          ]
+        },
+        select: {
+          initiatorId: true,
+          receiverId: true,
+          connectedAt: true
+        }
+      });
+
+      const viewerConnectionIds = viewerConnections.map(conn => 
+        conn.initiatorId === currentUserId ? conn.receiverId : conn.initiatorId
+      );
+
+      // Get target user's connections
+      const targetConnections = await prisma.userConnection.findMany({
+        where: {
+          OR: [
+            { initiatorId: targetUserId, status: 'ACCEPTED' },
+            { receiverId: targetUserId, status: 'ACCEPTED' }
+          ]
+        },
+        select: {
+          initiatorId: true,
+          receiverId: true
+        }
+      });
+
+      const targetConnectionIds = targetConnections.map(conn => 
+        conn.initiatorId === targetUserId ? conn.receiverId : conn.initiatorId
+      );
+
+      // Find mutual connection IDs
+      const mutualIds = viewerConnectionIds.filter(connId => 
+        targetConnectionIds.includes(connId)
+      );
+
+      const totalMutuals = mutualIds.length;
+      const skip = (page - 1) * limit;
+      const paginatedMutualIds = mutualIds.slice(skip, skip + limit);
+
+      // Fetch mutual connection details with connection date
+      const mutualConnections = await prisma.user.findMany({
+        where: {
+          id: { in: paginatedMutualIds }
+        },
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          trustScore: true,
+          trustLevel: true,
+          profile: {
+            select: {
+              profilePicture: true
+            }
+          },
+          location: {
+            select: {
+              currentCity: true
+            }
+          }
+        }
+      });
+
+      // Add connection dates
+      const connectionsWithDates = mutualConnections.map(user => {
+        const viewerConnection = viewerConnections.find(conn => 
+          (conn.initiatorId === user.id || conn.receiverId === user.id)
+        );
+        
+        return {
+          id: user.id,
+          fullName: user.fullName,
+          username: user.username,
+          profilePicture: user.profile?.profilePicture || null,
+          trustScore: user.trustScore,
+          trustLevel: user.trustLevel,
+          currentCity: user.location?.currentCity || null,
+          connectedSince: viewerConnection?.connectedAt || null
+        };
+      });
+
+      // Transform URLs
+      const transformedConnections = connectionsWithDates.map(user => 
+        UserController.transformUserResponse(user)
+      );
+
+      sendSuccess(res, {
+        mutualConnections: transformedConnections,
+        pagination: {
+          page,
+          limit,
+          total: totalMutuals,
+          totalPages: Math.ceil(totalMutuals / limit),
+          hasMore: page * limit < totalMutuals
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Send connection request to a user
    * @route POST /v2/users/connections/:id/request
