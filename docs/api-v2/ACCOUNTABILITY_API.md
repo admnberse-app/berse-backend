@@ -372,9 +372,77 @@ const monitorVouchees = async () => {
 
 ---
 
+## Platform Configuration
+
+**Accountability percentages are dynamically configurable** through the platform configuration system. Platform administrators can adjust penalty and reward percentages via database without code changes.
+
+### Configurable Rules
+
+#### Accountability Percentages
+
+The default 40% penalty / 20% reward split can be modified:
+
+```sql
+-- Example: Increase voucher penalty from 40% to 50%
+UPDATE platform_configs 
+SET value = jsonb_set(
+  value, 
+  '{voucherPenaltyPercentage}', 
+  '0.50'
+)
+WHERE category = 'ACCOUNTABILITY_RULES' AND key = 'percentages';
+```
+
+Configurable values:
+- `voucherPenaltyPercentage` - % of vouchee's negative impact applied to voucher (default: 0.40 = 40%)
+- `voucherRewardPercentage` - % of vouchee's positive impact applied to voucher (default: 0.20 = 20%)
+- `splitRewardEqually` - Whether to split reward among all vouchers (default: true)
+
+**Validation Rules:**
+- Percentages must be between 0 and 1 (0-100%)
+- Penalty percentage typically higher than reward to discourage risky vouching
+
+#### Impact Examples with Different Configurations
+
+**Default (40% penalty / 20% reward):**
+```javascript
+// Vouchee loses 10 points → Voucher loses 4 points
+// Vouchee gains 10 points → Voucher gains 2 points
+```
+
+**Stricter (50% penalty / 15% reward):**
+```javascript
+// Vouchee loses 10 points → Voucher loses 5 points  
+// Vouchee gains 10 points → Voucher gains 1.5 points
+```
+
+**Balanced (30% penalty / 30% reward):**
+```javascript
+// Vouchee loses 10 points → Voucher loses 3 points
+// Vouchee gains 10 points → Voucher gains 3 points  
+```
+
+### Configuration Best Practices
+
+1. **Higher Penalty Than Reward** - Encourages careful vouching
+2. **Test Impact** - Monitor trust score changes after adjustments
+3. **Community Feedback** - Survey users before major changes
+4. **Gradual Changes** - Adjust by 5-10% increments
+5. **Document Rationale** - Explain why percentages were changed
+
+### Configuration Documentation
+
+For complete accountability configuration details:
+- [Platform Configuration Guide](../PLATFORM_CONFIGURATION.md) - Full admin documentation
+- SQL update examples and validation rules
+- Configuration change history tracking
+
+---
+
 ## Related Documentation
 
 - [Trust Score API](./TRUST_SCORE_API.md) - Trust score calculation and management
 - [Connections API](./CONNECTIONS_API.md) - Vouch management
 - [Trust Moments API](./TRUST_MOMENTS_API.md) - Feedback that triggers accountability
 - [Trust Level Gating](./TRUST_LEVEL_GATING.md) - Feature access based on trust score
+- [Platform Configuration](../PLATFORM_CONFIGURATION.md) - Admin configuration guide

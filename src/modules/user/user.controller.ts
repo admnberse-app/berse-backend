@@ -123,6 +123,7 @@ export class UserController {
               totalConnections: true,
               pendingRequests: true,
               averageRating: true,
+              connectionQuality: true,
             },
           },
         },
@@ -132,8 +133,53 @@ export class UserController {
         throw new AppError('User not found', 404);
       }
 
-      // Transform response to have cleaner count names
-      const transformedUser = UserController.transformUserResponse(user);
+      // Get trust level gating information
+      const { getTrustLevelInfo, FEATURE_REQUIREMENTS } = await import('../../middleware/trust-level.middleware');
+      const trustLevelInfo = await getTrustLevelInfo(user.trustScore);
+
+      // Determine available features based on trust score
+      const availableFeatures: string[] = [];
+      const lockedFeatures: Array<{ feature: string; requiredScore: number }> = [];
+
+      Object.entries(FEATURE_REQUIREMENTS).forEach(([feature, requiredScore]) => {
+        if (user.trustScore >= requiredScore) {
+          availableFeatures.push(feature);
+        } else {
+          lockedFeatures.push({ feature, requiredScore });
+        }
+      });
+
+      // Transform response to unified format
+      const transformedUser = {
+        ...UserController.transformUserResponse(user),
+        // Member since (month and year only)
+        memberSince: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
+          month: 'long', 
+          year: 'numeric' 
+        }) : null,
+        // Trust Level Gating Information
+        trustLevelGating: {
+          currentLevel: {
+            name: trustLevelInfo.level,
+            label: trustLevelInfo.label,
+            minScore: trustLevelInfo.min,
+            maxScore: trustLevelInfo.max,
+            currentScore: Math.round(user.trustScore * 10) / 10,
+            percentage: Math.round((user.trustScore / trustLevelInfo.max) * 100),
+          },
+          nextLevel: trustLevelInfo.nextLevel || null,
+          availableFeatures,
+          lockedFeatures: lockedFeatures.slice(0, 5), // Show top 5 locked features
+          totalFeaturesAvailable: availableFeatures.length,
+          totalFeaturesLocked: lockedFeatures.length,
+        },
+        // Verification status
+        verification: {
+          email: !!user.security?.emailVerifiedAt,
+          phone: !!user.security?.phoneVerifiedAt,
+          mfa: user.security?.mfaEnabled || false,
+        },
+      };
 
       sendSuccess(res, transformedUser);
     } catch (error) {
@@ -1335,7 +1381,23 @@ export class UserController {
         }
       }
 
-      // Transform response with expanded details
+      // Get trust level gating information
+      const { getTrustLevelInfo, FEATURE_REQUIREMENTS } = await import('../../middleware/trust-level.middleware');
+      const trustLevelInfo = await getTrustLevelInfo(user.trustScore);
+
+      // Determine available features based on trust score (for viewing user's perspective)
+      const availableFeatures: string[] = [];
+      const lockedFeatures: Array<{ feature: string; requiredScore: number }> = [];
+
+      Object.entries(FEATURE_REQUIREMENTS).forEach(([feature, requiredScore]) => {
+        if (user.trustScore >= requiredScore) {
+          availableFeatures.push(feature);
+        } else {
+          lockedFeatures.push({ feature, requiredScore });
+        }
+      });
+
+      // Transform response with expanded details (unified format)
       const transformedUser = {
         ...user,
         // Member since (month and year only)
@@ -1343,6 +1405,22 @@ export class UserController {
           month: 'long', 
           year: 'numeric' 
         }) : null,
+        // Trust Level Gating Information
+        trustLevelGating: {
+          currentLevel: {
+            name: trustLevelInfo.level,
+            label: trustLevelInfo.label,
+            minScore: trustLevelInfo.min,
+            maxScore: trustLevelInfo.max,
+            currentScore: Math.round(user.trustScore * 10) / 10,
+            percentage: Math.round((user.trustScore / trustLevelInfo.max) * 100),
+          },
+          nextLevel: trustLevelInfo.nextLevel || null,
+          availableFeatures,
+          lockedFeatures: lockedFeatures.slice(0, 5), // Show top 5 locked features
+          totalFeaturesAvailable: availableFeatures.length,
+          totalFeaturesLocked: lockedFeatures.length,
+        },
         // Connection and trust metrics
         connections: {
           count: connectionsCount,

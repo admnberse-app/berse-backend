@@ -1,21 +1,184 @@
 # Card Game API Documentation
 
 ## Overview
-The Card Game API enables users to submit feedback, ratings, and engage in discussions about card game questions and topics. It includes social features like upvotes and replies, plus comprehensive analytics.
+The Card Game API enables users to engage with reflection questions, submit feedback, rate their experiences, and participate in community discussions. The system includes topics (e.g., "Slow Down, You're Doing Fine"), sessions with curated questions, and social features like upvotes and replies.
 
 **Base URL**: `/v2/cardgame`  
 **Authentication**: Required for all endpoints  
-**Version**: 2.1.0
+**Version**: 2.1.0  
+**Status**: ✅ Phase 1 Deployed (95% Complete)  
+**Database**: Railway Staging - Actual questions loaded
 
 ---
 
 ## Table of Contents
+- [Topics & Questions](#topics--questions)
+- [Sessions](#sessions)
 - [Feedback Management](#feedback-management)
 - [Upvote System](#upvote-system)
 - [Reply System](#reply-system)
 - [Statistics & Analytics](#statistics--analytics)
 - [Data Models](#data-models)
 - [Error Responses](#error-responses)
+- [Current Implementation Status](#current-implementation-status)
+
+---
+
+## Topics & Questions
+
+### Get All Topics
+Retrieve all available Card Game topics with their session structure.
+
+**Endpoint**: `GET /v2/cardgame/topics`  
+**Authentication**: Required
+
+#### Example Request
+```bash
+curl -X GET http://localhost:3001/v2/cardgame/topics \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Topics retrieved successfully",
+  "data": [
+    {
+      "id": "slowdown",
+      "title": "Slow Down, You're Doing Fine",
+      "description": "Reflection questions about pace, progress, and finding your natural rhythm in life",
+      "totalSessions": 2,
+      "createdAt": "2025-10-20T10:00:00.000Z",
+      "updatedAt": "2025-10-20T10:00:00.000Z",
+      "sessions": [
+        {
+          "sessionNumber": 1,
+          "title": "Recognizing Your Pace",
+          "questionCount": 10
+        },
+        {
+          "sessionNumber": 2,
+          "title": "Finding Your Rhythm",
+          "questionCount": 10
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### Get Questions for Session
+Retrieve all questions for a specific session.
+
+**Endpoint**: `GET /v2/cardgame/topics/:topicId/sessions/:sessionNumber/questions`  
+**Authentication**: Required
+
+#### Example Request
+```bash
+curl -X GET http://localhost:3001/v2/cardgame/topics/slowdown/sessions/1/questions \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Questions retrieved successfully",
+  "data": {
+    "topicId": "slowdown",
+    "sessionNumber": 1,
+    "sessionTitle": "Recognizing Your Pace",
+    "questions": [
+      {
+        "id": "slowdown-s1-q1",
+        "topicId": "slowdown",
+        "sessionNumber": 1,
+        "orderInSession": 1,
+        "questionText": "What areas of your life do you feel you're 'behind' in, and who decided this timeline?",
+        "createdAt": "2025-10-20T10:00:00.000Z",
+        "updatedAt": "2025-10-20T10:00:00.000Z"
+      },
+      {
+        "id": "slowdown-s1-q2",
+        "topicId": "slowdown",
+        "sessionNumber": 1,
+        "orderInSession": 2,
+        "questionText": "How does social media impact your perception of where you 'should' be in life?",
+        "createdAt": "2025-10-20T10:00:00.000Z",
+        "updatedAt": "2025-10-20T10:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+**Note**: Session 1 focuses on "Recognizing Your Pace" with questions about timelines, social comparison, and external pressures. Session 2 focuses on "Finding Your Rhythm" with questions about boundaries, grounding practices, and natural pace.
+
+---
+
+## Sessions
+
+### Start a Session
+Begin a new Card Game session for a topic.
+
+**Endpoint**: `POST /v2/cardgame/sessions`  
+**Authentication**: Required
+
+#### Request Body
+```json
+{
+  "topicId": "slowdown",
+  "sessionNumber": 1
+}
+```
+
+#### Response (201 Created)
+```json
+{
+  "success": true,
+  "message": "Session started successfully",
+  "data": {
+    "id": "session-uuid",
+    "userId": "user-uuid",
+    "topicId": "slowdown",
+    "sessionNumber": 1,
+    "startedAt": "2025-10-20T15:30:00.000Z",
+    "completedAt": null,
+    "progress": 0,
+    "totalQuestions": 10,
+    "createdAt": "2025-10-20T15:30:00.000Z",
+    "updatedAt": "2025-10-20T15:30:00.000Z"
+  }
+}
+```
+
+---
+
+### Get Session Progress
+Retrieve current session progress.
+
+**Endpoint**: `GET /v2/cardgame/sessions/:sessionId/progress`  
+**Authentication**: Required
+
+#### Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Session progress retrieved successfully",
+  "data": {
+    "sessionId": "session-uuid",
+    "progress": 7,
+    "totalQuestions": 10,
+    "percentComplete": 70,
+    "completedAt": null,
+    "feedbackSubmitted": 7,
+    "averageRating": 4.3
+  }
+}
+```
 
 ---
 
@@ -47,13 +210,13 @@ curl -X POST http://localhost:3001/v2/cardgame/feedback \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "topicId": "communication-skills",
-    "topicTitle": "Communication Skills",
-    "questionId": "q-001",
-    "questionText": "How do you handle difficult conversations?",
+    "topicId": "slowdown",
+    "topicTitle": "Slow Down, You'\''re Doing Fine",
+    "questionId": "slowdown-s1-q1",
+    "questionText": "What areas of your life do you feel you'\''re '\''behind'\'' in, and who decided this timeline?",
     "sessionNumber": 1,
     "rating": 5,
-    "comment": "This question really made me think!",
+    "comment": "This question really made me reflect on external expectations versus my own values.",
     "isHelpful": true
   }'
 ```
@@ -746,6 +909,80 @@ curl -X GET "http://localhost:3000/v2/cardgame/feedback?userId=YOUR_USER_ID" \
 
 ---
 
-**Last Updated**: October 17, 2025  
+## Current Implementation Status
+
+### ✅ Deployed Endpoints (23 total)
+
+**Topics & Questions (6 endpoints)**
+- ✅ GET `/v2/cardgame/topics` - Get all topics
+- ✅ GET `/v2/cardgame/topics/:topicId` - Get topic by ID
+- ✅ GET `/v2/cardgame/topics/:topicId/sessions/:sessionNumber/questions` - Get session questions
+- ✅ POST `/v2/cardgame/topics` - Create topic (admin)
+- ✅ PATCH `/v2/cardgame/topics/:topicId` - Update topic (admin)
+- ✅ POST `/v2/cardgame/topics/:topicId/questions` - Add question (admin)
+
+**Sessions (5 endpoints)**
+- ✅ POST `/v2/cardgame/sessions` - Start session
+- ✅ GET `/v2/cardgame/sessions/:sessionId/progress` - Get progress
+- ✅ PATCH `/v2/cardgame/sessions/:sessionId/progress` - Update progress
+- ✅ GET `/v2/cardgame/sessions` - Get all user sessions
+- ✅ POST `/v2/cardgame/sessions/:sessionId/complete` - Complete session
+
+**Feedback (5 endpoints)**
+- ✅ POST `/v2/cardgame/feedback` - Submit feedback
+- ✅ GET `/v2/cardgame/feedback` - Get all feedback (with filters)
+- ✅ GET `/v2/cardgame/feedback/:id` - Get feedback by ID
+- ✅ PATCH `/v2/cardgame/feedback/:id` - Update feedback
+- ✅ DELETE `/v2/cardgame/feedback/:id` - Delete feedback
+
+**Social Features (3 endpoints)**
+- ✅ POST `/v2/cardgame/feedback/:id/upvote` - Toggle upvote
+- ✅ POST `/v2/cardgame/feedback/:id/replies` - Add reply
+- ✅ DELETE `/v2/cardgame/replies/:id` - Delete reply
+
+**Statistics & Analytics (4 endpoints)**
+- ✅ GET `/v2/cardgame/stats/topics/:topicId` - Get topic stats
+- ✅ GET `/v2/cardgame/stats/topics` - Get all topic stats
+- ✅ GET `/v2/cardgame/stats/me` - Get user stats
+- ✅ GET `/v2/cardgame/analytics/topics/:topicId` - Get topic analytics
+
+### 📊 Current Data
+
+**Topics**: 1 topic deployed
+- "Slow Down, You're Doing Fine" (ID: `slowdown`)
+  - Session 1: "Recognizing Your Pace" (10 questions)
+  - Session 2: "Finding Your Rhythm" (10 questions)
+  - Total: 20 reflection questions from PDF
+
+**Sample Questions**:
+- "What areas of your life do you feel you're 'behind' in, and who decided this timeline?"
+- "How does social media impact your perception of where you 'should' be in life?"
+- "What would a day designed entirely around your natural rhythm look like?"
+- "What boundaries do you need to set to honor your natural pace?"
+
+### 🧪 Testing Status
+
+- ✅ Schema deployed to Railway staging database
+- ✅ Prisma client generated (v6.13.0)
+- ✅ TypeScript compilation: 0 errors
+- ✅ All 23 endpoints registered and accessible
+- ✅ Actual questions seeded from PDF
+- ✅ Topics endpoint tested with real user
+- ✅ Questions endpoints tested (both sessions)
+- ⏳ Complete manual endpoint testing pending
+- ⏳ Automated tests pending (target: 30+ tests, 80% coverage)
+- ⏳ Formal Prisma migration pending
+
+### 🚀 Next Steps
+
+1. **Manual Testing** - Test all 23 endpoints with complete user journeys
+2. **Automated Tests** - Write unit and integration tests
+3. **Migration** - Create formal Prisma migration file
+4. **Production Deployment** - Deploy after testing complete
+
+---
+
+**Last Updated**: October 20, 2025  
 **Version**: 2.1.0  
-**Status**: ✅ Production Ready
+**Status**: 🟡 Phase 1 - 95% Complete (Testing in Progress)  
+**Database**: Railway Staging - `crossover.proxy.rlwy.net:27596`

@@ -10,7 +10,13 @@ import {
   StatsResponse,
   TopicAnalyticsResponse,
   UserStatsResponse,
-  PaginatedFeedbackResponse
+  PaginatedFeedbackResponse,
+  CreateTopicRequest,
+  UpdateTopicRequest,
+  CreateQuestionRequest,
+  UpdateQuestionRequest,
+  StartSessionRequest,
+  CompleteSessionRequest,
 } from './cardgame.types';
 import logger from '../../utils/logger';
 import { Prisma } from '@prisma/client';
@@ -33,15 +39,48 @@ export class CardGameService {
       throw new AppError('Rating must be between 1 and 5', 400);
     }
 
+    // Validate question exists if questionId is provided
+    if (data.questionId) {
+      const question = await prisma.cardGameQuestion.findFirst({
+        where: {
+          id: data.questionId,
+          topicId: data.topicId,
+          isActive: true,
+        },
+      });
+
+      if (!question) {
+        throw new AppError('Invalid question ID for this topic', 400);
+      }
+
+      // Auto-fill questionText if not provided
+      if (!data.questionText) {
+        data.questionText = question.questionText;
+      }
+    }
+
+    // Get topic title if not provided
+    if (!data.topicTitle) {
+      const topic = await prisma.cardGameTopic.findUnique({
+        where: { id: data.topicId },
+      });
+      if (topic) {
+        data.topicTitle = topic.title;
+      }
+    }
+
     // Create feedback
     const feedback = await prisma.cardGameFeedback.create({
       data: {
         userId,
         topicId: data.topicId,
+        topicTitle: data.topicTitle,
         sessionNumber: data.sessionNumber,
         questionId: data.questionId,
+        questionText: data.questionText,
         rating: data.rating,
         comment: data.comment || null,
+        isHelpful: data.isHelpful !== undefined ? data.isHelpful : true,
       },
       include: {
         user: {
@@ -62,6 +101,11 @@ export class CardGameService {
           },
         },
       },
+    });
+
+    // Update session progress asynchronously
+    this.updateSessionProgress(userId, data.topicId, data.sessionNumber).catch((err) => {
+      logger.error(`Error updating session progress:`, err);
     });
 
     // Update topic statistics asynchronously
@@ -698,10 +742,13 @@ export class CardGameService {
       id: feedback.id,
       userId: feedback.userId,
       topicId: feedback.topicId,
+      topicTitle: feedback.topicTitle,
       sessionNumber: feedback.sessionNumber,
       questionId: feedback.questionId,
+      questionText: feedback.questionText,
       rating: feedback.rating,
       comment: feedback.comment,
+      isHelpful: feedback.isHelpful,
       createdAt: feedback.createdAt,
       updatedAt: feedback.updatedAt,
       user: feedback.user,
@@ -727,5 +774,612 @@ export class CardGameService {
       updatedAt: reply.updatedAt,
       user: reply.user,
     };
+  }
+
+  // ============================================================================
+  // TOPIC OPERATIONS
+  // ============================================================================
+
+  /**
+   * Get all active topics
+   */
+  static async getTopics(includeStats = false) {
+    const topics = await prisma.cardGameTopic.findMany({
+      where: { isActive: true },
+      orderBy: [
+        { displayOrder: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+
+    if (!includeStats) {
+      return topics;
+    }
+
+    // Include stats for each topic
+    const topicsWithStats = await Promise.all(
+      topics.map(async (topic) => {
+        const stats = await prisma.cardGameStat.findUnique({
+          where: { topicId: topic.id },
+        });
+
+        return {
+          ...topic,
+          stats: stats || {
+            totalSessions: 0,
+            averageRating: 0,
+            totalFeedback: 0,
+          },
+        };
+      })
+    );
+
+    return topicsWithStats;
+  }
+
+  /**
+   * Get a single topic by ID
+   */
+  static async getTopicById(topicId: string, userId?: string) {
+    const topic = await prisma.cardGameTopic.findUnique({
+      where: { id: topicId },
+    });
+
+    if (!topic) {
+      throw new AppError('Topic not found', 404);
+    }
+
+    // Get stats
+    const stats = await prisma.cardGameStat.findUnique({
+      where: { topicId },
+    });
+
+    // Get user's progress if userId provided
+    let userProgress;
+    if (userId) {
+      const sessions = await prisma.cardGameSession.findMany({
+        where: {
+          userId,
+          topicId,
+        },
+        orderBy: { sessionNumber: 'asc' },
+      });
+
+      const completedSessions = sessions.filter((s) => s.completedAt).length;
+      const lastSession = sessions[sessions.length - 1];
+      const canContinue = completedSessions < topic.totalSessions;
+
+      userProgress = {
+        sessionsCompleted: completedSessions,
+        lastSessionDate: lastSession?.startedAt,
+        canContinue,
+        nextSessionNumber: canContinue ? completedSessions + 1 : null,
+      };
+    }
+
+    return {
+      ...topic,
+      stats: stats || { totalSessions: 0, averageRating: 0, totalFeedback: 0 },
+      userProgress,
+    };
+  }
+
+  /**
+   * Create a new topic (Admin only)
+   */
+  static async createTopic(data: {
+    id: string;
+    title: string;
+    description?: string;
+    gradient?: string;
+    totalSessions: number;
+    displayOrder?: number;
+  }) {
+    // Check if topic already exists
+    const existing = await prisma.cardGameTopic.findUnique({
+      where: { id: data.id },
+    });
+
+    if (existing) {
+      throw new AppError('Topic with this ID already exists', 409);
+    }
+
+    const topic = await prisma.cardGameTopic.create({
+      data: {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        gradient: data.gradient,
+        totalSessions: data.totalSessions,
+        displayOrder: data.displayOrder || 0,
+        isActive: true,
+      },
+    });
+
+    // Initialize stats
+    await prisma.cardGameStat.create({
+      data: {
+        topicId: topic.id,
+        totalSessions: 0,
+        averageRating: 0,
+        totalFeedback: 0,
+      },
+    });
+
+    return topic;
+  }
+
+  /**
+   * Update a topic (Admin only)
+   */
+  static async updateTopic(
+    topicId: string,
+    data: {
+      title?: string;
+      description?: string;
+      gradient?: string;
+      totalSessions?: number;
+      isActive?: boolean;
+      displayOrder?: number;
+    }
+  ) {
+    const topic = await prisma.cardGameTopic.findUnique({
+      where: { id: topicId },
+    });
+
+    if (!topic) {
+      throw new AppError('Topic not found', 404);
+    }
+
+    return await prisma.cardGameTopic.update({
+      where: { id: topicId },
+      data,
+    });
+  }
+
+  // ============================================================================
+  // QUESTION OPERATIONS
+  // ============================================================================
+
+  /**
+   * Get questions for a specific session
+   */
+  static async getSessionQuestions(topicId: string, sessionNumber: number, activeOnly: boolean = true) {
+    // Verify topic exists
+    const topic = await prisma.cardGameTopic.findUnique({
+      where: { id: topicId },
+    });
+
+    if (!topic) {
+      throw new AppError('Topic not found', 404);
+    }
+
+    if (sessionNumber < 1 || sessionNumber > topic.totalSessions) {
+      throw new AppError('Invalid session number', 400);
+    }
+
+    const whereClause: any = {
+      topicId,
+      sessionNumber,
+    };
+
+    if (activeOnly) {
+      whereClause.isActive = true;
+    }
+
+    const questions = await prisma.cardGameQuestion.findMany({
+      where: whereClause,
+      orderBy: { questionOrder: 'asc' },
+    });
+
+    return {
+      topicId,
+      topicTitle: topic.title,
+      sessionNumber,
+      totalQuestions: questions.length,
+      questions,
+    };
+  }
+
+  /**
+   * Create a new question (Admin only)
+   */
+  static async createQuestion(data: {
+    topicId: string;
+    sessionNumber: number;
+    questionOrder: number;
+    questionText: string;
+  }) {
+    // Verify topic exists
+    const topic = await prisma.cardGameTopic.findUnique({
+      where: { id: data.topicId },
+    });
+
+    if (!topic) {
+      throw new AppError('Topic not found', 404);
+    }
+
+    if (data.sessionNumber < 1 || data.sessionNumber > topic.totalSessions) {
+      throw new AppError('Invalid session number', 400);
+    }
+
+    // Check if question already exists at this position
+    const existing = await prisma.cardGameQuestion.findUnique({
+      where: {
+        topicId_sessionNumber_questionOrder: {
+          topicId: data.topicId,
+          sessionNumber: data.sessionNumber,
+          questionOrder: data.questionOrder,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new AppError('Question already exists at this position', 409);
+    }
+
+    return await prisma.cardGameQuestion.create({
+      data: {
+        topicId: data.topicId,
+        sessionNumber: data.sessionNumber,
+        questionOrder: data.questionOrder,
+        questionText: data.questionText,
+        isActive: true,
+      },
+    });
+  }
+
+  /**
+   * Update a question (Admin only)
+   */
+  static async updateQuestion(
+    questionId: string,
+    data: {
+      questionText?: string;
+      isActive?: boolean;
+    }
+  ) {
+    const question = await prisma.cardGameQuestion.findUnique({
+      where: { id: questionId },
+    });
+
+    if (!question) {
+      throw new AppError('Question not found', 404);
+    }
+
+    return await prisma.cardGameQuestion.update({
+      where: { id: questionId },
+      data,
+    });
+  }
+
+  /**
+   * Delete a question (Admin only)
+   */
+  static async deleteQuestion(questionId: string) {
+    const question = await prisma.cardGameQuestion.findUnique({
+      where: { id: questionId },
+    });
+
+    if (!question) {
+      throw new AppError('Question not found', 404);
+    }
+
+    // Soft delete by setting isActive to false
+    return await prisma.cardGameQuestion.update({
+      where: { id: questionId },
+      data: { isActive: false },
+    });
+  }
+
+  // ============================================================================
+  // SESSION OPERATIONS
+  // ============================================================================
+
+  /**
+   * Start a new session
+   */
+  static async startSession(
+    userId: string,
+    data: {
+      topicId: string;
+      sessionNumber: number;
+      totalQuestions: number;
+    }
+  ) {
+    // Verify topic exists
+    const topic = await prisma.cardGameTopic.findUnique({
+      where: { id: data.topicId },
+    });
+
+    if (!topic) {
+      throw new AppError('Topic not found', 404);
+    }
+
+    if (data.sessionNumber < 1 || data.sessionNumber > topic.totalSessions) {
+      throw new AppError('Invalid session number', 400);
+    }
+
+    // Check if session already exists
+    const existing = await prisma.cardGameSession.findUnique({
+      where: {
+        userId_topicId_sessionNumber: {
+          userId,
+          topicId: data.topicId,
+          sessionNumber: data.sessionNumber,
+        },
+      },
+    });
+
+    if (existing) {
+      // Return existing session if not completed
+      if (!existing.completedAt) {
+        return existing;
+      }
+      throw new AppError('Session already completed', 409);
+    }
+
+    return await prisma.cardGameSession.create({
+      data: {
+        userId,
+        topicId: data.topicId,
+        sessionNumber: data.sessionNumber,
+        totalQuestions: data.totalQuestions,
+        questionsAnswered: 0,
+      },
+      include: {
+        topic: true,
+      },
+    });
+  }
+
+  /**
+   * Complete a session
+   */
+  static async completeSession(
+    sessionId: string,
+    userId: string,
+    data: {
+      averageRating?: number;
+    }
+  ) {
+    const session = await prisma.cardGameSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      throw new AppError('Session not found', 404);
+    }
+
+    // Verify ownership
+    if (session.userId !== userId) {
+      throw new AppError('You can only complete your own sessions', 403);
+    }
+
+    if (session.completedAt) {
+      throw new AppError('Session already completed', 400);
+    }
+
+    return await prisma.cardGameSession.update({
+      where: { id: sessionId },
+      data: {
+        completedAt: new Date(),
+        averageRating: data.averageRating,
+      },
+      include: {
+        topic: true,
+      },
+    });
+  }
+
+  /**
+   * Get incomplete sessions for a user
+   */
+  static async getIncompleteSessions(userId: string) {
+    return await prisma.cardGameSession.findMany({
+      where: {
+        userId,
+        completedAt: null,
+      },
+      include: {
+        topic: true,
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  /**
+   * Get all sessions for a user
+   */
+  static async getUserSessions(userId: string, topicId?: string) {
+    const where: Prisma.CardGameSessionWhereInput = { userId };
+    if (topicId) {
+      where.topicId = topicId;
+    }
+
+    return await prisma.cardGameSession.findMany({
+      where,
+      include: {
+        topic: true,
+      },
+      orderBy: [
+        { topicId: 'asc' },
+        { sessionNumber: 'asc' },
+      ],
+    });
+  }
+
+  /**
+   * Get session progress
+   */
+  static async getSessionProgress(sessionId: string, userId: string) {
+    const session = await prisma.cardGameSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        topic: true,
+      },
+    });
+
+    if (!session) {
+      throw new AppError('Session not found', 404);
+    }
+
+    // Verify ownership
+    if (session.userId !== userId) {
+      throw new AppError('You can only view your own session progress', 403);
+    }
+
+    // Verify ownership
+    if (session.userId !== userId) {
+      throw new AppError('You can only view your own session progress', 403);
+    }
+
+    const percentage = session.totalQuestions > 0
+      ? (session.questionsAnswered / session.totalQuestions) * 100
+      : 0;
+
+    return {
+      ...session,
+      progress: {
+        percentage: Math.round(percentage),
+        isComplete: !!session.completedAt,
+        canResume: !session.completedAt,
+      },
+    };
+  }
+
+  /**
+   * Get session summary
+   */
+  static async getSessionSummary(
+    userId: string,
+    topicId: string,
+    sessionNumber: number
+  ) {
+    const session = await prisma.cardGameSession.findUnique({
+      where: {
+        userId_topicId_sessionNumber: {
+          userId,
+          topicId,
+          sessionNumber,
+        },
+      },
+      include: {
+        topic: true,
+      },
+    });
+
+    if (!session) {
+      throw new AppError('Session not found', 404);
+    }
+
+    // Get user's feedback for this session
+    const feedback = await prisma.cardGameFeedback.findMany({
+      where: {
+        userId,
+        topicId,
+        sessionNumber,
+      },
+      include: {
+        _count: {
+          select: {
+            cardGameUpvotes: true,
+            cardGameReplies: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Calculate stats
+    const questionsAnswered = feedback.length;
+    const averageRating = questionsAnswered > 0
+      ? feedback.reduce((sum, f) => sum + f.rating, 0) / questionsAnswered
+      : 0;
+    const commentsCount = feedback.filter((f) => f.comment).length;
+
+    // Get community average for comparison
+    const communityFeedback = await prisma.cardGameFeedback.aggregate({
+      where: {
+        topicId,
+        sessionNumber,
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    return {
+      session,
+      feedback,
+      stats: {
+        totalQuestions: session.totalQuestions,
+        questionsAnswered,
+        averageRating: Math.round(averageRating * 10) / 10,
+        commentsCount,
+      },
+      communityComparison: {
+        yourRating: averageRating,
+        communityAverage: communityFeedback._avg.rating || 0,
+        percentile: 0, // TODO: Calculate percentile
+      },
+    };
+  }
+
+  /**
+   * Update session progress when feedback is submitted
+   */
+  static async updateSessionProgress(
+    userId: string,
+    topicId: string,
+    sessionNumber: number
+  ) {
+    const session = await prisma.cardGameSession.findUnique({
+      where: {
+        userId_topicId_sessionNumber: {
+          userId,
+          topicId,
+          sessionNumber,
+        },
+      },
+    });
+
+    if (!session || session.completedAt) {
+      return; // Session doesn't exist or already completed
+    }
+
+    // Count feedback for this session
+    const feedbackCount = await prisma.cardGameFeedback.count({
+      where: {
+        userId,
+        topicId,
+        sessionNumber,
+      },
+    });
+
+    // Calculate average rating
+    const avgRating = await prisma.cardGameFeedback.aggregate({
+      where: {
+        userId,
+        topicId,
+        sessionNumber,
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    // Update session
+    await prisma.cardGameSession.update({
+      where: { id: session.id },
+      data: {
+        questionsAnswered: feedbackCount,
+        averageRating: avgRating._avg.rating || undefined,
+        // Auto-complete if all questions answered
+        completedAt: feedbackCount >= session.totalQuestions
+          ? new Date()
+          : undefined,
+      },
+    });
   }
 }

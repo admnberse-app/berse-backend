@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CardGameController } from './cardgame.controller';
-import { authenticateToken } from '../../middleware/auth';
+import { authenticateToken, authorize } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import {
   submitFeedbackValidators,
@@ -10,7 +10,16 @@ import {
   idParamValidators,
   topicIdParamValidators,
   userIdParamValidators,
+  createTopicValidators,
+  updateTopicValidators,
+  createQuestionValidators,
+  updateQuestionValidators,
+  startSessionValidators,
+  completeSessionValidators,
+  sessionQuestionsValidators,
+  sessionSummaryValidators,
 } from './cardgame.validators';
+import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -449,6 +458,536 @@ router.get(
   userIdParamValidators,
   handleValidationErrors,
   CardGameController.getUserStats
+);
+
+// ============================================================================
+// TOPIC ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/cardgame/topics:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get all topics
+ *     description: Retrieve all card game topics, optionally filtered by active status
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: activeOnly
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Return only active topics
+ *     responses:
+ *       200:
+ *         description: Topics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       gradient:
+ *                         type: string
+ *                       totalSessions:
+ *                         type: integer
+ *                       isActive:
+ *                         type: boolean
+ *                       displayOrder:
+ *                         type: integer
+ */
+router.get(
+  '/topics',
+  authenticateToken,
+  CardGameController.getTopics
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/topics/{topicId}:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get topic by ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Topic retrieved successfully
+ *       404:
+ *         description: Topic not found
+ */
+router.get(
+  '/topics/:topicId',
+  authenticateToken,
+  topicIdParamValidators,
+  handleValidationErrors,
+  CardGameController.getTopicById
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/admin/topics:
+ *   post:
+ *     tags: [Card Game - Admin]
+ *     summary: Create new topic (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - title
+ *               - totalSessions
+ *             properties:
+ *               id:
+ *                 type: string
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               gradient:
+ *                 type: string
+ *               totalSessions:
+ *                 type: integer
+ *               displayOrder:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Topic created successfully
+ *       403:
+ *         description: Insufficient permissions
+ */
+router.post(
+  '/admin/topics',
+  authenticateToken,
+  authorize(UserRole.ADMIN),
+  createTopicValidators,
+  handleValidationErrors,
+  CardGameController.createTopic
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/admin/topics/{id}:
+ *   patch:
+ *     tags: [Card Game - Admin]
+ *     summary: Update topic (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               gradient:
+ *                 type: string
+ *               totalSessions:
+ *                 type: integer
+ *               isActive:
+ *                 type: boolean
+ *               displayOrder:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Topic updated successfully
+ *       403:
+ *         description: Insufficient permissions
+ *       404:
+ *         description: Topic not found
+ */
+router.patch(
+  '/admin/topics/:id',
+  authenticateToken,
+  authorize(UserRole.ADMIN),
+  [...idParamValidators, ...updateTopicValidators],
+  handleValidationErrors,
+  CardGameController.updateTopic
+);
+
+// ============================================================================
+// QUESTION ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/cardgame/topics/{topicId}/sessions/{sessionNumber}/questions:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get questions for a topic session
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: sessionNumber
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: activeOnly
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *     responses:
+ *       200:
+ *         description: Questions retrieved successfully
+ *       404:
+ *         description: Topic not found or no questions for this session
+ */
+router.get(
+  '/topics/:topicId/sessions/:sessionNumber/questions',
+  authenticateToken,
+  sessionQuestionsValidators,
+  handleValidationErrors,
+  CardGameController.getSessionQuestions
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/admin/questions:
+ *   post:
+ *     tags: [Card Game - Admin]
+ *     summary: Create new question (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - topicId
+ *               - sessionNumber
+ *               - questionOrder
+ *               - questionText
+ *             properties:
+ *               topicId:
+ *                 type: string
+ *               sessionNumber:
+ *                 type: integer
+ *               questionOrder:
+ *                 type: integer
+ *               questionText:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Question created successfully
+ *       403:
+ *         description: Insufficient permissions
+ */
+router.post(
+  '/admin/questions',
+  authenticateToken,
+  authorize(UserRole.ADMIN),
+  createQuestionValidators,
+  handleValidationErrors,
+  CardGameController.createQuestion
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/admin/questions/{id}:
+ *   patch:
+ *     tags: [Card Game - Admin]
+ *     summary: Update question (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               questionText:
+ *                 type: string
+ *               questionOrder:
+ *                 type: integer
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Question updated successfully
+ *       403:
+ *         description: Insufficient permissions
+ *       404:
+ *         description: Question not found
+ */
+router.patch(
+  '/admin/questions/:id',
+  authenticateToken,
+  authorize(UserRole.ADMIN),
+  [...idParamValidators, ...updateQuestionValidators],
+  handleValidationErrors,
+  CardGameController.updateQuestion
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/admin/questions/{id}:
+ *   delete:
+ *     tags: [Card Game - Admin]
+ *     summary: Delete question (Admin only) - Soft delete
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Question deleted successfully
+ *       403:
+ *         description: Insufficient permissions
+ *       404:
+ *         description: Question not found
+ */
+router.delete(
+  '/admin/questions/:id',
+  authenticateToken,
+  authorize(UserRole.ADMIN),
+  idParamValidators,
+  handleValidationErrors,
+  CardGameController.deleteQuestion
+);
+
+// ============================================================================
+// SESSION ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/start:
+ *   post:
+ *     tags: [Card Game]
+ *     summary: Start a new session
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - topicId
+ *               - sessionNumber
+ *             properties:
+ *               topicId:
+ *                 type: string
+ *               sessionNumber:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Session started successfully
+ *       400:
+ *         description: Session already started
+ */
+router.post(
+  '/sessions/start',
+  authenticateToken,
+  startSessionValidators,
+  handleValidationErrors,
+  CardGameController.startSession
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/{id}/complete:
+ *   patch:
+ *     tags: [Card Game]
+ *     summary: Complete a session
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               averageRating:
+ *                 type: number
+ *                 minimum: 1
+ *                 maximum: 5
+ *     responses:
+ *       200:
+ *         description: Session completed successfully
+ *       400:
+ *         description: Session already completed
+ *       403:
+ *         description: Not your session
+ *       404:
+ *         description: Session not found
+ */
+router.patch(
+  '/sessions/:id/complete',
+  authenticateToken,
+  [...idParamValidators, ...completeSessionValidators],
+  handleValidationErrors,
+  CardGameController.completeSession
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/incomplete:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get incomplete sessions for current user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Incomplete sessions retrieved successfully
+ */
+router.get(
+  '/sessions/incomplete',
+  authenticateToken,
+  CardGameController.getIncompleteSessions
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/users/me/sessions:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get all sessions for current user
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: topicId
+ *         schema:
+ *           type: string
+ *         description: Filter by topic ID
+ *     responses:
+ *       200:
+ *         description: User sessions retrieved successfully
+ */
+router.get(
+  '/users/me/sessions',
+  authenticateToken,
+  CardGameController.getUserSessions
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/{id}/progress:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get session progress
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Session progress retrieved successfully
+ *       403:
+ *         description: Not your session
+ *       404:
+ *         description: Session not found
+ */
+router.get(
+  '/sessions/:id/progress',
+  authenticateToken,
+  idParamValidators,
+  handleValidationErrors,
+  CardGameController.getSessionProgress
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/{topicId}/{sessionNumber}/summary:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get session summary
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: sessionNumber
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Session summary retrieved successfully
+ *       404:
+ *         description: Session not found
+ */
+router.get(
+  '/sessions/:topicId/:sessionNumber/summary',
+  authenticateToken,
+  sessionSummaryValidators,
+  handleValidationErrors,
+  CardGameController.getSessionSummary
 );
 
 export default router;

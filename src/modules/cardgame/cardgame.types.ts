@@ -2,17 +2,65 @@
 // CARD GAME REQUEST TYPES
 // ============================================================================
 
-export interface SubmitFeedbackRequest {
+// Topic Types
+export interface CreateTopicRequest {
+  id: string; // e.g., "slowdown", "mindfulness", etc.
+  title: string;
+  description?: string;
+  gradient?: string;
+  totalSessions: number;
+  displayOrder?: number;
+}
+
+export interface UpdateTopicRequest {
+  title?: string;
+  description?: string;
+  gradient?: string;
+  totalSessions?: number;
+  isActive?: boolean;
+  displayOrder?: number;
+}
+
+// Question Types
+export interface CreateQuestionRequest {
   topicId: string;
   sessionNumber: number;
+  questionOrder: number;
+  questionText: string;
+}
+
+export interface UpdateQuestionRequest {
+  questionText?: string;
+  isActive?: boolean;
+}
+
+// Session Types
+export interface StartSessionRequest {
+  topicId: string;
+  sessionNumber: number;
+  totalQuestions: number;
+}
+
+export interface CompleteSessionRequest {
+  averageRating?: number;
+}
+
+// Feedback Types (updated)
+export interface SubmitFeedbackRequest {
+  topicId: string;
+  topicTitle?: string; // Auto-filled from topic
+  sessionNumber: number;
   questionId: string;
+  questionText?: string; // Auto-filled from question
   rating: number; // 1-5
   comment?: string;
+  isHelpful?: boolean;
 }
 
 export interface UpdateFeedbackRequest {
   rating?: number;
   comment?: string;
+  isHelpful?: boolean;
 }
 
 export interface AddReplyRequest {
@@ -43,14 +91,104 @@ export interface FeedbackQuery {
 // RESPONSE TYPES
 // ============================================================================
 
-export interface FeedbackResponse {
+// Topic Response Types
+export interface TopicResponse {
+  id: string;
+  title: string;
+  description?: string;
+  gradient?: string;
+  totalSessions: number;
+  isActive: boolean;
+  displayOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Optional computed fields
+  stats?: {
+    totalSessions: number;
+    averageRating: number;
+    totalFeedback: number;
+    uniqueUsers?: number;
+  };
+  userProgress?: {
+    sessionsCompleted: number;
+    lastSessionDate?: Date;
+    canContinue: boolean;
+    nextSessionNumber?: number;
+  };
+}
+
+// Question Response Types
+export interface QuestionResponse {
+  id: string;
+  topicId: string;
+  sessionNumber: number;
+  questionOrder: number;
+  questionText: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SessionQuestionsResponse {
+  topicId: string;
+  topicTitle: string;
+  sessionNumber: number;
+  totalQuestions: number;
+  questions: QuestionResponse[];
+}
+
+// Session Response Types
+export interface SessionResponse {
   id: string;
   userId: string;
   topicId: string;
   sessionNumber: number;
+  startedAt: Date;
+  completedAt?: Date;
+  totalQuestions: number;
+  questionsAnswered: number;
+  averageRating?: number;
+  
+  // Optional relations
+  topic?: TopicResponse;
+  progress?: {
+    percentage: number;
+    isComplete: boolean;
+    canResume: boolean;
+  };
+}
+
+export interface SessionSummaryResponse {
+  session: SessionResponse;
+  feedback: FeedbackResponse[];
+  stats: {
+    totalQuestions: number;
+    questionsAnswered: number;
+    averageRating: number;
+    commentsCount: number;
+  };
+  communityComparison?: {
+    yourRating: number;
+    communityAverage: number;
+    percentile: number;
+  };
+}
+
+// Feedback Response Types (updated)
+
+// Feedback Response Types (updated)
+export interface FeedbackResponse {
+  id: string;
+  userId: string;
+  topicId: string;
+  topicTitle?: string; // NEW
+  sessionNumber: number;
   questionId: string;
+  questionText?: string; // NEW
   rating: number;
   comment?: string;
+  isHelpful?: boolean; // NEW
   createdAt: Date;
   updatedAt: Date;
   

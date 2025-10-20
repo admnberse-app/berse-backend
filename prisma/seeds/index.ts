@@ -134,6 +134,8 @@ async function displayFinalSummary() {
       userSetupScreens: await prisma.userSetupScreen.count(),
       paymentProviders: await prisma.paymentProvider.count(),
       appConfigs: await prisma.appConfig.count(),
+      cardGameTopics: await prisma.cardGameTopic.count(),
+      cardGameQuestions: await prisma.cardGameQuestion.count(),
     };
 
     console.table({
@@ -151,6 +153,8 @@ async function displayFinalSummary() {
       'User Setup Screens': stats.userSetupScreens,
       'Payment Providers': stats.paymentProviders,
       'App Configs': stats.appConfigs,
+      'Card Game Topics': stats.cardGameTopics,
+      'Card Game Questions': stats.cardGameQuestions,
     });
 
     // Get test user credentials
@@ -258,6 +262,10 @@ async function main() {
     {
       path: 'prisma/seeds/features/onboarding-v2.seed.ts',
       description: 'Onboarding V2 Screens',
+    },
+    {
+      path: 'prisma/seeds/cardgame.seed.ts',
+      description: 'Card Game Topics & Questions',
     },
   ];
 
