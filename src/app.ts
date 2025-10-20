@@ -17,6 +17,9 @@ import logger, { stream } from './utils/logger';
 
 // Import API routers
 import apiV2Router from './routes/v2';
+import subscriptionRoutes from './routes/subscription.routes';
+import adminSubscriptionRoutes from './routes/admin/subscription.admin.routes';
+import paymentWebhookRoutes from './routes/webhooks/payment-webhook.routes';
 
 const app: Application = express();
 
@@ -237,6 +240,17 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
 // API Routes
 app.use('/api/v2', apiV2Router);
 app.use('/v2', apiV2Router);      // New v2 routes (primary)
+
+// Subscription routes (new module)
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/v2/subscriptions', subscriptionRoutes);
+
+// Admin subscription management routes
+app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
+app.use('/v2/admin/subscriptions', adminSubscriptionRoutes);
+
+// Payment webhook routes (before CSRF validation)
+app.use('/api/webhooks/payment', paymentWebhookRoutes);
 
 // CSRF token endpoint
 app.get('/csrf-token', csrfTokenEndpoint);

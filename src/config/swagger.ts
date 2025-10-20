@@ -1,5 +1,6 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import { config } from './index';
+import { subscriptionSwaggerDocs } from '../docs/subscription.swagger';
 
 const swaggerDefinition = {
   openapi: '3.0.0',
@@ -1048,4 +1049,20 @@ const options: swaggerJsdoc.Options = {
   ],
 };
 
-export const swaggerSpec = swaggerJsdoc(options);
+export const swaggerSpec = swaggerJsdoc(options) as any;
+
+// Merge subscription module documentation
+if (subscriptionSwaggerDocs.components?.schemas) {
+  swaggerSpec.components = swaggerSpec.components || {};
+  swaggerSpec.components.schemas = {
+    ...swaggerSpec.components.schemas,
+    ...subscriptionSwaggerDocs.components.schemas,
+  };
+}
+
+if (subscriptionSwaggerDocs.paths) {
+  swaggerSpec.paths = {
+    ...swaggerSpec.paths,
+    ...subscriptionSwaggerDocs.paths,
+  };
+}
