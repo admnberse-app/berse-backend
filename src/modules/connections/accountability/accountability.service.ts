@@ -4,13 +4,14 @@ import { AppError } from '../../../middleware/error';
 import { TrustScoreService } from '../trust/trust-score.service';
 import { NotificationService } from '../../../services/notification.service';
 import logger from '../../../utils/logger';
+import { configService } from '../../platform/config.service';
 
 /**
  * Accountability Service
  * Implements the accountability chain where vouchers are affected by their vouchees' behavior
- * Formula:
- * - Negative behavior: Voucher penalty = vouchee penalty × 0.4
- * - Positive behavior: Voucher reward = vouchee reward × 0.2
+ * Formula (configurable via database):
+ * - Negative behavior: Voucher penalty = vouchee penalty × penaltyDistribution (default: 0.4)
+ * - Positive behavior: Voucher reward = vouchee reward × rewardDistribution (default: 0.2)
  */
 export class AccountabilityService {
   /**
@@ -118,15 +119,18 @@ export class AccountabilityService {
         return;
       }
 
+      // Get accountability rules from dynamic config
+      const accountabilityRules = await configService.getAccountabilityRules();
+
       // Calculate voucher impact based on vouchee impact
       let voucherImpact = 0;
       
       if (log.impactType === AccountabilityImpact.NEGATIVE) {
-        // Negative: Voucher gets 40% of the penalty
-        voucherImpact = log.impactValue * 0.4;
+        // Negative: Voucher gets penalty distribution % of the penalty
+        voucherImpact = log.impactValue * accountabilityRules.penaltyDistribution;
       } else if (log.impactType === AccountabilityImpact.POSITIVE) {
-        // Positive: Voucher gets 20% of the reward
-        voucherImpact = log.impactValue * 0.2;
+        // Positive: Voucher gets reward distribution % of the reward
+        voucherImpact = log.impactValue * accountabilityRules.rewardDistribution;
       }
       // NEUTRAL has no impact on voucher
 
@@ -238,12 +242,15 @@ export class AccountabilityService {
       const negativeCount = logs.filter(l => l.impactType === AccountabilityImpact.NEGATIVE).length;
       const neutralCount = logs.filter(l => l.impactType === AccountabilityImpact.NEUTRAL).length;
 
+      // Get accountability rules for calculations
+      const accountabilityRules = await configService.getAccountabilityRules();
+
       // Calculate total impact
       const totalImpact = logs.reduce((sum, log) => {
         if (log.impactType === AccountabilityImpact.NEGATIVE) {
-          return sum + log.impactValue * 0.4;
+          return sum + log.impactValue * accountabilityRules.penaltyDistribution;
         } else if (log.impactType === AccountabilityImpact.POSITIVE) {
-          return sum + log.impactValue * 0.2;
+          return sum + log.impactValue * accountabilityRules.rewardDistribution;
         }
         return sum;
       }, 0);
@@ -264,9 +271,9 @@ export class AccountabilityService {
         const existing = voucheeMap.get(log.voucheeId);
         let impact = 0;
         if (log.impactType === AccountabilityImpact.NEGATIVE) {
-          impact = log.impactValue * 0.4;
+          impact = log.impactValue * accountabilityRules.penaltyDistribution;
         } else if (log.impactType === AccountabilityImpact.POSITIVE) {
-          impact = log.impactValue * 0.2;
+          impact = log.impactValue * accountabilityRules.rewardDistribution;
         }
 
         if (existing) {

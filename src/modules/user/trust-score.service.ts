@@ -1,6 +1,7 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { configService } from '../platform/config.service';
 import {
   TrustScoreDetail,
   TrustScoreBreakdown,
@@ -1142,10 +1143,13 @@ export class TrustScoreUserService {
   }
 
   /**
-   * Get trust badges for a user
+   * Get trust badges for a user (uses dynamic badge config)
    */
   static async getTrustBadges(userId: string): Promise<any> {
     try {
+      // Get badge definitions from dynamic config
+      const badgeConfig = await configService.getBadgeDefinitions();
+      
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -1162,162 +1166,16 @@ export class TrustScoreUserService {
 
       const badges: any[] = [];
 
-      // Badge 1: First Vouch (has at least 1 approved vouch)
-      const vouchCount = await prisma.vouch.count({
-        where: {
-          voucheeId: userId,
-          status: { in: ['APPROVED', 'ACTIVE'] },
-        },
-      });
-
-      if (vouchCount >= 1) {
-        badges.push({
-          id: 'first-vouch',
-          name: 'First Vouch',
-          description: 'Received your first vouch from the community',
-          icon: '🎖️',
-          earnedAt: await prisma.vouch.findFirst({
-            where: {
-              voucheeId: userId,
-              status: { in: ['APPROVED', 'ACTIVE'] },
-            },
-            orderBy: { approvedAt: 'asc' },
-            select: { approvedAt: true },
-          }).then(v => v?.approvedAt || null),
-          tier: 'bronze',
-        });
-      }
-
-      // Badge 2: Trusted Member (50%+ trust score)
-      if (user.trustScore >= 50) {
-        badges.push({
-          id: 'trusted-member',
-          name: 'Trusted Member',
-          description: 'Achieved 50%+ trust score through consistent positive actions',
-          icon: '⭐',
-          earnedAt: await prisma.trustScoreHistory.findFirst({
-            where: {
-              userId,
-              score: { gte: 50 },
-            },
-            orderBy: { timestamp: 'asc' },
-            select: { timestamp: true },
-          }).then(h => h?.timestamp || null),
-          tier: 'silver',
-        });
-      }
-
-      // Badge 3: Community Leader (76%+ trust score)
-      if (user.trustScore >= 76) {
-        badges.push({
-          id: 'community-leader',
-          name: 'Community Leader',
-          description: 'Achieved 76%+ trust score and unlocked all platform features',
-          icon: '👑',
-          earnedAt: await prisma.trustScoreHistory.findFirst({
-            where: {
-              userId,
-              score: { gte: 76 },
-            },
-            orderBy: { timestamp: 'asc' },
-            select: { timestamp: true },
-          }).then(h => h?.timestamp || null),
-          tier: 'gold',
-        });
-      }
-
-      // Badge 4: Perfect Record (no negative feedback for 90+ days)
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      const negativeFeedback = await prisma.trustMoment.count({
-        where: {
-          receiverId: userId,
-          rating: { lte: 2 },
-          createdAt: { gte: ninetyDaysAgo },
-        },
-      });
-
-      const daysSinceCreation = Math.floor((Date.now() - user.createdAt.getTime()) / (24 * 60 * 60 * 1000));
-
-      if (negativeFeedback === 0 && daysSinceCreation >= 90) {
-        badges.push({
-          id: 'perfect-record',
-          name: 'Perfect Record',
-          description: 'Maintained zero negative feedback for 90+ days',
-          icon: '💎',
-          earnedAt: new Date(user.createdAt.getTime() + 90 * 24 * 60 * 60 * 1000),
-          tier: 'platinum',
-        });
-      }
-
-      // Badge 5: Accountability Hero (helped 5+ vouchees succeed)
-      const positiveImpacts = await prisma.accountabilityLog.count({
-        where: {
-          voucherId: userId,
-          impactType: 'POSITIVE',
-          isProcessed: true,
-        },
-      });
-
-      if (positiveImpacts >= 5) {
-        badges.push({
-          id: 'accountability-hero',
-          name: 'Accountability Hero',
-          description: 'Helped 5+ vouchees succeed through positive influence',
-          icon: '🦸',
-          earnedAt: await prisma.accountabilityLog.findFirst({
-            where: {
-              voucherId: userId,
-              impactType: 'POSITIVE',
-              isProcessed: true,
-            },
-            orderBy: { processedAt: 'asc' },
-            skip: 4, // Get the 5th one
-            select: { processedAt: true },
-          }).then(log => log?.processedAt || null),
-          tier: 'gold',
-        });
-      }
-
-      // Additional badges based on achievements
-      const stats = await prisma.userStat.findUnique({
-        where: { userId },
-      });
-
-      if (stats) {
-        // Event Enthusiast (attended 25+ events)
-        if (stats.eventsAttended >= 25) {
-          badges.push({
-            id: 'event-enthusiast',
-            name: 'Event Enthusiast',
-            description: 'Attended 25+ community events',
-            icon: '🎉',
-            earnedAt: null,
-            tier: 'silver',
-          });
-        }
-
-        // Community Builder (joined 10+ communities)
-        if (stats.communitiesJoined >= 10) {
-          badges.push({
-            id: 'community-builder',
-            name: 'Community Builder',
-            description: 'Active member of 10+ communities',
-            icon: '🏘️',
-            earnedAt: null,
-            tier: 'silver',
-          });
-        }
-
-        // Service Provider (provided 10+ services)
-        if (stats.servicesProvided >= 10) {
-          badges.push({
-            id: 'service-provider',
-            name: 'Service Provider',
-            description: 'Provided 10+ services to the community',
-            icon: '🛠️',
-            earnedAt: null,
-            tier: 'bronze',
-          });
+      // Process each badge from config
+      for (const badgeDef of badgeConfig.badges) {
+        const badgeResult = await this.checkBadgeEligibility(
+          userId,
+          user,
+          badgeDef
+        );
+        
+        if (badgeResult) {
+          badges.push(badgeResult);
         }
       }
 
@@ -1329,7 +1187,7 @@ export class TrustScoreUserService {
           return tierOrder[a.tier as keyof typeof tierOrder] - tierOrder[b.tier as keyof typeof tierOrder];
         }),
         progress: {
-          nextBadge: this.getNextBadgeProgress(user.trustScore, vouchCount, positiveImpacts, stats),
+          nextBadge: await this.getNextBadgeProgress(userId, user, badgeConfig),
         },
       };
     } catch (error) {
@@ -1339,65 +1197,303 @@ export class TrustScoreUserService {
   }
 
   /**
-   * Helper: Get progress toward next badge
+   * Check if user is eligible for a specific badge
    */
-  private static getNextBadgeProgress(
-    trustScore: number,
-    vouchCount: number,
-    positiveImpacts: number,
-    stats: any
-  ): any {
-    // Check what badges are missing and provide progress
-    if (vouchCount === 0) {
-      return {
-        badge: 'First Vouch',
-        description: 'Get your first vouch from the community',
-        progress: 0,
-        target: 1,
-      };
+  private static async checkBadgeEligibility(
+    userId: string,
+    user: any,
+    badgeDef: any
+  ): Promise<any | null> {
+    const { type, name, description, icon, tiers } = badgeDef;
+    let count = 0;
+    let earnedAt: Date | null = null;
+    let tier: string | null = null;
+
+    switch (type) {
+      case 'VOUCHER': {
+        count = await prisma.vouch.count({
+          where: {
+            voucherId: userId,
+            status: { in: ['APPROVED', 'ACTIVE'] },
+          },
+        });
+        
+        tier = this.determineBadgeTier(count, tiers);
+        if (tier && count >= tiers.bronze) {
+          earnedAt = await prisma.vouch.findFirst({
+            where: {
+              voucherId: userId,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+            },
+            orderBy: { approvedAt: 'asc' },
+            select: { approvedAt: true },
+          }).then(v => v?.approvedAt || null);
+        }
+        break;
+      }
+
+      case 'CONNECTOR': {
+        count = await prisma.userConnection.count({
+          where: {
+            OR: [{ initiatorId: userId }, { receiverId: userId }],
+            status: 'ACCEPTED',
+          },
+        });
+        
+        tier = this.determineBadgeTier(count, tiers);
+        break;
+      }
+
+      case 'COMMUNITY_BUILDER': {
+        const stats = await prisma.userStat.findUnique({
+          where: { userId },
+        });
+        count = stats?.communitiesJoined || 0;
+        tier = this.determineBadgeTier(count, tiers);
+        break;
+      }
+
+      case 'EVENT_ENTHUSIAST': {
+        const stats = await prisma.userStat.findUnique({
+          where: { userId },
+        });
+        count = stats?.eventsAttended || 0;
+        tier = this.determineBadgeTier(count, tiers);
+        break;
+      }
+
+      case 'TRUST_LEADER': {
+        count = Math.floor(user.trustScore);
+        tier = this.determineBadgeTier(count, tiers);
+        
+        if (tier && count >= tiers.bronze) {
+          earnedAt = await prisma.trustScoreHistory.findFirst({
+            where: {
+              userId,
+              score: { gte: tiers.bronze },
+            },
+            orderBy: { timestamp: 'asc' },
+            select: { timestamp: true },
+          }).then(h => h?.timestamp || null);
+        }
+        break;
+      }
+
+      case 'RELIABLE': {
+        const stats = await prisma.userStat.findUnique({
+          where: { userId },
+        });
+        count = stats?.eventsAttended || 0;
+        
+        // Check attendance rate for reliability
+        const noShows = await prisma.accountabilityLog.count({
+          where: {
+            voucheeId: userId,
+            description: { contains: 'no-show' },
+          },
+        });
+        
+        const attendanceRate = count > 0 ? ((count - noShows) / count) * 100 : 0;
+        if (attendanceRate >= 95) {
+          tier = this.determineBadgeTier(count, tiers);
+        }
+        break;
+      }
+
+      case 'IMPACT_MAKER': {
+        count = await prisma.accountabilityLog.count({
+          where: {
+            voucherId: userId,
+            impactType: 'POSITIVE',
+            isProcessed: true,
+          },
+        });
+        
+        tier = this.determineBadgeTier(count, tiers);
+        
+        if (tier && count >= tiers.bronze) {
+          earnedAt = await prisma.accountabilityLog.findFirst({
+            where: {
+              voucherId: userId,
+              impactType: 'POSITIVE',
+              isProcessed: true,
+            },
+            orderBy: { processedAt: 'asc' },
+            select: { processedAt: true },
+          }).then(log => log?.processedAt || null);
+        }
+        break;
+      }
+
+      case 'LONG_STANDING': {
+        const daysSinceCreation = Math.floor(
+          (Date.now() - user.createdAt.getTime()) / (24 * 60 * 60 * 1000)
+        );
+        count = daysSinceCreation;
+        tier = this.determineBadgeTier(count, tiers);
+        
+        if (tier && count >= tiers.bronze) {
+          earnedAt = new Date(user.createdAt.getTime() + tiers.bronze * 24 * 60 * 60 * 1000);
+        }
+        break;
+      }
+
+      default:
+        return null;
     }
 
-    if (trustScore < 50) {
-      return {
-        badge: 'Trusted Member',
-        description: 'Reach 50% trust score',
-        progress: Math.round(trustScore),
-        target: 50,
-      };
-    }
-
-    if (trustScore < 76) {
-      return {
-        badge: 'Community Leader',
-        description: 'Reach 76% trust score',
-        progress: Math.round(trustScore),
-        target: 76,
-      };
-    }
-
-    if (positiveImpacts < 5) {
-      return {
-        badge: 'Accountability Hero',
-        description: 'Help 5 vouchees succeed',
-        progress: positiveImpacts,
-        target: 5,
-      };
-    }
-
-    if (stats && stats.eventsAttended < 25) {
-      return {
-        badge: 'Event Enthusiast',
-        description: 'Attend 25 events',
-        progress: stats.eventsAttended,
-        target: 25,
-      };
+    if (!tier) {
+      return null;
     }
 
     return {
-      badge: 'All badges earned!',
-      description: 'You\'ve earned all available badges. Keep up the great work!',
-      progress: 100,
-      target: 100,
+      id: type.toLowerCase(),
+      name,
+      description,
+      icon,
+      tier,
+      count,
+      earnedAt: earnedAt || user.createdAt,
+      nextTier: this.getNextTier(tier, count, tiers),
     };
+  }
+
+  /**
+   * Determine badge tier based on count
+   */
+  private static determineBadgeTier(
+    count: number,
+    tiers: { bronze: number; silver: number; gold: number; platinum: number }
+  ): string | null {
+    if (count >= tiers.platinum) return 'platinum';
+    if (count >= tiers.gold) return 'gold';
+    if (count >= tiers.silver) return 'silver';
+    if (count >= tiers.bronze) return 'bronze';
+    return null;
+  }
+
+  /**
+   * Get next tier information
+   */
+  private static getNextTier(
+    currentTier: string,
+    count: number,
+    tiers: { bronze: number; silver: number; gold: number; platinum: number }
+  ): { tier: string; required: number; remaining: number } | null {
+    const tierOrder: Array<keyof typeof tiers> = ['bronze', 'silver', 'gold', 'platinum'];
+    const currentIndex = tierOrder.indexOf(currentTier as keyof typeof tiers);
+    
+    if (currentIndex === tierOrder.length - 1) {
+      return null; // Already at highest tier
+    }
+
+    const nextTierName = tierOrder[currentIndex + 1];
+    const required = tiers[nextTierName];
+    
+    return {
+      tier: nextTierName,
+      required,
+      remaining: Math.max(0, required - count),
+    };
+  }
+
+  /**
+   * Helper: Get progress toward next badge (uses dynamic config)
+   */
+  private static async getNextBadgeProgress(
+    userId: string,
+    user: any,
+    badgeConfig: any
+  ): Promise<any> {
+    const nextBadges: any[] = [];
+
+    for (const badgeDef of badgeConfig.badges) {
+      const { type, name, description, icon, tiers } = badgeDef;
+      
+      let currentCount = 0;
+      let minThreshold = tiers.bronze;
+
+      switch (type) {
+        case 'VOUCHER':
+          currentCount = await prisma.vouch.count({
+            where: {
+              voucherId: userId,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+            },
+          });
+          break;
+
+        case 'CONNECTOR':
+          currentCount = await prisma.userConnection.count({
+            where: {
+              OR: [{ initiatorId: userId }, { receiverId: userId }],
+              status: 'ACCEPTED',
+            },
+          });
+          break;
+
+        case 'COMMUNITY_BUILDER':
+          const communityStats = await prisma.userStat.findUnique({
+            where: { userId },
+          });
+          currentCount = communityStats?.communitiesJoined || 0;
+          break;
+
+        case 'EVENT_ENTHUSIAST':
+          const eventStats = await prisma.userStat.findUnique({
+            where: { userId },
+          });
+          currentCount = eventStats?.eventsAttended || 0;
+          break;
+
+        case 'TRUST_LEADER':
+          currentCount = Math.floor(user.trustScore);
+          break;
+
+        case 'RELIABLE':
+          const reliableStats = await prisma.userStat.findUnique({
+            where: { userId },
+          });
+          currentCount = reliableStats?.eventsAttended || 0;
+          break;
+
+        case 'IMPACT_MAKER':
+          currentCount = await prisma.accountabilityLog.count({
+            where: {
+              voucherId: userId,
+              impactType: 'POSITIVE',
+              isProcessed: true,
+            },
+          });
+          break;
+
+        case 'LONG_STANDING':
+          const daysSinceCreation = Math.floor(
+            (Date.now() - user.createdAt.getTime()) / (24 * 60 * 60 * 1000)
+          );
+          currentCount = daysSinceCreation;
+          break;
+
+        default:
+          continue;
+      }
+
+      // Check if user hasn't earned this badge yet
+      if (currentCount < minThreshold) {
+        nextBadges.push({
+          id: type.toLowerCase(),
+          name,
+          description,
+          icon,
+          currentProgress: currentCount,
+          required: minThreshold,
+          remaining: minThreshold - currentCount,
+          percentComplete: Math.floor((currentCount / minThreshold) * 100),
+        });
+      }
+    }
+
+    // Return the badge closest to completion
+    return nextBadges.sort((a, b) => b.percentComplete - a.percentComplete)[0] || null;
   }
 }

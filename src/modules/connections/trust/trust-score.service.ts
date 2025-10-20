@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/database';
 import logger from '../../../utils/logger';
 import { VouchStatus, VouchType } from '@prisma/client';
+import { configService } from '../../platform/config.service';
 
 /**
  * Trust Score Calculation Service
@@ -46,26 +47,25 @@ export class TrustScoreService {
    */
   static async calculateTrustScore(userId: string): Promise<number> {
     try {
-      // Get vouch config
-      const config = await prisma.vouchConfig.findFirst({
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (!config) {
-        logger.warn('No vouch config found, using defaults');
-      }
+      // Get trust formula from dynamic config
+      const trustFormula = await configService.getTrustFormula();
 
       // Calculate each component
-      const vouchScore = await this.calculateVouchScore(userId, config);
-      const activityScore = await this.calculateActivityScore(userId);
-      const trustMomentsScore = await this.calculateTrustMomentsScore(userId);
+      const vouchScore = await this.calculateVouchScore(userId, trustFormula);
+      const activityScore = await this.calculateActivityScore(userId, trustFormula);
+      const trustMomentsScore = await this.calculateTrustMomentsScore(userId, trustFormula);
+
+      // Apply weights from config
+      const weightedVouchScore = vouchScore * trustFormula.vouchWeight;
+      const weightedActivityScore = activityScore * trustFormula.activityWeight;
+      const weightedTrustMomentsScore = trustMomentsScore * trustFormula.trustMomentWeight;
 
       // Total score (out of 100)
-      const totalScore = vouchScore + activityScore + trustMomentsScore;
+      const totalScore = weightedVouchScore + weightedActivityScore + weightedTrustMomentsScore;
       const finalScore = Math.min(Math.max(totalScore, 0), 100); // Clamp between 0-100
 
       // Determine trust level based on score
-      const trustLevel = this.determineTrustLevel(finalScore);
+      const trustLevel = await this.determineTrustLevel(finalScore);
 
       // Get previous score before update
       const previousScore = await prisma.user.findUnique({
@@ -96,9 +96,9 @@ export class TrustScoreService {
           'recalculation',
           undefined,
           {
-            vouchScore,
-            activityScore,
-            trustMomentsScore,
+            vouchScore: weightedVouchScore,
+            activityScore: weightedActivityScore,
+            trustMomentsScore: weightedTrustMomentsScore,
             trustLevel,
           }
         ).catch(err => logger.error('Failed to record score change:', err));
@@ -112,18 +112,18 @@ export class TrustScoreService {
   }
 
   /**
-   * Calculate vouch score component (40% of total)
+   * Calculate vouch score component (returns 0-100 before weighting)
    * 
-   * VERIFIED FORMULA:
-   * - Primary vouch: 30% of 40% = 12 points (1 max)
-   * - Secondary vouches: 30% of 40% = 12 points (3 max, 4 points each)
-   * - Community vouches: 40% of 40% = 16 points (2 max, 8 points each)
+   * DYNAMIC FORMULA (configurable via database):
+   * - Primary vouch: primaryWeight% of total (default: 12%)
+   * - Secondary vouches: secondaryWeight% of total (default: 12%)
+   * - Community vouches: communityWeight% of total (default: 16%)
    * 
-   * Total possible: 12 + 12 + 16 = 40 points
+   * Note: This returns raw score out of 100. The weight is applied by calculateTrustScore()
    */
   private static async calculateVouchScore(
     userId: string,
-    config: any
+    trustFormula: any
   ): Promise<number> {
     try {
       // Get active vouches
@@ -134,9 +134,10 @@ export class TrustScoreService {
         },
       });
 
-      const primaryVouchWeight = config?.primaryVouchWeight || 30.0;
-      const secondaryVouchWeight = config?.secondaryVouchWeight || 30.0;
-      const communityVouchWeight = config?.communityVouchWeight || 40.0;
+      const { vouchBreakdown } = trustFormula;
+      const primaryVouchWeight = vouchBreakdown.primaryWeight * 100; // Convert to percentage
+      const secondaryVouchWeight = vouchBreakdown.secondaryWeight * 100;
+      const communityVouchWeight = vouchBreakdown.communityWeight * 100;
 
       let primaryScore = 0;
       let secondaryScore = 0;
@@ -147,21 +148,21 @@ export class TrustScoreService {
       const secondaryVouches = vouches.filter(v => v.vouchType === VouchType.SECONDARY);
       const communityVouches = vouches.filter(v => v.vouchType === VouchType.COMMUNITY);
 
-      // Primary vouch (max 1, worth 30% of vouch score = 12% of total)
+      // Primary vouch (max 1)
       if (primaryVouches.length > 0) {
-        primaryScore = primaryVouchWeight * (40 / 100); // 30% of 40% = 12%
+        primaryScore = primaryVouchWeight; // Full weight if has primary vouch
       }
 
-      // Secondary vouches (max 3, worth 30% of vouch score = 12% of total, ~4% each)
+      // Secondary vouches (max 3, proportional)
       const secondaryCount = Math.min(secondaryVouches.length, 3);
       if (secondaryCount > 0) {
-        secondaryScore = (secondaryVouchWeight * (40 / 100)) * (secondaryCount / 3);
+        secondaryScore = secondaryVouchWeight * (secondaryCount / 3);
       }
 
-      // Community vouches (max 2, worth 40% of vouch score = 16% of total, ~8% each)
+      // Community vouches (max 2, proportional)
       const communityCount = Math.min(communityVouches.length, 2);
       if (communityCount > 0) {
-        communityScore = (communityVouchWeight * (40 / 100)) * (communityCount / 2);
+        communityScore = communityVouchWeight * (communityCount / 2);
       }
 
       const totalVouchScore = primaryScore + secondaryScore + communityScore;
@@ -176,18 +177,22 @@ export class TrustScoreService {
   }
 
   /**
-   * Calculate activity participation score (30% of total)
+   * Calculate activity participation score (returns 0-100 before weighting)
    * 
-   * VERIFIED FORMULA:
-   * - Events Attended: 2 points each, max 10 points (5 events)
-   * - Events Hosted: 3 points each, max 9 points (3 events)
-   * - Communities Joined: 2 points each, max 6 points (3 communities)
-   * - Services Provided: 1 point each, max 5 points (5 services)
+   * DYNAMIC FORMULA (configurable via database):
+   * Activity points are fetched from config and contribute to max 100 score
+   * Default weights: events attended (2), hosted (5), communities (1), etc.
    * 
-   * Total possible: 10 + 9 + 6 + 5 = 30 points
+   * Note: This returns raw score out of 100. The weight is applied by calculateTrustScore()
    */
-  private static async calculateActivityScore(userId: string): Promise<number> {
+  private static async calculateActivityScore(
+    userId: string,
+    trustFormula: any
+  ): Promise<number> {
     try {
+      // Get activity weights from config
+      const activityWeights = await configService.getActivityWeights();
+
       // Get user stats
       const stats = await prisma.userStat.findUnique({
         where: { userId },
@@ -197,20 +202,19 @@ export class TrustScoreService {
         return 0;
       }
 
-      // Scoring factors (weighted contributions to 30%)
-      const eventsAttendedScore = Math.min(stats.eventsAttended * 2, 10); // Max 10 points (5 events)
-      const eventsHostedScore = Math.min(stats.eventsHosted * 3, 9); // Max 9 points (3 events)
-      const communitiesScore = Math.min(stats.communitiesJoined * 2, 6); // Max 6 points (3 communities)
-      const servicesScore = Math.min(stats.servicesProvided * 1, 5); // Max 5 points (5 services)
+      // Calculate scores using dynamic weights
+      let totalActivityScore = 0;
+      totalActivityScore += stats.eventsAttended * activityWeights.eventAttended;
+      totalActivityScore += stats.eventsHosted * activityWeights.eventHosted;
+      totalActivityScore += stats.communitiesJoined * activityWeights.communityJoined;
+      totalActivityScore += stats.servicesProvided * activityWeights.serviceCreated;
 
-      const totalActivityScore = Math.min(
-        eventsAttendedScore + eventsHostedScore + communitiesScore + servicesScore,
-        30
-      );
+      // Cap at configured maximum
+      const finalActivityScore = Math.min(totalActivityScore, activityWeights.maxActivityScore);
 
-      logger.debug(`Activity score for user ${userId}: ${totalActivityScore}`);
+      logger.debug(`Activity score for user ${userId}: ${finalActivityScore}`);
 
-      return totalActivityScore;
+      return finalActivityScore;
     } catch (error) {
       logger.error('Error calculating activity score:', error);
       return 0;
@@ -218,18 +222,18 @@ export class TrustScoreService {
   }
 
   /**
-   * Calculate trust moments score (30% of total)
+   * Calculate trust moments score (returns 0-100 before weighting)
    * 
    * VERIFIED FORMULA:
-   * - Base Score: (average rating / 5) * 30 points
-   *   - 5 stars = 30 points
-   *   - 4 stars = 24 points
-   *   - 3 stars = 18 points
-   * - Quantity Bonus: min(count * 0.3, 3) for engagement
+   * - Base Score: (average rating / 5) * 100 points
+   * - Quantity Bonus: Additional points for engagement
    * 
-   * Total possible: 30 points (27 from rating + 3 from quantity)
+   * Note: This returns raw score out of 100. The weight is applied by calculateTrustScore()
    */
-  private static async calculateTrustMomentsScore(userId: string): Promise<number> {
+  private static async calculateTrustMomentsScore(
+    userId: string,
+    trustFormula: any
+  ): Promise<number> {
     try {
       // Get trust moments (feedback) received
       const trustMoments = await prisma.trustMoment.findMany({
@@ -247,14 +251,13 @@ export class TrustScoreService {
       const totalRating = trustMoments.reduce((sum, tm) => sum + tm.rating, 0);
       const averageRating = totalRating / trustMoments.length;
 
-      // Convert to score out of 30
-      // 5 stars = 30 points, 4 stars = 24 points, etc.
-      const ratingScore = (averageRating / 5) * 30;
+      // Convert to score out of 100 (5 stars = 100 points)
+      const ratingScore = (averageRating / 5) * 100;
 
-      // Bonus for quantity (up to 3 points for having 10+ trust moments)
-      const quantityBonus = Math.min(trustMoments.length * 0.3, 3);
+      // Bonus for quantity (0.3 points per trust moment, max 10 points)
+      const quantityBonus = Math.min(trustMoments.length * 0.3, 10);
 
-      const totalTrustMomentsScore = Math.min(ratingScore + quantityBonus, 30);
+      const totalTrustMomentsScore = Math.min(ratingScore + quantityBonus, 100);
 
       logger.debug(`Trust moments score for user ${userId}: ${totalTrustMomentsScore} (avg rating: ${averageRating})`);
 
@@ -266,15 +269,31 @@ export class TrustScoreService {
   }
 
   /**
-   * Determine trust level based on score
+   * Determine trust level based on score (uses dynamic config)
    */
-  private static determineTrustLevel(score: number): string {
-    if (score >= 90) return 'elite';
-    if (score >= 75) return 'trusted';
-    if (score >= 60) return 'established';
-    if (score >= 40) return 'growing';
-    if (score >= 20) return 'starter';
-    return 'new';
+  private static async determineTrustLevel(score: number): Promise<string> {
+    try {
+      const trustLevels = await configService.getTrustLevels();
+      
+      // Find matching level
+      for (const level of trustLevels.levels) {
+        if (score >= level.minScore && score <= level.maxScore) {
+          return level.name.toLowerCase();
+        }
+      }
+      
+      // Fallback to lowest level
+      return trustLevels.levels[0].name.toLowerCase();
+    } catch (error) {
+      logger.error('Error determining trust level:', error);
+      // Fallback to hardcoded logic
+      if (score >= 90) return 'leader';
+      if (score >= 76) return 'trusted';
+      if (score >= 51) return 'established';
+      if (score >= 26) return 'growing';
+      if (score >= 11) return 'newcomer';
+      return 'starter';
+    }
   }
 
   /**

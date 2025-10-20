@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+import { configService } from '../modules/platform/config.service';
 
 // Define status enum until Prisma regenerates
 enum VouchOfferStatus {
@@ -11,30 +12,16 @@ enum VouchOfferStatus {
 
 const prisma = new PrismaClient();
 
-interface EligibilityCriteria {
-  minEventsAttended: number;
-  minMembershipDays: number;
-  requireZeroNegativeFeedback: boolean;
-}
-
 /**
  * Community Vouch Eligibility Job
  * 
- * Automatically identifies community members eligible for automatic vouch offers based on:
- * - 5+ events attended within the community
- * - 90+ days of active membership
- * - Zero negative feedback (trust moments with rating <= 2)
+ * Automatically identifies community members eligible for automatic vouch offers 
+ * using dynamic eligibility criteria from ConfigService.
  * 
  * Runs daily to create vouch offers for eligible members who haven't received one yet.
  * Offers expire after 30 days if not accepted.
  */
 export class CommunityVouchEligibilityJob {
-  private readonly ELIGIBILITY_CRITERIA: EligibilityCriteria = {
-    minEventsAttended: 5,
-    minMembershipDays: 90,
-    requireZeroNegativeFeedback: true,
-  };
-
   private readonly OFFER_EXPIRY_DAYS = 30;
 
   /**
@@ -45,6 +32,9 @@ export class CommunityVouchEligibilityJob {
     logger.info('[CommunityVouchEligibilityJob] Starting eligibility check...');
 
     try {
+      // Load dynamic eligibility criteria
+      const eligibilityCriteria = await configService.getVouchEligibilityCriteria();
+      
       // Get all communities
       const communities = await prisma.community.findMany({
         select: { id: true, name: true },
@@ -54,7 +44,11 @@ export class CommunityVouchEligibilityJob {
       let totalMembersChecked = 0;
 
       for (const community of communities) {
-        const { offersCreated, membersChecked } = await this.processCommunity(community.id, community.name);
+        const { offersCreated, membersChecked } = await this.processCommunity(
+          community.id, 
+          community.name,
+          eligibilityCriteria
+        );
         totalOffersCreated += offersCreated;
         totalMembersChecked += membersChecked;
       }
@@ -75,7 +69,11 @@ export class CommunityVouchEligibilityJob {
   /**
    * Process a single community to identify eligible members
    */
-  private async processCommunity(communityId: string, communityName: string): Promise<{ offersCreated: number; membersChecked: number }> {
+  private async processCommunity(
+    communityId: string, 
+    communityName: string,
+    eligibilityCriteria: any
+  ): Promise<{ offersCreated: number; membersChecked: number }> {
     logger.info(`[CommunityVouchEligibilityJob] Processing community: ${communityName} (${communityId})`);
 
     // Get all active members who haven't already received a pending/accepted offer
@@ -84,7 +82,7 @@ export class CommunityVouchEligibilityJob {
         communityId,
         isApproved: true,
         joinedAt: {
-          lte: new Date(Date.now() - this.ELIGIBILITY_CRITERIA.minMembershipDays * 24 * 60 * 60 * 1000),
+          lte: new Date(Date.now() - eligibilityCriteria.minMembershipDays * 24 * 60 * 60 * 1000),
         },
         user: {
           status: 'ACTIVE',
@@ -143,10 +141,15 @@ export class CommunityVouchEligibilityJob {
         }
 
         // Check eligibility
-        const eligibility = await this.checkEligibility(member.userId, communityId, member.joinedAt);
+        const eligibility = await this.checkEligibility(
+          member.userId, 
+          communityId, 
+          member.joinedAt,
+          eligibilityCriteria
+        );
 
         if (eligibility.isEligible) {
-          await this.createVouchOffer(member.userId, communityId, eligibility);
+          await this.createVouchOffer(member.userId, communityId, eligibility, eligibilityCriteria);
           offersCreated++;
 
           logger.info(`[CommunityVouchEligibilityJob] Created vouch offer for ${member.user.fullName}`, {
@@ -171,12 +174,13 @@ export class CommunityVouchEligibilityJob {
   }
 
   /**
-   * Check if a member meets eligibility criteria
+   * Check if a member meets eligibility criteria (uses dynamic config)
    */
   private async checkEligibility(
     userId: string,
     communityId: string,
-    joinedAt: Date
+    joinedAt: Date,
+    eligibilityCriteria: any
   ): Promise<{
     isEligible: boolean;
     eventsAttended: number;
@@ -200,7 +204,7 @@ export class CommunityVouchEligibilityJob {
 
     // Check for negative feedback (trust moments with rating <= 2)
     let hasNegativeFeedback = false;
-    if (this.ELIGIBILITY_CRITERIA.requireZeroNegativeFeedback) {
+    if (eligibilityCriteria.requireZeroNegativeFeedback) {
       const negativeFeedbackCount = await prisma.trustMoment.count({
         where: {
           receiverId: userId,
@@ -213,8 +217,8 @@ export class CommunityVouchEligibilityJob {
     }
 
     // Determine eligibility
-    const meetsEventRequirement = eventsAttended >= this.ELIGIBILITY_CRITERIA.minEventsAttended;
-    const meetsMembershipRequirement = membershipDays >= this.ELIGIBILITY_CRITERIA.minMembershipDays;
+    const meetsEventRequirement = eventsAttended >= eligibilityCriteria.minEventsAttended;
+    const meetsMembershipRequirement = membershipDays >= eligibilityCriteria.minMembershipDays;
     const meetsFeedbackRequirement = !hasNegativeFeedback;
 
     const isEligible = meetsEventRequirement && meetsMembershipRequirement && meetsFeedbackRequirement;
@@ -225,10 +229,10 @@ export class CommunityVouchEligibilityJob {
     } else {
       const failReasons: string[] = [];
       if (!meetsEventRequirement) {
-        failReasons.push(`only ${eventsAttended}/${this.ELIGIBILITY_CRITERIA.minEventsAttended} events attended`);
+        failReasons.push(`only ${eventsAttended}/${eligibilityCriteria.minEventsAttended} events attended`);
       }
       if (!meetsMembershipRequirement) {
-        failReasons.push(`only ${membershipDays}/${this.ELIGIBILITY_CRITERIA.minMembershipDays} days membership`);
+        failReasons.push(`only ${membershipDays}/${eligibilityCriteria.minMembershipDays} days membership`);
       }
       if (!meetsFeedbackRequirement) {
         failReasons.push('has negative feedback');
@@ -256,7 +260,8 @@ export class CommunityVouchEligibilityJob {
       membershipDays: number;
       hasNegativeFeedback: boolean;
       reason: string;
-    }
+    },
+    eligibilityCriteria: any
   ): Promise<void> {
     const expiresAt = new Date(Date.now() + this.OFFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
@@ -271,7 +276,7 @@ export class CommunityVouchEligibilityJob {
         hasNegativeFeedback: eligibility.hasNegativeFeedback,
         expiresAt,
         offerMetadata: {
-          criteria: this.ELIGIBILITY_CRITERIA as any,
+          criteria: eligibilityCriteria,
           eligibilityCheckDate: new Date().toISOString(),
           autoGenerated: true,
         } as any,

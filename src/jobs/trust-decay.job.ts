@@ -1,25 +1,21 @@
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { TrustScoreService } from '../modules/connections/trust/trust-score.service';
+import { configService } from '../modules/platform/config.service';
 
 const prisma = new PrismaClient();
 
 /**
  * Trust Decay Job
  * 
- * Applies trust score decay for inactive users:
- * - After 30 days of inactivity: -1% per week (-0.01 points per week)
- * - After 90 days of inactivity: -2% per week (-0.02 points per week)
+ * Applies trust score decay for inactive users using dynamic configuration.
+ * Decay thresholds and rates are loaded from ConfigService.
  * 
  * Runs weekly on Sundays at 2 AM
  * Logs all decay events for transparency
  */
 export class TrustDecayJob {
-  private readonly INACTIVITY_THRESHOLD_LIGHT = 30; // days
-  private readonly INACTIVITY_THRESHOLD_HEAVY = 90; // days
-  private readonly DECAY_RATE_LIGHT = 1; // 1% per week
-  private readonly DECAY_RATE_HEAVY = 2; // 2% per week
-  private readonly MIN_TRUST_SCORE = 0; // Don't decay below 0
+  private MIN_TRUST_SCORE = 0; // Don't decay below 0
 
   /**
    * Main job execution method
@@ -29,27 +25,24 @@ export class TrustDecayJob {
     logger.info('[TrustDecayJob] Starting trust decay process...');
 
     try {
+      // Load dynamic decay rules
+      const decayRules = await configService.getTrustDecayRules();
+      
       // Get all active users who might need decay
-      const users = await this.getInactiveUsers();
+      const users = await this.getInactiveUsers(decayRules);
       
       let totalDecayed = 0;
       let totalDecayAmount = 0;
-      let lightDecayCount = 0;
-      let heavyDecayCount = 0;
+      const decayTypeCounts: Record<string, number> = {};
 
       for (const user of users) {
         try {
-          const decayResult = await this.applyDecay(user);
+          const decayResult = await this.applyDecay(user, decayRules);
           
-          if (decayResult.decayed) {
+          if (decayResult.decayed && decayResult.decayType) {
             totalDecayed++;
             totalDecayAmount += decayResult.decayAmount;
-            
-            if (decayResult.decayType === 'light') {
-              lightDecayCount++;
-            } else {
-              heavyDecayCount++;
-            }
+            decayTypeCounts[decayResult.decayType] = (decayTypeCounts[decayResult.decayType] || 0) + 1;
           }
         } catch (error) {
           logger.error(`[TrustDecayJob] Error processing user ${user.id}`, { error });
@@ -62,8 +55,7 @@ export class TrustDecayJob {
         duration: `${duration}ms`,
         totalUsers: users.length,
         usersDecayed: totalDecayed,
-        lightDecay: lightDecayCount,
-        heavyDecay: heavyDecayCount,
+        decayBreakdown: decayTypeCounts,
         totalPointsDecayed: totalDecayAmount.toFixed(2),
       });
     } catch (error) {
@@ -75,15 +67,17 @@ export class TrustDecayJob {
   /**
    * Get users who are potentially inactive
    */
-  private async getInactiveUsers(): Promise<Array<{
+  private async getInactiveUsers(decayRules: any): Promise<Array<{
     id: string;
     fullName: string;
     trustScore: number;
     updatedAt: Date;
   }>> {
-    const thirtyDaysAgo = new Date(Date.now() - this.INACTIVITY_THRESHOLD_LIGHT * 24 * 60 * 60 * 1000);
+    // Get minimum threshold (first rule)
+    const minThreshold = Math.min(...decayRules.rules.map((r: any) => r.inactivityDays));
+    const thresholdDate = new Date(Date.now() - minThreshold * 24 * 60 * 60 * 1000);
 
-    // Get users who haven't had any activity in the last 30 days
+    // Get users who haven't had any activity in the last X days
     const users = await prisma.user.findMany({
       where: {
         status: 'ACTIVE',
@@ -106,7 +100,7 @@ export class TrustDecayJob {
     for (const user of users) {
       const lastActivity = await this.getLastActivityDate(user.id);
       
-      if (lastActivity < thirtyDaysAgo) {
+      if (lastActivity < thresholdDate) {
         inactiveUsers.push(user);
       }
     }
@@ -177,38 +171,43 @@ export class TrustDecayJob {
   }
 
   /**
-   * Apply decay to a user's trust score
+   * Apply decay to a user's trust score using dynamic decay rules
    */
-  private async applyDecay(user: {
-    id: string;
-    fullName: string;
-    trustScore: number;
-    updatedAt: Date;
-  }): Promise<{
+  private async applyDecay(
+    user: {
+      id: string;
+      fullName: string;
+      trustScore: number;
+      updatedAt: Date;
+    },
+    decayRules: any
+  ): Promise<{
     decayed: boolean;
     decayAmount: number;
-    decayType: 'light' | 'heavy' | null;
+    decayType: string | null;
   }> {
     const lastActivity = await this.getLastActivityDate(user.id);
     const inactiveDays = Math.floor((Date.now() - lastActivity.getTime()) / (24 * 60 * 60 * 1000));
 
-    // Determine decay rate based on inactivity period
-    let decayRate = 0;
-    let decayType: 'light' | 'heavy' | null = null;
+    // Find applicable decay rule based on inactivity period
+    // Sort rules by inactivityDays (descending) to apply most severe first
+    const sortedRules = [...decayRules.rules].sort((a: any, b: any) => b.inactivityDays - a.inactivityDays);
+    
+    let applicableRule = null;
+    for (const rule of sortedRules) {
+      if (inactiveDays >= rule.inactivityDays) {
+        applicableRule = rule;
+        break;
+      }
+    }
 
-    if (inactiveDays >= this.INACTIVITY_THRESHOLD_HEAVY) {
-      decayRate = this.DECAY_RATE_HEAVY;
-      decayType = 'heavy';
-    } else if (inactiveDays >= this.INACTIVITY_THRESHOLD_LIGHT) {
-      decayRate = this.DECAY_RATE_LIGHT;
-      decayType = 'light';
-    } else {
+    if (!applicableRule) {
       // No decay needed
       return { decayed: false, decayAmount: 0, decayType: null };
     }
 
     // Calculate decay amount (percentage of current score)
-    const decayAmount = (user.trustScore * decayRate) / 100;
+    const decayAmount = (user.trustScore * applicableRule.decayPercentage) / 100;
     const newScore = Math.max(user.trustScore - decayAmount, this.MIN_TRUST_SCORE);
 
     // Update trust score
@@ -223,45 +222,50 @@ export class TrustDecayJob {
       user.id,
       newScore,
       user.trustScore,
-      `Trust decay applied: ${decayRate}% for ${inactiveDays} days of inactivity`,
+      `Trust decay applied: ${applicableRule.decayPercentage}% for ${inactiveDays} days of inactivity`,
       undefined,
       'decay',
       undefined,
       {
         inactiveDays,
-        decayRate: `${decayRate}%`,
-        decayType,
+        decayRate: `${applicableRule.decayPercentage}%`,
+        decayType: applicableRule.type,
         lastActivity: lastActivity.toISOString(),
       }
     ).catch(err => logger.error('Failed to record decay in history:', err));
 
-    logger.info(`[TrustDecayJob] Applied ${decayType} decay to ${user.fullName}`, {
+    logger.info(`[TrustDecayJob] Applied ${applicableRule.type} decay to ${user.fullName}`, {
       userId: user.id,
       inactiveDays,
-      decayRate: `${decayRate}%`,
+      decayRate: `${applicableRule.decayPercentage}%`,
       oldScore: user.trustScore.toFixed(2),
       newScore: newScore.toFixed(2),
       decayAmount: decayAmount.toFixed(2),
     });
 
     // TODO: Send decay notification
-    // await this.sendDecayNotification(user.id, decayAmount, newScore, inactiveDays, decayType);
+    // await this.sendDecayNotification(user.id, decayAmount, newScore, inactiveDays, applicableRule.type);
 
     return {
       decayed: true,
       decayAmount,
-      decayType,
+      decayType: applicableRule.type,
     };
   }
 
   /**
-   * Send warnings to users approaching decay threshold
+   * Send warnings to users approaching decay threshold (uses dynamic config)
    */
   async sendDecayWarnings(): Promise<void> {
     logger.info('[TrustDecayJob] Checking for users needing decay warnings...');
 
     try {
-      const warningThreshold = this.INACTIVITY_THRESHOLD_LIGHT - 7; // 7 days before decay starts
+      // Load decay rules to determine warning threshold
+      const decayRules = await configService.getTrustDecayRules();
+      
+      // Get minimum inactivity threshold
+      const minThreshold = Math.min(...decayRules.rules.map((r: any) => r.inactivityDays));
+      const warningThreshold = minThreshold - 7; // 7 days before decay starts
       const warningDate = new Date(Date.now() - warningThreshold * 24 * 60 * 60 * 1000);
 
       const users = await prisma.user.findMany({
@@ -284,7 +288,7 @@ export class TrustDecayJob {
           const lastActivity = await this.getLastActivityDate(user.id);
           const inactiveDays = Math.floor((Date.now() - lastActivity.getTime()) / (24 * 60 * 60 * 1000));
 
-          // Send warning if user is 7 days away from decay (23 days inactive)
+          // Send warning if user is 7 days away from decay
           if (inactiveDays === warningThreshold) {
             // TODO: Send warning notification
             // await NotificationService.sendTrustDecayWarning(user.id, 7);

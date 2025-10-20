@@ -2899,3 +2899,36 @@ enum VouchType {
   SECONDARY
   COMMUNITY
 }
+
+model PlatformConfig {
+  id          String   @id @default(cuid())
+  category    String   // Config category (TRUST_FORMULA, TRUST_LEVELS, etc.)
+  key         String   // Specific config key within category
+  value       Json     // Flexible JSON storage for config data
+  description String?  // Human-readable description of what this config does
+  updatedBy   String?  // Admin user ID who last updated this config
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1) // Incremented on each update for tracking
+  createdAt   DateTime @default(now())
+
+  @@unique([category, key])
+  @@index([category])
+  @@map("platform_configs")
+}
+
+model ConfigHistory {
+  id        String   @id @default(cuid())
+  configId  String   // Reference to PlatformConfig.id
+  category  String   // Denormalized for easier querying
+  key       String   // Denormalized for easier querying
+  oldValue  Json     // Previous configuration value
+  newValue  Json     // New configuration value
+  changedBy String   // Admin user ID who made the change
+  changedAt DateTime @default(now())
+  reason    String?  // Optional explanation for the change
+
+  @@index([configId])
+  @@index([changedAt])
+  @@index([category, key])
+  @@map("config_history")
+}

@@ -432,6 +432,105 @@ console.log(`Change: +${after.trustScore - before.trustScore} points`);
 
 ---
 
+## Platform Configuration
+
+**All trust system values are dynamically configurable** through the platform configuration system. Platform administrators can adjust formulas, thresholds, and rules via database updates without requiring code changes.
+
+### Configurable Components
+
+#### 1. Trust Formula Weights
+The component weights (40/30/30 default split) can be adjusted:
+
+```sql
+-- Example: Change vouch weight from 40% to 50%
+UPDATE platform_configs 
+SET value = jsonb_set(
+  value, 
+  '{vouchWeight}', 
+  '0.50'
+)
+WHERE category = 'TRUST_FORMULA' AND key = 'weights';
+```
+
+Configurable weights:
+- `vouchWeight` - Contribution from vouches (default: 0.40 = 40%)
+- `activityWeight` - Contribution from activity (default: 0.30 = 30%)
+- `trustMomentWeight` - Contribution from trust moments (default: 0.30 = 30%)
+- `vouchBreakdown.primaryWeight` - Primary vouch contribution (default: 0.12 = 12%)
+- `vouchBreakdown.secondaryWeight` - Secondary vouch contribution (default: 0.12 = 12%)
+- `vouchBreakdown.communityWeight` - Community vouch contribution (default: 0.16 = 16%)
+
+**Validation Rules:**
+- Main weights must sum to 1.0 (100%)
+- Vouch breakdown weights must sum to vouchWeight
+- All weights must be between 0 and 1
+
+#### 2. Trust Levels and Thresholds
+The 6 trust level tiers and their score ranges can be modified:
+
+```sql
+-- Example: Adjust "Established" level range
+UPDATE platform_configs 
+SET value = jsonb_set(
+  jsonb_set(value, '{levels,2,minScore}', '55'),
+  '{levels,2,maxScore}', '74'
+)
+WHERE category = 'TRUST_LEVELS' AND key = 'levels';
+```
+
+Each level has:
+- `name` - Display name (e.g., "Elite", "Trusted")
+- `minScore` - Minimum score (0-100)
+- `maxScore` - Maximum score (0-100)
+- `description` - Level description
+- `color` - Badge color
+
+#### 3. Badge Definitions
+All 8 badge types with their tier requirements:
+
+```sql
+-- Example: Adjust "Trusted Member" badge requirement
+UPDATE platform_configs 
+SET value = jsonb_set(
+  value, 
+  '{TRUSTED_MEMBER,tiers,silver}', 
+  '55'
+)
+WHERE category = 'BADGE_DEFINITIONS' AND key = 'badges';
+```
+
+#### 4. Activity Weights
+Point values for different activity types:
+
+```sql
+-- Example: Increase event attendance value
+UPDATE platform_configs 
+SET value = jsonb_set(
+  value, 
+  '{eventAttended}', 
+  '{"maxPoints": 12, "threshold": 5}'
+)
+WHERE category = 'ACTIVITY_WEIGHTS' AND key = 'weights';
+```
+
+### Best Practices for Admins
+
+1. **Test Changes in Staging** - Validate config changes before production
+2. **Document Reasons** - Use the `reason` field when updating configs
+3. **Monitor Impact** - Watch trust score distribution after changes
+4. **Gradual Adjustments** - Make small incremental changes
+5. **Backup Before Changes** - Config history is tracked, but backup first
+
+### Configuration Documentation
+
+For complete configuration management details, see:
+- [Platform Configuration Guide](../PLATFORM_CONFIGURATION.md) - Full admin documentation
+- SQL update examples for all config categories
+- Validation rules and constraints
+- Rollback procedures
+
+---
+
 ## Related Documentation
 
 - [Connections API](./CONNECTIONS_API.md) - Connection management and vouching system
@@ -440,6 +539,7 @@ console.log(`Change: +${after.trustScore - before.trustScore} points`);
 - [Accountability API](./ACCOUNTABILITY_API.md) - Accountability chain system
 - [Trust Level Gating](./TRUST_LEVEL_GATING.md) - Feature access control
 - [Connection Module README](../../src/modules/connections/README.md) - Technical implementation details
+- [Platform Configuration](../PLATFORM_CONFIGURATION.md) - Admin configuration guide
 
 ---
 

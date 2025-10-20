@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
 import { AppError } from './error';
 import logger from '../utils/logger';
+import { configService } from '../modules/platform/config.service';
 
 /**
  * Trust Level Thresholds
@@ -59,44 +60,57 @@ export const FEATURE_REQUIREMENTS = {
 } as const;
 
 /**
- * Get trust level information from score
+ * Get trust level information from score (uses dynamic config)
  */
-export function getTrustLevelInfo(score: number): {
+export async function getTrustLevelInfo(score: number): Promise<{
   level: string;
   label: string;
   min: number;
   max: number;
   nextLevel?: { name: string; label: string; requiredScore: number };
-} {
-  let currentLevel: { min: number; max: number; name: string; label: string } = TRUST_LEVELS.READ_ONLY;
-  
-  for (const [, level] of Object.entries(TRUST_LEVELS)) {
-    if (score >= level.min && score <= level.max) {
-      currentLevel = level;
-      break;
+}> {
+  try {
+    const trustLevels = await configService.getTrustLevels();
+    
+    // Find current level
+    let currentLevel = trustLevels.levels[0];
+    for (const level of trustLevels.levels) {
+      if (score >= level.minScore && score <= level.maxScore) {
+        currentLevel = level;
+        break;
+      }
     }
-  }
 
-  // Find next level
-  let nextLevel: { name: string; label: string; requiredScore: number } | undefined;
-  for (const [, level] of Object.entries(TRUST_LEVELS)) {
-    if (level.min > currentLevel.max) {
-      nextLevel = {
-        name: level.name,
-        label: level.label,
-        requiredScore: level.min,
-      };
-      break;
+    // Find next level
+    let nextLevel: { name: string; label: string; requiredScore: number } | undefined;
+    for (const level of trustLevels.levels) {
+      if (level.minScore > currentLevel.maxScore) {
+        nextLevel = {
+          name: level.name,
+          label: level.name,
+          requiredScore: level.minScore,
+        };
+        break;
+      }
     }
-  }
 
-  return {
-    level: currentLevel.name,
-    label: currentLevel.label,
-    min: currentLevel.min,
-    max: currentLevel.max,
-    nextLevel,
-  };
+    return {
+      level: currentLevel.name.toLowerCase(),
+      label: currentLevel.name,
+      min: currentLevel.minScore,
+      max: currentLevel.maxScore,
+      nextLevel,
+    };
+  } catch (error) {
+    logger.error('Error getting trust level info:', error);
+    // Fallback to basic info
+    return {
+      level: 'unknown',
+      label: 'Unknown',
+      min: 0,
+      max: 100,
+    };
+  }
 }
 
 /**
@@ -171,8 +185,8 @@ export const requireTrustLevel = (
 
       // Check if user meets minimum trust score
       if (user.trustScore < minScore) {
-        const currentLevelInfo = getTrustLevelInfo(user.trustScore);
-        const requiredLevelInfo = getTrustLevelInfo(minScore);
+        const currentLevelInfo = await getTrustLevelInfo(user.trustScore);
+        const requiredLevelInfo = await getTrustLevelInfo(minScore);
         const suggestions = getTrustScoreSuggestions(user.trustScore, minScore);
 
         logger.warn(`Trust level insufficient: User ${userId} (${user.trustScore}) attempted to access feature requiring ${minScore}`);
@@ -226,23 +240,44 @@ export const requireTrustLevel = (
 
 /**
  * Middleware to check feature access
- * Uses predefined feature requirements
+ * Uses dynamic feature requirements from database
  * 
- * @param featureKey - Key from FEATURE_REQUIREMENTS
+ * @param featureKey - Feature key to check
  * 
  * @example
- * router.post('/events', authenticate, requireFeature('CREATE_EVENTS'), createEvent);
+ * router.post('/events', authenticate, requireFeature('createEvent'), createEvent);
  */
 export const requireFeature = (
-  featureKey: keyof typeof FEATURE_REQUIREMENTS
+  featureKey: string
 ) => {
-  const minScore = FEATURE_REQUIREMENTS[featureKey];
-  const featureName = featureKey
-    .toLowerCase()
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (l) => l.toUpperCase());
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const featureGating = await configService.getFeatureGating();
+      const feature = (featureGating.features as any)[featureKey];
+      
+      if (!feature) {
+        logger.warn(`Unknown feature key: ${featureKey}`);
+        res.status(500).json({
+          success: false,
+          error: 'Invalid feature configuration',
+        });
+        return;
+      }
 
-  return requireTrustLevel(minScore, featureName);
+      const minScore = feature.requiredScore;
+      const featureName = feature.feature;
+
+      // Use the main requireTrustLevel logic
+      const middleware = requireTrustLevel(minScore, featureName);
+      await middleware(req, res, next);
+    } catch (error) {
+      logger.error('Feature check error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to check feature access',
+      });
+    }
+  };
 };
 
 /**

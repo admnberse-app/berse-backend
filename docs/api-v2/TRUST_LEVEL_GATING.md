@@ -473,12 +473,152 @@ describe('Event Creation with Trust Level', () => {
 
 ---
 
+## Platform Configuration
+
+**All feature requirements are dynamically configurable** through the platform configuration system. Platform administrators can adjust minimum trust scores for any feature via database without requiring code deployment.
+
+### Configurable Feature Requirements
+
+Each feature's minimum trust score can be modified:
+
+```sql
+-- Example: Lower "create events" requirement from 26% to 20%
+UPDATE platform_configs 
+SET value = jsonb_set(
+  value, 
+  '{CREATE_EVENTS}', 
+  '20'
+)
+WHERE category = 'FEATURE_GATING' AND key = 'requirements';
+```
+
+#### All Configurable Features
+
+**Read-Only Features (default: 0%)**
+- `VIEW_PROFILES`, `VIEW_EVENTS`, `VIEW_COMMUNITIES`, `VIEW_MARKETPLACE`
+
+**Basic Participation (default: 11%)**  
+- `ATTEND_EVENTS`, `MESSAGE_CONNECTIONS`, `REQUEST_CONNECTIONS`, `ADD_TO_CART`
+
+**Active Participation (default: 26%)**
+- `CREATE_EVENTS`, `JOIN_COMMUNITIES`, `HOST_TRAVELERS`, `CREATE_LISTINGS`, `PURCHASE_ITEMS`
+
+**Leadership & Services (default: 51%)**
+- `PUBLISH_EVENTS`, `CREATE_SERVICES`, `ORGANIZE_ACTIVITIES`, `BECOME_MODERATOR`
+
+**Advanced Features (default: 76%)**
+- `CREATE_COMMUNITIES`, `CREATE_FUNDRAISERS`, `BECOME_ADMIN`, `MENTOR_USERS`
+
+**Platform Leadership (default: 91%)**
+- `UNLIMITED_VOUCHES`, `PLATFORM_GOVERNANCE`, `VERIFY_OTHERS`
+
+### Configuration Strategy
+
+#### When to Lower Requirements
+- Early platform growth phase (need more activity)
+- Feature is low-risk for abuse
+- Community feedback indicates barrier is too high
+- Want to encourage specific behaviors
+
+#### When to Raise Requirements  
+- Abuse is occurring at current level
+- Feature is high-risk (e.g., money, personal data)
+- Platform maturity allows stricter controls
+- Quality concerns with user-generated content
+
+### Example: Adjusting Event Creation
+
+**Scenario:** Too many low-quality events being created
+
+```sql
+-- Increase event creation requirement from 26% to 35%
+UPDATE platform_configs 
+SET value = jsonb_set(
+  value, 
+  '{CREATE_EVENTS}', 
+  '35'
+),
+description = 'Increased to reduce low-quality event spam',
+updated_by = 'admin_user_id',
+version = version + 1
+WHERE category = 'FEATURE_GATING' AND key = 'requirements';
+
+-- Log the change
+INSERT INTO config_history (config_id, category, key, old_value, new_value, changed_by, reason)
+SELECT id, category, key, 
+  jsonb_build_object('CREATE_EVENTS', 26),
+  jsonb_build_object('CREATE_EVENTS', 35),
+  'admin_user_id',
+  'Reduce low-quality event spam based on user feedback'
+FROM platform_configs 
+WHERE category = 'FEATURE_GATING' AND key = 'requirements';
+```
+
+**Impact Analysis:**
+```sql
+-- Check how many users would be affected
+SELECT 
+  COUNT(*) as affected_users,
+  AVG(trust_score) as avg_score
+FROM users 
+WHERE trust_score >= 26 AND trust_score < 35;
+```
+
+### Monitoring Configuration Changes
+
+After adjusting feature requirements:
+
+1. **Track Barrier Hits** - Monitor 403 errors for that feature
+2. **User Distribution** - Watch how many users are at each level
+3. **Feature Usage** - Check if usage dropped significantly
+4. **User Feedback** - Survey affected users
+5. **Trust Score Trends** - See if users are working to increase scores
+
+### Rollback Procedure
+
+If a configuration change causes issues:
+
+```sql
+-- View change history
+SELECT * FROM config_history 
+WHERE category = 'FEATURE_GATING' AND key = 'requirements'
+ORDER BY changed_at DESC;
+
+-- Rollback to previous value
+UPDATE platform_configs 
+SET value = (SELECT old_value FROM config_history 
+             WHERE config_id = platform_configs.id 
+             ORDER BY changed_at DESC LIMIT 1),
+    version = version + 1,
+    updated_by = 'admin_user_id'
+WHERE category = 'FEATURE_GATING' AND key = 'requirements';
+```
+
+### Configuration Best Practices
+
+1. **Test in Staging** - Validate changes before production
+2. **Communicate Changes** - Notify users of requirement adjustments  
+3. **Gradual Changes** - Adjust by 5-10 points at a time
+4. **Monitor Impact** - Watch metrics for 1-2 weeks after changes
+5. **Document Rationale** - Explain why each change was made
+6. **User Support** - Help affected users understand changes
+
+### Configuration Documentation
+
+For complete feature gating configuration:
+- [Platform Configuration Guide](../PLATFORM_CONFIGURATION.md) - Full admin documentation
+- SQL update examples and validation rules
+- Configuration history and rollback procedures
+
+---
+
 ## Related Documentation
 
 - [Trust Score API](./TRUST_SCORE_API.md) - Trust score calculation
 - [Accountability API](./ACCOUNTABILITY_API.md) - Accountability chain system
 - [Connections API](./CONNECTIONS_API.md) - Vouching system
 - [Trust Moments API](./TRUST_MOMENTS_API.md) - Feedback system
+- [Platform Configuration](../PLATFORM_CONFIGURATION.md) - Admin configuration guide
 
 ---
 
