@@ -17,6 +17,7 @@ import { VouchType, VouchStatus, ConnectionStatus, CommunityRole } from '@prisma
 import logger from '../../../utils/logger';
 import { TrustScoreService } from '../trust/trust-score.service';
 import { NotificationService } from '../../../services/notification.service';
+import { TrustScoreUserService } from '../../user/trust-score.service';
 
 export class VouchService {
   
@@ -319,10 +320,41 @@ export class VouchService {
         });
 
         // Update trust score
+        const previousScore = await prisma.user.findUnique({
+          where: { id: vouch.voucheeId },
+          select: { trustScore: true },
+        }).then(u => u?.trustScore || 0);
+
         await TrustScoreService.triggerTrustScoreUpdate(
           vouch.voucheeId,
           `Vouch approved by ${voucherName}`
         );
+
+        // Get new score and record history
+        const newScore = await prisma.user.findUnique({
+          where: { id: vouch.voucheeId },
+          select: { trustScore: true },
+        }).then(u => u?.trustScore || 0);
+
+        await TrustScoreUserService.recordScoreChange(
+          vouch.voucheeId,
+          newScore,
+          previousScore,
+          `${vouch.vouchType} vouch approved by ${voucherName}`,
+          'vouches',
+          'vouch',
+          vouchId
+        ).catch(err => logger.error('Failed to record score change:', err));
+
+        // Update user stats
+        try {
+          const { UserStatService } = await import('../../user/user-stat.service');
+          await UserStatService.incrementVouchesReceived(vouch.voucheeId);
+          await UserStatService.incrementVouchesGiven(voucherId);
+          logger.info(`Updated vouch stats for vouchee ${vouch.voucheeId} and voucher ${voucherId}`);
+        } catch (error) {
+          logger.error('Failed to update user stats for vouch approval:', error);
+        }
 
         // Send notification to vouchee
         await NotificationService.notifyVouchReceived(
@@ -486,12 +518,69 @@ export class VouchService {
       });
 
       // 4. Recalculate vouchee's trust score
+      const previousScore = await prisma.user.findUnique({
+        where: { id: vouch.voucheeId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
       await TrustScoreService.triggerTrustScoreUpdate(
         vouch.voucheeId,
         `Vouch revoked by ${vouch.users_vouches_voucherIdTousers.fullName}`
       );
 
+      // Get new score and record history
+      const newScore = await prisma.user.findUnique({
+        where: { id: vouch.voucheeId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
+      await TrustScoreUserService.recordScoreChange(
+        vouch.voucheeId,
+        newScore,
+        previousScore,
+        `${vouch.vouchType} vouch revoked by ${vouch.users_vouches_voucherIdTousers.fullName}`,
+        'vouches',
+        'vouch',
+        vouchId,
+        { reason }
+      ).catch(err => logger.error('Failed to record score change:', err));
+
+      // Update user stats
+      try {
+        const { UserStatService } = await import('../../user/user-stat.service');
+        await UserStatService.decrementVouchesReceived(vouch.voucheeId);
+        await UserStatService.decrementVouchesGiven(voucherId);
+        logger.info(`Decremented vouch stats for vouchee ${vouch.voucheeId} and voucher ${voucherId}`);
+      } catch (error) {
+        logger.error('Failed to update user stats for vouch revocation:', error);
+      }
+
       logger.info(`Vouch revoked: ${vouchId}`);
+
+      // Trigger accountability chain for vouch revocation (negative impact)
+      try {
+        const { AccountabilityService } = await import('../accountability/accountability.service');
+        const revokeImpact = -(previousScore - newScore); // Calculate the negative impact
+        
+        await AccountabilityService.recordAccountabilityEvent(
+          vouch.voucheeId,
+          'NEGATIVE' as any,
+          revokeImpact,
+          `Vouch revoked: ${reason || 'No reason provided'}`,
+          'vouch_revocation',
+          vouchId,
+          {
+            vouchType: vouch.vouchType,
+            voucherId,
+            voucherName: vouch.users_vouches_voucherIdTousers.fullName,
+            reason,
+          }
+        );
+        
+        logger.info(`Triggered accountability chain for vouch revocation ${vouchId}`);
+      } catch (error) {
+        logger.error('Failed to trigger accountability chain for vouch revocation:', error);
+      }
 
       // TODO: Send notification to vouchee
     } catch (error) {
@@ -586,10 +675,37 @@ export class VouchService {
       });
 
       // 4. Update user's trust score
+      const previousScore = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
       await TrustScoreService.triggerTrustScoreUpdate(
         userId,
         'Community vouch received'
       );
+
+      // Get new score and record history
+      const newScore = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        select: { name: true },
+      });
+
+      await TrustScoreUserService.recordScoreChange(
+        userId,
+        newScore,
+        previousScore,
+        `Community vouch received from ${community?.name || 'community'}`,
+        'vouches',
+        'community_vouch',
+        vouch.id,
+        { communityId }
+      ).catch(err => logger.error('Failed to record score change:', err));
 
       logger.info(`Community vouch created: ${vouch.id} for user ${userId}`);
 

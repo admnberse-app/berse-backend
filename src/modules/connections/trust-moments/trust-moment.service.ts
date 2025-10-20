@@ -198,10 +198,63 @@ export class TrustMomentService {
       logger.info(`Trust moment created: ${moment.id} from ${giverId} to ${receiverId}`);
 
       // 8. Trigger async trust score update for receiver
+      const previousScore = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
+      // Trigger trust score recalculation
       TrustScoreService.triggerTrustScoreUpdate(
         receiverId,
         `Trust moment received from ${moment.giver.fullName}`
       ).catch(error => logger.error('Failed to update trust score:', error));
+
+      // 9. Trigger accountability chain for negative or positive ratings
+      if (rating <= 2 || rating >= 4) {
+        try {
+          const { AccountabilityService } = await import('../accountability/accountability.service');
+          const impactType = rating <= 2 ? 'NEGATIVE' : 'POSITIVE';
+          
+          await AccountabilityService.recordAccountabilityEvent(
+            receiverId,
+            impactType as any,
+            trustImpact,
+            `Trust moment rating: ${rating} stars - ${feedback || 'No feedback'}`,
+            'trust_moment',
+            moment.id,
+            {
+              rating,
+              momentType: moment.momentType,
+              giverId,
+              giverName: moment.giver.fullName,
+              eventId: moment.eventId,
+            }
+          );
+          
+          logger.info(`Triggered accountability chain for trust moment ${moment.id} (${impactType})`);
+        } catch (error) {
+          logger.error('Failed to trigger accountability chain:', error);
+          // Don't throw - accountability failure shouldn't stop trust moment creation
+        }
+      }      // Import and record score change
+      const { TrustScoreUserService } = await import('../../user/trust-score.service');
+      
+      // Get new score and record history
+      const newScore = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
+      TrustScoreUserService.recordScoreChange(
+        receiverId,
+        newScore,
+        previousScore,
+        `Trust moment received (${rating} stars) from ${moment.giver.fullName}`,
+        'trustMoments',
+        'trust_moment',
+        moment.id,
+        { rating, momentType, tags }
+      ).catch(err => logger.error('Failed to record score change:', err));
 
       return this.formatTrustMomentResponse(moment);
     } catch (error) {
@@ -322,10 +375,76 @@ export class TrustMomentService {
 
       // 6. Trigger async trust score update if rating changed
       if (data.rating !== undefined && data.rating !== existingMoment.rating) {
+        const previousScore = await prisma.user.findUnique({
+          where: { id: existingMoment.receiverId },
+          select: { trustScore: true },
+        }).then(u => u?.trustScore || 0);
+
         TrustScoreService.triggerTrustScoreUpdate(
           existingMoment.receiverId,
           'Trust moment rating updated'
         ).catch(error => logger.error('Failed to update trust score:', error));
+
+        // Import and record score change
+        const { TrustScoreUserService } = await import('../../user/trust-score.service');
+        
+        // Get new score and record history
+        const newScore = await prisma.user.findUnique({
+          where: { id: existingMoment.receiverId },
+          select: { trustScore: true },
+        }).then(u => u?.trustScore || 0);
+
+        TrustScoreUserService.recordScoreChange(
+          existingMoment.receiverId,
+          newScore,
+          previousScore,
+          `Trust moment rating updated (${existingMoment.rating} → ${data.rating} stars)`,
+          'trustMoments',
+          'trust_moment',
+          momentId,
+          { oldRating: existingMoment.rating, newRating: data.rating }
+        ).catch(err => logger.error('Failed to record score change:', err));
+
+        // 7. Trigger accountability chain if rating changed to/from threshold
+        const oldRating = existingMoment.rating;
+        const newRating = data.rating;
+        const shouldTriggerAccountability = 
+          (oldRating > 2 && newRating <= 2) || // Changed to negative
+          (oldRating < 4 && newRating >= 4) || // Changed to positive
+          (oldRating <= 2 && newRating > 2 && newRating < 4) || // Changed from negative to neutral
+          (oldRating >= 4 && newRating < 4 && newRating > 2); // Changed from positive to neutral
+
+        if (shouldTriggerAccountability) {
+          try {
+            const { AccountabilityService } = await import('../accountability/accountability.service');
+            let impactType: 'NEGATIVE' | 'POSITIVE' | 'NEUTRAL' = 'NEUTRAL';
+            
+            if (newRating <= 2) {
+              impactType = 'NEGATIVE';
+            } else if (newRating >= 4) {
+              impactType = 'POSITIVE';
+            }
+            
+            await AccountabilityService.recordAccountabilityEvent(
+              existingMoment.receiverId,
+              impactType as any,
+              trustImpact,
+              `Trust moment rating updated: ${oldRating} → ${newRating} stars`,
+              'trust_moment',
+              momentId,
+              {
+                oldRating,
+                newRating,
+                momentType: updatedMoment.momentType,
+                giverId: userId,
+              }
+            );
+            
+            logger.info(`Triggered accountability chain for updated trust moment ${momentId} (${impactType})`);
+          } catch (error) {
+            logger.error('Failed to trigger accountability chain:', error);
+          }
+        }
       }
 
       return this.formatTrustMomentResponse(updatedMoment);
@@ -363,10 +482,35 @@ export class TrustMomentService {
       logger.info(`Trust moment deleted: ${momentId}`);
 
       // 4. Trigger async trust score update
+      const previousScore = await prisma.user.findUnique({
+        where: { id: existingMoment.receiverId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
       TrustScoreService.triggerTrustScoreUpdate(
         existingMoment.receiverId,
         'Trust moment deleted'
       ).catch(error => logger.error('Failed to update trust score:', error));
+
+      // Import and record score change
+      const { TrustScoreUserService } = await import('../../user/trust-score.service');
+      
+      // Get new score and record history
+      const newScore = await prisma.user.findUnique({
+        where: { id: existingMoment.receiverId },
+        select: { trustScore: true },
+      }).then(u => u?.trustScore || 0);
+
+      TrustScoreUserService.recordScoreChange(
+        existingMoment.receiverId,
+        newScore,
+        previousScore,
+        `Trust moment deleted (was ${existingMoment.rating} stars)`,
+        'trustMoments',
+        'trust_moment',
+        momentId,
+        { deletedRating: existingMoment.rating }
+      ).catch(err => logger.error('Failed to record score change:', err));
     } catch (error) {
       if (error instanceof AppError) throw error;
       logger.error('Error deleting trust moment:', error);

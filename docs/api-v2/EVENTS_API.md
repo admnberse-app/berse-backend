@@ -953,7 +953,7 @@ Purchase a single ticket for a paid event. Each purchase is for one attendee onl
 
 Get all tickets purchased by the authenticated user.
 
-**Endpoint:** `GET /v2/events/tickets/my-tickets`
+**Endpoint:** `GET /v2/events/me/tickets`
 
 **Authentication:** Required
 
@@ -962,8 +962,8 @@ Get all tickets purchased by the authenticated user.
 
 **Examples:**
 ```
-GET /v2/events/tickets/my-tickets
-GET /v2/events/tickets/my-tickets?eventId=evt_cm123456789
+GET /v2/events/me/tickets
+GET /v2/events/me/tickets?eventId=evt_cm123456789
 ```
 
 **Response:** `200 OK`
@@ -1093,7 +1093,7 @@ Cancel event registration. Updates `EventParticipant` status to `CANCELED` (soft
 
 Get all event registrations (EventParticipant records) for the authenticated user.
 
-**Endpoint:** `GET /v2/events/participants/my-registrations`
+**Endpoint:** `GET /v2/events/me/registrations`
 
 **Authentication:** Required
 

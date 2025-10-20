@@ -71,6 +71,14 @@ export class MarketplaceService {
       }
     });
 
+    // Update user stat for listing creation
+    try {
+      const { UserStatService } = await import('../user/user-stat.service');
+      await UserStatService.incrementListingsPosted(userId);
+    } catch (error) {
+      console.error('Failed to update user stat for listing creation:', error);
+    }
+
     // Log activity
 
     return this.formatListingResponse(listing);

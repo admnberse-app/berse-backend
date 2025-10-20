@@ -436,11 +436,363 @@ console.log(`Change: +${after.trustScore - before.trustScore} points`);
 
 - [Connections API](./CONNECTIONS_API.md) - Connection management and vouching system
 - [Events API](./EVENTS_API.md) - Event attendance and check-in
-- [Trust Moments API](./TRUST_MOMENTS_API.md) - Feedback and rating system (coming soon)
+- [Trust Moments API](./TRUST_MOMENTS_API.md) - Feedback and rating system
+- [Accountability API](./ACCOUNTABILITY_API.md) - Accountability chain system
+- [Trust Level Gating](./TRUST_LEVEL_GATING.md) - Feature access control
 - [Connection Module README](../../src/modules/connections/README.md) - Technical implementation details
 
 ---
 
-**Last Updated:** October 17, 2025  
-**API Version:** v2.1.0  
-**Module Status:** Trust Score ✅ Complete | Event Triggers ✅ Complete | Trust Moments 🚧 Coming Soon
+## New Trust System Features (v2.2.0)
+
+### Trust Dashboard
+
+Get a comprehensive overview of your trust score with actionable insights.
+
+**Endpoint:** `GET /api/v2/users/:userId/trust-dashboard`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user_123",
+      "fullName": "John Doe",
+      "trustScore": 75.5,
+      "trustLevel": "trusted"
+    },
+    "rank": {
+      "percentile": 82.4,
+      "position": 127,
+      "totalUsers": 5432
+    },
+    "recentChanges": [
+      {
+        "timestamp": "2025-10-18T10:00:00Z",
+        "change": 2.5,
+        "reason": "Trust moment positive feedback",
+        "newScore": 75.5
+      }
+    ],
+    "suggestions": [
+      "Request vouches from trusted connections",
+      "Attend more community events",
+      "Provide services to increase activity score"
+    ],
+    "accountabilityImpact": {
+      "totalImpact": 3.2,
+      "affectedVouchees": 4
+    },
+    "decayWarning": null,
+    "lastActivity": {
+      "date": "2025-10-19T15:30:00Z",
+      "daysAgo": 1
+    }
+  }
+}
+```
+
+**Features:**
+- Rank percentile among all active users
+- Recent trust score changes (last 7 days)
+- Personalized suggestions for improvement
+- Accountability impact (if you're a voucher)
+- Decay warning (if 23-30 days inactive)
+- Last activity tracking
+
+---
+
+### Trust Badges
+
+Earn and display achievement badges based on trust milestones.
+
+**Endpoint:** `GET /api/v2/users/:userId/badges`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "user_123",
+    "totalBadges": 8,
+    "badges": [
+      {
+        "name": "First Vouch",
+        "description": "Received your first vouch",
+        "tier": "bronze",
+        "icon": "🤝",
+        "earned": true,
+        "earnedAt": "2025-09-15T10:00:00Z"
+      },
+      {
+        "name": "Trusted Member",
+        "description": "Achieve 50%+ trust score",
+        "tier": "silver",
+        "icon": "⭐",
+        "earned": true,
+        "earnedAt": "2025-10-01T14:30:00Z"
+      },
+      {
+        "name": "Community Leader",
+        "description": "Achieve 76%+ trust score",
+        "tier": "gold",
+        "icon": "👑",
+        "earned": false,
+        "progress": 99.3,
+        "target": 76
+      }
+    ],
+    "progress": {
+      "nextBadge": "Community Leader",
+      "description": "Achieve 76%+ trust score",
+      "progress": 75.5,
+      "target": 76
+    }
+  }
+}
+```
+
+**Badge Types:**
+
+| Badge | Tier | Requirement |
+|-------|------|-------------|
+| First Vouch | Bronze | Receive 1+ vouch |
+| Service Provider | Bronze | Provide 10+ services |
+| Trusted Member | Silver | Achieve 50%+ trust score |
+| Event Enthusiast | Silver | Attend 25+ events |
+| Community Builder | Silver | Join 10+ communities |
+| Community Leader | Gold | Achieve 76%+ trust score |
+| Accountability Hero | Gold | 5+ positive accountability impacts |
+| Perfect Record | Platinum | Zero negative feedback for 90+ days |
+
+---
+
+### Trust Leaderboard
+
+See how you rank among other users in the platform.
+
+**Endpoint:** `GET /api/v2/trust/leaderboard`
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| type | enum | global | Leaderboard type: global, community, friends |
+| communityId | string | - | Required for community type |
+| limit | integer | 100 | Maximum number of results |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "type": "global",
+    "timestamp": "2025-10-20T15:00:00Z",
+    "leaderboard": [
+      {
+        "rank": 1,
+        "username": "User9234",
+        "trustScore": 98.5,
+        "trustLevel": "elite",
+        "isMe": false
+      },
+      {
+        "rank": 2,
+        "username": "john_doe",
+        "trustScore": 95.2,
+        "trustLevel": "elite",
+        "isMe": true
+      }
+    ],
+    "userRank": {
+      "rank": 2,
+      "percentile": 99.8
+    }
+  }
+}
+```
+
+**Leaderboard Types:**
+- **Global**: All active users on the platform
+- **Community**: Users in a specific community
+- **Friends**: Your accepted connections only
+
+**Privacy:**
+- Usernames are anonymized for users not in your network
+- Only trust score and level are shown for anonymized users
+
+---
+
+### Trust Score History
+
+View historical trust score changes with detailed reasons.
+
+**Endpoint:** `GET /api/v2/users/:userId/trust-history`
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | integer | 1 | Page number |
+| limit | integer | 20 | Logs per page |
+| startDate | date | - | Filter from date |
+| endDate | date | - | Filter to date |
+| component | enum | - | Filter by component: vouches, activity, trustMoments |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "history": [
+      {
+        "id": "hist_123",
+        "timestamp": "2025-10-18T10:00:00Z",
+        "score": 75.5,
+        "change": 2.5,
+        "previousScore": 73.0,
+        "reason": "Trust moment positive feedback",
+        "component": "trustMoments",
+        "relatedEntityType": "trust_moment",
+        "relatedEntityId": "tm_456",
+        "metadata": {
+          "rating": 5,
+          "giverName": "Jane Smith"
+        }
+      }
+    ],
+    "pagination": {
+      "total": 45,
+      "page": 1,
+      "limit": 20,
+      "totalPages": 3
+    }
+  }
+}
+```
+
+---
+
+### Community Vouch Offers
+
+Automatic vouch offers for eligible community members.
+
+**Endpoint:** `GET /api/v2/communities/:communityId/vouch-offers`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "offers": [
+      {
+        "id": "offer_123",
+        "communityId": "comm_456",
+        "communityName": "Tech Enthusiasts",
+        "status": "PENDING",
+        "eligibilityReason": "5+ events attended, 90+ days membership, zero negative feedback",
+        "eventsAttended": 12,
+        "membershipDays": 127,
+        "hasNegativeFeedback": false,
+        "createdAt": "2025-10-10T08:00:00Z",
+        "expiresAt": "2025-11-09T08:00:00Z",
+        "daysRemaining": 20
+      }
+    ]
+  }
+}
+```
+
+**Actions:**
+- `POST /api/v2/communities/:communityId/vouch-offers/:offerId/accept` - Accept offer
+- `POST /api/v2/communities/:communityId/vouch-offers/:offerId/reject` - Reject offer
+
+**Eligibility Criteria:**
+- 5+ events attended in the community
+- 90+ days of membership
+- Zero negative feedback (trust moments with rating ≤ 2)
+
+---
+
+### Trust Decay System
+
+Trust scores decay after periods of inactivity to ensure currency.
+
+**Decay Rules:**
+- **After 30 days inactivity**: -1% per week
+- **After 90 days inactivity**: -2% per week
+
+**Warning Notifications:**
+- Sent 7 days before decay starts (23 days inactive)
+- Message: "Your trust score will start decaying in X days"
+
+**Last Activity Tracked From:**
+- Event participation
+- Trust moments given
+- Marketplace listings created
+- New connections made
+
+**Reactivation Bonus:**
+- Return after decay: +2% bonus to encourage re-engagement
+
+---
+
+## Trust Level Gating
+
+Features are now gated based on trust level to prevent abuse and ensure quality.
+
+### Access Requirements
+
+| Feature | Minimum Trust Score | Level |
+|---------|-------------------|-------|
+| View profiles, events, marketplace | 0% | Any |
+| Attend events, message connections | 11% | Newcomer |
+| Create events, join communities | 26% | Growing |
+| Publish events, create listings | 51% | Established |
+| Create communities, fundraisers | 76% | Trusted |
+| Platform governance, unlimited vouches | 91% | Leader |
+
+### Middleware Implementation
+
+Routes are protected with `requireTrustLevel` middleware:
+
+```typescript
+router.post('/events', 
+  authenticate, 
+  requireTrustLevel(26, 'create events'),
+  createEvent
+);
+```
+
+**Error Response (403):**
+```json
+{
+  "success": false,
+  "error": "Insufficient trust level",
+  "message": "You need a higher trust score to create events",
+  "requirements": {
+    "feature": "create events",
+    "minimumScore": 26,
+    "minimumLevel": "Growing"
+  },
+  "current": {
+    "score": 18.5,
+    "level": "Starter",
+    "levelName": "starter"
+  },
+  "progress": {
+    "pointsNeeded": 7.5,
+    "percentage": 71
+  },
+  "suggestions": [
+    "Request vouches from trusted connections",
+    "Attend community events to build reputation"
+  ],
+  "helpUrl": "/help/trust-score"
+}
+```
+
+---
+
+**Last Updated:** October 20, 2025  
+**API Version:** v2.2.0  
+**Module Status:** Trust Score ✅ Complete | Accountability ✅ Complete | Decay System ✅ Complete | Badges ✅ Complete

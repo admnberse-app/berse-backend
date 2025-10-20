@@ -535,4 +535,77 @@ router.get(
   VouchController.getVouchSummary
 );
 
+/**
+ * @swagger
+ * /v2/users/{userId}/vouches:
+ *   get:
+ *     summary: Get vouches for a specific user
+ *     description: |
+ *       Get vouches received by a user, with optional filters.
+ *       If viewing own profile, also includes vouches given.
+ *     tags: [Connections - Vouching]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, APPROVED, ACTIVE, DECLINED, REVOKED]
+ *         description: Filter by vouch status
+ *       - in: query
+ *         name: vouchType
+ *         schema:
+ *           type: string
+ *           enum: [PRIMARY, SECONDARY, COMMUNITY]
+ *         description: Filter by vouch type
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: User vouches retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     received:
+ *                       type: object
+ *                       description: Vouches received by this user
+ *                     given:
+ *                       type: object
+ *                       description: Vouches given (only if viewing own profile)
+ *                     limits:
+ *                       type: object
+ *                       description: Vouch limits and availability
+ *       404:
+ *         description: User not found
+ */
+router.get(
+  '/users/:userId/vouches',
+  authenticateToken,
+  vouchQueryValidators,
+  handleValidationErrors,
+  VouchController.getUserVouches
+);
+
 export default router;

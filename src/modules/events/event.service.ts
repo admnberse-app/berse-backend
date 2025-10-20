@@ -98,6 +98,17 @@ export class EventService {
         },
       });
 
+      // Update user stats for events hosted (only if published)
+      if (event.status === EventStatus.PUBLISHED) {
+        try {
+          const { UserStatService } = await import('../user/user-stat.service');
+          await UserStatService.incrementEventsHosted(userId);
+          logger.info(`Incremented eventsHosted stat for user ${userId}`);
+        } catch (error) {
+          logger.error('Failed to update user stat for event hosting:', error);
+        }
+      }
+
       // Invalidate relevant caches
       await Promise.all([
         cacheService.deletePattern('bersemuka:events:trending:*'),
@@ -1147,13 +1158,48 @@ export class EventService {
         },
       });
 
+      // Update user stats for events attended
+      try {
+        const { UserStatService } = await import('../user/user-stat.service');
+        await UserStatService.incrementEventsAttended(targetUserId);
+        logger.info(`Incremented eventsAttended stat for user ${targetUserId}`);
+      } catch (error) {
+        logger.error('Failed to update user stat for event attendance:', error);
+      }
+
       // Trigger trust score update after event check-in
       try {
         const { TrustScoreService } = await import('../connections/trust/trust-score.service');
+        const { TrustScoreUserService } = await import('../user/trust-score.service');
+        
+        // Get previous score
+        const previousScore = await prisma.user.findUnique({
+          where: { id: targetUserId },
+          select: { trustScore: true },
+        }).then(u => u?.trustScore || 0);
+
         await TrustScoreService.triggerTrustScoreUpdate(
           targetUserId,
           `Event attendance: ${event.title}`
         );
+        
+        // Get new score and record history
+        const newScore = await prisma.user.findUnique({
+          where: { id: targetUserId },
+          select: { trustScore: true },
+        }).then(u => u?.trustScore || 0);
+
+        await TrustScoreUserService.recordScoreChange(
+          targetUserId,
+          newScore,
+          previousScore,
+          `Attended event: ${event.title}`,
+          'activity',
+          'event',
+          eventId,
+          { eventType: event.type, location: event.location }
+        );
+        
         logger.info(`Trust score update triggered for user ${targetUserId} after event check-in`);
       } catch (error) {
         // Non-critical error - log but don't fail the check-in

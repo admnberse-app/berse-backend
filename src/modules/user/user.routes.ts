@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserController } from './user.controller';
 import { QRCodeController } from './qr-code.controller';
+import { TrustScoreController } from './trust-score.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { updateProfileValidators, searchUsersValidators } from './user.validators';
@@ -1626,5 +1627,345 @@ router.get('/metadata/gender-options', UserController.getGenderOptions);
  *                             example: ["Hiking", "Camping", "Rock Climbing"]
  */
 router.get('/metadata/interest-categories', UserController.getInterestCategories);
+
+// ============================================================================
+// TRUST SCORE ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-score:
+ *   get:
+ *     summary: Get user trust score detail
+ *     description: |
+ *       Get comprehensive trust score information including breakdown by components:
+ *       - Vouches (40%): Primary, Secondary, and Community vouches
+ *       - Activity (30%): Events attended/hosted, communities joined, services provided
+ *       - Trust Moments (30%): Ratings and feedback from connections
+ *     tags: [Users - Trust Score]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: includeBreakdown
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include detailed component breakdown
+ *       - in: query
+ *         name: includeHistory
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Include score history
+ *       - in: query
+ *         name: historyDays
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *         description: Number of days of history to include
+ *     responses:
+ *       200:
+ *         description: Trust score detail retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                     currentScore:
+ *                       type: number
+ *                       example: 85
+ *                     trustLevel:
+ *                       type: string
+ *                       enum: [new, starter, growing, established, trusted, elite]
+ *                     lastCalculatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                     breakdown:
+ *                       type: object
+ *                     nextLevel:
+ *                       type: object
+ *       404:
+ *         description: User not found
+ */
+router.get('/:userId/trust-score', authenticateToken, TrustScoreController.getTrustScoreDetail);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-score/history:
+ *   get:
+ *     summary: Get trust score history
+ *     description: Get historical trust score data over time with summary statistics (own profile only)
+ *     tags: [Users - Trust Score]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID (must be authenticated user)
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for history (ISO 8601)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for history (ISO 8601)
+ *       - in: query
+ *         name: granularity
+ *         schema:
+ *           type: string
+ *           enum: [daily, weekly, monthly]
+ *           default: daily
+ *         description: Data granularity
+ *     responses:
+ *       200:
+ *         description: Score history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                     history:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *                           score:
+ *                             type: number
+ *                           change:
+ *                             type: number
+ *                           reason:
+ *                             type: string
+ *                           component:
+ *                             type: string
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         startScore:
+ *                           type: number
+ *                         endScore:
+ *                           type: number
+ *                         totalChange:
+ *                           type: number
+ *                         highestScore:
+ *                           type: number
+ *                         lowestScore:
+ *                           type: number
+ *                         averageScore:
+ *                           type: number
+ *       403:
+ *         description: Can only view own history
+ */
+router.get('/:userId/trust-score/history', authenticateToken, TrustScoreController.getTrustScoreHistory);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-score/suggestions:
+ *   get:
+ *     summary: Get personalized trust score improvement suggestions
+ *     description: Get actionable suggestions to improve trust score based on current gaps
+ *     tags: [Users - Trust Score]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID (must be authenticated user)
+ *     responses:
+ *       200:
+ *         description: Suggestions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     currentScore:
+ *                       type: number
+ *                     currentLevel:
+ *                       type: string
+ *                     nextLevel:
+ *                       type: string
+ *                     pointsToNextLevel:
+ *                       type: number
+ *                     suggestions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     quickWins:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       403:
+ *         description: Can only view own suggestions
+ */
+router.get('/:userId/trust-score/suggestions', authenticateToken, TrustScoreController.getSuggestions);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-score/recent-updates:
+ *   get:
+ *     summary: Get recent trust score updates
+ *     description: Get timeline of recent activities that affected trust score
+ *     tags: [Users - Trust Score]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID (must be authenticated user)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of updates to retrieve
+ *     responses:
+ *       200:
+ *         description: Recent updates retrieved successfully
+ *       403:
+ *         description: Can only view own updates
+ */
+router.get('/:userId/trust-score/recent-updates', authenticateToken, TrustScoreController.getRecentUpdates);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-dashboard:
+ *   get:
+ *     summary: Get comprehensive trust dashboard
+ *     description: Get trust score, rank percentile, recent changes, suggestions, accountability impact, and decay warnings
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Dashboard retrieved successfully
+ *       403:
+ *         description: Can only view own dashboard
+ */
+router.get('/:userId/trust-dashboard', authenticateToken, TrustScoreController.getTrustDashboard);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/badges:
+ *   get:
+ *     summary: Get user's trust badges
+ *     description: Get earned trust badges based on achievements (First Vouch, Trusted Member, Community Leader, Perfect Record, Accountability Hero, etc.)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Badges retrieved successfully
+ */
+router.get('/:userId/badges', authenticateToken, TrustScoreController.getBadges);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/stats:
+ *   get:
+ *     summary: Get user activity statistics
+ *     description: Get user's activity stats including events, vouches, communities, services
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                     eventsAttended:
+ *                       type: integer
+ *                     eventsHosted:
+ *                       type: integer
+ *                     vouchesGiven:
+ *                       type: integer
+ *                     vouchesReceived:
+ *                       type: integer
+ *                     listingsPosted:
+ *                       type: integer
+ *                     servicesProvided:
+ *                       type: integer
+ *                     communitiesJoined:
+ *                       type: integer
+ *                     totalPoints:
+ *                       type: integer
+ *                     lastCalculatedAt:
+ *                       type: string
+ *                       format: date-time
+ */
+router.get('/:userId/stats', authenticateToken, TrustScoreController.getUserStats);
 
 export default router;

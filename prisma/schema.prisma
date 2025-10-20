@@ -270,12 +270,41 @@ model Community {
   user             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
   communityMembers CommunityMember[]
   events            Event[]
+  vouchOffers       CommunityVouchOffer[]
 
   @@index([category])
   @@index([createdAt])
   @@index([name])
 
   @@map("communities")
+}
+
+model CommunityVouchOffer {
+  id                String              @id @default(cuid())
+  userId            String
+  communityId       String
+  eligibilityReason String              // e.g. "5+ events attended, 90+ days membership, zero negative feedback"
+  status            VouchOfferStatus    @default(PENDING)
+  eventsAttended    Int                 @default(0)
+  membershipDays    Int                 @default(0)
+  hasNegativeFeedback Boolean           @default(false)
+  offerMetadata     Json?               // Additional eligibility details
+  createdAt         DateTime            @default(now())
+  expiresAt         DateTime            // Auto-set to 30 days from creation
+  acceptedAt        DateTime?
+  rejectedAt        DateTime?
+  vouchId           String?             @unique // Reference to created vouch if accepted
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community         Community           @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId, status])
+  @@index([userId])
+  @@index([communityId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdAt])
+
+  @@map("community_vouch_offers")
 }
 
 model CommunityMember {
@@ -2387,6 +2416,7 @@ model User {
   travelTrips                                              TravelTrip[]
   trustMomentsGiven                                        TrustMoment[]             @relation("trust_moments_giverIdTousers")
   trustMomentsReceived                                     TrustMoment[]             @relation("trust_moments_receiverIdTousers")
+  trustScoreHistories                                      TrustScoreHistory[]
   userActivities                                           UserActivity[]
   userBadges                                               UserBadge[]
   blockedUsers                                             UserBlock[]               @relation("user_blocks_blockedIdTousers")
@@ -2409,6 +2439,9 @@ model User {
   other_users                                               User[]                     @relation("usersTousers")
   vouchesReceived                                           Vouch[]                   @relation("vouches_voucheeIdTousers")
   vouchesGiven                                              Vouch[]                   @relation("vouches_voucherIdTousers")
+  accountabilityLogsAsVoucher                              AccountabilityLog[]       @relation("accountability_logs_voucherIdTousers")
+  accountabilityLogsAsVouchee                              AccountabilityLog[]       @relation("accountability_logs_voucheeIdTousers")
+  communityVouchOffers                                     CommunityVouchOffer[]
 
   @@index([createdAt])
   @@index([deletedAt])
@@ -2518,6 +2551,58 @@ model TrustMoment {
   @@index([createdAt])
 
   @@map("trust_moments")
+}
+
+model TrustScoreHistory {
+  id                String    @id @default(cuid())
+  userId            String
+  score             Float
+  change            Float     @default(0)
+  previousScore     Float?
+  reason            String?
+  component         String?
+  relatedEntityType String?
+  relatedEntityId   String?
+  metadata          Json?
+  timestamp         DateTime  @default(now())
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([userId, component])
+  @@index([timestamp])
+
+  @@map("trust_score_histories")
+}
+
+model AccountabilityLog {
+  id                String                @id @default(cuid())
+  voucherId         String
+  voucheeId         String
+  chainId           String?
+  impactType        AccountabilityImpact
+  impactValue       Float
+  description       String?
+  relatedEntityType String?
+  relatedEntityId   String?
+  metadata          Json?
+  occurredAt        DateTime              @default(now())
+  processedAt       DateTime?
+  isProcessed       Boolean               @default(false)
+  voucher           User                  @relation("accountability_logs_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
+  vouchee           User                  @relation("accountability_logs_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId, isProcessed])
+  @@index([voucheeId, occurredAt])
+  @@index([impactType, isProcessed])
+  @@index([occurredAt])
+
+  @@map("accountability_logs")
+}
+
+enum AccountabilityImpact {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
 }
 
 enum AnnouncementPriority {
@@ -2792,6 +2877,13 @@ enum UserStatus {
   DEACTIVATED
   BANNED
   PENDING
+}
+
+enum VouchOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
 }
 
 enum VouchStatus {

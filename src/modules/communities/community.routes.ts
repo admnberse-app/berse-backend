@@ -3,6 +3,8 @@ import { CommunityController } from './community.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { requireTrustLevel } from '../../middleware/trust-level.middleware';
+import vouchOfferRoutes from './vouch-offer.routes';
 import {
   createCommunityValidators,
   updateCommunityValidators,
@@ -67,6 +69,7 @@ const communityController = new CommunityController();
 router.post(
   '/',
   authenticateToken,
+  requireTrustLevel(76, 'create communities'),
   createCommunityValidators,
   handleValidationErrors,
   asyncHandler(communityController.createCommunity.bind(communityController))
@@ -632,5 +635,8 @@ router.delete(
   handleValidationErrors,
   asyncHandler(communityController.revokeVouch.bind(communityController))
 );
+
+// Mount vouch offer routes
+router.use('/', vouchOfferRoutes);
 
 export const communityRoutes = router;

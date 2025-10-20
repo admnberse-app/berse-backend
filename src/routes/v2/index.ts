@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import { authRoutes } from '../../modules/auth';
 import { userRoutes } from '../../modules/user';
+import { TrustScoreController } from '../../modules/user/trust-score.controller';
 import { countriesRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
 import onboardingV2Routes from '../../modules/onboarding/onboarding-v2.routes';
 import { eventRoutes } from '../../modules/events';
 import { connectionRoutes, vouchRoutes, trustMomentRoutes } from '../../modules/connections';
+import accountabilityRoutes from '../../modules/connections/accountability/accountability.routes';
 import { cardGameRoutes } from '../../modules/cardgame';
 import { gamificationRoutes } from '../../modules/gamification';
 import { communityRoutes } from '../../modules/communities';
+import vouchOfferRoutes from '../../modules/communities/vouch-offer.routes';
 import notificationRoutes from '../../modules/user/notification.routes';
 import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
 import { paymentRoutes } from '../../modules/payments';
@@ -19,6 +22,7 @@ import constantsRoutes from '../../modules/app-constants/constants.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
+import { authenticateToken } from '../../middleware/auth';
 
 const router = Router();
 const paymentController = new PaymentController();
@@ -105,10 +109,22 @@ router.use('/vouches', vouchRoutes);
 router.use('/', trustMomentRoutes);
 
 /**
+ * Accountability routes
+ * Base path: /v2/accountability
+ */
+router.use('/accountability', accountabilityRoutes);
+
+/**
  * Notification routes
  * Base path: /v2/notifications
  */
 router.use('/notifications', notificationRoutes);
+
+/**
+ * Trust Leaderboard
+ * Base path: /v2/trust/leaderboard
+ */
+router.get('/trust/leaderboard', authenticateToken, asyncHandler(TrustScoreController.getLeaderboard));
 
 /**
  * Card Game routes
@@ -151,6 +167,12 @@ router.use('/app-constants', constantsRoutes);
  * Base path: /v2/admin/revenue
  */
 router.use('/admin/revenue', adminRevenueRoutes);
+
+/**
+ * Admin Vouch Offer routes
+ * Base path: /v2/admin/vouch-offers
+ */
+router.use('/admin', vouchOfferRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION
@@ -329,10 +351,10 @@ router.get('/docs', (req, res) => {
         'POST /v2/events/ticket-tiers': 'Create ticket tier (auth required)',
         'PUT /v2/events/ticket-tiers/:id': 'Update ticket tier (auth required)',
         'POST /v2/events/tickets/purchase': 'Purchase ticket (auth required)',
-        'GET /v2/events/tickets/my-tickets': 'Get my tickets (auth required)',
-        'POST /v2/events/:id/rsvp': 'RSVP to event (auth required)',
-        'DELETE /v2/events/:id/rsvp': 'Cancel RSVP (auth required)',
-        'GET /v2/events/rsvps/my-rsvps': 'Get my RSVPs (auth required)',
+        'GET /v2/events/me/tickets': 'Get my tickets (auth required)',
+        'POST /v2/events/:id/register': 'Register for event (auth required)',
+        'DELETE /v2/events/:id/register': 'Cancel registration (auth required)',
+        'GET /v2/events/me/registrations': 'Get my registrations (auth required)',
         'POST /v2/events/:id/check-in': 'Check-in attendee (auth required)',
         'GET /v2/events/:id/attendees': 'Get event attendees (auth required)',
         'GET /v2/events/calendar/today': 'Get today events',

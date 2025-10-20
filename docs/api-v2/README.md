@@ -12,7 +12,11 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 👤 [User & Profile API](./USER_API.md) - Profile management, user discovery, activity tracking, and social connections
 - 📱 [QR Code Identity API](./QR_CODE_API.md) - JWT-based QR codes for connections and event check-ins ([Quick Ref](./QR_CODE_QUICKREF.md))
 - 🤝 [Connections API](./CONNECTIONS_API.md) - Connection management, vouching system, and trust scores ([Quick Ref](./CONNECTIONS_QUICKREF.md))
-- 🏘️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
+- � [Trust Score API](./TRUST_SCORE_API.md) - Trust score calculation, dashboard, badges, and leaderboard
+- ⚖️ [Accountability API](./ACCOUNTABILITY_API.md) - Accountability chain where vouchers are affected by vouchees' behavior
+- 🔒 [Trust Level Gating](./TRUST_LEVEL_GATING.md) - Feature access control based on trust score
+- 🎁 [Community Vouch Offers API](./COMMUNITY_VOUCH_OFFERS_API.md) - Automatic vouch offers for eligible community members
+- �🏘️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
 - 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
@@ -515,6 +519,34 @@ See [CHANGELOG.md](../../CHANGELOG.md) for API version history and breaking chan
 
 ## Recent Changes (October 2025)
 
+### ✅ What's New in V2.2 (October 20, 2025)
+
+**🏆 Comprehensive Trust System**
+- **Trust Dashboard:** Comprehensive overview with rank percentile, recent changes, suggestions, accountability impact, and decay warnings
+- **Trust Badges:** 8 achievement badges (bronze/silver/gold/platinum) for trust milestones
+- **Trust Leaderboard:** Global, community, and friends leaderboards with anonymization
+- **Trust Score History:** Detailed tracking of all score changes with reasons and metadata
+- **Trust Level Gating:** Feature access control (26%/51%/76% thresholds) to prevent abuse
+- **Accountability Chain:** Vouchers affected by vouchees' behavior (40% penalty / 20% reward formula)
+- **Community Vouch Offers:** Automatic vouch offers for eligible community members (5+ events, 90+ days, zero negative feedback)
+- **Trust Decay System:** Scores decay after inactivity (-1% after 30 days, -2% after 90 days) with warnings and reactivation bonuses
+
+**🎯 Trust Level Tiers:**
+- **Starter (0-10%):** Read-only access
+- **Newcomer (11-25%):** Basic participation (attend events, message)
+- **Growing (26-50%):** Active participation (create events, join communities)
+- **Established (51-75%):** Leadership (publish events, create services)
+- **Trusted (76-90%):** Advanced features (create communities, fundraisers)
+- **Leader (91-100%):** Platform governance
+
+**📊 Key Features:**
+- Real-time trust score updates
+- Personalized suggestions for improvement
+- Accountability notifications for vouchers
+- Automated eligibility job for vouch offers
+- Comprehensive trust score formula (40% vouches + 30% activity + 30% trust moments)
+- Feature gating middleware protecting sensitive routes
+
 ### ✅ What's New in V2.1 (October 15, 2025)
 
 **🔐 Enhanced Authentication & Security**
@@ -575,6 +607,9 @@ Key changes when migrating:
 The API is currently focused on core functionality:
 - ✅ **Authentication** - Full user auth lifecycle with device tracking and security features
 - ✅ **User Management** - Profiles, connections, discovery, activity tracking, security events
+- ✅ **Trust System** - Trust scores, accountability chain, trust level gating, badges, leaderboard
+- ✅ **Communities** - Community management, membership, community vouching, automatic vouch offers
+- ✅ **Connections** - Connection management, vouching system, trust moments
 - ✅ **Onboarding V2** - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth)
 - ✅ **Metadata** - Countries, regions, timezones
 - ✅ **Events** - Event management, ticket sales, RSVPs, QR code check-ins
@@ -584,14 +619,13 @@ The API is currently focused on core functionality:
 - 💬 Messaging API (V2)
 - 🔔 Notifications API (V2)
 - 🎯 Matching API (V2)
-- 🏘️ Communities API (V2)
 - 💳 Payments API (V2)
 - 🎮 Card Game API (V2)
 
 ---
 
-**Last Updated:** October 15, 2025  
-**API Version:** v2.1.0  
+**Last Updated:** October 20, 2025  
+**API Version:** v2.2.0  
 **Status:** Active Development
 
 ---

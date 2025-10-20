@@ -162,4 +162,45 @@ export class VouchController {
       next(error);
     }
   }
+
+  /**
+   * Get vouches for a specific user
+   * @route GET /v2/users/:userId/vouches
+   */
+  static async getUserVouches(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const requesterId = req.user?.id;
+      
+      const query: VouchQuery = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 20,
+        status: req.query.status as any,
+        vouchType: req.query.vouchType as any,
+        isCommunityVouch: req.query.isCommunityVouch === 'true',
+        sortBy: req.query.sortBy as any,
+        sortOrder: req.query.sortOrder as any,
+      };
+
+      // Get vouches received by this user
+      const received = await VouchService.getVouchesReceived(userId, query);
+      
+      // Only include vouches given if viewing own profile
+      let given = null;
+      if (userId === requesterId) {
+        given = await VouchService.getVouchesGiven(userId, query);
+      }
+
+      // Get limits
+      const limits = await VouchService.getVouchLimits(userId);
+
+      sendSuccess(res, {
+        received,
+        given,
+        limits,
+      }, 'User vouches retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }

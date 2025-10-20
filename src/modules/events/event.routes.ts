@@ -3,6 +3,7 @@ import { EventController } from './event.controller';
 import { handleValidationErrors } from '../../middleware/validation';
 import { authenticateToken } from '../../middleware/auth';
 import { uploadImage } from '../../middleware/upload';
+import { requireTrustLevel } from '../../middleware/trust-level.middleware';
 import { 
   createEventValidators,
   updateEventValidators,
@@ -531,6 +532,7 @@ router.get(
 router.post(
   '/',
   authenticateToken,
+  requireTrustLevel(26, 'create events'),
   createEventValidators,
   handleValidationErrors,
   EventController.createEvent
@@ -581,6 +583,7 @@ router.post(
 router.put(
   '/:id',
   authenticateToken,
+  requireTrustLevel(51, 'publish events'),
   updateEventValidators,
   handleValidationErrors,
   EventController.updateEvent
@@ -778,7 +781,7 @@ router.post(
 
 /**
  * @swagger
- * /v2/events/tickets/my-tickets:
+ * /v2/events/me/tickets:
  *   get:
  *     summary: Get my tickets
  *     description: Retrieve all tickets purchased by the authenticated user
@@ -796,7 +799,7 @@ router.post(
  *         description: Tickets retrieved successfully
  */
 router.get(
-  '/tickets/my-tickets',
+  '/me/tickets',
   authenticateToken,
   EventController.getMyTickets
 );
@@ -894,7 +897,7 @@ router.delete(
 
 /**
  * @swagger
- * /v2/events/participants/my-registrations:
+ * /v2/events/me/registrations:
  *   get:
  *     summary: Get my event registrations
  *     description: |
@@ -949,7 +952,7 @@ router.delete(
  *                             type: string
  */
 router.get(
-  '/participants/my-registrations',
+  '/me/registrations',
   authenticateToken,
   EventController.getMyRegistrations
 );

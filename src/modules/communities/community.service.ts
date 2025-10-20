@@ -635,6 +635,17 @@ export class CommunityService {
         },
       });
 
+      // Update user stats (only if member was approved)
+      if (member.isApproved) {
+        try {
+          const { UserStatService } = await import('../user/user-stat.service');
+          await UserStatService.decrementCommunitiesJoined(userId);
+          logger.info(`Decremented communitiesJoined for user ${userId}`);
+        } catch (error) {
+          logger.error('Failed to update user stat for community leave:', error);
+        }
+      }
+
       logger.info('User left community', { communityId, userId });
     } catch (error) {
       logger.error('Failed to leave community', { error, userId, communityId });
@@ -691,6 +702,15 @@ export class CommunityService {
           },
         },
       });
+
+      // Update user stats
+      try {
+        const { UserStatService } = await import('../user/user-stat.service');
+        await UserStatService.incrementCommunitiesJoined(userId);
+        logger.info(`Incremented communitiesJoined for user ${userId}`);
+      } catch (error) {
+        logger.error('Failed to update user stat for community join:', error);
+      }
 
       logger.info('Member approved', { communityId, userId, adminUserId });
 

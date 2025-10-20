@@ -3,6 +3,7 @@ import { marketplaceController } from './marketplace.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { uploadImage } from '../../middleware/upload';
+import { requireTrustLevel } from '../../middleware/trust-level.middleware';
 import {
   createListingValidator,
   updateListingValidator,
@@ -97,6 +98,7 @@ router.post(
 router.post(
   '/listings',
   authenticateToken,
+  requireTrustLevel(51, 'create marketplace listings'),
   createListingValidator,
   handleValidationErrors,
   marketplaceController.createListing.bind(marketplaceController)

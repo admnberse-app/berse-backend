@@ -215,7 +215,7 @@ export class EventController {
 
   /**
    * Get user's tickets
-   * @route GET /v2/events/tickets/my-tickets
+   * @route GET /v2/events/me/tickets
    */
   static async getMyTickets(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -272,7 +272,7 @@ export class EventController {
 
   /**
    * Get user's event registrations
-   * @route GET /v2/events/participants/my-registrations
+   * @route GET /v2/events/me/registrations
    */
   static async getMyRegistrations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
