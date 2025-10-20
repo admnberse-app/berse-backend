@@ -736,7 +736,7 @@ export class PaymentController {
    *         description: Webhook processed successfully
    *       400:
    *         description: Invalid webhook signature or payload
-  /**
+   *
    * @route POST /v2/payments/webhooks/:provider
    * @desc Handle payment provider webhooks
    * @access Public (signature verified)
