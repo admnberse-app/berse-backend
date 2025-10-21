@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "dotenv -e .env.development.local -- nodemon --exec ts-node src/server.ts",
-    "dev:local": "nodemon --exec ts-node src/server.ts",
+    "dev:local": "dotenv -e .env.local -- npm run dev",
+    "test:username": "dotenv -e .env.local -- node test-username-validation.js",
     "build": "rimraf dist && tsc && npm run copy-files",
     "build:backend": "rimraf dist && tsc && npm run copy-files",
     "build:check": "tsc --noEmit",
@@ -30,6 +31,7 @@
     "prisma:seed:events": "ts-node prisma/seeds/core/events.seed.ts",
     "prisma:seed:config": "ts-node prisma/seeds/config/seed-app-config.ts && ts-node prisma/seeds/config/seed-payment-providers.ts",
     "prisma:seed:onboarding": "ts-node prisma/seeds/features/onboarding-v2.seed.ts",
+    "prisma:seed:cardgame": "ts-node prisma/seeds/cardgame.seed.ts",
     "seed": "ts-node prisma/seeds/index.ts",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
