@@ -13,8 +13,10 @@ export class OnboardingV2Validators {
     body('screenId')
       .notEmpty()
       .withMessage('Screen ID is required')
-      .isUUID()
-      .withMessage('Screen ID must be a valid UUID'),
+      .isString()
+      .withMessage('Screen ID must be a string')
+      .isLength({ min: 20, max: 30 })
+      .withMessage('Screen ID must be a valid CUID'),
     
     body('action')
       .notEmpty()
@@ -64,8 +66,10 @@ export class OnboardingV2Validators {
     
     query('screenId')
       .optional()
-      .isUUID()
-      .withMessage('Screen ID must be a valid UUID'),
+      .isString()
+      .withMessage('Screen ID must be a string')
+      .isLength({ min: 20, max: 30 })
+      .withMessage('Screen ID must be a valid CUID'),
   ];
 
   // ============================================================================
@@ -76,8 +80,10 @@ export class OnboardingV2Validators {
     body('screenId')
       .notEmpty()
       .withMessage('Screen ID is required')
-      .isUUID()
-      .withMessage('Screen ID must be a valid UUID'),
+      .isString()
+      .withMessage('Screen ID must be a string')
+      .isLength({ min: 20, max: 30 })
+      .withMessage('Screen ID must be a valid CUID'),
     
     body('action')
       .notEmpty()
@@ -119,8 +125,10 @@ export class OnboardingV2Validators {
     
     query('screenId')
       .optional()
-      .isUUID()
-      .withMessage('Screen ID must be a valid UUID'),
+      .isString()
+      .withMessage('Screen ID must be a string')
+      .isLength({ min: 20, max: 30 })
+      .withMessage('Screen ID must be a valid CUID'),
     
     query('screenType')
       .optional()

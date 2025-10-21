@@ -11,15 +11,16 @@ const router = Router();
  *     Profile field options and metadata endpoints for user profile completion.
  *     
  *     Features:
- *     - 🎯 **Interests**: 70+ categorized interests with emojis
- *     - 🌍 **Languages**: 27 supported languages with native names
- *     - 💼 **Professions**: 50+ career categories
- *     - 🚀 **Travel Styles**: 14 travel preference types
- *     - 🧠 **Personality Types**: 16 MBTI types with descriptions
- *     - 🔒 **Privacy Options**: Visibility and location sharing settings
- *     - ✅ **Username Validation**: Real-time validation with smart suggestions
+ *     - Interests - 70+ categorized interests with emojis
+ *     - Languages - 27 supported languages with native names
+ *     - Professions - 50+ career categories
+ *     - Travel Styles - 14 travel preference types
+ *     - Personality Types - 16 MBTI types with descriptions
+ *     - Privacy Options - Visibility and location sharing settings
+ *     - Username Validation - Real-time validation with smart suggestions
  *     
  *     All endpoints return structured data optimized for mobile app integration.
+ */
 
 /**
  * @swagger
@@ -112,6 +113,7 @@ const router = Router();
  *                     locationPrivacyOptions:
  *                       type: object
  *                       description: "Location sharing preferences"
+ */
 router.get('/', profileMetadataController.getAllProfileMetadata);
 
 /**
@@ -273,7 +275,12 @@ router.get('/location-privacy-options', profileMetadataController.getLocationPri
  * /v2/metadata/profile/validate-username:
  *   post:
  *     summary: Validate username availability
- *     description: |\n *       Validates username format and checks database availability with user-friendly responses.\n *       \n *       **Validation Rules:**\n *       - Length: 3-30 characters\n *       - Format: Letters, numbers, underscores, and dashes only\n *       - Reserved words: admin, root, system, api, etc. are blocked\n *       - Database check: Ensures username is not already taken\n *       \n *       **Response Features:**\n *       - User-friendly messages for mobile apps\n *       - Smart suggestions when username is unavailable\n *       - Context-specific error messages\n *       - Both technical and display-ready messages
+ *     description: |
+ *       Validates username format and checks database availability with user-friendly responses.
+ *       
+ *       Validation Rules - Length 3-30 characters, Letters numbers underscores and dashes only, Reserved words blocked, Database availability check
+ *       
+ *       Response Features - User-friendly messages for mobile apps, Smart suggestions when username is unavailable, Context-specific error messages
  *     tags: [Profile Metadata]
  *     requestBody:
  *       required: true
