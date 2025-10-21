@@ -8,66 +8,64 @@ datasource db {
 }
 
 model AnnouncementAnalytic {
-  id             String        @id
+  id             String       @id @default(cuid())
   announcementId String
   userId         String?
-  viewed         Boolean       @default(false)
+  viewed         Boolean      @default(false)
   viewedAt       DateTime?
-  clicked        Boolean       @default(false)
+  clicked        Boolean      @default(false)
   clickedAt      DateTime?
-  dismissed      Boolean       @default(false)
+  dismissed      Boolean      @default(false)
   dismissedAt    DateTime?
   viewedFrom     String?
   deviceInfo     Json?
-  createdAt      DateTime      @default(now())
+  createdAt      DateTime     @default(now())
   announcements  Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
   @@index([announcementId, viewed])
   @@index([userId])
-
   @@map("announcement_analytics")
 }
 
 model Announcement {
-  id                     String                   @id
-  title                  String
-  content                String
-  excerpt                String?
-  imageUrl               String?
-  thumbnailUrl           String?
-  videoUrl               String?
-  priority               AnnouncementPriority     @default(NORMAL)
-  displayType            String                   @default("banner")
-  targetAudience         String                   @default("all")
-  targetCountries        String[]                 @default([])
-  targetUserSegment      String[]                 @default([])
-  minAppVersion          String?
-  ctaText                String?
-  ctaUrl                 String?
-  ctaAction              String?
-  publishedAt            DateTime?
-  expiresAt              DateTime?
-  isActive               Boolean                  @default(true)
-  isPinned               Boolean                  @default(false)
-  isDismissible          Boolean                  @default(true)
-  viewCount              Int                      @default(0)
-  clickCount             Int                      @default(0)
-  createdBy              String?
-  tags                   String[]                 @default([])
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
-  analytics AnnouncementAnalytic[]
+  id                String                 @id @default(cuid())
+  title             String
+  content           String
+  excerpt           String?
+  imageUrl          String?
+  thumbnailUrl      String?
+  videoUrl          String?
+  priority          AnnouncementPriority   @default(NORMAL)
+  displayType       String                 @default("banner")
+  targetAudience    String                 @default("all")
+  targetCountries   String[]               @default([])
+  targetUserSegment String[]               @default([])
+  minAppVersion     String?
+  ctaText           String?
+  ctaUrl            String?
+  ctaAction         String?
+  publishedAt       DateTime?
+  expiresAt         DateTime?
+  isActive          Boolean                @default(true)
+  isPinned          Boolean                @default(false)
+  isDismissible     Boolean                @default(true)
+  viewCount         Int                    @default(0)
+  clickCount        Int                    @default(0)
+  createdBy         String?
+  tags              String[]               @default([])
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  analytics         AnnouncementAnalytic[]
 
   @@index([expiresAt])
   @@index([isActive, publishedAt])
   @@index([isPinned, isActive])
   @@index([priority, isActive])
-
   @@map("announcements")
 }
 
 model AppConfig {
-  id          String   @id
+  id          String   @id @default(cuid())
   configKey   String   @unique
   configValue String
   dataType    String   @default("string")
@@ -77,66 +75,63 @@ model AppConfig {
   isEditable  Boolean  @default(true)
   updatedBy   String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 
   @@index([category, isPublic])
   @@index([configKey])
-
   @@map("app_configs")
 }
 
 model AppNoticeDismissal {
-  id          String      @id
+  id          String    @id @default(cuid())
   noticeId    String
   userId      String
-  dismissedAt DateTime    @default(now())
+  dismissedAt DateTime  @default(now())
   app_notices AppNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
 
   @@unique([noticeId, userId])
   @@index([userId])
-
   @@map("app_notice_dismissals")
 }
 
 model AppNotice {
-  id                    String                  @id
-  noticeType            AppNoticeType
-  title                 String
-  message               String
-  icon                  String?
-  displayLocation       String[]                @default(["home"])
-  displayStyle          String                  @default("banner")
-  priority              Int                     @default(0)
-  isDismissible         Boolean                 @default(true)
-  autoDismiss           Boolean                 @default(false)
-  autoDismissSeconds    Int?
-  targetAudience        String                  @default("all")
-  targetUserIds         String[]                @default([])
-  targetSegments        String[]                @default([])
-  targetCountries       String[]                @default([])
-  minAppVersion         String?
-  ctaText               String?
-  ctaAction             String?
-  ctaUrl                String?
-  startDate             DateTime                @default(now())
-  endDate               DateTime?
-  isActive              Boolean                 @default(true)
-  impressionCount       Int                     @default(0)
-  dismissCount          Int                     @default(0)
-  clickCount            Int                     @default(0)
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime
-  dismissals AppNoticeDismissal[]
+  id                 String               @id @default(cuid())
+  noticeType         AppNoticeType
+  title              String
+  message            String
+  icon               String?
+  displayLocation    String[]             @default(["home"])
+  displayStyle       String               @default("banner")
+  priority           Int                  @default(0)
+  isDismissible      Boolean              @default(true)
+  autoDismiss        Boolean              @default(false)
+  autoDismissSeconds Int?
+  targetAudience     String               @default("all")
+  targetUserIds      String[]             @default([])
+  targetSegments     String[]             @default([])
+  targetCountries    String[]             @default([])
+  minAppVersion      String?
+  ctaText            String?
+  ctaAction          String?
+  ctaUrl             String?
+  startDate          DateTime             @default(now())
+  endDate            DateTime?
+  isActive           Boolean              @default(true)
+  impressionCount    Int                  @default(0)
+  dismissCount       Int                  @default(0)
+  clickCount         Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  dismissals         AppNoticeDismissal[]
 
   @@index([isActive, startDate, endDate])
   @@index([noticeType, isActive])
   @@index([priority, isActive])
-
   @@map("app_notices")
 }
 
 model AppVersion {
-  id                  String      @id
+  id                  String      @id @default(cuid())
   versionNumber       String
   versionCode         Int
   platform            AppPlatform
@@ -154,166 +149,245 @@ model AppVersion {
   improvements        Json?
   deprecations        Json?
   createdAt           DateTime    @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime    @updatedAt
 
   @@unique([versionNumber, platform])
   @@index([platform, isActive])
   @@index([platform, isCurrent])
   @@index([releaseDate])
-
   @@map("app_versions")
 }
 
 model AuthIdentity {
-  id          String   @id
+  id          String   @id @default(cuid())
   userId      String
   provider    String
   providerUid String
   email       String?
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUid])
   @@index([userId])
-
   @@map("auth_identities")
 }
 
 model Badge {
-  id          String        @id
-  type        BadgeType     @unique
+  id          String      @id @default(cuid())
+  type        BadgeType   @unique
   name        String
   description String
   criteria    String
   imageUrl    String?
-  userBadges UserBadge[]
+  userBadges  UserBadge[]
 
   @@map("badges")
 }
 
 model CardGameFeedback {
-  id                String              @id
-  userId            String
-  topicId           String
-  sessionNumber     Int
-  questionId        String
-  rating            Int
-  comment           String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String           @id @default(cuid())
+  userId          String
+  topicId         String
+  sessionNumber   Int
+  questionId      String
+  rating          Int
+  comment         String?
+  topicTitle      String? // NEW: Display name of topic
+  questionText    String? // NEW: Actual question text
+  isHelpful       Boolean          @default(true) // NEW: Was question helpful?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic           CardGameTopic?   @relation(fields: [topicId], references: [id])
   cardGameReplies CardGameReply[]
   cardGameUpvotes CardGameUpvote[]
 
   @@index([questionId])
   @@index([topicId])
   @@index([userId])
-
   @@map("card_game_feedbacks")
 }
 
 model CardGameReply {
-  id                  String              @id
-  userId              String
-  feedbackId          String
-  text                String
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime
+  id                String           @id @default(cuid())
+  userId            String
+  feedbackId        String
+  text              String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([feedbackId])
   @@index([userId])
-
   @@map("card_game_replies")
 }
 
 model CardGameStat {
-  id            String   @id
+  id            String   @id @default(cuid())
   topicId       String   @unique
   totalSessions Int      @default(0)
   averageRating Float    @default(0)
   totalFeedback Int      @default(0)
   createdAt     DateTime @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
 
   @@index([topicId])
-
   @@map("card_game_stats")
 }
 
 model CardGameUpvote {
-  id                  String              @id
-  userId              String
-  feedbackId          String
-  createdAt           DateTime            @default(now())
+  id                String           @id @default(cuid())
+  userId            String
+  feedbackId        String
+  createdAt         DateTime         @default(now())
   cardGameFeedbacks CardGameFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, feedbackId])
   @@index([feedbackId])
   @@index([userId])
-
   @@map("card_game_upvotes")
 }
 
+model CardGameTopic {
+  id            String             @id // e.g., "slowdown"
+  title         String
+  description   String?
+  gradient      String? // CSS gradient string for UI
+  totalSessions Int                @default(0)
+  isActive      Boolean            @default(true)
+  displayOrder  Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  questions     CardGameQuestion[]
+  feedbacks     CardGameFeedback[]
+  sessions      CardGameSession[]
+
+  @@index([isActive, displayOrder])
+  @@map("card_game_topics")
+}
+
+model CardGameQuestion {
+  id            String        @id @default(cuid())
+  topicId       String
+  sessionNumber Int
+  questionOrder Int // Position in session (1-10)
+  questionText  String
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  topic         CardGameTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, sessionNumber, questionOrder])
+  @@index([topicId])
+  @@index([topicId, sessionNumber])
+  @@map("card_game_questions")
+}
+
+model CardGameSession {
+  id                String        @id @default(cuid())
+  userId            String
+  topicId           String
+  sessionNumber     Int
+  startedAt         DateTime      @default(now())
+  completedAt       DateTime?
+  totalQuestions    Int
+  questionsAnswered Int           @default(0)
+  averageRating     Float?
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic             CardGameTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId, sessionNumber])
+  @@index([userId])
+  @@index([topicId])
+  @@index([userId, completedAt])
+  @@map("card_game_sessions")
+}
+
 model Community {
-  id                String              @id
-  name              String              @unique
-  description       String?
-  imageUrl          String?
-  category          String?
-  isVerified        Boolean             @default(false)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime
-  createdById       String
-  users             User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  id               String                @id @default(cuid())
+  name             String                @unique
+  description      String?
+  imageUrl         String?
+  category         String?
+  isVerified       Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  createdById      String
+  user             User                  @relation(fields: [createdById], references: [id], onDelete: Cascade)
   communityMembers CommunityMember[]
-  events            Event[]
+  events           Event[]
+  vouchOffers      CommunityVouchOffer[]
 
   @@index([category])
   @@index([createdAt])
   @@index([name])
-
   @@map("communities")
 }
 
+model CommunityVouchOffer {
+  id                  String           @id @default(cuid())
+  userId              String
+  communityId         String
+  eligibilityReason   String // e.g. "5+ events attended, 90+ days membership, zero negative feedback"
+  status              VouchOfferStatus @default(PENDING)
+  eventsAttended      Int              @default(0)
+  membershipDays      Int              @default(0)
+  hasNegativeFeedback Boolean          @default(false)
+  offerMetadata       Json? // Additional eligibility details
+  createdAt           DateTime         @default(now())
+  expiresAt           DateTime // Auto-set to 30 days from creation
+  acceptedAt          DateTime?
+  rejectedAt          DateTime?
+  vouchId             String?          @unique // Reference to created vouch if accepted
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community           Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId, status])
+  @@index([userId])
+  @@index([communityId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("community_vouch_offers")
+}
+
 model CommunityMember {
-  id          String        @id
+  id          String        @id @default(cuid())
   role        CommunityRole @default(MEMBER)
   joinedAt    DateTime      @default(now())
   isApproved  Boolean       @default(false)
   userId      String
   communityId String
-  communities Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communities Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, communityId])
   @@index([communityId])
   @@index([role])
   @@index([userId])
-
   @@map("community_members")
 }
 
 model ConnectionReview {
-  id                                         String           @id
+  id                                         String         @id @default(cuid())
   connectionId                               String
   reviewerId                                 String
   revieweeId                                 String
   rating                                     Int
   review                                     String?
-  reviewType                                 String           @default("general")
-  isPublic                                   Boolean          @default(true)
-  isFeatured                                 Boolean          @default(false)
-  isVerified                                 Boolean          @default(false)
+  reviewType                                 String         @default("general")
+  isPublic                                   Boolean        @default(true)
+  isFeatured                                 Boolean        @default(false)
+  isVerified                                 Boolean        @default(false)
   verificationSource                         String?
-  helpfulCount                               Int              @default(0)
-  createdAt                                  DateTime         @default(now())
-  updatedAt                                  DateTime
+  helpfulCount                               Int            @default(0)
+  createdAt                                  DateTime       @default(now())
+  updatedAt                                  DateTime       @updatedAt
   user_connections                           UserConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  users_connection_reviews_revieweeIdTousers User @relation("connection_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
-  users_connection_reviews_reviewerIdTousers User @relation("connection_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+  users_connection_reviews_revieweeIdTousers User           @relation("connection_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_connection_reviews_reviewerIdTousers User           @relation("connection_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, reviewerId])
   @@index([connectionId])
@@ -322,7 +396,6 @@ model ConnectionReview {
   @@index([rating])
   @@index([revieweeId])
   @@index([reviewerId])
-
   @@map("connection_reviews")
 }
 
@@ -346,18 +419,17 @@ model ConnectionStat {
   connectionQuality       Float    @default(0.0)
   lastCalculatedAt        DateTime @default(now())
   createdAt               DateTime @default(now())
-  updatedAt               DateTime
-  users                   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt               DateTime @updatedAt
+  users                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([averageRating])
   @@index([connectionQuality])
   @@index([totalConnections])
-
   @@map("connection_stats")
 }
 
 model DeviceRegistration {
-  id                String   @id
+  id                String   @id @default(cuid())
   userId            String
   deviceFingerprint String
   deviceName        String?
@@ -365,116 +437,104 @@ model DeviceRegistration {
   isTrusted         Boolean  @default(false)
   lastSeenAt        DateTime @default(now())
   createdAt         DateTime @default(now())
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceFingerprint])
   @@index([userId])
-
   @@map("device_registrations")
 }
 
 model EmailVerificationToken {
-  id         String    @id
+  id         String    @id @default(cuid())
   userId     String
   email      String
   token      String    @unique
   expiresAt  DateTime
   verifiedAt DateTime?
   createdAt  DateTime  @default(now())
-  users      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
-
   @@map("email_verification_tokens")
 }
 
-model EventAttendance {
-  id          String   @id
-  checkedInAt DateTime @default(now())
-  userId      String
-  eventId     String
-  events      Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model EventParticipant {
+  id           String                 @id @default(cuid())
+  userId       String
+  eventId      String
+  status       EventParticipantStatus @default(REGISTERED)
+  qrCode       String                 @unique
+  checkedInAt  DateTime?
+  canceledAt   DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  events       Event                  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventTickets EventTicket[]
 
   @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
   @@index([checkedInAt])
-  @@index([eventId])
-  @@index([userId])
-
-  @@map("event_attendances")
-}
-
-model EventRsvp {
-  id        String   @id
-  qrCode    String   @unique
-  createdAt DateTime @default(now())
-  userId    String
-  eventId   String
-  events    Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, eventId])
   @@index([createdAt])
-  @@index([eventId])
-  @@index([userId])
-
-  @@map("event_rsvps")
+  @@map("event_participants")
 }
 
 model EventTicketTier {
-  id             String          @id
+  id             String        @id @default(cuid())
   eventId        String
   tierName       String
   description    String?
   price          Float
-  currency       String          @default("MYR")
+  currency       String        @default("MYR")
   totalQuantity  Int?
-  soldQuantity   Int             @default(0)
-  minPurchase    Int             @default(1)
-  maxPurchase    Int             @default(10)
+  soldQuantity   Int           @default(0)
+  minPurchase    Int           @default(1)
+  maxPurchase    Int           @default(10)
   availableFrom  DateTime?
   availableUntil DateTime?
-  displayOrder   Int             @default(0)
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime
-  events         Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventTickets  EventTicket[]
+  displayOrder   Int           @default(0)
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  events         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventTickets   EventTicket[]
 
   @@index([availableFrom, availableUntil])
   @@index([eventId, isActive])
-
   @@map("event_ticket_tiers")
 }
 
 model EventTicket {
-  id                   String                @id
+  id                   String              @id @default(cuid())
   eventId              String
   userId               String
+  participantId        String
   ticketTierId         String?
-  ticketType           String                @default("GENERAL")
+  ticketType           String              @default("GENERAL")
   price                Float
-  currency             String                @default("MYR")
-  status               EventTicketStatus     @default(PENDING)
+  currency             String              @default("MYR")
+  status               EventTicketStatus   @default(PENDING)
   paymentTransactionId String?
-  paymentStatus        PaymentStatus         @default(PENDING)
-  ticketNumber         String                @unique
-  quantity             Int                   @default(1)
-  purchasedAt          DateTime              @default(now())
-  checkedInAt          DateTime?
+  paymentStatus        PaymentStatus       @default(PENDING)
+  ticketNumber         String              @unique
+  purchasedAt          DateTime            @default(now())
   canceledAt           DateTime?
   refundedAt           DateTime?
   attendeeName         String?
   attendeeEmail        String?
   attendeePhone        String?
-  events               Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  tier   EventTicketTier? @relation(fields: [ticketTierId], references: [id])
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant          EventParticipant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  paymentTransactions  PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+  tier                 EventTicketTier?    @relation(fields: [ticketTierId], references: [id])
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, ticketNumber])
   @@index([eventId])
+  @@index([participantId])
   @@index([paymentTransactionId])
   @@index([purchasedAt])
   @@index([status])
@@ -482,40 +542,39 @@ model EventTicket {
   @@index([ticketTierId])
   @@index([userId])
   @@index([userId, status])
-
   @@map("event_tickets")
 }
 
 model Event {
-  id                 String               @id
-  title              String
-  description        String?
-  type               EventType
-  date               DateTime
-  location           String
-  mapLink            String?
-  maxAttendees       Int?
-  notes              String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime
-  hostId             String
-  communityId        String?
-  currency           String               @default("MYR")
-  hostType           EventHostType        @default(PERSONAL)
-  images             String[]             @default([])
-  isFree             Boolean              @default(true)
-  organizerPayout    Float?               @default(0.0)
-  platformFee        Float?               @default(0.0)
-  price              Float?
-  status             EventStatus          @default(DRAFT)
-  ticketsSold        Int                  @default(0)
-  totalRevenue       Float?               @default(0.0)
-  eventAttendances  EventAttendance[]
-  eventRsvps        EventRsvp[]
-  tier EventTicketTier[]
+  id                String             @id @default(cuid())
+  title             String
+  description       String?
+  type              EventType
+  date              DateTime
+  location          String
+  mapLink           String?
+  maxAttendees      Int?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  hostId            String
+  communityId       String?
+  currency          String             @default("MYR")
+  hostType          EventHostType      @default(PERSONAL)
+  images            String[]           @default([])
+  isFree            Boolean            @default(true)
+  organizerPayout   Float?             @default(0.0)
+  platformFee       Float?             @default(0.0)
+  price             Float?
+  status            EventStatus        @default(DRAFT)
+  ticketsSold       Int                @default(0)
+  totalRevenue      Float?             @default(0.0)
+  eventParticipants EventParticipant[]
+  tier              EventTicketTier[]
   eventTickets      EventTicket[]
-  communities        Community? @relation(fields: [communityId], references: [id])
-  users              User @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  trust_moments     TrustMoment[]
+  communities       Community?         @relation(fields: [communityId], references: [id])
+  user              User               @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   @@index([communityId, date])
   @@index([communityId])
@@ -529,12 +588,11 @@ model Event {
   @@index([status])
   @@index([type, date])
   @@index([type])
-
   @@map("events")
 }
 
 model FaqAnalytic {
-  id            String    @id
+  id            String    @id @default(cuid())
   faqId         String
   userId        String?
   viewed        Boolean   @default(false)
@@ -544,16 +602,15 @@ model FaqAnalytic {
   searchQuery   String?
   viewedFrom    String?
   createdAt     DateTime  @default(now())
-  faqs          Faq @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  faqs          Faq       @relation(fields: [faqId], references: [id], onDelete: Cascade)
 
   @@index([faqId, viewed])
   @@index([userId])
-
   @@map("faq_analytics")
 }
 
 model FaqCategory {
-  id           String  @id
+  id           String  @id @default(cuid())
   name         String
   description  String?
   icon         String?
@@ -562,95 +619,91 @@ model FaqCategory {
   faqs         Faq[]
 
   @@index([displayOrder, isActive])
-
   @@map("faq_categories")
 }
 
 model Faq {
-  id                String          @id
+  id                String        @id @default(cuid())
   categoryId        String?
   question          String
   answer            String
-  displayOrder      Int             @default(0)
-  tags              String[]        @default([])
-  isActive          Boolean         @default(true)
-  isFeatured        Boolean         @default(false)
-  viewCount         Int             @default(0)
-  helpfulCount      Int             @default(0)
-  notHelpfulCount   Int             @default(0)
-  relatedFaqIds     String[]        @default([])
-  relatedArticleIds String[]        @default([])
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime
-  analytics     FaqAnalytic[]
-  category    FaqCategory? @relation(fields: [categoryId], references: [id])
+  displayOrder      Int           @default(0)
+  tags              String[]      @default([])
+  isActive          Boolean       @default(true)
+  isFeatured        Boolean       @default(false)
+  viewCount         Int           @default(0)
+  helpfulCount      Int           @default(0)
+  notHelpfulCount   Int           @default(0)
+  relatedFaqIds     String[]      @default([])
+  relatedArticleIds String[]      @default([])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  analytics         FaqAnalytic[]
+  category          FaqCategory?  @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId, isActive])
   @@index([displayOrder])
   @@index([isFeatured, isActive])
-
   @@map("faqs")
 }
 
 model FeatureFlagAnalytic {
-  id            String        @id
+  id            String      @id @default(cuid())
   featureFlagId String
   userId        String?
   wasEnabled    Boolean
-  evaluatedAt   DateTime      @default(now())
+  evaluatedAt   DateTime    @default(now())
   variant       String?
   userSegment   String?
   platform      String?
   appVersion    String?
-  featureUsed   Boolean       @default(false)
+  featureUsed   Boolean     @default(false)
   usedAt        DateTime?
-  usageCount    Int           @default(0)
+  usageCount    Int         @default(0)
   feature_flags FeatureFlag @relation(fields: [featureFlagId], references: [id], onDelete: Cascade)
 
   @@index([evaluatedAt])
   @@index([featureFlagId, wasEnabled])
   @@index([userId])
-
   @@map("feature_flag_analytics")
 }
 
 model FeatureFlag {
-  id                     String                   @id
-  featureKey             String                   @unique
-  featureName            String
-  description            String?
-  isEnabled              Boolean                  @default(false)
-  isGlobal               Boolean                  @default(false)
-  rolloutPercentage      Float                    @default(0.0)
-  rolloutStrategy        String                   @default("percentage")
-  targetUserIds          String[]                 @default([])
-  targetSegments         String[]                 @default([])
-  targetCountries        String[]                 @default([])
-  targetPlatforms        String[]                 @default([])
-  minAppVersion          String?
-  maxAppVersion          String?
-  isABTest               Boolean                  @default(false)
-  abTestVariant          String?
-  abTestMetrics          Json?
-  enabledAt              DateTime?
-  disabledAt             DateTime?
-  scheduledEnableAt      DateTime?
-  scheduledDisableAt     DateTime?
-  createdBy              String?
-  tags                   String[]                 @default([])
-  dependencies           String[]                 @default([])
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
-  analytics FeatureFlagAnalytic[]
+  id                 String                @id @default(cuid())
+  featureKey         String                @unique
+  featureName        String
+  description        String?
+  isEnabled          Boolean               @default(false)
+  isGlobal           Boolean               @default(false)
+  rolloutPercentage  Float                 @default(0.0)
+  rolloutStrategy    String                @default("percentage")
+  targetUserIds      String[]              @default([])
+  targetSegments     String[]              @default([])
+  targetCountries    String[]              @default([])
+  targetPlatforms    String[]              @default([])
+  minAppVersion      String?
+  maxAppVersion      String?
+  isABTest           Boolean               @default(false)
+  abTestVariant      String?
+  abTestMetrics      Json?
+  enabledAt          DateTime?
+  disabledAt         DateTime?
+  scheduledEnableAt  DateTime?
+  scheduledDisableAt DateTime?
+  createdBy          String?
+  tags               String[]              @default([])
+  dependencies       String[]              @default([])
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  analytics          FeatureFlagAnalytic[]
 
   @@index([featureKey, isEnabled])
   @@index([isEnabled, isGlobal])
-
   @@map("feature_flags")
 }
 
 model FeatureUsage {
-  id             String   @id
+  id             String   @id @default(cuid())
   userId         String
   subscriptionId String?
   featureCode    String
@@ -660,21 +713,20 @@ model FeatureUsage {
   periodStart    DateTime
   periodEnd      DateTime
   metadata       Json?
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([periodStart, periodEnd])
   @@index([subscriptionId, featureCode])
   @@index([usedAt])
   @@index([userId, featureCode])
-
   @@map("feature_usage")
 }
 
 model HelpArticleAnalytic {
-  id               String        @id
+  id               String      @id @default(cuid())
   articleId        String
   userId           String?
-  viewed           Boolean       @default(false)
+  viewed           Boolean     @default(false)
   viewedAt         DateTime?
   markedHelpful    Boolean?
   markedAt         DateTime?
@@ -682,70 +734,67 @@ model HelpArticleAnalytic {
   scrollDepth      Float?
   viewedFrom       String?
   searchQuery      String?
-  createdAt        DateTime      @default(now())
+  createdAt        DateTime    @default(now())
   help_articles    HelpArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@index([articleId, viewed])
   @@index([userId])
-
   @@map("help_article_analytics")
 }
 
 model HelpArticleCategory {
-  id            String          @id
+  id            String        @id @default(cuid())
   name          String
-  slug          String          @unique
+  slug          String        @unique
   description   String?
   icon          String?
-  displayOrder  Int             @default(0)
-  isActive      Boolean         @default(true)
+  displayOrder  Int           @default(0)
+  isActive      Boolean       @default(true)
   help_articles HelpArticle[]
 
   @@index([displayOrder, isActive])
-
   @@map("help_article_categories")
 }
 
 model HelpArticle {
-  id                      String                   @id
-  categoryId              String?
-  title                   String
-  slug                    String                   @unique
-  content                 String
-  excerpt                 String?
-  thumbnailUrl            String?
-  videoUrl                String?
-  attachments             Json?
-  displayOrder            Int                      @default(0)
-  tags                    String[]                 @default([])
-  metaDescription         String?
-  keywords                String[]                 @default([])
-  isActive                Boolean                  @default(true)
-  isFeatured              Boolean                  @default(false)
-  isPremiumOnly           Boolean                  @default(false)
-  viewCount               Int                      @default(0)
-  helpfulCount            Int                      @default(0)
-  notHelpfulCount         Int                      @default(0)
-  averageTimeSpent        Float?
-  relatedArticleIds       String[]                 @default([])
-  relatedFaqIds           String[]                 @default([])
-  createdBy               String?
-  publishedAt             DateTime?
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime
-  analytics  HelpArticleAnalytic[]
-  category HelpArticleCategory? @relation(fields: [categoryId], references: [id])
+  id                String                @id @default(cuid())
+  categoryId        String?
+  title             String
+  slug              String                @unique
+  content           String
+  excerpt           String?
+  thumbnailUrl      String?
+  videoUrl          String?
+  attachments       Json?
+  displayOrder      Int                   @default(0)
+  tags              String[]              @default([])
+  metaDescription   String?
+  keywords          String[]              @default([])
+  isActive          Boolean               @default(true)
+  isFeatured        Boolean               @default(false)
+  isPremiumOnly     Boolean               @default(false)
+  viewCount         Int                   @default(0)
+  helpfulCount      Int                   @default(0)
+  notHelpfulCount   Int                   @default(0)
+  averageTimeSpent  Float?
+  relatedArticleIds String[]              @default([])
+  relatedFaqIds     String[]              @default([])
+  createdBy         String?
+  publishedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  analytics         HelpArticleAnalytic[]
+  category          HelpArticleCategory?  @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId, isActive])
   @@index([isFeatured, isActive])
   @@index([publishedAt])
   @@index([slug])
-
   @@map("help_articles")
 }
 
 model LegalDocumentAcceptance {
-  id              String            @id
+  id              String            @id @default(cuid())
   documentId      String
   userId          String
   acceptedAt      DateTime          @default(now())
@@ -754,59 +803,56 @@ model LegalDocumentAcceptance {
   deviceInfo      Json?
   documentVersion String
   documentType    LegalDocumentType
-  legal_documents LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  legal_documents LegalDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, documentId])
   @@index([documentId])
   @@index([userId, documentType])
-
   @@map("legal_document_acceptances")
 }
 
 model LegalDocument {
-  id                         String                       @id
-  documentType               LegalDocumentType
-  version                    String
-  title                      String
-  content                    String
-  summary                    String?
-  effectiveDate              DateTime
-  expiryDate                 DateTime?
-  isActive                   Boolean                      @default(false)
-  isCurrent                  Boolean                      @default(false)
-  requiresAcceptance         Boolean                      @default(false)
-  changesSummary             String?
-  previousVersionId          String?
-  createdBy                  String?
-  approvedBy                 String?
-  approvedAt                 DateTime?
-  createdAt                  DateTime                     @default(now())
-  updatedAt                  DateTime
-  acceptances LegalDocumentAcceptance[]
+  id                 String                    @id @default(cuid())
+  documentType       LegalDocumentType
+  version            String
+  title              String
+  content            String
+  summary            String?
+  effectiveDate      DateTime
+  expiryDate         DateTime?
+  isActive           Boolean                   @default(false)
+  isCurrent          Boolean                   @default(false)
+  requiresAcceptance Boolean                   @default(false)
+  changesSummary     String?
+  previousVersionId  String?
+  createdBy          String?
+  approvedBy         String?
+  approvedAt         DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  acceptances        LegalDocumentAcceptance[]
 
   @@unique([documentType, version])
   @@index([documentType, isCurrent])
   @@index([effectiveDate])
-
   @@map("legal_documents")
 }
 
 model ListingPriceHistory {
-  id                   String               @id
-  listingId            String
-  price                Float
-  currency             String               @default("MYR")
-  reason               String?
-  changedAt            DateTime             @default(now())
+  id                  String             @id @default(cuid())
+  listingId           String
+  price               Float
+  currency            String             @default("MYR")
+  reason              String?
+  changedAt           DateTime           @default(now())
   marketplaceListings MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@index([listingId, changedAt])
-
   @@map("listing_price_history")
 }
 
 model LoginAttempt {
-  id            String   @id
+  id            String   @id @default(cuid())
   userId        String?
   identifier    String
   ipAddress     String
@@ -814,17 +860,16 @@ model LoginAttempt {
   success       Boolean
   failureReason String?
   attemptedAt   DateTime @default(now())
-  users         User? @relation(fields: [userId], references: [id])
+  users         User?    @relation(fields: [userId], references: [id])
 
   @@index([identifier, attemptedAt])
   @@index([ipAddress, attemptedAt])
   @@index([userId, attemptedAt])
-
   @@map("login_attempts")
 }
 
 model MaintenanceSchedule {
-  id                String            @id
+  id                String            @id @default(cuid())
   title             String
   description       String
   startTime         DateTime
@@ -845,105 +890,101 @@ model MaintenanceSchedule {
   completionNotes   String?
   createdBy         String?
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime          @updatedAt
 
   @@index([startTime, endTime])
   @@index([status, startTime])
-
   @@map("maintenance_schedules")
 }
 
 model MarketplaceCartItem {
-  id                   String               @id
-  userId               String
-  listingId            String
-  quantity             Int
-  addedAt              DateTime             @default(now())
+  id                  String             @id @default(cuid())
+  userId              String
+  listingId           String
+  quantity            Int
+  addedAt             DateTime           @default(now())
   marketplaceListings MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, listingId])
   @@index([userId])
-
   @@map("marketplace_cart_items")
 }
 
 model MarketplaceDispute {
-  id                 String             @id
+  id                 String           @id @default(cuid())
   orderId            String
   initiatedBy        String
   reason             String
-  status             DisputeStatus      @default(OPEN)
+  status             DisputeStatus    @default(OPEN)
   resolution         Json?
-  createdAt          DateTime           @default(now())
+  createdAt          DateTime         @default(now())
   resolvedAt         DateTime?
-  users              User @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
+  user               User             @relation(fields: [initiatedBy], references: [id], onDelete: Cascade)
   marketplace_orders MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([status])
-
   @@map("marketplace_disputes")
 }
 
 model MarketplaceListing {
-  id                     String                   @id
-  userId                 String
-  title                  String
-  description            String?
-  category               String?
-  price                  Float
-  currency               String                   @default("MYR")
-  quantity               Int?
-  location               String?
-  images                 String[]                 @default([])
-  status                 ListingStatus            @default(DRAFT)
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
-  priceHistory  ListingPriceHistory[]
+  id                   String                @id @default(cuid())
+  userId               String
+  title                String
+  description          String?
+  category             String?
+  price                Float
+  currency             String                @default("MYR")
+  quantity             Int?
+  location             String?
+  images               String[]              @default([])
+  status               ListingStatus         @default(DRAFT)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  priceHistory         ListingPriceHistory[]
   marketplaceCartItems MarketplaceCartItem[]
-  users                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  marketplace_orders     MarketplaceOrder[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  marketplace_orders   MarketplaceOrder[]
 
   @@index([category])
   @@index([createdAt])
   @@index([status])
   @@index([userId, status])
-
   @@map("marketplace_listings")
 }
 
 model MarketplaceOrder {
-  id                                       String                 @id
+  id                                       String               @id @default(cuid())
   listingId                                String
   buyerId                                  String
   sellerId                                 String
   quantity                                 Int
   unitPrice                                Float
   subtotal                                 Float
-  shippingFee                              Float                  @default(0.0)
+  shippingFee                              Float                @default(0.0)
   totalAmount                              Float
-  currency                                 String                 @default("MYR")
+  currency                                 String               @default("MYR")
   paymentTransactionId                     String?
-  paymentStatus                            PaymentStatus          @default(PENDING)
+  paymentStatus                            PaymentStatus        @default(PENDING)
   platformFee                              Float?
   sellerPayout                             Float?
-  status                                   OrderStatus            @default(PENDING)
+  status                                   OrderStatus          @default(PENDING)
   shippingAddress                          Json?
   trackingNumber                           String?
   notes                                    String?
-  createdAt                                DateTime               @default(now())
-  updatedAt                                DateTime
+  createdAt                                DateTime             @default(now())
+  updatedAt                                DateTime             @updatedAt
   confirmedAt                              DateTime?
   shippedAt                                DateTime?
   deliveredAt                              DateTime?
   canceledAt                               DateTime?
-  marketplaceDisputes                     MarketplaceDispute[]
-  users_marketplace_orders_buyerIdTousers  User @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
-  marketplaceListings                     MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  paymentTransactions                     PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  users_marketplace_orders_sellerIdTousers User @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
-  reviews                      MarketplaceReview[]
+  marketplaceDisputes                      MarketplaceDispute[]
+  users_marketplace_orders_buyerIdTousers  User                 @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
+  marketplaceListings                      MarketplaceListing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  paymentTransactions                      PaymentTransaction?  @relation(fields: [paymentTransactionId], references: [id])
+  users_marketplace_orders_sellerIdTousers User                 @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
+  reviews                                  MarketplaceReview[]
 
   @@index([buyerId, status])
   @@index([createdAt])
@@ -952,30 +993,28 @@ model MarketplaceOrder {
   @@index([paymentTransactionId])
   @@index([sellerId, status])
   @@index([status])
-
   @@map("marketplace_orders")
 }
 
 model MarketplaceReview {
-  id                                          String             @id
+  id                                          String           @id @default(cuid())
   orderId                                     String
   reviewerId                                  String
   revieweeId                                  String
   rating                                      Int
   comment                                     String?
-  createdAt                                   DateTime           @default(now())
+  createdAt                                   DateTime         @default(now())
   marketplace_orders                          MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  users_marketplace_reviews_revieweeIdTousers User @relation("marketplace_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
-  users_marketplace_reviews_reviewerIdTousers User @relation("marketplace_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
+  users_marketplace_reviews_revieweeIdTousers User             @relation("marketplace_reviews_revieweeIdTousers", fields: [revieweeId], references: [id], onDelete: Cascade)
+  users_marketplace_reviews_reviewerIdTousers User             @relation("marketplace_reviews_reviewerIdTousers", fields: [reviewerId], references: [id], onDelete: Cascade)
 
   @@unique([orderId, reviewerId])
   @@index([revieweeId, rating])
-
   @@map("marketplace_reviews")
 }
 
 model Match {
-  id                              String      @id
+  id                              String      @id @default(cuid())
   type                            MatchType
   status                          MatchStatus @default(PENDING)
   compatibility                   Float
@@ -985,12 +1024,12 @@ model Match {
   location                        String?
   message                         String?
   createdAt                       DateTime    @default(now())
-  updatedAt                       DateTime
+  updatedAt                       DateTime    @updatedAt
   expiresAt                       DateTime
   senderId                        String
   receiverId                      String
-  users_matches_receiverIdTousers User @relation("matches_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
-  users_matches_senderIdTousers   User @relation("matches_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+  users_matches_receiverIdTousers User        @relation("matches_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  users_matches_senderIdTousers   User        @relation("matches_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId, type])
   @@index([createdAt])
@@ -1001,19 +1040,18 @@ model Match {
   @@index([senderId, status])
   @@index([status])
   @@index([type])
-
   @@map("matches")
 }
 
 model Message {
-  id                               String   @id
+  id                               String   @id @default(cuid())
   content                          String
   isRead                           Boolean  @default(false)
   createdAt                        DateTime @default(now())
   senderId                         String
   receiverId                       String
-  users_messages_receiverIdTousers User @relation("messages_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
-  users_messages_senderIdTousers   User @relation("messages_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
+  users_messages_receiverIdTousers User     @relation("messages_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  users_messages_senderIdTousers   User     @relation("messages_senderIdTousers", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([isRead])
@@ -1021,7 +1059,6 @@ model Message {
   @@index([receiverId, isRead])
   @@index([senderId])
   @@index([senderId, receiverId])
-
   @@map("messages")
 }
 
@@ -1034,14 +1071,14 @@ model NotificationPreference {
   preferences  Json     @default("{}")
   quietHours   Json?
   timezone     String   @default("Asia/Kuala_Lumpur")
-  updatedAt    DateTime
-  users        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt    DateTime @updatedAt
+  users        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
 }
 
 model Notification {
-  id                String           @id
+  id                String           @id @default(cuid())
   type              NotificationType
   title             String
   message           String
@@ -1057,7 +1094,7 @@ model Notification {
   relatedEntityId   String?
   relatedEntityType String?
   scheduledFor      DateTime?
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([priority])
@@ -1066,152 +1103,276 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId])
   @@index([userId, readAt])
-
   @@map("notifications")
 }
 
+// DEPRECATED: Old unified onboarding system - kept for backward compatibility
+// Use AppPreviewScreen and UserSetupScreen instead
 model OnboardingAnalytic {
-  id                 String             @id
+  id                 String           @id @default(cuid())
   screenId           String
   userId             String?
-  viewed             Boolean            @default(false)
+  viewed             Boolean          @default(false)
   viewedAt           DateTime?
-  completed          Boolean            @default(false)
+  completed          Boolean          @default(false)
   completedAt        DateTime?
-  skipped            Boolean            @default(false)
+  skipped            Boolean          @default(false)
   skippedAt          DateTime?
   timeSpentSeconds   Int?
   deviceInfo         Json?
   appVersion         String?
-  createdAt          DateTime           @default(now())
+  createdAt          DateTime         @default(now())
   onboarding_screens OnboardingScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([screenId, viewed])
   @@index([userId])
-
   @@map("onboarding_analytics")
 }
 
+// DEPRECATED: Old unified onboarding system - kept for backward compatibility
+// Use AppPreviewScreen and UserSetupScreen instead
 model OnboardingScreen {
-  id                   String                 @id
-  screenOrder          Int
-  title                String
-  subtitle             String?
-  description          String?
-  imageUrl             String?
-  videoUrl             String?
-  ctaText              String?
-  ctaAction            String?
-  ctaUrl               String?
-  backgroundColor      String?
-  isSkippable          Boolean                @default(true)
-  isActive             Boolean                @default(true)
-  targetAudience       String                 @default("all")
-  minAppVersion        String?
-  metadata             Json?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime
-  analytics OnboardingAnalytic[]
+  id              String               @id @default(cuid())
+  screenOrder     Int
+  title           String
+  subtitle        String?
+  description     String?
+  imageUrl        String?
+  videoUrl        String?
+  ctaText         String?
+  ctaAction       String?
+  ctaUrl          String?
+  backgroundColor String?
+  isSkippable     Boolean              @default(true)
+  isActive        Boolean              @default(true)
+  targetAudience  String               @default("all")
+  minAppVersion   String?
+  metadata        Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  analytics       OnboardingAnalytic[]
 
   @@index([isActive])
   @@index([screenOrder, isActive])
-
   @@map("onboarding_screens")
 }
 
+// NEW: App Preview Screens (Pre-Authentication)
+// Shown before login/registration to introduce the app
+model AppPreviewScreen {
+  id              String               @id @default(cuid())
+  screenOrder     Int
+  title           String
+  subtitle        String?
+  description     String?
+  imageUrl        String?
+  videoUrl        String?
+  animationUrl    String?
+  iconName        String?
+  ctaText         String?
+  ctaAction       String? // "next", "skip", "get_started"
+  backgroundColor String?              @default("#FFFFFF")
+  textColor       String?              @default("#000000")
+  isSkippable     Boolean              @default(true)
+  isActive        Boolean              @default(true)
+  minAppVersion   String?
+  metadata        Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  analytics       AppPreviewAnalytic[]
+
+  @@unique([title, screenOrder])
+  @@index([isActive, screenOrder])
+  @@map("app_preview_screens")
+}
+
+// Analytics for App Preview Screens (anonymous tracking)
+model AppPreviewAnalytic {
+  id               String           @id @default(cuid())
+  screenId         String
+  sessionId        String? // Anonymous session identifier
+  userId           String? // If user later registers/logs in
+  viewed           Boolean          @default(false)
+  viewedAt         DateTime?
+  completed        Boolean          @default(false)
+  completedAt      DateTime?
+  skipped          Boolean          @default(false)
+  skippedAt        DateTime?
+  timeSpentSeconds Int?
+  deviceInfo       Json?
+  appVersion       String?
+  createdAt        DateTime         @default(now())
+  screen           AppPreviewScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  @@index([screenId, viewed])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("app_preview_analytics")
+}
+
+// NEW: User Setup Screens (Post-Authentication)
+// Personalized onboarding after registration/verification
+model UserSetupScreen {
+  id              String              @id @default(cuid())
+  screenOrder     Int
+  screenType      UserSetupScreenType // "profile", "network", "community", "preferences", "tutorial"
+  title           String
+  subtitle        String?
+  description     String?
+  imageUrl        String?
+  videoUrl        String?
+  iconName        String?
+  ctaText         String?
+  ctaAction       String? // "complete_profile", "add_connections", "join_communities", etc.
+  ctaUrl          String?
+  backgroundColor String?             @default("#FFFFFF")
+  textColor       String?             @default("#000000")
+  isRequired      Boolean             @default(false) // Cannot skip if true
+  isSkippable     Boolean             @default(true)
+  isActive        Boolean             @default(true)
+  targetAudience  String              @default("all") // "all", "new_users", "verified_users"
+  requiredFields  String[]            @default([]) // Required profile fields for this screen
+  minAppVersion   String?
+  metadata        Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  analytics       UserSetupAnalytic[]
+
+  @@unique([title, screenOrder])
+  @@index([isActive, screenOrder])
+  @@index([screenType])
+  @@index([isRequired])
+  @@map("user_setup_screens")
+}
+
+// Analytics for User Setup Screens (authenticated users only)
+model UserSetupAnalytic {
+  id               String          @id @default(cuid())
+  screenId         String
+  userId           String // Always required (authenticated users only)
+  viewed           Boolean         @default(false)
+  viewedAt         DateTime?
+  completed        Boolean         @default(false)
+  completedAt      DateTime?
+  skipped          Boolean         @default(false)
+  skippedAt        DateTime?
+  timeSpentSeconds Int?
+  actionsTaken     Json? // Track specific actions user took on this screen
+  deviceInfo       Json?
+  appVersion       String?
+  createdAt        DateTime        @default(now())
+  screen           UserSetupScreen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  user             User            @relation("UserSetupAnalytics", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([screenId, userId])
+  @@index([userId, completed])
+  @@index([screenId, viewed])
+  @@index([createdAt])
+  @@map("user_setup_analytics")
+}
+
+enum UserSetupScreenType {
+  PROFILE // Complete profile information
+  NETWORK // Set up trust network, add connections
+  COMMUNITY // Join communities, follow interests
+  PREFERENCES // Notification, privacy, app preferences
+  TUTORIAL // Feature tours and walkthroughs
+  VERIFICATION // Additional verification steps
+
+  @@map("user_setup_screen_type")
+}
+
 model PasswordResetToken {
-  id        String    @id
+  id        String    @id @default(cuid())
   userId    String
   token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
   ipAddress String
   createdAt DateTime  @default(now())
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
-
   @@map("password_reset_tokens")
 }
 
 model PaymentProviderRouting {
-  id                String            @id
-  ruleName          String
-  providerId        String
-  conditions        Json
-  priority          Int               @default(0)
-  isActive          Boolean           @default(true)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime
-  provider PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  id         String          @id @default(cuid())
+  ruleName   String
+  providerId String
+  conditions Json
+  priority   Int             @default(0)
+  isActive   Boolean         @default(true)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  provider   PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@index([priority, isActive])
   @@index([providerId, isActive])
-
   @@map("payment_provider_routing")
 }
 
 model PaymentProvider {
-  id                       String                     @id
-  providerCode             String                     @unique
-  providerName             String
-  providerType             String
-  supportedCountries       String[]
-  supportedCurrencies      String[]
-  isActive                 Boolean                    @default(true)
-  isDefault                Boolean                    @default(false)
-  priorityOrder            Int                        @default(0)
-  configuration            Json                       @default("{}")
-  feeStructure             Json                       @default("{}")
-  capabilities             Json                       @default("{}")
-  webhookConfig            Json?
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime
-  routing PaymentProviderRouting[]
-  paymentTransactions     PaymentTransaction[]
+  id                  String                   @id @default(cuid())
+  providerCode        String                   @unique
+  providerName        String
+  providerType        String
+  supportedCountries  String[]
+  supportedCurrencies String[]
+  isActive            Boolean                  @default(true)
+  isDefault           Boolean                  @default(false)
+  priorityOrder       Int                      @default(0)
+  configuration       Json                     @default("{}")
+  feeStructure        Json                     @default("{}")
+  capabilities        Json                     @default("{}")
+  webhookConfig       Json?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  routing             PaymentProviderRouting[]
+  paymentTransactions PaymentTransaction[]
 
   @@index([isActive, priorityOrder])
   @@index([providerCode])
-
   @@map("payment_providers")
 }
 
 model PaymentTransaction {
-  id                     String                  @id
+  id                     String                @id @default(cuid())
   userId                 String
   transactionType        TransactionType
   referenceType          String
   referenceId            String
   amount                 Float
-  currency               String                  @default("MYR")
-  totalFees              Float                   @default(0.0)
-  platformFee            Float                   @default(0.0)
-  gatewayFee             Float                   @default(0.0)
-  netAmount              Float                   @default(0.0)
+  currency               String                @default("MYR")
+  totalFees              Float                 @default(0.0)
+  platformFee            Float                 @default(0.0)
+  gatewayFee             Float                 @default(0.0)
+  netAmount              Float                 @default(0.0)
   providerId             String
-  gatewayTransactionId   String                  @unique
+  gatewayTransactionId   String                @unique
   gatewayPaymentMethodId String?
   gatewayMetadata        Json?
-  status                 PaymentStatus           @default(PENDING)
+  status                 PaymentStatus         @default(PENDING)
   failureReason          String?
   processedAt            DateTime?
-  refundedAmount         Float?                  @default(0.0)
+  refundedAmount         Float?                @default(0.0)
   refundedAt             DateTime?
   refundReason           String?
   description            String?
   metadata               Json?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime
-  eventTickets          EventTicket[]
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  eventTickets           EventTicket[]
   marketplace_orders     MarketplaceOrder[]
-  provider      PaymentProvider @relation(fields: [providerId], references: [id])
-  users                  User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payoutDistributions   PayoutDistribution[]
-  bookings       ServiceBooking[]
-  subscriptionPayments  SubscriptionPayment[]
-  fees       TransactionFee[]
+  provider               PaymentProvider       @relation(fields: [providerId], references: [id])
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payoutDistributions    PayoutDistribution[]
+  bookings               ServiceBooking[]
+  subscriptionPayments   SubscriptionPayment[]
+  fees                   TransactionFee[]
 
   @@index([createdAt])
   @@index([gatewayTransactionId])
@@ -1221,74 +1382,80 @@ model PaymentTransaction {
   @@index([transactionType])
   @@index([transactionType, status])
   @@index([userId, status])
-
   @@map("payment_transactions")
 }
 
 model PayoutDistribution {
-  id                   String               @id
+  id                   String             @id @default(cuid())
   paymentTransactionId String
   recipientId          String
-  recipientType        String
+  recipientType        String // 'event_organizer', 'marketplace_seller', 'service_provider', 'platform'
   amount               Float
-  currency             String               @default("MYR")
-  status               PayoutStatus         @default(PENDING)
-  releaseDate          DateTime?
+  currency             String             @default("MYR")
+  status               PayoutStatus       @default(HELD)
+  releaseDate          DateTime? // When funds can be released (escrow hold until this date)
   gatewayPayoutId      String?
-  createdAt            DateTime             @default(now())
+  holdReason           String? // 'awaiting_delivery', 'awaiting_event', 'dispute', 'verification', etc.
+  canReleaseAt         DateTime? // Earliest possible release time (calculated based on rules)
+  autoReleaseEnabled   Boolean            @default(true) // Auto-release when releaseDate passes
+  requiresManualReview Boolean            @default(false) // Admin must approve release
+  metadata             Json? // Additional context (eventId, orderId, etc.)
+  notes                String? // Admin notes or release conditions
+  createdAt            DateTime           @default(now())
   releasedAt           DateTime?
-  paymentTransactions PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  canceledAt           DateTime?
+  failureReason        String? // If payout fails
+  paymentTransactions  PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([paymentTransactionId])
   @@index([recipientId, status])
   @@index([releaseDate, status])
-
+  @@index([canReleaseAt, status, autoReleaseEnabled])
+  @@index([status, requiresManualReview])
   @@map("payout_distributions")
 }
 
 model PlatformFeeConfig {
-  id               String             @id
-  configName       String
-  transactionType  TransactionType
-  feePercentage    Float?
-  feeFixed         Float?
-  minFee           Float?
-  maxFee           Float?
-  currency         String             @default("MYR")
-  conditions       Json               @default("{}")
-  recipientType    String             @default("platform")
-  recipientId      String?
-  isActive         Boolean            @default(true)
-  priority         Int                @default(0)
-  effectiveFrom    DateTime           @default(now())
-  effectiveUntil   DateTime?
-  description      String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  fees TransactionFee[]
+  id              String           @id @default(cuid())
+  configName      String
+  transactionType TransactionType
+  feePercentage   Float?
+  feeFixed        Float?
+  minFee          Float?
+  maxFee          Float?
+  currency        String           @default("MYR")
+  conditions      Json             @default("{}")
+  recipientType   String           @default("platform")
+  recipientId     String?
+  isActive        Boolean          @default(true)
+  priority        Int              @default(0)
+  effectiveFrom   DateTime         @default(now())
+  effectiveUntil  DateTime?
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  fees            TransactionFee[]
 
   @@index([effectiveFrom, effectiveUntil])
   @@index([priority, isActive])
   @@index([transactionType, isActive])
-
   @@map("platform_fee_configs")
 }
 
 model PointHistory {
-  id          String   @id
+  id          String   @id @default(cuid())
   points      Int
   action      String
   description String?
   createdAt   DateTime @default(now())
   userId      String
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([action])
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([userId])
-
   @@map("point_histories")
 }
 
@@ -1319,85 +1486,81 @@ model ProfileCompletionStatus {
   lastCalculatedAt    DateTime  @default(now())
   firstCompleteAt     DateTime?
   createdAt           DateTime  @default(now())
-  updatedAt           DateTime
-  users               User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([completionLevel])
   @@index([completionScore])
   @@index([lastCalculatedAt])
-
   @@map("profile_completion_status")
 }
 
 model PushSubscription {
-  id        String   @id
+  id        String   @id @default(cuid())
   userId    String   @unique
   endpoint  String
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  users     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-
   @@map("push_subscriptions")
 }
 
 model Redemption {
-  id          String           @id
+  id          String           @id @default(cuid())
   status      RedemptionStatus @default(PENDING)
   notes       String?
   redeemedAt  DateTime         @default(now())
   processedAt DateTime?
   userId      String
   rewardId    String
-  rewards     Reward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewards     Reward           @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([rewardId])
   @@index([status])
   @@index([userId])
-
   @@map("redemptions")
 }
 
 model ReferralCampaign {
-  id                   String      @id
-  campaignCode         String      @unique
+  id                   String     @id @default(cuid())
+  campaignCode         String     @unique
   campaignName         String
   description          String?
-  referrerRewardType   String      @default("points")
-  referrerRewardAmount Float       @default(100.0)
-  refereeRewardType    String      @default("points")
-  refereeRewardAmount  Float       @default(50.0)
+  referrerRewardType   String     @default("points")
+  referrerRewardAmount Float      @default(100.0)
+  refereeRewardType    String     @default("points")
+  refereeRewardAmount  Float      @default(50.0)
   bonusRewards         Json?
-  activationCriteria   Json        @default("{}")
+  activationCriteria   Json       @default("{}")
   startDate            DateTime
   endDate              DateTime?
   maxReferrals         Int?
   maxPerUser           Int?
-  targetCountries      String[]    @default([])
+  targetCountries      String[]   @default([])
   targetUserSegment    String?
-  isActive             Boolean     @default(true)
-  isPaused             Boolean     @default(false)
-  totalReferrals       Int         @default(0)
-  totalSignups         Int         @default(0)
-  totalActivated       Int         @default(0)
-  totalRewardsGiven    Float       @default(0.0)
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime
+  isActive             Boolean    @default(true)
+  isPaused             Boolean    @default(false)
+  totalReferrals       Int        @default(0)
+  totalSignups         Int        @default(0)
+  totalActivated       Int        @default(0)
+  totalRewardsGiven    Float      @default(0.0)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
   referrals            Referral[]
 
   @@index([campaignCode, isActive])
   @@index([isActive, isPaused])
   @@index([startDate, endDate])
-
   @@map("referral_campaigns")
 }
 
 model ReferralReward {
-  id                String               @id
+  id                String               @id @default(cuid())
   referralId        String
   userId            String
   rewardType        String
@@ -1412,16 +1575,15 @@ model ReferralReward {
   claimedAt         DateTime?
   metadata          Json?
   createdAt         DateTime             @default(now())
-  updatedAt         DateTime
-  referrals         Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt         DateTime             @updatedAt
+  referrals         Referral             @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([awardedAt])
   @@index([isMilestoneReward])
   @@index([referralId])
   @@index([status])
   @@index([userId, status])
-
   @@map("referral_rewards")
 }
 
@@ -1448,22 +1610,21 @@ model ReferralStat {
   lastActivationAt      DateTime?
   lastCalculatedAt      DateTime  @default(now())
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime
-  users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime  @updatedAt
+  users                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leaderboardRank])
   @@index([topReferrerBadge])
   @@index([totalActivated])
   @@index([totalPointsEarned])
-
   @@map("referral_stats")
 }
 
 model Referral {
-  id                                String              @id
+  id                                String            @id @default(cuid())
   referrerId                        String
   refereeId                         String?
-  referralCode                      String              @unique
+  referralCode                      String            @unique
   referralMethod                    String?
   referralSource                    String?
   campaignId                        String?
@@ -1471,21 +1632,21 @@ model Referral {
   signedUpAt                        DateTime?
   activatedAt                       DateTime?
   expiredAt                         DateTime?
-  isActivated                       Boolean             @default(false)
+  isActivated                       Boolean           @default(false)
   activationCriteria                Json?
-  referrerRewardGiven               Boolean             @default(false)
-  refereeRewardGiven                Boolean             @default(false)
+  referrerRewardGiven               Boolean           @default(false)
+  refereeRewardGiven                Boolean           @default(false)
   ipAddress                         String?
   userAgent                         String?
   deviceInfo                        Json?
   metadata                          Json?
   notes                             String?
-  createdAt                         DateTime            @default(now())
-  updatedAt                         DateTime
-  referralRewards                  ReferralReward[]
-  campaign                ReferralCampaign? @relation(fields: [campaignId], references: [id])
-  users_referrals_refereeIdTousers  User? @relation("referrals_refereeIdTousers", fields: [refereeId], references: [id])
-  users_referrals_referrerIdTousers User @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
+  createdAt                         DateTime          @default(now())
+  updatedAt                         DateTime          @updatedAt
+  referralRewards                   ReferralReward[]
+  campaign                          ReferralCampaign? @relation(fields: [campaignId], references: [id])
+  users_referrals_refereeIdTousers  User?             @relation("referrals_refereeIdTousers", fields: [refereeId], references: [id])
+  users_referrals_referrerIdTousers User              @relation("referrals_referrerIdTousers", fields: [referrerId], references: [id], onDelete: Cascade)
 
   @@index([activatedAt])
   @@index([campaignId])
@@ -1495,49 +1656,47 @@ model Referral {
   @@index([referralCode])
   @@index([referrerId, isActivated])
   @@index([signedUpAt])
-
   @@map("referrals")
 }
 
 model RefreshToken {
-  id          String   @id
+  id          String   @id @default(cuid())
   tokenHash   String   @unique
   tokenFamily String
   userId      String
   isRevoked   Boolean  @default(false)
   expiresAt   DateTime
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([tokenHash])
   @@index([userId])
-
   @@map("refresh_tokens")
 }
 
 model Reward {
-  id             String        @id
+  id             String       @id @default(cuid())
   title          String
   description    String
   pointsRequired Int
   category       String
   partner        String
-  quantity       Int           @default(0)
+  quantity       Int          @default(0)
   imageUrl       String?
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   redemptions    Redemption[]
 
+  @@unique([title, category])
   @@index([category])
   @@index([isActive])
-
   @@map("rewards")
 }
 
 model SecurityEvent {
-  id          String   @id
+  id          String   @id @default(cuid())
   userId      String
   eventType   String
   severity    String   @default("medium")
@@ -1546,44 +1705,43 @@ model SecurityEvent {
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
-  users       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventType])
   @@index([severity])
   @@index([userId, createdAt])
-
   @@map("security_events")
 }
 
 model ServiceBooking {
-  id                                       String                @id
+  id                                       String              @id @default(cuid())
   serviceId                                String
   customerId                               String
   providerId                               String
   bookingType                              ServiceType
   startDate                                DateTime
   endDate                                  DateTime
-  guestsCount                              Int                   @default(1)
+  guestsCount                              Int                 @default(1)
   baseAmount                               Float
-  additionalFees                           Float                 @default(0.0)
+  additionalFees                           Float               @default(0.0)
   totalAmount                              Float
-  currency                                 String                @default("MYR")
+  currency                                 String              @default("MYR")
   paymentTransactionId                     String?
-  paymentStatus                            PaymentStatus         @default(PENDING)
+  paymentStatus                            PaymentStatus       @default(PENDING)
   platformFee                              Float?
   providerPayout                           Float?
-  status                                   BookingStatus         @default(PENDING)
+  status                                   BookingStatus       @default(PENDING)
   specialRequests                          String?
   bookingDetails                           Json?
-  createdAt                                DateTime              @default(now())
-  updatedAt                                DateTime
+  createdAt                                DateTime            @default(now())
+  updatedAt                                DateTime            @updatedAt
   confirmedAt                              DateTime?
   completedAt                              DateTime?
   canceledAt                               DateTime?
-  users_service_bookings_customerIdTousers User @relation("service_bookings_customerIdTousers", fields: [customerId], references: [id], onDelete: Cascade)
-  paymentTransactions                     PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  users_service_bookings_providerIdTousers User @relation("service_bookings_providerIdTousers", fields: [providerId], references: [id], onDelete: Cascade)
-  services                                 Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  users_service_bookings_customerIdTousers User                @relation("service_bookings_customerIdTousers", fields: [customerId], references: [id], onDelete: Cascade)
+  paymentTransactions                      PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+  users_service_bookings_providerIdTousers User                @relation("service_bookings_providerIdTousers", fields: [providerId], references: [id], onDelete: Cascade)
+  services                                 Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@index([customerId, status])
   @@index([paymentStatus])
@@ -1592,117 +1750,112 @@ model ServiceBooking {
   @@index([serviceId])
   @@index([startDate, endDate])
   @@index([status])
-
   @@map("service_bookings")
 }
 
 model Service {
-  id               String             @id
-  providerId       String
-  title            String
-  description      String?
-  serviceType      ServiceType
-  category         String?
-  pricingType      PricingType
-  basePrice        Float
-  currency         String             @default("MYR")
-  maxGuests        Int?
-  location         String?
-  availability     Json?
-  requirements     Json?
-  images           String[]           @default([])
-  status           ServiceStatus      @default(DRAFT)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  bookings ServiceBooking[]
-  users            User @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  id           String           @id @default(cuid())
+  providerId   String
+  title        String
+  description  String?
+  serviceType  ServiceType
+  category     String?
+  pricingType  PricingType
+  basePrice    Float
+  currency     String           @default("MYR")
+  maxGuests    Int?
+  location     String?
+  availability Json?
+  requirements Json?
+  images       String[]         @default([])
+  status       ServiceStatus    @default(DRAFT)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  bookings     ServiceBooking[]
+  users        User             @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@index([providerId, status])
   @@index([serviceType, status])
   @@index([status])
-
   @@map("services")
 }
 
 model SubscriptionPayment {
-  id                   String                @id
+  id                   String              @id @default(cuid())
   subscriptionId       String
   userId               String
   amount               Float
-  currency             String                @default("MYR")
+  currency             String              @default("MYR")
   billingPeriodStart   DateTime
   billingPeriodEnd     DateTime
-  status               PaymentStatus         @default(PENDING)
-  attemptCount         Int                   @default(1)
+  status               PaymentStatus       @default(PENDING)
+  attemptCount         Int                 @default(1)
   paymentTransactionId String?
   gatewayInvoiceId     String?
   dueDate              DateTime
   paidAt               DateTime?
   failedAt             DateTime?
   failureReason        String?
-  createdAt            DateTime              @default(now())
-  paymentTransactions PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  subscriptions   UserSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt            DateTime            @default(now())
+  paymentTransactions  PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+  subscriptions        UserSubscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([dueDate])
   @@index([paymentTransactionId])
   @@index([status])
   @@index([subscriptionId, status])
   @@index([userId, status])
-
   @@map("subscription_payments")
 }
 
 model SubscriptionTier {
-  id                 String               @id
-  tierCode           String               @unique
-  tierName           String
-  description        String?
-  price              Float                @default(0.0)
-  currency           String               @default("MYR")
-  billingCycle       String               @default("MONTHLY")
-  features           Json                 @default("{}")
-  displayOrder       Int                  @default(0)
-  isActive           Boolean              @default(true)
-  isPublic           Boolean              @default(true)
-  trialDays          Int?                 @default(0)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  id            String             @id @default(cuid())
+  tierCode      String             @unique
+  tierName      String
+  description   String?
+  price         Float              @default(0.0)
+  currency      String             @default("MYR")
+  billingCycle  String             @default("MONTHLY")
+  features      Json               @default("{}")
+  displayOrder  Int                @default(0)
+  isActive      Boolean            @default(true)
+  isPublic      Boolean            @default(true)
+  trialDays     Int?               @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
   subscriptions UserSubscription[]
 
   @@index([displayOrder])
   @@index([isActive, isPublic])
   @@index([tierCode, isActive])
-
   @@map("subscription_tiers")
 }
 
 model TransactionFee {
-  id                   String                @id
-  transactionId        String
-  feeConfigId          String?
-  feeType              String
-  feePercentage        Float?
-  feeFixed             Float?
-  calculatedFee        Float
-  recipientType        String
-  recipientId          String?
-  currency             String                @default("MYR")
-  description          String?
-  appliedAt            DateTime              @default(now())
-  feeConfig PlatformFeeConfig? @relation(fields: [feeConfigId], references: [id])
+  id                  String             @id @default(cuid())
+  transactionId       String
+  feeConfigId         String?
+  feeType             String
+  feePercentage       Float?
+  feeFixed            Float?
+  calculatedFee       Float
+  recipientType       String
+  recipientId         String?
+  currency            String             @default("MYR")
+  description         String?
+  appliedAt           DateTime           @default(now())
+  feeConfig           PlatformFeeConfig? @relation(fields: [feeConfigId], references: [id])
   paymentTransactions PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
   @@index([feeConfigId])
   @@index([recipientType, recipientId])
   @@index([transactionId, feeType])
-
   @@map("transaction_fees")
 }
 
 model TravelBucketList {
-  id                String    @id
+  id                String    @id @default(cuid())
   userId            String
   country           String
   city              String?
@@ -1716,45 +1869,43 @@ model TravelBucketList {
   isPublic          Boolean   @default(true)
   seekingCompanions Boolean   @default(false)
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime  @updatedAt
 
   @@index([country])
   @@index([seekingCompanions])
   @@index([userId, status])
-
   @@map("travel_bucket_list")
 }
 
 model TravelCompanion {
-  id                                         String       @id
+  id                                         String     @id @default(cuid())
   tripId                                     String
   userId                                     String
   companionId                                String?
   companionName                              String?
   companionEmail                             String?
   companionPhone                             String?
-  invitationStatus                           String       @default("pending")
-  canRequestIntro                            Boolean      @default(true)
+  invitationStatus                           String     @default("pending")
+  canRequestIntro                            Boolean    @default(true)
   relationship                               String?
   notes                                      String?
-  hasVouched                                 Boolean      @default(false)
+  hasVouched                                 Boolean    @default(false)
   vouchId                                    String?
-  addedAt                                    DateTime     @default(now())
+  addedAt                                    DateTime   @default(now())
   verifiedAt                                 DateTime?
-  users_travel_companions_companionIdTousers User? @relation("travel_companions_companionIdTousers", fields: [companionId], references: [id])
-  travelTrips                               TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  users_travel_companions_userIdTousers      User @relation("travel_companions_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+  users_travel_companions_companionIdTousers User?      @relation("travel_companions_companionIdTousers", fields: [companionId], references: [id])
+  travelTrips                                TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  users_travel_companions_userIdTousers      User       @relation("travel_companions_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([companionId])
   @@index([invitationStatus])
   @@index([tripId])
   @@index([userId])
-
   @@map("travel_companions")
 }
 
 model TravelHighlight {
-  id            String       @id
+  id            String     @id @default(cuid())
   tripId        String
   title         String
   description   String?
@@ -1762,17 +1913,16 @@ model TravelHighlight {
   image         String?
   date          DateTime?
   location      String?
-  createdAt     DateTime     @default(now())
-  travelTrips  TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  travelTrips   TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([highlightType])
   @@index([tripId])
-
   @@map("travel_highlights")
 }
 
 model TravelLocation {
-  id             String       @id
+  id             String     @id @default(cuid())
   tripId         String
   country        String
   city           String
@@ -1782,18 +1932,17 @@ model TravelLocation {
   duration       Int?
   rating         Int?
   notes          String?
-  wouldRecommend Boolean      @default(true)
+  wouldRecommend Boolean    @default(true)
   tips           String?
-  images         String[]     @default([])
+  images         String[]   @default([])
   latitude       Float?
   longitude      Float?
-  createdAt      DateTime     @default(now())
-  travelTrips   TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdAt      DateTime   @default(now())
+  travelTrips    TravelTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([country, city])
   @@index([placeType])
   @@index([tripId])
-
   @@map("travel_locations")
 }
 
@@ -1815,117 +1964,113 @@ model TravelStat {
   averageTripDuration   Int?
   lastCalculatedAt      DateTime  @default(now())
   createdAt             DateTime  @default(now())
-  updatedAt             DateTime
-  users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt             DateTime  @updatedAt
+  users                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countriesVisited])
   @@index([totalTrips])
-
   @@map("travel_stats")
 }
 
 model TravelTrip {
-  id                String              @id
+  id                String            @id @default(cuid())
   userId            String
   title             String
   description       String?
   purpose           String?
-  countries         String[]            @default([])
-  cities            String[]            @default([])
+  countries         String[]          @default([])
+  cities            String[]          @default([])
   startDate         DateTime
   endDate           DateTime?
   duration          Int?
   coverImage        String?
-  images            String[]            @default([])
-  isPublic          Boolean             @default(true)
-  isFeatured        Boolean             @default(false)
-  tags              String[]            @default([])
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime
-  travelCompanions TravelCompanion[]
+  images            String[]          @default([])
+  isPublic          Boolean           @default(true)
+  isFeatured        Boolean           @default(false)
+  tags              String[]          @default([])
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  travelCompanions  TravelCompanion[]
   travel_highlights TravelHighlight[]
   travel_locations  TravelLocation[]
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countries])
   @@index([startDate])
   @@index([userId, isPublic])
   @@index([userId, startDate])
-
   @@map("travel_trips")
 }
 
 model UserActivity {
-  id           String   @id
+  id           String   @id @default(cuid())
   userId       String
   activityType String
   entityType   String
   entityId     String
   visibility   String   @default("public")
   createdAt    DateTime @default(now())
-  users        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([activityType])
   @@index([userId, createdAt])
-
   @@map("user_activities")
 }
 
 model UserBadge {
-  id       String   @id
+  id       String   @id @default(cuid())
   earnedAt DateTime @default(now())
   userId   String
   badgeId  String
-  badges   Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  users    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badges   Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  users    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
   @@index([userId])
-
   @@map("user_badges")
 }
 
 model UserBlock {
-  id                                 String   @id
+  id                                 String   @id @default(cuid())
   blockerId                          String
   blockedId                          String
   reason                             String?
   blockedAt                          DateTime @default(now())
-  users_user_blocks_blockedIdTousers User @relation("user_blocks_blockedIdTousers", fields: [blockedId], references: [id], onDelete: Cascade)
-  users_user_blocks_blockerIdTousers User @relation("user_blocks_blockerIdTousers", fields: [blockerId], references: [id], onDelete: Cascade)
+  users_user_blocks_blockedIdTousers User     @relation("user_blocks_blockedIdTousers", fields: [blockedId], references: [id], onDelete: Cascade)
+  users_user_blocks_blockerIdTousers User     @relation("user_blocks_blockerIdTousers", fields: [blockerId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
   @@index([blockedId])
   @@index([blockerId])
-
   @@map("user_blocks")
 }
 
 model UserConnection {
-  id                                        String               @id
+  id                                        String             @id @default(cuid())
   initiatorId                               String
   receiverId                                String
-  status                                    ConnectionStatus     @default(PENDING)
+  status                                    ConnectionStatus   @default(PENDING)
   message                                   String?
   relationshipType                          String?
   relationshipCategory                      String?
   howWeMet                                  String?
-  trustStrength                             Float                @default(0.0)
-  interactionCount                          Int                  @default(0)
+  trustStrength                             Float              @default(0.0)
+  interactionCount                          Int                @default(0)
   lastInteraction                           DateTime?
-  badges                                    String[]             @default([])
-  tags                                      String[]             @default([])
-  mutualFriendsCount                        Int                  @default(0)
-  mutualCommunitiesCount                    Int                  @default(0)
-  createdAt                                 DateTime             @default(now())
+  badges                                    String[]           @default([])
+  tags                                      String[]           @default([])
+  mutualFriendsCount                        Int                @default(0)
+  mutualCommunitiesCount                    Int                @default(0)
+  createdAt                                 DateTime           @default(now())
   respondedAt                               DateTime?
   connectedAt                               DateTime?
   removedAt                                 DateTime?
   removedBy                                 String?
   canReconnectAt                            DateTime?
   connection_reviews                        ConnectionReview[]
-  users_user_connections_initiatorIdTousers User @relation("user_connections_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
-  users_user_connections_receiverIdTousers  User @relation("user_connections_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+  trust_moments                             TrustMoment[]
+  users_user_connections_initiatorIdTousers User               @relation("user_connections_initiatorIdTousers", fields: [initiatorId], references: [id], onDelete: Cascade)
+  users_user_connections_receiverIdTousers  User               @relation("user_connections_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([initiatorId, receiverId])
   @@index([badges])
@@ -1937,7 +2082,6 @@ model UserConnection {
   @@index([relationshipCategory])
   @@index([status])
   @@index([trustStrength])
-
   @@map("user_connections")
 }
 
@@ -1951,17 +2095,16 @@ model UserLocation {
   timezone           String    @default("Asia/Kuala_Lumpur")
   preferredLanguage  String    @default("en")
   currency           String    @default("MYR")
-  updatedAt          DateTime
+  updatedAt          DateTime  @updatedAt
   lastLocationUpdate DateTime?
   latitude           Float?
   longitude          Float?
-  users              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([countryOfResidence])
   @@index([currentCity])
   @@index([latitude, longitude])
   @@index([timezone])
-
   @@map("user_locations")
 }
 
@@ -1980,17 +2123,16 @@ model UserMetadata {
   tags           String[] @default([])
   notes          String?
   internalNotes  String?
-  updatedAt      DateTime
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([affiliateId])
   @@index([referralSource])
-
   @@map("user_metadata")
 }
 
 model UserPaymentMethod {
-  id              String    @id
+  id              String    @id @default(cuid())
   userId          String
   provider        String
   gatewayMethodId String
@@ -2001,11 +2143,10 @@ model UserPaymentMethod {
   isDefault       Boolean   @default(false)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
-  users           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, isDefault])
-
   @@map("user_payment_methods")
 }
 
@@ -2016,8 +2157,8 @@ model UserPreference {
   googleCalendarRefreshToken String?
   pushToken                  String?
   preferences                Json     @default("{}")
-  updatedAt                  DateTime
-  users                      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt                  DateTime @updatedAt
+  users                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
 }
@@ -2034,42 +2175,40 @@ model UserPrivacy {
   deletionRequestedAt     DateTime?
   deletionScheduledFor    DateTime?
   dataExportRequestedAt   DateTime?
-  updatedAt               DateTime
-  users                   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt               DateTime  @updatedAt
+  users                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([deletionRequestedAt])
   @@index([profileVisibility])
-
   @@map("user_privacy")
 }
 
 model UserProfile {
-  userId           String    @id
-  displayName      String?
-  profilePicture   String?
-  bio              String?
-  shortBio         String?
-  dateOfBirth      DateTime?
-  gender           String?
-  age              Int?
-  profession       String?
-  occupation       String?
-  website          String?
-  personalityType  String?
-  interests        String[]  @default([])
-  languages        String[]  @default([])
-  instagramHandle  String?
-  linkedinHandle   String?
-  travelStyle      String?
-  bucketList       String[]  @default([])
-  travelBio        String?
-  customFields     Json?
-  locationPrivacy  String    @default("friends") // "public", "friends", "private"
-  updatedAt        DateTime
-  users            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String    @id
+  displayName     String?
+  profilePicture  String?
+  bio             String?
+  shortBio        String?
+  dateOfBirth     DateTime?
+  gender          String?
+  age             Int?
+  profession      String?
+  occupation      String?
+  website         String?
+  personalityType String?
+  interests       String[]  @default([])
+  languages       String[]  @default([])
+  instagramHandle String?
+  linkedinHandle  String?
+  travelStyle     String?
+  bucketList      String[]  @default([])
+  travelBio       String?
+  customFields    Json?
+  locationPrivacy String    @default("friends") // "public", "friends", "private"
+  updatedAt       DateTime  @updatedAt
+  users           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([displayName])
-
   @@map("user_profiles")
 }
 
@@ -2090,14 +2229,13 @@ model UserSecurity {
   lockoutUntil         DateTime?
   suspendedUntil       DateTime?
   suspensionReason     String?
-  updatedAt            DateTime
-  users                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([emailVerifiedAt])
   @@index([lastLoginAt])
   @@index([mfaEnabled])
   @@index([phoneVerifiedAt])
-
   @@map("user_security")
 }
 
@@ -2109,18 +2247,17 @@ model UserServiceProfile {
   hostDescription  String?
   guideDescription String?
   servicesOffered  Json?
-  updatedAt        DateTime
-  users            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt        DateTime @updatedAt
+  users            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isGuideAvailable])
   @@index([isHostAvailable])
   @@index([isHostCertified])
-
   @@map("user_service_profiles")
 }
 
 model UserSession {
-  id             String   @id
+  id             String   @id @default(cuid())
   userId         String
   sessionToken   String   @unique
   deviceInfo     Json?
@@ -2131,12 +2268,11 @@ model UserSession {
   lastActivityAt DateTime @default(now())
   expiresAt      DateTime
   createdAt      DateTime @default(now())
-  users          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([sessionToken])
   @@index([userId, isActive])
-
   @@map("user_sessions")
 }
 
@@ -2151,19 +2287,18 @@ model UserStat {
   communitiesJoined Int      @default(0)
   totalPoints       Int      @default(0)
   lastCalculatedAt  DateTime @default(now())
-  users             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventsAttended])
   @@index([totalPoints])
-
   @@map("user_stats")
 }
 
 model UserSubscription {
-  id                    String                  @id
+  id                    String                @id @default(cuid())
   userId                String
   tierId                String
-  status                SubscriptionStatus      @default(ACTIVE)
+  status                SubscriptionStatus    @default(ACTIVE)
   currentPeriodStart    DateTime
   currentPeriodEnd      DateTime
   cancelAt              DateTime?
@@ -2172,110 +2307,116 @@ model UserSubscription {
   trialEnd              DateTime?
   paymentProviderId     String?
   gatewaySubscriptionId String?
-  usageData             Json                    @default("{}")
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime
-  subscriptionPayments SubscriptionPayment[]
-  tiers    SubscriptionTier @relation(fields: [tierId], references: [id])
-  users                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageData             Json                  @default("{}")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  subscriptionPayments  SubscriptionPayment[]
+  tiers                 SubscriptionTier      @relation(fields: [tierId], references: [id])
+  users                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([currentPeriodEnd])
   @@index([gatewaySubscriptionId])
   @@index([status])
   @@index([tierId, status])
   @@index([userId, status])
-
   @@map("user_subscriptions")
 }
 
 model User {
-  id                                                        String                      @id
-  email                                                     String?                     @unique
-  phone                                                     String?                     @unique
-  password                                                  String?
-  fullName                                                  String
-  role                                                      UserRole                    @default(GENERAL_USER)
-  totalPoints                                               Int                         @default(0)
-  createdAt                                                 DateTime                    @default(now())
-  updatedAt                                                 DateTime
-  referredById                                              String?
-  username                                                  String?                     @unique
-  deletedAt                                                 DateTime?
-  status                                                    UserStatus                  @default(ACTIVE)
-  trustLevel                                                String                      @default("starter")
-  trustScore                                                Float                       @default(0.0)
-  authIdentities                                           AuthIdentity[]
-  cardGameFeedbacks                                       CardGameFeedback[]
-  cardGameReplies                                         CardGameReply[]
-  cardGameUpvotes                                         CardGameUpvote[]
-  communities                                               Community[]
-  communityMembers                                         CommunityMember[]
-  connection_reviews_connection_reviews_revieweeIdTousers   ConnectionReview[]        @relation("connection_reviews_revieweeIdTousers")
-  connection_reviews_connection_reviews_reviewerIdTousers   ConnectionReview[]        @relation("connection_reviews_reviewerIdTousers")
-  connectionStats                                          ConnectionStat?
-  deviceRegistrations                                      DeviceRegistration[]
-  emailVerificationTokens                                 EmailVerificationToken[]
-  eventAttendances                                         EventAttendance[]
-  eventRsvps                                               EventRsvp[]
-  eventTickets                                             EventTicket[]
-  events                                                    Event[]
-  featureUsage                                             FeatureUsage[]
-  loginAttempts                                            LoginAttempt[]
-  marketplaceCartItems                                    MarketplaceCartItem[]
-  marketplaceDisputes                                      MarketplaceDispute[]
-  marketplaceListings                                      MarketplaceListing[]
-  marketplace_orders_marketplace_orders_buyerIdTousers      MarketplaceOrder[]        @relation("marketplace_orders_buyerIdTousers")
-  marketplace_orders_marketplace_orders_sellerIdTousers     MarketplaceOrder[]        @relation("marketplace_orders_sellerIdTousers")
-  marketplace_reviews_marketplace_reviews_revieweeIdTousers MarketplaceReview[]       @relation("marketplace_reviews_revieweeIdTousers")
-  marketplace_reviews_marketplace_reviews_reviewerIdTousers MarketplaceReview[]       @relation("marketplace_reviews_reviewerIdTousers")
-  matches_matches_receiverIdTousers                         Match[]                   @relation("matches_receiverIdTousers")
-  matches_matches_senderIdTousers                           Match[]                   @relation("matches_senderIdTousers")
-  messages_messages_receiverIdTousers                       Message[]                  @relation("messages_receiverIdTousers")
-  messages_messages_senderIdTousers                         Message[]                  @relation("messages_senderIdTousers")
-  notificationPreferences                                  NotificationPreference?
-  notifications                                             Notification[]
-  passwordResetTokens                                     PasswordResetToken[]
-  paymentTransactions                                      PaymentTransaction[]
-  payoutDistributions                                      PayoutDistribution[]
-  pointHistories                                           PointHistory[]
-  profileCompletionStatus                                 ProfileCompletionStatus?
-  pushSubscription                                        PushSubscription?
-  redemptions                                               Redemption[]
-  referralRewards                                          ReferralReward[]
-  referralStats                                            ReferralStat?
-  referrals_referrals_refereeIdTousers                      Referral[]                 @relation("referrals_refereeIdTousers")
-  referrals_referrals_referrerIdTousers                     Referral[]                 @relation("referrals_referrerIdTousers")
-  refreshTokens                                            RefreshToken[]
-  securityEvents                                           SecurityEvent[]
-  service_bookings_service_bookings_customerIdTousers       ServiceBooking[]          @relation("service_bookings_customerIdTousers")
-  service_bookings_service_bookings_providerIdTousers       ServiceBooking[]          @relation("service_bookings_providerIdTousers")
-  services                                                  Service[]
-  subscriptionPayments                                     SubscriptionPayment[]
-  travel_companions_travel_companions_companionIdTousers    TravelCompanion[]         @relation("travel_companions_companionIdTousers")
-  travel_companions_travel_companions_userIdTousers         TravelCompanion[]         @relation("travel_companions_userIdTousers")
-  travelStats                                              TravelStat?
-  travelTrips                                              TravelTrip[]
-  userActivities                                           UserActivity[]
-  userBadges                                               UserBadge[]
-  user_blocks_user_blocks_blockedIdTousers                  UserBlock[]               @relation("user_blocks_blockedIdTousers")
-  user_blocks_user_blocks_blockerIdTousers                  UserBlock[]               @relation("user_blocks_blockerIdTousers")
-  user_connections_user_connections_initiatorIdTousers      UserConnection[]          @relation("user_connections_initiatorIdTousers")
-  user_connections_user_connections_receiverIdTousers       UserConnection[]          @relation("user_connections_receiverIdTousers")
-  location                                            UserLocation?
-  metadata                                             UserMetadata?
-  paymentMethods                                      UserPaymentMethod[]
-  preferences                                          UserPreference?
-  privacy                                              UserPrivacy?
-  profile                                             UserProfile?
-  security                                             UserSecurity?
-  serviceProfile                                     UserServiceProfile?
-  sessions                                             UserSession[]
-  stats                                                UserStat?
-  subscriptions                                        UserSubscription[]
-  users                                                     User? @relation("usersTousers", fields: [referredById], references: [id])
-  other_users                                               User[]                     @relation("usersTousers")
-  vouches_vouches_voucheeIdTousers                          Vouch[]                   @relation("vouches_voucheeIdTousers")
-  vouches_vouches_voucherIdTousers                          Vouch[]                   @relation("vouches_voucherIdTousers")
+  id                          String                   @id @default(cuid())
+  email                       String?                  @unique
+  phone                       String?                  @unique
+  password                    String?
+  fullName                    String
+  role                        UserRole                 @default(GENERAL_USER)
+  totalPoints                 Int                      @default(0)
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
+  referredById                String?
+  username                    String?                  @unique
+  deletedAt                   DateTime?
+  status                      UserStatus               @default(ACTIVE)
+  trustLevel                  String                   @default("starter")
+  trustScore                  Float                    @default(0.0)
+  authIdentities              AuthIdentity[]
+  cardGameFeedbacks           CardGameFeedback[]
+  cardGameReplies             CardGameReply[]
+  cardGameUpvotes             CardGameUpvote[]
+  cardGameSessions            CardGameSession[]
+  communities                 Community[]
+  communityMembers            CommunityMember[]
+  connectionReviewsReceived   ConnectionReview[]       @relation("connection_reviews_revieweeIdTousers")
+  connectionReviewsGiven      ConnectionReview[]       @relation("connection_reviews_reviewerIdTousers")
+  connectionStats             ConnectionStat?
+  deviceRegistrations         DeviceRegistration[]
+  emailVerificationTokens     EmailVerificationToken[]
+  eventParticipants           EventParticipant[]
+  eventTickets                EventTicket[]
+  events                      Event[]
+  featureUsage                FeatureUsage[]
+  loginAttempts               LoginAttempt[]
+  marketplaceCartItems        MarketplaceCartItem[]
+  marketplaceDisputes         MarketplaceDispute[]
+  marketplaceListings         MarketplaceListing[]
+  ordersAsBuyer               MarketplaceOrder[]       @relation("marketplace_orders_buyerIdTousers")
+  ordersAsSeller              MarketplaceOrder[]       @relation("marketplace_orders_sellerIdTousers")
+  marketplaceReviewsReceived  MarketplaceReview[]      @relation("marketplace_reviews_revieweeIdTousers")
+  marketplaceReviewsGiven     MarketplaceReview[]      @relation("marketplace_reviews_reviewerIdTousers")
+  matchesReceived             Match[]                  @relation("matches_receiverIdTousers")
+  matchesSent                 Match[]                  @relation("matches_senderIdTousers")
+  messagesReceived            Message[]                @relation("messages_receiverIdTousers")
+  messagesSent                Message[]                @relation("messages_senderIdTousers")
+  notificationPreferences     NotificationPreference?
+  notifications               Notification[]
+  passwordResetTokens         PasswordResetToken[]
+  paymentTransactions         PaymentTransaction[]
+  payoutDistributions         PayoutDistribution[]
+  pointHistories              PointHistory[]
+  profileCompletionStatus     ProfileCompletionStatus?
+  pushSubscription            PushSubscription?
+  redemptions                 Redemption[]
+  referralRewards             ReferralReward[]
+  referralStats               ReferralStat?
+  referralsAsReferee          Referral[]               @relation("referrals_refereeIdTousers")
+  referralsAsReferrer         Referral[]               @relation("referrals_referrerIdTousers")
+  refreshTokens               RefreshToken[]
+  securityEvents              SecurityEvent[]
+  bookingsAsCustomer          ServiceBooking[]         @relation("service_bookings_customerIdTousers")
+  bookingsAsProvider          ServiceBooking[]         @relation("service_bookings_providerIdTousers")
+  services                    Service[]
+  subscriptionPayments        SubscriptionPayment[]
+  travelCompanionsAsCompanion TravelCompanion[]        @relation("travel_companions_companionIdTousers")
+  travelCompanionsAsUser      TravelCompanion[]        @relation("travel_companions_userIdTousers")
+  travelStats                 TravelStat?
+  travelTrips                 TravelTrip[]
+  trustMomentsGiven           TrustMoment[]            @relation("trust_moments_giverIdTousers")
+  trustMomentsReceived        TrustMoment[]            @relation("trust_moments_receiverIdTousers")
+  trustScoreHistories         TrustScoreHistory[]
+  userActivities              UserActivity[]
+  userBadges                  UserBadge[]
+  blockedUsers                UserBlock[]              @relation("user_blocks_blockedIdTousers")
+  blockingUsers               UserBlock[]              @relation("user_blocks_blockerIdTousers")
+  connectionsInitiated        UserConnection[]         @relation("user_connections_initiatorIdTousers")
+  connectionsReceived         UserConnection[]         @relation("user_connections_receiverIdTousers")
+  userSetupAnalytics          UserSetupAnalytic[]      @relation("UserSetupAnalytics")
+  location                    UserLocation?
+  metadata                    UserMetadata?
+  paymentMethods              UserPaymentMethod[]
+  preferences                 UserPreference?
+  privacy                     UserPrivacy?
+  profile                     UserProfile?
+  security                    UserSecurity?
+  serviceProfile              UserServiceProfile?
+  sessions                    UserSession[]
+  stats                       UserStat?
+  subscriptions               UserSubscription[]
+  users                       User?                    @relation("usersTousers", fields: [referredById], references: [id])
+  other_users                 User[]                   @relation("usersTousers")
+  vouchesReceived             Vouch[]                  @relation("vouches_voucheeIdTousers")
+  vouchesGiven                Vouch[]                  @relation("vouches_voucherIdTousers")
+  accountabilityLogsAsVoucher AccountabilityLog[]      @relation("accountability_logs_voucherIdTousers")
+  accountabilityLogsAsVouchee AccountabilityLog[]      @relation("accountability_logs_voucheeIdTousers")
+  communityVouchOffers        CommunityVouchOffer[]
 
   @@index([createdAt])
   @@index([deletedAt])
@@ -2288,12 +2429,11 @@ model User {
   @@index([trustLevel])
   @@index([trustScore])
   @@index([username])
-
   @@map("users")
 }
 
 model VouchConfig {
-  id                             String    @id
+  id                             String    @id @default(cuid())
   maxPrimaryVouches              Int       @default(1)
   maxSecondaryVouches            Int       @default(3)
   maxCommunityVouches            Int       @default(2)
@@ -2311,15 +2451,14 @@ model VouchConfig {
   perTier                        Json?
   effectiveFrom                  DateTime?
   createdAt                      DateTime  @default(now())
-  updatedAt                      DateTime
+  updatedAt                      DateTime  @updatedAt
 
   @@index([effectiveFrom])
-
   @@map("vouch_configs")
 }
 
 model Vouch {
-  id                             String      @id
+  id                             String      @id @default(cuid())
   voucherId                      String
   voucheeId                      String
   vouchType                      VouchType   @default(PRIMARY)
@@ -2339,9 +2478,9 @@ model Vouch {
   revokeReason                   String?
   trustImpact                    Float?
   createdAt                      DateTime    @default(now())
-  updatedAt                      DateTime
-  users_vouches_voucheeIdTousers User @relation("vouches_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
-  users_vouches_voucherIdTousers User @relation("vouches_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
+  updatedAt                      DateTime    @updatedAt
+  users_vouches_voucheeIdTousers User        @relation("vouches_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
+  users_vouches_voucherIdTousers User        @relation("vouches_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
 
   @@unique([voucherId, voucheeId, vouchType])
   @@index([communityId, status])
@@ -2349,8 +2488,90 @@ model Vouch {
   @@index([isCommunityVouch])
   @@index([voucheeId, status])
   @@index([voucherId, status])
-
   @@map("vouches")
+}
+
+model TrustMoment {
+  id                    String         @id @default(cuid())
+  connectionId          String
+  giverId               String
+  receiverId            String
+  eventId               String?
+  momentType            String         @default("general")
+  rating                Int
+  feedback              String?
+  experienceDescription String?
+  tags                  String[]       @default([])
+  isPublic              Boolean        @default(true)
+  isVerified            Boolean        @default(false)
+  verificationSource    String?
+  trustImpact           Float          @default(0.0)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  event                 Event?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  connection            UserConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  giver                 User           @relation("trust_moments_giverIdTousers", fields: [giverId], references: [id], onDelete: Cascade)
+  receiver              User           @relation("trust_moments_receiverIdTousers", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, giverId, eventId])
+  @@index([eventId])
+  @@index([giverId])
+  @@index([receiverId])
+  @@index([momentType])
+  @@index([rating])
+  @@index([isPublic])
+  @@index([createdAt])
+  @@map("trust_moments")
+}
+
+model TrustScoreHistory {
+  id                String   @id @default(cuid())
+  userId            String
+  score             Float
+  change            Float    @default(0)
+  previousScore     Float?
+  reason            String?
+  component         String?
+  relatedEntityType String?
+  relatedEntityId   String?
+  metadata          Json?
+  timestamp         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([userId, component])
+  @@index([timestamp])
+  @@map("trust_score_histories")
+}
+
+model AccountabilityLog {
+  id                String               @id @default(cuid())
+  voucherId         String
+  voucheeId         String
+  chainId           String?
+  impactType        AccountabilityImpact
+  impactValue       Float
+  description       String?
+  relatedEntityType String?
+  relatedEntityId   String?
+  metadata          Json?
+  occurredAt        DateTime             @default(now())
+  processedAt       DateTime?
+  isProcessed       Boolean              @default(false)
+  voucher           User                 @relation("accountability_logs_voucherIdTousers", fields: [voucherId], references: [id], onDelete: Cascade)
+  vouchee           User                 @relation("accountability_logs_voucheeIdTousers", fields: [voucheeId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId, isProcessed])
+  @@index([voucheeId, occurredAt])
+  @@index([impactType, isProcessed])
+  @@index([occurredAt])
+  @@map("accountability_logs")
+}
+
+enum AccountabilityImpact {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
 }
 
 enum AnnouncementPriority {
@@ -2435,6 +2656,14 @@ enum EventStatus {
   COMPLETED
 }
 
+enum EventParticipantStatus {
+  REGISTERED
+  CONFIRMED
+  CHECKED_IN
+  CANCELED
+  NO_SHOW
+}
+
 enum EventTicketStatus {
   PENDING
   CONFIRMED
@@ -2507,6 +2736,12 @@ enum NotificationType {
   SERVICE
   MARKETPLACE
   PAYMENT
+  SOCIAL
+  CONNECTION
+  ACHIEVEMENT
+  REMINDER
+  COMMUNITY
+  TRAVEL
 }
 
 enum OrderStatus {
@@ -2531,12 +2766,13 @@ enum PaymentStatus {
 }
 
 enum PayoutStatus {
-  PENDING
-  PROCESSING
-  RELEASED
-  HELD
-  FAILED
-  CANCELED
+  PENDING // Ready for processing/release
+  PROCESSING // Being processed by payment gateway
+  RELEASED // Successfully paid out
+  HELD // In escrow, waiting for release conditions
+  FROZEN // Frozen due to dispute or investigation
+  FAILED // Payout attempt failed
+  CANCELED // Payout canceled (refunded to buyer)
 }
 
 enum PricingType {
@@ -2612,15 +2848,56 @@ enum UserStatus {
   PENDING
 }
 
+enum VouchOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
 enum VouchStatus {
   PENDING
   APPROVED
   ACTIVE
   REVOKED
+  DECLINED
 }
 
 enum VouchType {
   PRIMARY
   SECONDARY
   COMMUNITY
+}
+
+model PlatformConfig {
+  id          String   @id @default(cuid())
+  category    String // Config category (TRUST_FORMULA, TRUST_LEVELS, etc.)
+  key         String // Specific config key within category
+  value       Json // Flexible JSON storage for config data
+  description String? // Human-readable description of what this config does
+  updatedBy   String? // Admin user ID who last updated this config
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1) // Incremented on each update for tracking
+  createdAt   DateTime @default(now())
+
+  @@unique([category, key])
+  @@index([category])
+  @@map("platform_configs")
+}
+
+model ConfigHistory {
+  id        String   @id @default(cuid())
+  configId  String // Reference to PlatformConfig.id
+  category  String // Denormalized for easier querying
+  key       String // Denormalized for easier querying
+  oldValue  Json // Previous configuration value
+  newValue  Json // New configuration value
+  changedBy String // Admin user ID who made the change
+  changedAt DateTime @default(now())
+  reason    String? // Optional explanation for the change
+
+  @@index([configId])
+  @@index([changedAt])
+  @@index([category, key])
+  @@map("config_history")
 }

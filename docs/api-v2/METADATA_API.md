@@ -31,6 +31,14 @@ The Metadata API provides endpoints for accessing countries, regions, timezones,
   - [Get Countries by Region](#get-countries-by-region)
 - [Timezones](#timezones)
   - [Get All Timezones](#get-all-timezones)
+- [Profile Metadata](#profile-metadata)
+  - [Get All Profile Metadata](#get-all-profile-metadata)
+  - [Get Interests List](#get-interests-list)
+  - [Get Languages List](#get-languages-list)
+  - [Get Professions List](#get-professions-list)
+  - [Get Genders List](#get-genders-list)
+  - [Get Travel Styles List](#get-travel-styles-list)
+  - [Get Personality Types List](#get-personality-types-list)
 - [Caching](#caching)
 - [Examples](#examples)
 
@@ -1066,6 +1074,455 @@ Get a complete list of all unique timezones from all countries.
 
 ---
 
+## Profile Metadata
+
+### Overview
+The Profile Metadata API provides curated lists for user profile fields, replacing free-text inputs with structured, validated options. All endpoints return categorized data with emojis and descriptions for better user experience.
+
+**Base URL:**
+- **Production:** `https://api.berse-app.com/v2/metadata/profile`
+- **Development:** `http://localhost:3001/v2/metadata/profile`
+
+**Authentication:** None required (public endpoints)
+
+**Data Coverage:**
+- **Interests:** 69+ interests across 8 categories
+- **Languages:** 27 languages with native names
+- **Professions:** 49+ professions across 6 categories
+- **Genders:** 5 gender options
+- **Travel Styles:** 14 travel preferences
+- **Personality Types:** 16 MBTI personality types
+
+---
+
+### Get All Profile Metadata
+Get comprehensive lists of all profile field options in one call for efficient mobile app loading.
+
+**Endpoint:** `GET /v2/metadata/profile`
+
+**Cache:** 1 day (86400 seconds)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Profile metadata retrieved successfully",
+  "data": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-15T10:30:00.000Z",
+    "interests": {
+      "category": "Interests",
+      "description": "User interests and hobbies",
+      "items": [
+        {
+          "value": "fitness",
+          "label": "Fitness",
+          "category": "Sports & Fitness",
+          "emoji": "💪"
+        },
+        {
+          "value": "yoga",
+          "label": "Yoga",
+          "category": "Sports & Fitness",
+          "emoji": "🧘"
+        }
+      ]
+    },
+    "languages": {
+      "category": "Languages",
+      "description": "Spoken languages",
+      "items": [
+        {
+          "value": "en",
+          "label": "English",
+          "native": "English",
+          "emoji": "🇬🇧"
+        },
+        {
+          "value": "ms",
+          "label": "Malay",
+          "native": "Bahasa Melayu",
+          "emoji": "🇲🇾"
+        }
+      ]
+    },
+    "professions": {
+      "category": "Professions",
+      "description": "Professional roles and occupations",
+      "items": [
+        {
+          "value": "software_engineer",
+          "label": "Software Engineer",
+          "category": "Technology",
+          "emoji": "👨‍💻"
+        }
+      ]
+    },
+    "genders": {
+      "category": "Gender",
+      "description": "Gender options",
+      "items": [
+        {
+          "value": "Male",
+          "label": "Male",
+          "emoji": "♂️"
+        }
+      ]
+    },
+    "travelStyles": {
+      "category": "Travel Styles",
+      "description": "Travel preferences and styles",
+      "items": [
+        {
+          "value": "Backpacker",
+          "label": "Backpacker",
+          "description": "Budget-friendly, spontaneous adventure",
+          "emoji": "🎒"
+        }
+      ]
+    },
+    "personalityTypes": {
+      "category": "Personality Types",
+      "description": "MBTI personality types",
+      "items": [
+        {
+          "value": "INTJ",
+          "label": "INTJ - Architect",
+          "category": "Analysts",
+          "description": "Imaginative and strategic thinkers",
+          "emoji": "🏛️"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Use Cases:**
+- Mobile app profile setup screens
+- Bulk loading of all profile options
+- Offline caching of metadata
+- Form validation and autocomplete
+
+---
+
+### Get Interests List
+Get curated list of 69+ user interests and hobbies organized by category.
+
+**Endpoint:** `GET /v2/metadata/profile/interests`
+
+**Cache:** 1 day
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Interests retrieved successfully",
+  "data": {
+    "category": "Interests",
+    "description": "User interests and hobbies",
+    "items": [
+      {
+        "value": "fitness",
+        "label": "Fitness",
+        "category": "Sports & Fitness",
+        "emoji": "💪"
+      },
+      {
+        "value": "yoga",
+        "label": "Yoga",
+        "category": "Sports & Fitness",
+        "emoji": "🧘"
+      },
+      {
+        "value": "art",
+        "label": "Art",
+        "category": "Arts & Culture",
+        "emoji": "🎨"
+      },
+      {
+        "value": "technology",
+        "label": "Technology",
+        "category": "Technology",
+        "emoji": "💻"
+      }
+    ]
+  }
+}
+```
+
+**Categories:**
+- Sports & Fitness (10 items)
+- Arts & Culture (10 items)
+- Food & Drink (6 items)
+- Technology (6 items)
+- Travel & Adventure (5 items)
+- Social & Community (5 items)
+- Business & Career (5 items)
+- Wellness & Mindfulness (5 items)
+- Entertainment (4 items)
+- Nature & Animals (4 items)
+- Learning (5 items)
+- Fashion & Style (2 items)
+- Religion & Spirituality (2 items)
+
+---
+
+### Get Languages List
+Get list of 27 supported languages with native names and flag emojis.
+
+**Endpoint:** `GET /v2/metadata/profile/languages`
+
+**Cache:** 1 day
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Languages retrieved successfully",
+  "data": {
+    "category": "Languages",
+    "description": "Spoken languages",
+    "items": [
+      {
+        "value": "en",
+        "label": "English",
+        "native": "English",
+        "emoji": "🇬🇧"
+      },
+      {
+        "value": "ms",
+        "label": "Malay",
+        "native": "Bahasa Melayu",
+        "emoji": "🇲🇾"
+      },
+      {
+        "value": "zh",
+        "label": "Chinese",
+        "native": "中文",
+        "emoji": "🇨🇳"
+      },
+      {
+        "value": "ja",
+        "label": "Japanese",
+        "native": "日本語",
+        "emoji": "🇯🇵"
+      }
+    ]
+  }
+}
+```
+
+**Supported Languages:**
+English, Malay, Chinese, Tamil, Hindi, Bengali, Indonesian, Thai, Vietnamese, Tagalog, Japanese, Korean, Arabic, Spanish, French, German, Portuguese, Russian, Italian, Dutch, Polish, Turkish, Urdu, Persian, Khmer, Burmese, Other
+
+---
+
+### Get Professions List
+Get curated list of 49+ professions and occupations organized by category.
+
+**Endpoint:** `GET /v2/metadata/profile/professions`
+
+**Cache:** 1 day
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Professions retrieved successfully",
+  "data": {
+    "category": "Professions",
+    "description": "Professional roles and occupations",
+    "items": [
+      {
+        "value": "software_engineer",
+        "label": "Software Engineer",
+        "category": "Technology",
+        "emoji": "👨‍💻"
+      },
+      {
+        "value": "doctor",
+        "label": "Doctor",
+        "category": "Healthcare",
+        "emoji": "👨‍⚕️"
+      },
+      {
+        "value": "teacher",
+        "label": "Teacher",
+        "category": "Education",
+        "emoji": "👨‍🏫"
+      }
+    ]
+  }
+}
+```
+
+**Categories:**
+- Technology (6 items)
+- Business & Finance (6 items)
+- Creative & Media (7 items)
+- Education (4 items)
+- Healthcare (5 items)
+- Hospitality & Tourism (4 items)
+- Sports & Fitness (4 items)
+- Marketing & Sales (4 items)
+- Legal & Government (2 items)
+- Other (7 items)
+
+---
+
+### Get Genders List
+Get list of gender options for profile completion.
+
+**Endpoint:** `GET /v2/metadata/profile/genders`
+
+**Cache:** 1 day
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Genders retrieved successfully",
+  "data": {
+    "category": "Gender",
+    "description": "Gender options",
+    "items": [
+      {
+        "value": "Male",
+        "label": "Male",
+        "emoji": "♂️"
+      },
+      {
+        "value": "Female",
+        "label": "Female",
+        "emoji": "♀️"
+      },
+      {
+        "value": "Non-binary",
+        "label": "Non-binary",
+        "emoji": "⚧️"
+      },
+      {
+        "value": "Prefer not to say",
+        "label": "Prefer not to say",
+        "emoji": "🤐"
+      },
+      {
+        "value": "Other",
+        "label": "Other",
+        "emoji": "✨"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Get Travel Styles List
+Get list of 14 travel style preferences with descriptions.
+
+**Endpoint:** `GET /v2/metadata/profile/travel-styles`
+
+**Cache:** 1 day
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Travel styles retrieved successfully",
+  "data": {
+    "category": "Travel Styles",
+    "description": "Travel preferences and styles",
+    "items": [
+      {
+        "value": "Backpacker",
+        "label": "Backpacker",
+        "description": "Budget-friendly, spontaneous adventure",
+        "emoji": "🎒"
+      },
+      {
+        "value": "Luxury Traveler",
+        "label": "Luxury Traveler",
+        "description": "Comfort and premium experiences",
+        "emoji": "✨"
+      },
+      {
+        "value": "Cultural Explorer",
+        "label": "Cultural Explorer",
+        "description": "Deep dive into local culture",
+        "emoji": "🏛️"
+      },
+      {
+        "value": "Adventure Seeker",
+        "label": "Adventure Seeker",
+        "description": "Thrill and outdoor activities",
+        "emoji": "🏔️"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Get Personality Types List
+Get list of 16 MBTI personality types organized by category.
+
+**Endpoint:** `GET /v2/metadata/profile/personality-types`
+
+**Cache:** 1 day
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Personality types retrieved successfully",
+  "data": {
+    "category": "Personality Types",
+    "description": "MBTI personality types",
+    "items": [
+      {
+        "value": "INTJ",
+        "label": "INTJ - Architect",
+        "category": "Analysts",
+        "description": "Imaginative and strategic thinkers",
+        "emoji": "🏛️"
+      },
+      {
+        "value": "ENFP",
+        "label": "ENFP - Campaigner",
+        "category": "Diplomats",
+        "description": "Enthusiastic, creative, and sociable",
+        "emoji": "🎨"
+      },
+      {
+        "value": "ISTJ",
+        "label": "ISTJ - Logistician",
+        "category": "Sentinels",
+        "description": "Practical and fact-minded",
+        "emoji": "📋"
+      },
+      {
+        "value": "ESFP",
+        "label": "ESFP - Entertainer",
+        "category": "Explorers",
+        "description": "Spontaneous, energetic, and enthusiastic",
+        "emoji": "🎉"
+      }
+    ]
+  }
+}
+```
+
+**Categories:**
+- Analysts (4 types): INTJ, INTP, ENTJ, ENTP
+- Diplomats (4 types): INFJ, INFP, ENFJ, ENFP
+- Sentinels (4 types): ISTJ, ISFJ, ESTJ, ESFJ
+- Explorers (4 types): ISTP, ISFP, ESTP, ESFP
+
+---
+
 ## Caching
 
 ### Cache Strategy
@@ -1086,6 +1543,13 @@ All metadata endpoints use **Redis caching** with a cache-aside pattern for opti
 | Get Regions | `metadata:regions:all` | 1 day |
 | Get Countries by Region | `metadata:region:{region}:countries` | 1 day |
 | Get Timezones | `metadata:timezones:all` | 1 day |
+| Get All Profile Metadata | `metadata:profile:all` | 1 day |
+| Get Interests List | `metadata:profile:interests` | 1 day |
+| Get Languages List | `metadata:profile:languages` | 1 day |
+| Get Professions List | `metadata:profile:professions` | 1 day |
+| Get Genders List | `metadata:profile:genders` | 1 day |
+| Get Travel Styles List | `metadata:profile:travel-styles` | 1 day |
+| Get Personality Types List | `metadata:profile:personality-types` | 1 day |
 
 ### Performance Improvements
 - **Cache Hit Rate:** 95%+
@@ -1571,6 +2035,252 @@ const getAsianCountries = async () => {
 };
 ```
 
+**Get All Profile Metadata:**
+```javascript
+const getAllProfileMetadata = async () => {
+  const response = await fetch('https://api.berse-app.com/v2/metadata/profile');
+  const data = await response.json();
+  
+  if (data.success) {
+    console.log(`Version: ${data.data.version}`);
+    console.log(`Interests: ${data.data.interests.items.length}`);
+    console.log(`Languages: ${data.data.languages.items.length}`);
+    console.log(`Professions: ${data.data.professions.items.length}`);
+    
+    return data.data;
+  }
+  return null;
+};
+
+// Usage in mobile app for initial data loading
+const loadProfileMetadata = async () => {
+  try {
+    const metadata = await getAllProfileMetadata();
+    // Cache locally for offline use
+    localStorage.setItem('profileMetadata', JSON.stringify(metadata));
+    localStorage.setItem('metadataTimestamp', Date.now().toString());
+  } catch (error) {
+    console.error('Failed to load profile metadata:', error);
+  }
+};
+```
+
+**Get Interests for Profile Setup:**
+```javascript
+const loadInterestsForSelection = async () => {
+  const response = await fetch('https://api.berse-app.com/v2/metadata/profile/interests');
+  const data = await response.json();
+  
+  if (data.success) {
+    // Group interests by category for UI
+    const groupedInterests = data.data.items.reduce((acc, interest) => {
+      if (!acc[interest.category]) {
+        acc[interest.category] = [];
+      }
+      acc[interest.category].push(interest);
+      return acc;
+    }, {});
+    
+    return groupedInterests;
+  }
+  return {};
+};
+
+// React component for interest selection
+const InterestSelector = () => {
+  const [interests, setInterests] = useState({});
+  const [selectedInterests, setSelectedInterests] = useState([]);
+  
+  useEffect(() => {
+    loadInterestsForSelection().then(setInterests);
+  }, []);
+  
+  const toggleInterest = (interest) => {
+    setSelectedInterests(prev => 
+      prev.includes(interest.value)
+        ? prev.filter(i => i !== interest.value)
+        : [...prev, interest.value]
+    );
+  };
+  
+  return (
+    <div>
+      {Object.entries(interests).map(([category, items]) => (
+        <div key={category}>
+          <h3>{category}</h3>
+          {items.map(interest => (
+            <button
+              key={interest.value}
+              onClick={() => toggleInterest(interest)}
+              style={{
+                background: selectedInterests.includes(interest.value) ? '#007bff' : '#fff'
+              }}
+            >
+              {interest.emoji} {interest.label}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+```
+
+**Get Languages for Profile:**
+```javascript
+const getLanguages = async () => {
+  const response = await fetch('https://api.berse-app.com/v2/metadata/profile/languages');
+  const data = await response.json();
+  return data.success ? data.data.items : [];
+};
+
+// Language dropdown component
+const LanguageSelector = ({ selectedLanguage, onSelect }) => {
+  const [languages, setLanguages] = useState([]);
+  
+  useEffect(() => {
+    getLanguages().then(setLanguages);
+  }, []);
+  
+  return (
+    <select value={selectedLanguage} onChange={(e) => onSelect(e.target.value)}>
+      <option value="">Select Language</option>
+      {languages.map(lang => (
+        <option key={lang.value} value={lang.value}>
+          {lang.emoji} {lang.label} ({lang.native})
+        </option>
+      ))}
+    </select>
+  );
+};
+```
+
+**Get Professions for Profile:**
+```javascript
+const getProfessions = async () => {
+  const response = await fetch('https://api.berse-app.com/v2/metadata/profile/professions');
+  const data = await response.json();
+  return data.success ? data.data.items : [];
+};
+
+// Profession autocomplete
+const ProfessionAutocomplete = ({ onSelect }) => {
+  const [professions, setProfessions] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [query, setQuery] = useState('');
+  
+  useEffect(() => {
+    getProfessions().then(setProfessions);
+  }, []);
+  
+  useEffect(() => {
+    if (query.length > 0) {
+      const filtered = professions.filter(prof =>
+        prof.label.toLowerCase().includes(query.toLowerCase())
+      );
+      setFiltered(filtered.slice(0, 10)); // Limit results
+    } else {
+      setFiltered([]);
+    }
+  }, [query, professions]);
+  
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search profession..."
+      />
+      {filtered.length > 0 && (
+        <ul>
+          {filtered.map(prof => (
+            <li key={prof.value} onClick={() => onSelect(prof)}>
+              {prof.emoji} {prof.label} - {prof.category}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+```
+
+**Get Travel Styles and Personality Types:**
+```javascript
+const getTravelStyles = async () => {
+  const response = await fetch('https://api.berse-app.com/v2/metadata/profile/travel-styles');
+  const data = await response.json();
+  return data.success ? data.data.items : [];
+};
+
+const getPersonalityTypes = async () => {
+  const response = await fetch('https://api.berse-app.com/v2/metadata/profile/personality-types');
+  const data = await response.json();
+  return data.success ? data.data.items : [];
+};
+
+// Combined profile completion component
+const ProfileCompletion = () => {
+  const [travelStyles, setTravelStyles] = useState([]);
+  const [personalityTypes, setPersonalityTypes] = useState([]);
+  const [selectedTravelStyle, setSelectedTravelStyle] = useState('');
+  const [selectedPersonality, setSelectedPersonality] = useState('');
+  
+  useEffect(() => {
+    Promise.all([
+      getTravelStyles(),
+      getPersonalityTypes()
+    ]).then(([styles, types]) => {
+      setTravelStyles(styles);
+      setPersonalityTypes(types);
+    });
+  }, []);
+  
+  return (
+    <div>
+      <div>
+        <h3>What's your travel style?</h3>
+        {travelStyles.map(style => (
+          <div key={style.value}>
+            <input
+              type="radio"
+              id={style.value}
+              name="travelStyle"
+              value={style.value}
+              checked={selectedTravelStyle === style.value}
+              onChange={(e) => setSelectedTravelStyle(e.target.value)}
+            />
+            <label htmlFor={style.value}>
+              {style.emoji} <strong>{style.label}</strong> - {style.description}
+            </label>
+          </div>
+        ))}
+      </div>
+      
+      <div>
+        <h3>What's your personality type?</h3>
+        {personalityTypes.map(type => (
+          <div key={type.value}>
+            <input
+              type="radio"
+              id={type.value}
+              name="personalityType"
+              value={type.value}
+              checked={selectedPersonality === type.value}
+              onChange={(e) => setSelectedPersonality(e.target.value)}
+            />
+            <label htmlFor={type.value}>
+              {type.emoji} <strong>{type.label}</strong> ({type.category}) - {type.description}
+            </label>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
 ### cURL Examples
 
 **Get All Countries:**
@@ -1681,6 +2391,45 @@ curl "https://api.berse-app.com/v2/metadata/cities/popular?userLatitude=3.139&us
 curl "https://api.berse-app.com/v2/metadata/cities/popular?userLatitude=1.3521&userLongitude=103.8198&limit=5&radius=500"
 ```
 
+**Get All Profile Metadata:**
+```bash
+# Get all profile metadata in one call
+curl https://api.berse-app.com/v2/metadata/profile
+
+# Development endpoint
+curl http://localhost:3001/v2/metadata/profile
+```
+
+**Get Interests List:**
+```bash
+curl https://api.berse-app.com/v2/metadata/profile/interests
+```
+
+**Get Languages List:**
+```bash
+curl https://api.berse-app.com/v2/metadata/profile/languages
+```
+
+**Get Professions List:**
+```bash
+curl https://api.berse-app.com/v2/metadata/profile/professions
+```
+
+**Get Genders List:**
+```bash
+curl https://api.berse-app.com/v2/metadata/profile/genders
+```
+
+**Get Travel Styles List:**
+```bash
+curl https://api.berse-app.com/v2/metadata/profile/travel-styles
+```
+
+**Get Personality Types List:**
+```bash
+curl https://api.berse-app.com/v2/metadata/profile/personality-types
+```
+
 ### React Native/Mobile Examples
 
 **Country Picker Component:**
@@ -1779,6 +2528,380 @@ const RegionFilter = ({ onRegionSelect }) => {
 };
 ```
 
+**Profile Metadata Loading in React Native:**
+```typescript
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+
+const ProfileSetupScreen = () => {
+  const [metadata, setMetadata] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    loadProfileMetadata();
+  }, []);
+  
+  const loadProfileMetadata = async () => {
+    try {
+      const response = await fetch('https://api.berse-app.com/v2/metadata/profile');
+      const data = await response.json();
+      
+      if (data.success) {
+        setMetadata(data.data);
+        // Cache for offline use
+        await AsyncStorage.setItem('profileMetadata', JSON.stringify(data.data));
+      }
+    } catch (error) {
+      console.error('Failed to load metadata:', error);
+      // Try to load from cache
+      const cached = await AsyncStorage.getItem('profileMetadata');
+      if (cached) {
+        setMetadata(JSON.parse(cached));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  if (loading) return <Text>Loading profile options...</Text>;
+  if (!metadata) return <Text>Failed to load profile options</Text>;
+  
+  return (
+    <View>
+      <Text>Profile Setup</Text>
+      <Text>Languages: {metadata.languages.items.length}</Text>
+      <Text>Interests: {metadata.interests.items.length}</Text>
+      <Text>Professions: {metadata.professions.items.length}</Text>
+    </View>
+  );
+};
+```
+
+**Interest Selection Component:**
+```typescript
+const InterestSelector = ({ selectedInterests, onSelectionChange }) => {
+  const [interests, setInterests] = useState([]);
+  
+  useEffect(() => {
+    fetch('https://api.berse-app.com/v2/metadata/profile/interests')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Group by category
+          const grouped = data.data.items.reduce((acc, item) => {
+            if (!acc[item.category]) acc[item.category] = [];
+            acc[item.category].push(item);
+            return acc;
+          }, {});
+          setInterests(grouped);
+        }
+      });
+  }, []);
+  
+  const toggleInterest = (interest) => {
+    const isSelected = selectedInterests.includes(interest.value);
+    if (isSelected) {
+      onSelectionChange(selectedInterests.filter(i => i !== interest.value));
+    } else {
+      onSelectionChange([...selectedInterests, interest.value]);
+    }
+  };
+  
+  return (
+    <FlatList
+      data={Object.entries(interests)}
+      keyExtractor={([category]) => category}
+      renderItem={({ item: [category, items] }) => (
+        <View>
+          <Text style={{ fontWeight: 'bold' }}>{category}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {items.map(interest => (
+              <TouchableOpacity
+                key={interest.value}
+                onPress={() => toggleInterest(interest)}
+                style={{
+                  backgroundColor: selectedInterests.includes(interest.value) 
+                    ? '#007bff' : '#f0f0f0',
+                  padding: 8,
+                  margin: 4,
+                  borderRadius: 4
+                }}
+              >
+                <Text>{interest.emoji} {interest.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+    />
+  );
+};
+```
+
+**Language Picker:**
+```typescript
+const LanguagePicker = ({ selectedLanguage, onSelect }) => {
+  const [languages, setLanguages] = useState([]);
+  
+  useEffect(() => {
+    fetch('https://api.berse-app.com/v2/metadata/profile/languages')
+      .then(res => res.json())
+      .then(data => data.success && setLanguages(data.data.items));
+  }, []);
+  
+  return (
+    <Picker selectedValue={selectedLanguage} onValueChange={onSelect}>
+      <Picker.Item label="Select Language" value="" />
+      {languages.map(lang => (
+        <Picker.Item 
+          key={lang.value} 
+          label={`${lang.emoji} ${lang.label}`} 
+          value={lang.value} 
+        />
+      ))}
+    </Picker>
+  );
+};
+```
+
+### 8. Profile Metadata Best Practices
+```javascript
+// ✅ Good: Load all metadata once and cache locally
+const ProfileMetadataManager = {
+  data: null,
+  lastFetched: null,
+  
+  async loadAll() {
+    // Check if we have fresh data (less than 24 hours old)
+    if (this.data && this.lastFetched && 
+        Date.now() - this.lastFetched < 86400000) {
+      return this.data;
+    }
+    
+    const response = await fetch('/v2/metadata/profile');
+    const result = await response.json();
+    
+    if (result.success) {
+      this.data = result.data;
+      this.lastFetched = Date.now();
+      return this.data;
+    }
+    
+    throw new Error('Failed to load profile metadata');
+  },
+  
+  getInterests() { return this.data?.interests.items || []; },
+  getLanguages() { return this.data?.languages.items || []; },
+  getProfessions() { return this.data?.professions.items || []; },
+  getGenders() { return this.data?.genders.items || []; },
+  getTravelStyles() { return this.data?.travelStyles.items || []; },
+  getPersonalityTypes() { return this.data?.personalityTypes.items || []; }
+};
+
+// ✅ Good: Group interests by category for better UX
+const groupInterestsByCategory = (interests) => {
+  return interests.reduce((acc, interest) => {
+    if (!acc[interest.category]) {
+      acc[interest.category] = [];
+    }
+    acc[interest.category].push(interest);
+    return acc;
+  }, {});
+};
+
+// ✅ Good: Implement smart search for professions
+const searchProfessions = (professions, query) => {
+  if (!query || query.length < 2) return [];
+  
+  const lowercaseQuery = query.toLowerCase();
+  return professions
+    .filter(prof => 
+      prof.label.toLowerCase().includes(lowercaseQuery) ||
+      prof.category.toLowerCase().includes(lowercaseQuery)
+    )
+    .slice(0, 10); // Limit results
+};
+
+// ✅ Good: Validate selections against metadata
+const validateProfileSelections = (selections, metadata) => {
+  const errors = {};
+  
+  // Check if selected interests exist
+  if (selections.interests) {
+    const validInterests = metadata.interests.items.map(i => i.value);
+    const invalidInterests = selections.interests.filter(i => !validInterests.includes(i));
+    if (invalidInterests.length > 0) {
+      errors.interests = `Invalid interests: ${invalidInterests.join(', ')}`;
+    }
+  }
+  
+  // Check if selected language exists
+  if (selections.language) {
+    const validLanguages = metadata.languages.items.map(l => l.value);
+    if (!validLanguages.includes(selections.language)) {
+      errors.language = 'Invalid language selection';
+    }
+  }
+  
+  return errors;
+};
+
+// ✅ Good: Handle offline mode gracefully
+const getProfileMetadataWithFallback = async () => {
+  try {
+    // Try network first
+    const response = await fetch('/v2/metadata/profile');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('profileMetadata', JSON.stringify(data.data));
+        localStorage.setItem('metadataTimestamp', Date.now().toString());
+        return data.data;
+      }
+    }
+  } catch (error) {
+    console.warn('Network request failed, trying cache');
+  }
+  
+  // Fallback to cache
+  const cached = localStorage.getItem('profileMetadata');
+  const timestamp = localStorage.getItem('metadataTimestamp');
+  
+  if (cached && timestamp) {
+    const age = Date.now() - parseInt(timestamp);
+    if (age < 7 * 24 * 60 * 60 * 1000) { // 7 days
+      console.log('Using cached metadata');
+      return JSON.parse(cached);
+    }
+  }
+  
+  throw new Error('No metadata available');
+};
+```
+
+### 9. Profile-Specific Integration Patterns
+```javascript
+// Multi-step profile creation with metadata validation
+class ProfileCreator {
+  constructor() {
+    this.metadata = null;
+    this.currentStep = 1;
+    this.profileData = {};
+  }
+  
+  async initialize() {
+    this.metadata = await getProfileMetadataWithFallback();
+  }
+  
+  // Step 1: Basic info (name, gender, language)
+  setBasicInfo(data) {
+    const errors = this.validateBasicInfo(data);
+    if (Object.keys(errors).length > 0) {
+      throw new Error(`Validation errors: ${Object.values(errors).join(', ')}`);
+    }
+    this.profileData = { ...this.profileData, ...data };
+    this.currentStep = 2;
+  }
+  
+  // Step 2: Interests and profession
+  setInterestsAndProfession(data) {
+    const errors = this.validateInterestsAndProfession(data);
+    if (Object.keys(errors).length > 0) {
+      throw new Error(`Validation errors: ${Object.values(errors).join(', ')}`);
+    }
+    this.profileData = { ...this.profileData, ...data };
+    this.currentStep = 3;
+  }
+  
+  // Step 3: Travel preferences and personality
+  setPreferences(data) {
+    const errors = this.validatePreferences(data);
+    if (Object.keys(errors).length > 0) {
+      throw new Error(`Validation errors: ${Object.values(errors).join(', ')}`);
+    }
+    this.profileData = { ...this.profileData, ...data };
+    this.currentStep = 4;
+  }
+  
+  validateBasicInfo(data) {
+    const errors = {};
+    const validGenders = this.metadata.genders.items.map(g => g.value);
+    const validLanguages = this.metadata.languages.items.map(l => l.value);
+    
+    if (data.gender && !validGenders.includes(data.gender)) {
+      errors.gender = 'Invalid gender';
+    }
+    if (data.language && !validLanguages.includes(data.language)) {
+      errors.language = 'Invalid language';
+    }
+    return errors;
+  }
+  
+  validateInterestsAndProfession(data) {
+    const errors = {};
+    const validInterests = this.metadata.interests.items.map(i => i.value);
+    const validProfessions = this.metadata.professions.items.map(p => p.value);
+    
+    if (data.interests) {
+      const invalidInterests = data.interests.filter(i => !validInterests.includes(i));
+      if (invalidInterests.length > 0) {
+        errors.interests = `Invalid interests: ${invalidInterests.join(', ')}`;
+      }
+    }
+    if (data.profession && !validProfessions.includes(data.profession)) {
+      errors.profession = 'Invalid profession';
+    }
+    return errors;
+  }
+  
+  validatePreferences(data) {
+    const errors = {};
+    const validTravelStyles = this.metadata.travelStyles.items.map(t => t.value);
+    const validPersonalityTypes = this.metadata.personalityTypes.items.map(p => p.value);
+    
+    if (data.travelStyle && !validTravelStyles.includes(data.travelStyle)) {
+      errors.travelStyle = 'Invalid travel style';
+    }
+    if (data.personalityType && !validPersonalityTypes.includes(data.personalityType)) {
+      errors.personalityType = 'Invalid personality type';
+    }
+    return errors;
+  }
+  
+  getProgress() {
+    return {
+      currentStep: this.currentStep,
+      totalSteps: 3,
+      completed: this.currentStep > 3,
+      profileData: this.profileData
+    };
+  }
+}
+
+// Usage
+const creator = new ProfileCreator();
+await creator.initialize();
+
+// Step through profile creation
+creator.setBasicInfo({
+  name: 'John Doe',
+  gender: 'Male',
+  language: 'en'
+});
+
+creator.setInterestsAndProfession({
+  interests: ['fitness', 'technology', 'travel'],
+  profession: 'software_engineer'
+});
+
+creator.setPreferences({
+  travelStyle: 'Backpacker',
+  personalityType: 'INTJ'
+});
+
+console.log('Profile creation complete:', creator.getProgress());
+```
+
 ---
 
 ## Data Sources
@@ -1807,6 +2930,23 @@ States, provinces, and cities data is sourced from the **country-state-city** li
 - ✅ Hierarchical data structure (Country → State → City)
 - ✅ Comprehensive global coverage
 - ✅ Regularly maintained and updated
+
+### Profile Metadata Data
+Profile metadata is curated from industry standards and user research:
+
+- **Interests & Hobbies:** Categorized from common user preferences and activities
+- **Languages:** ISO language codes with native names and flag emojis
+- **Professions:** Based on standard occupational classifications
+- **Genders:** Inclusive options following modern UX best practices
+- **Travel Styles:** Derived from tourism industry categorizations
+- **Personality Types:** Myers-Briggs Type Indicator (MBTI) 16-type system
+
+**Data Quality:**
+- ✅ Curated and categorized for consistency
+- ✅ Includes emojis for visual appeal
+- ✅ Localized where appropriate
+- ✅ Regularly reviewed and updated
+- ✅ Inclusive and diverse options
 
 ---
 

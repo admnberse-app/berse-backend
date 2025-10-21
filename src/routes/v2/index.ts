@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authRoutes } from '../../modules/auth';
 import { userRoutes } from '../../modules/user';
 import { TrustScoreController } from '../../modules/user/trust-score.controller';
-import { countriesRoutes } from '../../modules/metadata';
+import { countriesRoutes, profileMetadataRoutes } from '../../modules/metadata';
 import { onboardingRoutes } from '../../modules/onboarding';
 import onboardingV2Routes from '../../modules/onboarding/onboarding-v2.routes';
 import { eventRoutes } from '../../modules/events';
@@ -64,6 +64,12 @@ router.use('/users', userRoutes);
  * Base path: /v2/metadata
  */
 router.use('/metadata', countriesRoutes);
+
+/**
+ * Profile Metadata routes (interests, languages, professions, etc.)
+ * Base path: /v2/metadata/profile
+ */
+router.use('/metadata/profile', profileMetadataRoutes);
 
 /**
  * Onboarding routes (Legacy - deprecated)

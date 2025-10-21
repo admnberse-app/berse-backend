@@ -199,6 +199,7 @@ export async function seedEnhancedUsers() {
       },
       security: {
         emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
       },
     },
@@ -321,6 +322,7 @@ export async function seedEnhancedUsers() {
       },
       security: {
         emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
       },
     },
@@ -358,6 +360,7 @@ export async function seedEnhancedUsers() {
       },
       security: {
         emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
       },
     },
@@ -397,6 +400,7 @@ export async function seedEnhancedUsers() {
       },
       security: {
         emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
       },
     },
@@ -481,6 +485,7 @@ export async function seedEnhancedUsers() {
       },
       security: {
         emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(Date.now() - 10 * 60 * 60 * 1000),
       },
       serviceProfile: {
@@ -615,6 +620,7 @@ export async function seedEnhancedUsers() {
       },
       security: {
         emailVerifiedAt: new Date(),
+        phoneVerifiedAt: new Date(),
         lastLoginAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
       },
       serviceProfile: {
