@@ -50,10 +50,17 @@ const rewards = [
 export async function seedRewards() {
   console.log('\n🎁 Seeding rewards...');
   
-  await prisma.reward.deleteMany({});
-  
   for (const reward of rewards) {
-    await prisma.reward.create({ data: reward });
+    await prisma.reward.upsert({
+      where: { 
+        title_category: {
+          title: reward.title,
+          category: reward.category
+        }
+      },
+      update: reward,
+      create: reward,
+    });
   }
   
   const count = await prisma.reward.count();

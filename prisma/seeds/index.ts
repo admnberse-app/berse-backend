@@ -149,12 +149,12 @@ async function displayFinalSummary() {
       'Vouches': stats.vouches,
       'Services': stats.services,
       'Marketplace Listings': stats.marketplaceListings,
-      'App Preview Screens': stats.appPreviewScreens,
-      'User Setup Screens': stats.userSetupScreens,
-      'Payment Providers': stats.paymentProviders,
-      'App Configs': stats.appConfigs,
-      'Card Game Topics': stats.cardGameTopics,
-      'Card Game Questions': stats.cardGameQuestions,
+    'App Preview Screens': stats.appPreviewScreens,
+    'User Setup Screens': stats.userSetupScreens,
+    'Payment Providers': stats.paymentProviders,
+    'App Configs': stats.appConfigs,
+    'Card Game Topics': stats.cardGameTopics,
+    'Card Game Questions': stats.cardGameQuestions,
     });
 
     // Get test user credentials
@@ -234,8 +234,8 @@ async function main() {
       description: 'Referral Campaign (LAUNCH2025)',
     },
     {
-      path: 'prisma/seeds/core/users.seed.ts',
-      description: 'Test Users (5 users with profiles)',
+      path: 'prisma/seeds/core/users-enhanced.seed.ts',
+      description: 'Enhanced Test Users (15 diverse users with complete profiles)',
     },
     {
       path: 'prisma/seeds/core/communities.seed.ts',

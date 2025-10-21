@@ -238,10 +238,12 @@ const tiers = [
 export async function seedSubscriptionTiers() {
   console.log('\n💎 Seeding subscription tiers...');
   
-  await prisma.subscriptionTier.deleteMany({});
-  
   for (const tier of tiers) {
-    await prisma.subscriptionTier.create({ data: tier });
+    await prisma.subscriptionTier.upsert({
+      where: { tierCode: tier.tierCode },
+      update: tier,
+      create: tier,
+    });
   }
   
   const count = await prisma.subscriptionTier.count();

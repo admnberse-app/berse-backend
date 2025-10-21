@@ -1182,6 +1182,7 @@ model AppPreviewScreen {
   updatedAt       DateTime             @updatedAt
   analytics       AppPreviewAnalytic[]
 
+  @@unique([title, screenOrder])
   @@index([isActive, screenOrder])
   @@map("app_preview_screens")
 }
@@ -1239,6 +1240,7 @@ model UserSetupScreen {
   updatedAt       DateTime            @updatedAt
   analytics       UserSetupAnalytic[]
 
+  @@unique([title, screenOrder])
   @@index([isActive, screenOrder])
   @@index([screenType])
   @@index([isRequired])
@@ -1687,6 +1689,7 @@ model Reward {
   updatedAt      DateTime     @updatedAt
   redemptions    Redemption[]
 
+  @@unique([title, category])
   @@index([category])
   @@index([isActive])
   @@map("rewards")

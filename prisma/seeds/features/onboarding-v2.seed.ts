@@ -12,7 +12,6 @@ async function seedOnboardingScreens() {
   
   const appPreviewScreens = [
     {
-      id: crypto.randomUUID(),
       screenOrder: 1,
       title: 'Welcome to Berse',
       subtitle: 'Connect with verified, trusted people',
@@ -27,7 +26,6 @@ async function seedOnboardingScreens() {
       isActive: true,
     },
     {
-      id: crypto.randomUUID(),
       screenOrder: 2,
       title: 'Trust Through Vouches',
       subtitle: 'Build credibility with community vouches',
@@ -42,7 +40,6 @@ async function seedOnboardingScreens() {
       isActive: true,
     },
     {
-      id: crypto.randomUUID(),
       screenOrder: 3,
       title: 'Discover Events',
       subtitle: 'Join curated experiences',
@@ -57,7 +54,6 @@ async function seedOnboardingScreens() {
       isActive: true,
     },
     {
-      id: crypto.randomUUID(),
       screenOrder: 4,
       title: 'Ready to Join?',
       subtitle: 'Create your account in seconds',
@@ -75,10 +71,13 @@ async function seedOnboardingScreens() {
 
   console.log('Creating app preview screens...');
   for (const screen of appPreviewScreens) {
-    await prisma.appPreviewScreen.upsert({
-      where: { id: screen.id },
-      update: screen,
-      create: screen,
+    // Delete existing screen with same order if exists
+    await prisma.appPreviewScreen.deleteMany({
+      where: { screenOrder: screen.screenOrder }
+    });
+    // Create new screen
+    await prisma.appPreviewScreen.create({
+      data: screen,
     });
   }
   console.log(`✅ Created ${appPreviewScreens.length} app preview screens`);
@@ -89,7 +88,6 @@ async function seedOnboardingScreens() {
 
   const userSetupScreens = [
     {
-      id: crypto.randomUUID(),
       screenOrder: 1,
       screenType: UserSetupScreenType.PROFILE,
       title: 'Complete Your Profile',
@@ -109,7 +107,6 @@ async function seedOnboardingScreens() {
       isActive: true,
     },
     {
-      id: crypto.randomUUID(),
       screenOrder: 2,
       screenType: UserSetupScreenType.NETWORK,
       title: 'Build Your Trust Network',
@@ -129,7 +126,6 @@ async function seedOnboardingScreens() {
       isActive: true,
     },
     {
-      id: crypto.randomUUID(),
       screenOrder: 3,
       screenType: UserSetupScreenType.COMMUNITY,
       title: 'Join Communities',
@@ -149,67 +145,7 @@ async function seedOnboardingScreens() {
       isActive: true,
     },
     {
-      id: crypto.randomUUID(),
       screenOrder: 4,
-      screenType: UserSetupScreenType.PREFERENCES,
-      title: 'Notification Preferences',
-      subtitle: 'Stay in the loop, your way',
-      description: 'Choose how and when you want to be notified about events, connections, messages, and community updates.',
-      imageUrl: 'https://cdn.pixabay.com/photo/2016/12/21/17/11/signe-1923369_1280.png',
-      iconName: 'bell',
-      ctaText: 'Set Preferences',
-      ctaAction: 'set_preferences',
-      ctaUrl: '/settings/notifications',
-      backgroundColor: '#FFFFFF',
-      textColor: '#000000',
-      isRequired: false,
-      isSkippable: true,
-      requiredFields: [],
-      targetAudience: 'all',
-      isActive: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      screenOrder: 5,
-      screenType: UserSetupScreenType.TUTORIAL,
-      title: 'Discover Features',
-      subtitle: 'Get the most out of Berse',
-      description: 'Take a quick tour of key features: event discovery, trust scores, community vouches, and the points system.',
-      imageUrl: 'https://cdn.pixabay.com/photo/2018/02/08/22/27/flower-3138556_1280.jpg',
-      iconName: 'sparkles',
-      ctaText: 'Take Tour',
-      ctaAction: 'take_tour',
-      backgroundColor: '#FFFFFF',
-      textColor: '#000000',
-      isRequired: false,
-      isSkippable: true,
-      requiredFields: [],
-      targetAudience: 'new_users',
-      isActive: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      screenOrder: 6,
-      screenType: UserSetupScreenType.VERIFICATION,
-      title: 'Verify Your Identity',
-      subtitle: 'Unlock full access',
-      description: 'Complete email verification and optionally add phone verification for higher trust score and access to premium features.',
-      imageUrl: 'https://cdn.pixabay.com/photo/2016/12/27/21/03/check-mark-1935966_1280.png',
-      iconName: 'shield-check',
-      ctaText: 'Verify Now',
-      ctaAction: 'verify',
-      ctaUrl: '/settings/verification',
-      backgroundColor: '#FFFFFF',
-      textColor: '#000000',
-      isRequired: false,
-      isSkippable: true,
-      requiredFields: [],
-      targetAudience: 'all',
-      isActive: true,
-    },
-    {
-      id: crypto.randomUUID(),
-      screenOrder: 7,
       screenType: UserSetupScreenType.TUTORIAL,
       title: 'All Set! 🎉',
       subtitle: 'Welcome to the Berse community',
@@ -231,10 +167,13 @@ async function seedOnboardingScreens() {
 
   console.log('Creating user setup screens...');
   for (const screen of userSetupScreens) {
-    await prisma.userSetupScreen.upsert({
-      where: { id: screen.id },
-      update: screen,
-      create: screen,
+    // Delete existing screen with same order if exists
+    await prisma.userSetupScreen.deleteMany({
+      where: { screenOrder: screen.screenOrder }
+    });
+    // Create new screen
+    await prisma.userSetupScreen.create({
+      data: screen,
     });
   }
   console.log(`✅ Created ${userSetupScreens.length} user setup screens`);
