@@ -2,6 +2,8 @@
  * Profile Metadata Service
  * Provides curated lists for profile field options
  */
+import { prisma } from '../../config/database';
+
 class ProfileMetadataService {
   private readonly version = '1.0.0';
   private readonly lastUpdated = new Date().toISOString();
@@ -410,22 +412,18 @@ class ProfileMetadataService {
         isValid: false,
         isAvailable: false,
         errors,
-        suggestions: this.generateUsernameSuggestions(username)
+        suggestions: this.generateUsernameSuggestions(username),
+        message: 'Please fix the issues below and try again',
+        userFriendlyMessage: errors.join('. ') + '.'
       };
     }
 
     // Check database availability
     try {
-      // Import Prisma client dynamically to avoid circular dependencies
-      const { PrismaClient } = require('@prisma/client');
-      const prisma = new PrismaClient();
-
       const existingUser = await prisma.user.findUnique({
         where: { username: username.trim() },
         select: { id: true }
       });
-
-      await prisma.$disconnect();
 
       const isAvailable = !existingUser;
 
@@ -433,7 +431,11 @@ class ProfileMetadataService {
         isValid: true,
         isAvailable,
         errors: [],
-        suggestions: isAvailable ? [] : this.generateUsernameSuggestions(username)
+        suggestions: isAvailable ? [] : this.generateUsernameSuggestions(username),
+        message: isAvailable ? 'Great! This username is available' : 'This username is already taken',
+        userFriendlyMessage: isAvailable 
+          ? `"${username}" is available and ready to use!` 
+          : `"${username}" is already taken. Try one of these suggestions instead.`
       };
     } catch (error) {
       console.error('Error checking username availability:', error);
@@ -441,7 +443,9 @@ class ProfileMetadataService {
         isValid: false,
         isAvailable: false,
         errors: ['Unable to validate username at this time. Please try again.'],
-        suggestions: this.generateUsernameSuggestions(username)
+        suggestions: this.generateUsernameSuggestions(username),
+        message: 'Validation temporarily unavailable',
+        userFriendlyMessage: 'Unable to check username availability right now. Please try again in a moment.'
       };
     }
   }
@@ -451,22 +455,50 @@ class ProfileMetadataService {
    */
   private generateUsernameSuggestions(baseUsername: string): string[] {
     const suggestions = [];
+    
+    // Clean the base username for suggestions
+    let cleanBase = baseUsername
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '') // Remove invalid characters
+      .replace(/^[_-]+|[_-]+$/g, '') // Remove leading/trailing underscores/dashes
+      .substring(0, 20); // Limit length for suggestions
+    
+    // If cleaned base is too short or empty, use a generic base
+    if (cleanBase.length < 3) {
+      cleanBase = 'user';
+    }
+    
     const numbers = ['123', '2024', '99', '007'];
     const suffixes = ['_official', '_traveler', '_explorer', '_wanderer'];
 
     // Add numbers
     numbers.forEach(num => {
-      suggestions.push(`${baseUsername}${num}`);
+      const suggestion = `${cleanBase}${num}`;
+      if (suggestion.length <= 30) {
+        suggestions.push(suggestion);
+      }
     });
 
     // Add suffixes
     suffixes.forEach(suffix => {
-      suggestions.push(`${baseUsername}${suffix}`);
+      const suggestion = `${cleanBase}${suffix}`;
+      if (suggestion.length <= 30) {
+        suggestions.push(suggestion);
+      }
     });
 
     // Random combinations
-    suggestions.push(`${baseUsername}_${Math.floor(Math.random() * 1000)}`);
-    suggestions.push(`${baseUsername}${Math.floor(Math.random() * 100)}`);
+    const randomNum = Math.floor(Math.random() * 1000);
+    const randomSuggestion = `${cleanBase}_${randomNum}`;
+    if (randomSuggestion.length <= 30) {
+      suggestions.push(randomSuggestion);
+    }
+    
+    const randomNum2 = Math.floor(Math.random() * 100);
+    const randomSuggestion2 = `${cleanBase}${randomNum2}`;
+    if (randomSuggestion2.length <= 30) {
+      suggestions.push(randomSuggestion2);
+    }
 
     return suggestions.slice(0, 5); // Return top 5 suggestions
   }

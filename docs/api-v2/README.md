@@ -18,11 +18,7 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 🎁 [Community Vouch Offers API](./COMMUNITY_VOUCH_OFFERS_API.md) - Automatic vouch offers for eligible community members
 - �🏘️ [Communities API](./COMMUNITIES_API.md) - Community management, membership, and community vouching ([Quick Ref](./COMMUNITIES_QUICKREF.md))
 - 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
-- 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
-- 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
-- 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
-- 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
-- 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, and timezone data
+- 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, timezone data, and **Profile Metadata** (interests, languages, professions, username validation) ([Quick Ref](./PROFILE_METADATA_QUICKREF.md) | [Test Results](./USERNAME_VALIDATION_TEST_RESULTS.md))
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
 - 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
 

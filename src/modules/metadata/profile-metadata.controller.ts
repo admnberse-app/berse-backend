@@ -110,13 +110,18 @@ class ProfileMetadataController {
         isValid: false,
         isAvailable: false,
         errors: ['Username is required'],
-        suggestions: []
-      }, 'Username validation completed');
+        suggestions: [],
+        message: 'Username is required',
+        userFriendlyMessage: 'Please enter a username to check availability.'
+      }, 'Please enter a username');
       return;
     }
 
     const result = await profileMetadataService.validateUsername(username.trim());
-    sendSuccess(res, result, 'Username validation completed');
+    
+    // Use the user-friendly message from the service result
+    const message = result.userFriendlyMessage || result.message || 'Username validation completed';
+    sendSuccess(res, result, message);
   }
 }
 

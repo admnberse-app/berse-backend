@@ -1523,6 +1523,185 @@ Get list of 16 MBTI personality types organized by category.
 
 ---
 
+## ✅ Username Validation
+
+### Endpoint
+```http
+POST /v2/metadata/profile/validate-username
+```
+
+### Features & Enhancements (Updated October 21, 2025)
+
+- ✅ **Format validation**: Length, characters, reserved words
+- ✅ **Database availability check**: Real-time uniqueness verification  
+- ✅ **Smart suggestions**: Alternative usernames when unavailable
+- ✅ **User-friendly messages**: Mobile-optimized response messages
+- ✅ **Comprehensive error handling**: Clear validation guidance
+
+### Request Body
+```json
+{
+  "username": "john_doe123"
+}
+```
+
+### Validation Rules
+| Rule | Requirement | Error Message |
+|------|-------------|---------------|
+| **Length** | 3-30 characters | "Username must be at least 3 characters long" |
+| **Format** | Letters, numbers, _, - only | "Username can only contain letters, numbers, underscores, and dashes" |
+| **Reserved** | No system words | "This username is reserved and cannot be used" |
+| **Availability** | Must be unique | "This username is already taken" |
+
+### Response Examples
+
+#### ✅ Available Username
+```json
+{
+  "success": true,
+  "message": "\"testuser123\" is available and ready to use!",
+  "data": {
+    "isValid": true,
+    "isAvailable": true,
+    "errors": [],
+    "suggestions": [],
+    "userFriendlyMessage": "\"testuser123\" is available and ready to use!"
+  }
+}
+```
+
+#### ❌ Username Taken
+```json
+{
+  "success": true,
+  "message": "\"davidtech\" is already taken. Try one of these suggestions instead.",
+  "data": {
+    "isValid": true,
+    "isAvailable": false,
+    "errors": [],
+    "suggestions": ["davidtech123", "davidtech2024", "davidtech99", "davidtech007", "davidtech_official"],
+    "userFriendlyMessage": "\"davidtech\" is already taken. Try one of these suggestions instead."
+  }
+}
+```
+
+#### ⚠️ Invalid Format
+```json
+{
+  "success": true,
+  "message": "Username must be at least 3 characters long.",
+  "data": {
+    "isValid": false,
+    "isAvailable": false,
+    "errors": ["Username must be at least 3 characters long"],
+    "suggestions": ["user123", "user2024", "user_official"],
+    "userFriendlyMessage": "Username must be at least 3 characters long."
+  }
+}
+```
+
+#### 🔒 Reserved Username
+```json
+{
+  "success": true,
+  "message": "This username is reserved and cannot be used.",
+  "data": {
+    "isValid": false,
+    "isAvailable": false,
+    "errors": ["This username is reserved and cannot be used"],
+    "suggestions": ["admin123", "admin2024", "admin_user"],
+    "userFriendlyMessage": "This username is reserved and cannot be used."
+  }
+}
+```
+
+### Integration Example
+```dart
+class UsernameValidator {
+  Future<UsernameValidationResult> validate(String username) async {
+    final response = await http.post(
+      Uri.parse('/v2/metadata/profile/validate-username'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username}),
+    );
+    
+    final data = jsonDecode(response.body);
+    
+    // Use the user-friendly message for UI display
+    return UsernameValidationResult(
+      isValid: data['data']['isValid'],
+      isAvailable: data['data']['isAvailable'],
+      message: data['message'], // Now user-friendly!
+      suggestions: List<String>.from(data['data']['suggestions']),
+    );
+  }
+}
+```
+
+---
+
+## 🎯 Profile Field Options
+
+### Get Age Ranges
+**Endpoint:** `GET /v2/metadata/profile/age-ranges`
+
+```json
+{
+  "success": true,
+  "message": "Age ranges retrieved successfully", 
+  "data": {
+    "category": "Age Ranges",
+    "items": [
+      {"value": "18-24", "label": "18-24"},
+      {"value": "25-34", "label": "25-34"},
+      {"value": "35-44", "label": "35-44"},
+      {"value": "45-54", "label": "45-54"},
+      {"value": "55-64", "label": "55-64"},
+      {"value": "65-74", "label": "65-74"},
+      {"value": "75+", "label": "75+"}
+    ]
+  }
+}
+```
+
+### Get Visibility Options
+**Endpoint:** `GET /v2/metadata/profile/visibility-options`
+
+```json
+{
+  "success": true,
+  "message": "Visibility options retrieved successfully",
+  "data": {
+    "category": "Profile Visibility", 
+    "items": [
+      {"value": "public", "label": "Public", "description": "Visible to everyone"},
+      {"value": "friends", "label": "Friends Only", "description": "Visible to connections only"},
+      {"value": "private", "label": "Private", "description": "Only visible to you"}
+    ]
+  }
+}
+```
+
+### Get Location Privacy Options
+**Endpoint:** `GET /v2/metadata/profile/location-privacy-options`
+
+```json
+{
+  "success": true,
+  "message": "Location privacy options retrieved successfully",
+  "data": {
+    "category": "Location Privacy",
+    "items": [
+      {"value": "public", "label": "Public", "description": "Share exact location"},
+      {"value": "city", "label": "City Only", "description": "Share city but not exact location"},
+      {"value": "private", "label": "Private", "description": "Don't share location"}
+    ]
+  }
+}
+```
+
+---
+
 ## Caching
 
 ### Cache Strategy
