@@ -20,6 +20,7 @@ import {
 } from './cardgame.types';
 import logger from '../../utils/logger';
 import { Prisma } from '@prisma/client';
+import { NotificationService } from '../../services/notification.service';
 
 export class CardGameService {
   
@@ -385,6 +386,14 @@ export class CardGameService {
     // Check if feedback exists
     const feedback = await prisma.cardGameFeedback.findUnique({
       where: { id: feedbackId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
     });
 
     if (!feedback) {
@@ -402,6 +411,7 @@ export class CardGameService {
     });
 
     let hasUpvoted: boolean;
+    let newUpvoteCount: number;
 
     if (existingUpvote) {
       // Remove upvote and decrement count
@@ -435,10 +445,28 @@ export class CardGameService {
     // Get updated count from cached field
     const updatedFeedback = await prisma.cardGameFeedback.findUnique({
       where: { id: feedbackId },
-      select: { upvoteCount: true },
+      select: { upvoteCount: true, questionText: true },
     });
 
-    return { hasUpvoted, upvoteCount: updatedFeedback?.upvoteCount || 0 };
+    newUpvoteCount = updatedFeedback?.upvoteCount || 0;
+
+    // Send notification if upvoted and reached popular threshold (10+ upvotes)
+    if (hasUpvoted) {
+      const popularThresholds = [10, 25, 50, 100];
+      if (popularThresholds.includes(newUpvoteCount)) {
+        NotificationService.notifyCardGameFeedbackPopular(
+          feedback.userId,
+          feedbackId,
+          feedback.topicTitle,
+          newUpvoteCount,
+          updatedFeedback?.questionText || ''
+        ).catch((err) => {
+          logger.error('Failed to send card game feedback popular notification:', err);
+        });
+      }
+    }
+
+    return { hasUpvoted, upvoteCount: newUpvoteCount };
   }
 
   // ============================================================================
@@ -456,6 +484,14 @@ export class CardGameService {
     // Check if feedback exists
     const feedback = await prisma.cardGameFeedback.findUnique({
       where: { id: feedbackId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
     });
 
     if (!feedback) {
@@ -485,6 +521,18 @@ export class CardGameService {
           },
         },
       },
+    });
+
+    // Send notification to feedback owner (async, don't wait)
+    NotificationService.notifyCardGameReply(
+      feedback.userId,
+      reply.user.fullName,
+      userId,
+      reply.text,
+      feedbackId,
+      feedback.topicTitle
+    ).catch((err) => {
+      logger.error('Failed to send card game reply notification:', err);
     });
 
     return this.formatReply(reply);
@@ -522,6 +570,20 @@ export class CardGameService {
     // Verify parent reply exists
     const parentReply = await prisma.cardGameReply.findUnique({
       where: { id: parentReplyId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        cardGameFeedbacks: {
+          select: {
+            id: true,
+            topicTitle: true,
+          },
+        },
+      },
     });
 
     if (!parentReply) {
@@ -556,6 +618,19 @@ export class CardGameService {
       },
     });
 
+    // Send notification to parent reply owner (async, don't wait)
+    NotificationService.notifyCardGameNestedReply(
+      parentReply.userId,
+      reply.user.fullName,
+      userId,
+      reply.text,
+      parentReplyId,
+      parentReply.feedbackId,
+      parentReply.cardGameFeedbacks.topicTitle
+    ).catch((err) => {
+      logger.error('Failed to send card game nested reply notification:', err);
+    });
+
     return reply;
   }
 
@@ -569,6 +644,20 @@ export class CardGameService {
     // Check if reply exists
     const reply = await prisma.cardGameReply.findUnique({
       where: { id: replyId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        cardGameFeedbacks: {
+          select: {
+            id: true,
+            topicTitle: true,
+          },
+        },
+      },
     });
 
     if (!reply) {
@@ -586,6 +675,7 @@ export class CardGameService {
     });
 
     let hasUpvoted: boolean;
+    let newUpvoteCount: number;
 
     if (existingUpvote) {
       // Remove upvote and decrement count
@@ -622,7 +712,46 @@ export class CardGameService {
       select: { upvoteCount: true },
     });
 
-    return { hasUpvoted, upvoteCount: updatedReply?.upvoteCount || 0 };
+    newUpvoteCount = updatedReply?.upvoteCount || 0;
+
+    // Send notification if upvoted (not on un-upvote)
+    if (hasUpvoted) {
+      // Get upvoter's name
+      const upvoter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { fullName: true },
+      });
+
+      // Send upvote notification (async, don't wait)
+      NotificationService.notifyCardGameReplyUpvote(
+        reply.userId,
+        upvoter?.fullName || 'Someone',
+        userId,
+        replyId,
+        reply.feedbackId,
+        newUpvoteCount,
+        reply.cardGameFeedbacks.topicTitle
+      ).catch((err) => {
+        logger.error('Failed to send card game reply upvote notification:', err);
+      });
+
+      // Check for milestone notifications (10, 25, 50, 100 upvotes)
+      const milestones = [10, 25, 50, 100];
+      if (milestones.includes(newUpvoteCount)) {
+        NotificationService.notifyCardGameReplyMilestone(
+          reply.userId,
+          replyId,
+          reply.feedbackId,
+          newUpvoteCount,
+          reply.cardGameFeedbacks.topicTitle,
+          reply.text
+        ).catch((err) => {
+          logger.error('Failed to send card game reply milestone notification:', err);
+        });
+      }
+    }
+
+    return { hasUpvoted, upvoteCount: newUpvoteCount };
   }
 
   /**
@@ -1329,6 +1458,15 @@ export class CardGameService {
   ) {
     const session = await prisma.cardGameSession.findUnique({
       where: { id: sessionId },
+      include: {
+        topic: {
+          select: {
+            id: true,
+            title: true,
+            totalSessions: true,
+          },
+        },
+      },
     });
 
     if (!session) {
@@ -1344,7 +1482,7 @@ export class CardGameService {
       throw new AppError('Session already completed', 400);
     }
 
-    return await prisma.cardGameSession.update({
+    const completed = await prisma.cardGameSession.update({
       where: { id: sessionId },
       data: {
         completedAt: new Date(),
@@ -1354,6 +1492,22 @@ export class CardGameService {
         topic: true,
       },
     });
+
+    // Send session completion notification (async, don't wait)
+    if (data.averageRating) {
+      NotificationService.notifyCardGameSessionComplete(
+        userId,
+        session.topic.title,
+        session.topic.id,
+        session.sessionNumber,
+        session.topic.totalSessions,
+        data.averageRating
+      ).catch((err) => {
+        logger.error('Failed to send card game session complete notification:', err);
+      });
+    }
+
+    return completed;
   }
 
   /**

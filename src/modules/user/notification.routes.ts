@@ -25,4 +25,10 @@ router.put('/:notificationId/read', NotificationController.markAsRead);
 // Delete a specific notification
 router.delete('/:notificationId', NotificationController.deleteNotification);
 
+// Get notification preferences
+router.get('/preferences', NotificationController.getPreferences);
+
+// Update notification preferences
+router.put('/preferences', NotificationController.updatePreferences);
+
 export default router;

@@ -383,4 +383,204 @@ export class NotificationController {
       next(error);
     }
   }
+
+  /**
+   * @swagger
+   * /v2/notifications/preferences:
+   *   get:
+   *     summary: Get notification preferences
+   *     description: Retrieve user's notification preferences (which notification types are enabled/disabled)
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Notification preferences retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Notification preferences retrieved successfully
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     EVENT:
+   *                       type: boolean
+   *                       example: true
+   *                     MATCH:
+   *                       type: boolean
+   *                       example: true
+   *                     POINTS:
+   *                       type: boolean
+   *                       example: true
+   *                     MESSAGE:
+   *                       type: boolean
+   *                       example: true
+   *                     SYSTEM:
+   *                       type: boolean
+   *                       example: true
+   *                     VOUCH:
+   *                       type: boolean
+   *                       example: true
+   *                     SERVICE:
+   *                       type: boolean
+   *                       example: false
+   *                     MARKETPLACE:
+   *                       type: boolean
+   *                       example: true
+   *                     PAYMENT:
+   *                       type: boolean
+   *                       example: true
+   *                     SOCIAL:
+   *                       type: boolean
+   *                       example: true
+   *                     CONNECTION:
+   *                       type: boolean
+   *                       example: true
+   *                     ACHIEVEMENT:
+   *                       type: boolean
+   *                       example: true
+   *                     REMINDER:
+   *                       type: boolean
+   *                       example: true
+   *                     COMMUNITY:
+   *                       type: boolean
+   *                       example: true
+   *                     TRAVEL:
+   *                       type: boolean
+   *                       example: true
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Server error
+   */
+  static async getPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+
+      const preferences = await NotificationService.getNotificationPreferences(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Notification preferences retrieved successfully',
+        data: preferences,
+      });
+    } catch (error: any) {
+      logger.error('Error getting notification preferences:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * @swagger
+   * /v2/notifications/preferences:
+   *   put:
+   *     summary: Update notification preferences
+   *     description: Update user's notification preferences (enable/disable notification types)
+   *     tags: [Notifications]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               EVENT:
+   *                 type: boolean
+   *                 description: Enable/disable event notifications
+   *               MATCH:
+   *                 type: boolean
+   *                 description: Enable/disable match notifications
+   *               POINTS:
+   *                 type: boolean
+   *                 description: Enable/disable points notifications
+   *               MESSAGE:
+   *                 type: boolean
+   *                 description: Enable/disable message notifications
+   *               SYSTEM:
+   *                 type: boolean
+   *                 description: Enable/disable system notifications
+   *               VOUCH:
+   *                 type: boolean
+   *                 description: Enable/disable vouch notifications
+   *               SERVICE:
+   *                 type: boolean
+   *                 description: Enable/disable service notifications
+   *               MARKETPLACE:
+   *                 type: boolean
+   *                 description: Enable/disable marketplace notifications
+   *               PAYMENT:
+   *                 type: boolean
+   *                 description: Enable/disable payment notifications
+   *               SOCIAL:
+   *                 type: boolean
+   *                 description: Enable/disable social notifications
+   *               CONNECTION:
+   *                 type: boolean
+   *                 description: Enable/disable connection notifications
+   *               ACHIEVEMENT:
+   *                 type: boolean
+   *                 description: Enable/disable achievement notifications
+   *               REMINDER:
+   *                 type: boolean
+   *                 description: Enable/disable reminder notifications
+   *               COMMUNITY:
+   *                 type: boolean
+   *                 description: Enable/disable community notifications
+   *               TRAVEL:
+   *                 type: boolean
+   *                 description: Enable/disable travel notifications
+   *             example:
+   *               EVENT: true
+   *               MESSAGE: true
+   *               SERVICE: false
+   *     responses:
+   *       200:
+   *         description: Notification preferences updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Notification preferences updated successfully
+   *                 data:
+   *                   type: object
+   *                   description: Updated preferences
+   *       400:
+   *         description: Invalid preferences data
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Server error
+   */
+  static async updatePreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const preferences = req.body;
+
+      const updated = await NotificationService.updateNotificationPreferences(userId, preferences);
+
+      res.status(200).json({
+        success: true,
+        message: 'Notification preferences updated successfully',
+        data: updated,
+      });
+    } catch (error: any) {
+      logger.error('Error updating notification preferences:', error);
+      next(error);
+    }
+  }
 }

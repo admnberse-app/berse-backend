@@ -499,6 +499,40 @@ export class EventService {
         },
       });
 
+      // Notify participants of important changes
+      if (data.status === EventStatus.CANCELED) {
+        // Get all participants to notify
+        const participants = await prisma.eventParticipant.findMany({
+          where: { eventId },
+          select: { userId: true },
+        });
+
+        // Notify each participant about cancellation
+        participants.forEach(p => {
+          NotificationService.notifyEventCanceled(
+            p.userId,
+            eventId,
+            event.title
+          ).catch(err => logger.error('Failed to send cancellation notification:', err));
+        });
+      } else if (data.date && event.date.getTime() !== new Date(data.date).getTime()) {
+        // Date was changed - notify participants
+        const participants = await prisma.eventParticipant.findMany({
+          where: { eventId },
+          select: { userId: true },
+        });
+
+        participants.forEach(p => {
+          NotificationService.notifyEventDateChanged(
+            p.userId,
+            eventId,
+            event.title,
+            event.date,
+            new Date(data.date!)
+          ).catch(err => logger.error('Failed to send date change notification:', err));
+        });
+      }
+
       return this.transformEventResponse(updatedEvent);
     } catch (error: any) {
       logger.error('Error updating event:', error);
@@ -919,6 +953,14 @@ export class EventService {
         },
       });
 
+      // Send registration confirmation to user
+      NotificationService.notifyEventRegistrationConfirmed(
+        userId,
+        eventId,
+        participant.events.title,
+        participant.events.date
+      ).catch(err => logger.error('Failed to send event registration notification:', err));
+
       return participant as any;
     } catch (error: any) {
       logger.error('Error creating RSVP:', error);
@@ -1214,6 +1256,13 @@ export class EventService {
       ).catch((error) => {
         logger.error('Failed to log event check-in:', error);
       });
+
+      // Notify user of successful check-in
+      NotificationService.notifyEventCheckedIn(
+        targetUserId,
+        eventId,
+        event.title
+      ).catch(err => logger.error('Failed to send check-in notification:', err));
 
       return {
         id: participant.id,

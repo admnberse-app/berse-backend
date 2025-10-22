@@ -242,6 +242,14 @@ export class BadgeService {
         badgeName: badge.name,
       },
     });
+
+    // Send dedicated badge earned notification
+    NotificationService.notifyBadgeEarned(
+      userId,
+      badge.id,
+      badge.name,
+      badge.description
+    ).catch(err => console.error('Failed to send badge earned notification:', err));
   }
 
   static async getUserBadges(userId: string) {

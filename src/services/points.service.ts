@@ -51,7 +51,7 @@ export class PointsService {
       await NotificationService.createNotification({
         userId,
         type: 'POINTS',
-        title: `\ud83c\udf89 ${crossedMilestone} Points Milestone!`,
+        title: `🎉 ${crossedMilestone} Points Milestone!`,
         message: `Amazing! You've reached ${crossedMilestone} points. Keep up the great work!`,
         actionUrl: '/gamification/dashboard',
         priority: 'high',
@@ -60,6 +60,13 @@ export class PointsService {
           currentPoints: newTotal,
         },
       });
+
+      // Send dedicated milestone notification
+      NotificationService.notifyPointsMilestone(
+        userId,
+        crossedMilestone,
+        newTotal
+      ).catch(err => console.error('Failed to send points milestone notification:', err));
     }
   }
 

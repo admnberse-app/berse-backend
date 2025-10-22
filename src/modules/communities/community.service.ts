@@ -1,5 +1,6 @@
 import { PrismaClient, CommunityRole, Prisma } from '@prisma/client';
 import { AppError } from '../../middleware/error';
+import { NotificationService } from '../../services/notification.service';
 import logger from '../../utils/logger';
 import type {
   CreateCommunityInput,
@@ -712,6 +713,21 @@ export class CommunityService {
         logger.error('Failed to update user stat for community join:', error);
       }
 
+      // Get community for notification
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        select: { name: true },
+      });
+
+      // Notify user of approval
+      if (community) {
+        NotificationService.notifyCommunityJoinApproved(
+          userId,
+          communityId,
+          community.name
+        ).catch(err => logger.error('Failed to send join approval notification:', err));
+      }
+
       logger.info('Member approved', { communityId, userId, adminUserId });
 
       return this.formatMemberResponse(updatedMember);
@@ -756,6 +772,22 @@ export class CommunityService {
           },
         },
       });
+
+      // Get community for notification
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        select: { name: true },
+      });
+
+      // Notify user of rejection
+      if (community) {
+        NotificationService.notifyCommunityJoinRejected(
+          userId,
+          communityId,
+          community.name,
+          reason
+        ).catch(err => logger.error('Failed to send join rejection notification:', err));
+      }
 
       logger.info('Member rejected', { communityId, userId, adminUserId, reason });
     } catch (error) {
@@ -824,6 +856,35 @@ export class CommunityService {
         },
       });
 
+      // Get community for notification
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        select: { name: true },
+      });
+
+      if (community) {
+        // Notify based on role change
+        if (role === 'ADMIN') {
+          NotificationService.notifyCommunityPromotedToOwner(
+            userId,
+            communityId,
+            community.name
+          ).catch(err => logger.error('Failed to send promotion to admin notification:', err));
+        } else if (role === 'MODERATOR' && member.role === 'MEMBER') {
+          NotificationService.notifyCommunityPromotedToModerator(
+            userId,
+            communityId,
+            community.name
+          ).catch(err => logger.error('Failed to send promotion to moderator notification:', err));
+        } else if (role === 'MEMBER' && (member.role === 'ADMIN' || member.role === 'MODERATOR')) {
+          NotificationService.notifyCommunityDemoted(
+            userId,
+            community.name,
+            communityId
+          ).catch(err => logger.error('Failed to send demotion notification:', err));
+        }
+      }
+
       logger.info('Member role updated', { communityId, userId, adminUserId, newRole: role });
 
       return this.formatMemberResponse(updatedMember);
@@ -874,6 +935,22 @@ export class CommunityService {
           },
         },
       });
+
+      // Get community for notification
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        select: { name: true },
+      });
+
+      // Notify user of removal
+      if (community) {
+        NotificationService.notifyCommunityRemoved(
+          userId,
+          communityId,
+          community.name,
+          reason
+        ).catch(err => logger.error('Failed to send community removal notification:', err));
+      }
 
       logger.info('Member removed', { communityId, userId, adminUserId, reason });
     } catch (error) {

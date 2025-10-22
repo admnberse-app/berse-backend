@@ -364,6 +364,22 @@ export class VouchService {
           vouch.vouchType
         );
 
+        // Send approval notification to vouchee
+        NotificationService.notifyVouchApproved(
+          vouch.voucheeId,
+          vouchId,
+          voucherName,
+          vouch.vouchType
+        ).catch(err => logger.error('Failed to send vouch approval notification:', err));
+
+        // Send activation notification
+        NotificationService.notifyVouchActivated(
+          vouch.voucheeId,
+          vouchId,
+          voucherName,
+          vouch.vouchType
+        ).catch(err => logger.error('Failed to send vouch activation notification:', err));
+
         logger.info(`Vouch approved: ${vouchId} (${vouch.vouchType})`);
       } else if (action === 'downgrade') {
         // 4. Downgrade vouch type
@@ -458,6 +474,14 @@ export class VouchService {
             },
           },
         });
+
+        // Notify vouchee of rejection
+        NotificationService.notifyVouchRejected(
+          vouch.voucheeId,
+          vouchId,
+          voucherName,
+          vouch.vouchType
+        ).catch(err => logger.error('Failed to send vouch rejection notification:', err));
 
         logger.info(`Vouch declined: ${vouchId}`);
       } else {
@@ -554,6 +578,14 @@ export class VouchService {
       } catch (error) {
         logger.error('Failed to update user stats for vouch revocation:', error);
       }
+
+      // Notify vouchee of revocation
+      NotificationService.notifyVouchRevoked(
+        vouch.voucheeId,
+        vouch.users_vouches_voucherIdTousers.fullName,
+        vouchId,
+        reason
+      ).catch(err => logger.error('Failed to send vouch revocation notification:', err));
 
       logger.info(`Vouch revoked: ${vouchId}`);
 

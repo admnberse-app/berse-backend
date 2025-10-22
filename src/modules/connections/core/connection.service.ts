@@ -292,6 +292,16 @@ export class ConnectionService {
           accepterName,
           userId
         );
+      } else {
+        // Send notification to initiator about rejection
+        const rejecterName = updatedConnection.users_user_connections_receiverIdTousers?.fullName || 
+                            updatedConnection.users_user_connections_receiverIdTousers?.username || 
+                            'Someone';
+        NotificationService.notifyConnectionRejected(
+          connection.initiatorId,
+          rejecterName,
+          userId
+        ).catch(err => logger.error('Failed to send connection rejected notification:', err));
       }
 
       logger.info(
@@ -330,12 +340,27 @@ export class ConnectionService {
         throw new AppError('Only pending requests can be withdrawn', 400);
       }
 
-      await prisma.userConnection.update({
+      const updatedConnection = await prisma.userConnection.update({
         where: { id: data.connectionId },
         data: { status: ConnectionStatus.CANCELED },
+        include: {
+          users_user_connections_initiatorIdTousers: {
+            select: { id: true, fullName: true, username: true }
+          },
+        },
       });
 
       await this.updateConnectionStats(userId);
+
+      // Notify receiver that request was canceled
+      const senderName = updatedConnection.users_user_connections_initiatorIdTousers?.fullName || 
+                        updatedConnection.users_user_connections_initiatorIdTousers?.username || 
+                        'Someone';
+      NotificationService.notifyConnectionRequestCanceled(
+        connection.receiverId,
+        senderName,
+        userId
+      ).catch(err => logger.error('Failed to send connection request canceled notification:', err));
 
       logger.info(`Connection request withdrawn: ${data.connectionId} by ${userId}`);
     } catch (error) {
@@ -378,13 +403,21 @@ export class ConnectionService {
       const canReconnectAt = new Date();
       canReconnectAt.setDate(canReconnectAt.getDate() + cooldownDays);
 
-      await prisma.userConnection.update({
+      const updatedConnection = await prisma.userConnection.update({
         where: { id: data.connectionId },
         data: {
           status: ConnectionStatus.REMOVED,
           removedAt: new Date(),
           removedBy: userId,
           canReconnectAt,
+        },
+        include: {
+          users_user_connections_initiatorIdTousers: {
+            select: { id: true, fullName: true, username: true }
+          },
+          users_user_connections_receiverIdTousers: {
+            select: { id: true, fullName: true, username: true }
+          },
         },
       });
 
@@ -393,6 +426,19 @@ export class ConnectionService {
         this.updateConnectionStats(connection.initiatorId),
         this.updateConnectionStats(connection.receiverId),
       ]);
+
+      // Notify the other user about connection removal
+      const otherUserId = connection.initiatorId === userId ? connection.receiverId : connection.initiatorId;
+      const removerUser = connection.initiatorId === userId 
+        ? updatedConnection.users_user_connections_initiatorIdTousers
+        : updatedConnection.users_user_connections_receiverIdTousers;
+      const removerName = removerUser?.fullName || removerUser?.username || 'Someone';
+      
+      NotificationService.notifyConnectionRemoved(
+        otherUserId,
+        removerName,
+        userId
+      ).catch(err => logger.error('Failed to send connection removed notification:', err));
 
       logger.info(`Connection removed: ${data.connectionId} by ${userId}`);
     } catch (error) {

@@ -841,4 +841,994 @@ export class NotificationService {
       },
     });
   }
+
+  // ============================================================================
+  // CARD GAME NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify user when someone replies to their card game feedback
+   */
+  static async notifyCardGameReply(
+    feedbackOwnerId: string,
+    replierName: string,
+    replierId: string,
+    replyText: string,
+    feedbackId: string,
+    topicTitle: string
+  ) {
+    // Don't notify if user replies to their own feedback
+    if (feedbackOwnerId === replierId) {
+      return null;
+    }
+
+    const truncatedText = replyText.length > 100 
+      ? replyText.substring(0, 100) + '...' 
+      : replyText;
+
+    return await this.createNotification({
+      userId: feedbackOwnerId,
+      type: 'SOCIAL',
+      title: '💬 New Reply to Your Card Game Answer',
+      message: `${replierName} replied to your answer in "${topicTitle}": "${truncatedText}"`,
+      actionUrl: `/cardgame/feedback/${feedbackId}`,
+      priority: 'normal',
+      relatedEntityId: feedbackId,
+      relatedEntityType: 'cardgame_feedback',
+      metadata: {
+        event: 'cardgame_reply_received',
+        feedbackId,
+        replierId,
+        replierName,
+        topicTitle,
+        replyPreview: truncatedText,
+      },
+    });
+  }
+
+  /**
+   * Notify user when someone replies to their reply (nested reply)
+   */
+  static async notifyCardGameNestedReply(
+    parentReplyOwnerId: string,
+    replierName: string,
+    replierId: string,
+    replyText: string,
+    parentReplyId: string,
+    feedbackId: string,
+    topicTitle: string
+  ) {
+    // Don't notify if user replies to their own reply
+    if (parentReplyOwnerId === replierId) {
+      return null;
+    }
+
+    const truncatedText = replyText.length > 100 
+      ? replyText.substring(0, 100) + '...' 
+      : replyText;
+
+    return await this.createNotification({
+      userId: parentReplyOwnerId,
+      type: 'SOCIAL',
+      title: '💬 New Reply to Your Comment',
+      message: `${replierName} replied to your comment in "${topicTitle}": "${truncatedText}"`,
+      actionUrl: `/cardgame/feedback/${feedbackId}`,
+      priority: 'normal',
+      relatedEntityId: parentReplyId,
+      relatedEntityType: 'cardgame_reply',
+      metadata: {
+        event: 'cardgame_nested_reply_received',
+        feedbackId,
+        parentReplyId,
+        replierId,
+        replierName,
+        topicTitle,
+        replyPreview: truncatedText,
+      },
+    });
+  }
+
+  /**
+   * Notify user when someone upvotes their card game reply
+   */
+  static async notifyCardGameReplyUpvote(
+    replyOwnerId: string,
+    upvoterName: string,
+    upvoterId: string,
+    replyId: string,
+    feedbackId: string,
+    currentUpvoteCount: number,
+    topicTitle: string
+  ) {
+    // Don't notify if user upvotes their own reply
+    if (replyOwnerId === upvoterId) {
+      return null;
+    }
+
+    return await this.createNotification({
+      userId: replyOwnerId,
+      type: 'ACHIEVEMENT',
+      title: '👍 Your Card Game Reply Was Upvoted!',
+      message: `${upvoterName} upvoted your reply in "${topicTitle}" (${currentUpvoteCount} upvotes)`,
+      actionUrl: `/cardgame/feedback/${feedbackId}`,
+      priority: 'low',
+      relatedEntityId: replyId,
+      relatedEntityType: 'cardgame_reply',
+      metadata: {
+        event: 'cardgame_reply_upvoted',
+        replyId,
+        feedbackId,
+        upvoterId,
+        upvoterName,
+        topicTitle,
+        upvoteCount: currentUpvoteCount,
+      },
+    });
+  }
+
+  /**
+   * Notify user when their card game reply reaches upvote milestones
+   */
+  static async notifyCardGameReplyMilestone(
+    replyOwnerId: string,
+    replyId: string,
+    feedbackId: string,
+    milestone: number,
+    topicTitle: string,
+    replyText: string
+  ) {
+    const truncatedText = replyText.length > 100 
+      ? replyText.substring(0, 100) + '...' 
+      : replyText;
+
+    return await this.createNotification({
+      userId: replyOwnerId,
+      type: 'ACHIEVEMENT',
+      title: `🎉 ${milestone} Upvotes Milestone!`,
+      message: `Your reply in "${topicTitle}" reached ${milestone} upvotes! "${truncatedText}"`,
+      actionUrl: `/cardgame/feedback/${feedbackId}`,
+      priority: 'normal',
+      relatedEntityId: replyId,
+      relatedEntityType: 'cardgame_reply',
+      metadata: {
+        event: 'cardgame_reply_milestone',
+        replyId,
+        feedbackId,
+        topicTitle,
+        milestone,
+        replyPreview: truncatedText,
+      },
+    });
+  }
+
+  /**
+   * Notify user when they complete a card game session
+   */
+  static async notifyCardGameSessionComplete(
+    userId: string,
+    topicTitle: string,
+    topicId: string,
+    sessionNumber: number,
+    totalSessions: number,
+    averageRating: number
+  ) {
+    const isLastSession = sessionNumber === totalSessions;
+    const title = isLastSession 
+      ? '🎊 Topic Completed!' 
+      : '✅ Session Completed!';
+    
+    const message = isLastSession
+      ? `Congratulations! You completed all sessions of "${topicTitle}" with an average rating of ${averageRating.toFixed(1)} stars! 🌟`
+      : `Great work! You completed session ${sessionNumber} of "${topicTitle}" with an average rating of ${averageRating.toFixed(1)} stars!`;
+
+    return await this.createNotification({
+      userId,
+      type: 'ACHIEVEMENT',
+      title,
+      message,
+      actionUrl: `/cardgame/topics/${topicId}`,
+      priority: 'normal',
+      relatedEntityId: topicId,
+      relatedEntityType: 'cardgame_topic',
+      metadata: {
+        event: 'cardgame_session_completed',
+        topicId,
+        topicTitle,
+        sessionNumber,
+        totalSessions,
+        averageRating,
+        isTopicComplete: isLastSession,
+      },
+    });
+  }
+
+  /**
+   * Notify user when their card game feedback receives many upvotes
+   */
+  static async notifyCardGameFeedbackPopular(
+    feedbackOwnerId: string,
+    feedbackId: string,
+    topicTitle: string,
+    upvoteCount: number,
+    questionText: string
+  ) {
+    const truncatedQuestion = questionText.length > 80 
+      ? questionText.substring(0, 80) + '...' 
+      : questionText;
+
+    return await this.createNotification({
+      userId: feedbackOwnerId,
+      type: 'ACHIEVEMENT',
+      title: '🔥 Your Answer is Popular!',
+      message: `Your answer to "${truncatedQuestion}" in "${topicTitle}" has ${upvoteCount} upvotes!`,
+      actionUrl: `/cardgame/feedback/${feedbackId}`,
+      priority: 'normal',
+      relatedEntityId: feedbackId,
+      relatedEntityType: 'cardgame_feedback',
+      metadata: {
+        event: 'cardgame_feedback_popular',
+        feedbackId,
+        topicTitle,
+        upvoteCount,
+        questionPreview: truncatedQuestion,
+      },
+    });
+  }
+
+  // ============================================================================
+  // CONNECTION NOTIFICATIONS (EXTENDED)
+  // ============================================================================
+
+  /**
+   * Notify user when their connection request is rejected
+   */
+  static async notifyConnectionRejected(userId: string, rejecterName: string, rejecterId: string) {
+    return await this.createNotification({
+      userId,
+      type: 'CONNECTION',
+      title: 'Connection Request Declined',
+      message: `${rejecterName} declined your connection request.`,
+      actionUrl: `/profile/${rejecterId}`,
+      priority: 'low',
+      relatedEntityId: rejecterId,
+      relatedEntityType: 'connection_rejected',
+      metadata: {
+        event: 'connection_rejected',
+        rejecterId,
+        rejecterName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when someone cancels their connection request
+   */
+  static async notifyConnectionRequestCanceled(
+    userId: string,
+    senderName: string,
+    senderId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'CONNECTION',
+      title: 'Connection Request Canceled',
+      message: `${senderName} canceled their connection request.`,
+      actionUrl: `/profile/${senderId}`,
+      priority: 'low',
+      relatedEntityId: senderId,
+      relatedEntityType: 'connection_request_canceled',
+      metadata: {
+        event: 'connection_request_canceled',
+        senderId,
+        senderName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when a connection removes them
+   */
+  static async notifyConnectionRemoved(userId: string, removerName: string, removerId: string) {
+    return await this.createNotification({
+      userId,
+      type: 'CONNECTION',
+      title: 'Connection Removed',
+      message: `${removerName} removed you from their connections.`,
+      actionUrl: '/connections',
+      priority: 'normal',
+      relatedEntityId: removerId,
+      relatedEntityType: 'connection_removed',
+      metadata: {
+        event: 'connection_removed',
+        removerId,
+        removerName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when they can reconnect with someone (after cooldown)
+   */
+  static async notifyReconnectionAvailable(
+    userId: string,
+    otherUserName: string,
+    otherUserId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'CONNECTION',
+      title: 'Reconnection Available',
+      message: `You can now reconnect with ${otherUserName}!`,
+      actionUrl: `/profile/${otherUserId}`,
+      priority: 'low',
+      relatedEntityId: otherUserId,
+      relatedEntityType: 'reconnection_available',
+      metadata: {
+        event: 'reconnection_available',
+        otherUserId,
+        otherUserName,
+      },
+    });
+  }
+
+  // ============================================================================
+  // EVENT NOTIFICATIONS (EXTENDED)
+  // ============================================================================
+
+  /**
+   * Notify user when their event registration is confirmed
+   */
+  static async notifyEventRegistrationConfirmed(
+    userId: string,
+    eventTitle: string,
+    eventId: string,
+    eventDate: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'EVENT',
+      title: '✅ Event Registration Confirmed',
+      message: `You're registered for "${eventTitle}" on ${eventDate.toLocaleDateString()}!`,
+      actionUrl: `/events/${eventId}`,
+      priority: 'high',
+      relatedEntityId: eventId,
+      relatedEntityType: 'event',
+      metadata: {
+        event: 'event_registration_confirmed',
+        eventId,
+        eventTitle,
+        eventDate: eventDate.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user 24 hours before event
+   */
+  static async notifyEventReminder24h(
+    userId: string,
+    eventTitle: string,
+    eventId: string,
+    eventDate: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'REMINDER',
+      title: '📅 Event Tomorrow',
+      message: `"${eventTitle}" starts in 24 hours! Don't forget to prepare.`,
+      actionUrl: `/events/${eventId}`,
+      priority: 'high',
+      relatedEntityId: eventId,
+      relatedEntityType: 'event',
+      metadata: {
+        event: 'event_reminder_24h',
+        eventId,
+        eventTitle,
+        eventDate: eventDate.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user 1 hour before event
+   */
+  static async notifyEventReminder1h(
+    userId: string,
+    eventTitle: string,
+    eventId: string,
+    eventLocation?: string
+  ) {
+    const message = eventLocation
+      ? `"${eventTitle}" starts in 1 hour at ${eventLocation}!`
+      : `"${eventTitle}" starts in 1 hour!`;
+
+    return await this.createNotification({
+      userId,
+      type: 'REMINDER',
+      title: '⏰ Event Starting Soon',
+      message,
+      actionUrl: `/events/${eventId}`,
+      priority: 'urgent',
+      relatedEntityId: eventId,
+      relatedEntityType: 'event',
+      metadata: {
+        event: 'event_reminder_1h',
+        eventId,
+        eventTitle,
+        eventLocation,
+      },
+    });
+  }
+
+  /**
+   * Notify user when event is canceled
+   */
+  static async notifyEventCanceled(
+    userId: string,
+    eventTitle: string,
+    eventId: string,
+    reason?: string
+  ) {
+    const message = reason
+      ? `"${eventTitle}" has been canceled. Reason: ${reason}`
+      : `"${eventTitle}" has been canceled by the host.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'EVENT',
+      title: '❌ Event Canceled',
+      message,
+      actionUrl: `/events/${eventId}`,
+      priority: 'urgent',
+      relatedEntityId: eventId,
+      relatedEntityType: 'event',
+      metadata: {
+        event: 'event_canceled',
+        eventId,
+        eventTitle,
+        reason,
+      },
+    });
+  }
+
+  /**
+   * Notify user when event date/time changes
+   */
+  static async notifyEventDateChanged(
+    userId: string,
+    eventTitle: string,
+    eventId: string,
+    oldDate: Date,
+    newDate: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'EVENT',
+      title: '📆 Event Date Changed',
+      message: `"${eventTitle}" has been rescheduled from ${oldDate.toLocaleString()} to ${newDate.toLocaleString()}.`,
+      actionUrl: `/events/${eventId}`,
+      priority: 'high',
+      relatedEntityId: eventId,
+      relatedEntityType: 'event',
+      metadata: {
+        event: 'event_date_changed',
+        eventId,
+        eventTitle,
+        oldDate: oldDate.toISOString(),
+        newDate: newDate.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user when they successfully check in to event
+   */
+  static async notifyEventCheckedIn(
+    userId: string,
+    eventTitle: string,
+    eventId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'EVENT',
+      title: '✅ Checked In Successfully',
+      message: `You're checked in to "${eventTitle}"! Enjoy the event!`,
+      actionUrl: `/events/${eventId}`,
+      priority: 'normal',
+      relatedEntityId: eventId,
+      relatedEntityType: 'event',
+      metadata: {
+        event: 'event_checked_in',
+        eventId,
+        eventTitle,
+      },
+    });
+  }
+
+  // ============================================================================
+  // COMMUNITY NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify user when community join request is approved
+   */
+  static async notifyCommunityJoinApproved(
+    userId: string,
+    communityName: string,
+    communityId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: '🎉 Community Join Approved',
+      message: `Welcome to ${communityName}! Your membership has been approved.`,
+      actionUrl: `/communities/${communityId}`,
+      priority: 'high',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_join_approved',
+        communityId,
+        communityName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when community join request is rejected
+   */
+  static async notifyCommunityJoinRejected(
+    userId: string,
+    communityName: string,
+    communityId: string,
+    reason?: string
+  ) {
+    const message = reason
+      ? `Your request to join ${communityName} was declined. Reason: ${reason}`
+      : `Your request to join ${communityName} was declined.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: 'Community Join Request Declined',
+      message,
+      actionUrl: `/communities/${communityId}`,
+      priority: 'normal',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_join_rejected',
+        communityId,
+        communityName,
+        reason,
+      },
+    });
+  }
+
+  /**
+   * Notify user when promoted to moderator
+   */
+  static async notifyCommunityPromotedToModerator(
+    userId: string,
+    communityName: string,
+    communityId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: '⭐ Promoted to Moderator',
+      message: `Congratulations! You've been promoted to moderator in ${communityName}.`,
+      actionUrl: `/communities/${communityId}`,
+      priority: 'high',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_promoted_moderator',
+        communityId,
+        communityName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when promoted to owner
+   */
+  static async notifyCommunityPromotedToOwner(
+    userId: string,
+    communityName: string,
+    communityId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: '👑 Promoted to Owner',
+      message: `Congratulations! You're now an owner of ${communityName}!`,
+      actionUrl: `/communities/${communityId}`,
+      priority: 'high',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_promoted_owner',
+        communityId,
+        communityName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when demoted from moderator
+   */
+  static async notifyCommunityDemoted(
+    userId: string,
+    communityName: string,
+    communityId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: 'Role Changed',
+      message: `You're no longer a moderator in ${communityName}.`,
+      actionUrl: `/communities/${communityId}`,
+      priority: 'normal',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_demoted',
+        communityId,
+        communityName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when removed from community
+   */
+  static async notifyCommunityRemoved(
+    userId: string,
+    communityName: string,
+    communityId: string,
+    reason?: string
+  ) {
+    const message = reason
+      ? `You've been removed from ${communityName}. Reason: ${reason}`
+      : `You've been removed from ${communityName}.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: 'Removed from Community',
+      message,
+      actionUrl: '/communities',
+      priority: 'high',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_removed',
+        communityId,
+        communityName,
+        reason,
+      },
+    });
+  }
+
+  /**
+   * Notify community admins when new member joins
+   */
+  static async notifyCommunityNewMember(
+    userId: string,
+    communityName: string,
+    communityId: string,
+    newMemberName: string,
+    newMemberId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'COMMUNITY',
+      title: '👋 New Member Joined',
+      message: `${newMemberName} just joined ${communityName}!`,
+      actionUrl: `/communities/${communityId}/members`,
+      priority: 'low',
+      relatedEntityId: communityId,
+      relatedEntityType: 'community',
+      metadata: {
+        event: 'community_new_member',
+        communityId,
+        communityName,
+        newMemberId,
+        newMemberName,
+      },
+    });
+  }
+
+  // ============================================================================
+  // VOUCH NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify user when vouch request is approved
+   */
+  static async notifyVouchApproved(
+    userId: string,
+    voucherName: string,
+    voucherId: string,
+    vouchType: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'VOUCH',
+      title: '✅ Vouch Approved',
+      message: `Your ${vouchType} vouch from ${voucherName} has been approved!`,
+      actionUrl: `/profile/${userId}`,
+      priority: 'high',
+      relatedEntityId: voucherId,
+      relatedEntityType: 'vouch',
+      metadata: {
+        event: 'vouch_approved',
+        voucherId,
+        voucherName,
+        vouchType,
+      },
+    });
+  }
+
+  /**
+   * Notify user when vouch request is rejected
+   */
+  static async notifyVouchRejected(
+    userId: string,
+    voucherName: string,
+    voucherId: string,
+    reason?: string
+  ) {
+    const message = reason
+      ? `Your vouch from ${voucherName} was not approved. Reason: ${reason}`
+      : `Your vouch from ${voucherName} was not approved.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'VOUCH',
+      title: 'Vouch Not Approved',
+      message,
+      actionUrl: `/profile/${userId}`,
+      priority: 'normal',
+      relatedEntityId: voucherId,
+      relatedEntityType: 'vouch',
+      metadata: {
+        event: 'vouch_rejected',
+        voucherId,
+        voucherName,
+        reason,
+      },
+    });
+  }
+
+  /**
+   * Notify user when vouch is activated
+   */
+  static async notifyVouchActivated(
+    userId: string,
+    voucherName: string,
+    voucherId: string,
+    vouchType: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'VOUCH',
+      title: '⭐ Vouch Activated',
+      message: `Your ${vouchType} vouch from ${voucherName} is now active!`,
+      actionUrl: `/profile/${userId}`,
+      priority: 'normal',
+      relatedEntityId: voucherId,
+      relatedEntityType: 'vouch',
+      metadata: {
+        event: 'vouch_activated',
+        voucherId,
+        voucherName,
+        vouchType,
+      },
+    });
+  }
+
+  /**
+   * Notify user when vouch is revoked
+   */
+  static async notifyVouchRevoked(
+    userId: string,
+    voucherName: string,
+    voucherId: string,
+    reason?: string
+  ) {
+    const message = reason
+      ? `Your vouch from ${voucherName} has been revoked. Reason: ${reason}`
+      : `Your vouch from ${voucherName} has been revoked.`;
+
+    return await this.createNotification({
+      userId,
+      type: 'VOUCH',
+      title: '⚠️ Vouch Revoked',
+      message,
+      actionUrl: `/profile/${userId}`,
+      priority: 'urgent',
+      relatedEntityId: voucherId,
+      relatedEntityType: 'vouch',
+      metadata: {
+        event: 'vouch_revoked',
+        voucherId,
+        voucherName,
+        reason,
+      },
+    });
+  }
+
+  // ============================================================================
+  // POINTS & ACHIEVEMENTS NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify user when reaching points milestone
+   */
+  static async notifyPointsMilestone(
+    userId: string,
+    milestone: number,
+    totalPoints: number
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'ACHIEVEMENT',
+      title: `🎉 ${milestone} Points Milestone!`,
+      message: `Congratulations! You've reached ${milestone} points! Total: ${totalPoints}`,
+      actionUrl: '/rewards',
+      priority: 'normal',
+      relatedEntityId: userId,
+      relatedEntityType: 'points_milestone',
+      metadata: {
+        event: 'points_milestone',
+        milestone,
+        totalPoints,
+      },
+    });
+  }
+
+  /**
+   * Notify user when earning a badge
+   */
+  static async notifyBadgeEarned(
+    userId: string,
+    badgeName: string,
+    badgeId: string,
+    badgeDescription: string,
+    badgeImageUrl?: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'ACHIEVEMENT',
+      title: `🏆 Badge Earned: ${badgeName}`,
+      message: badgeDescription,
+      actionUrl: `/profile/${userId}/badges`,
+      priority: 'normal',
+      relatedEntityId: badgeId,
+      relatedEntityType: 'badge',
+      metadata: {
+        event: 'badge_earned',
+        badgeId,
+        badgeName,
+        badgeDescription,
+        badgeImageUrl,
+      },
+    });
+  }
+
+  /**
+   * Notify user when upgrading badge tier
+   */
+  static async notifyBadgeTierUpgraded(
+    userId: string,
+    badgeName: string,
+    badgeId: string,
+    newTier: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'ACHIEVEMENT',
+      title: `⬆️ Badge Upgraded: ${badgeName}`,
+      message: `Your ${badgeName} badge has been upgraded to ${newTier} tier!`,
+      actionUrl: `/profile/${userId}/badges`,
+      priority: 'normal',
+      relatedEntityId: badgeId,
+      relatedEntityType: 'badge',
+      metadata: {
+        event: 'badge_tier_upgraded',
+        badgeId,
+        badgeName,
+        newTier,
+      },
+    });
+  }
+
+  // ============================================================================
+  // NOTIFICATION PREFERENCES
+  // ============================================================================
+
+  /**
+   * Get user's notification preferences
+   * Returns which notification types are enabled/disabled
+   */
+  static async getNotificationPreferences(userId: string): Promise<Record<string, boolean>> {
+    const prefs = await prisma.notificationPreference.findUnique({
+      where: { userId },
+      select: { preferences: true },
+    });
+
+    // Default: all notifications enabled
+    const defaultPreferences = {
+      EVENT: true,
+      MATCH: true,
+      POINTS: true,
+      MESSAGE: true,
+      SYSTEM: true,
+      VOUCH: true,
+      SERVICE: true,
+      MARKETPLACE: true,
+      PAYMENT: true,
+      SOCIAL: true,
+      CONNECTION: true,
+      ACHIEVEMENT: true,
+      REMINDER: true,
+      COMMUNITY: true,
+      TRAVEL: true,
+    };
+
+    if (!prefs?.preferences || typeof prefs.preferences !== 'object') {
+      return defaultPreferences;
+    }
+
+    // Merge with defaults to ensure all types are present
+    return {
+      ...defaultPreferences,
+      ...(prefs.preferences as Record<string, boolean>),
+    };
+  }
+
+  /**
+   * Update user's notification preferences
+   */
+  static async updateNotificationPreferences(
+    userId: string,
+    preferences: Record<string, boolean>
+  ): Promise<Record<string, boolean>> {
+    // Get current preferences
+    const current = await this.getNotificationPreferences(userId);
+
+    // Merge with new preferences
+    const updated = {
+      ...current,
+      ...preferences,
+    };
+
+    // Update in database (upsert to create if doesn't exist)
+    await prisma.notificationPreference.upsert({
+      where: { userId },
+      create: {
+        userId,
+        preferences: updated as any,
+      },
+      update: {
+        preferences: updated as any,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Check if user has a specific notification type enabled
+   */
+  static async isNotificationTypeEnabled(
+    userId: string,
+    notificationType: string
+  ): Promise<boolean> {
+    const preferences = await this.getNotificationPreferences(userId);
+    return preferences[notificationType] !== false; // Default to true if not set
+  }
 }
+
