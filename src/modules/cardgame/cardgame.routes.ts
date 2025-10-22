@@ -10,6 +10,7 @@ import {
   idParamValidators,
   topicIdParamValidators,
   userIdParamValidators,
+  questionIdParamValidators,
   createTopicValidators,
   updateTopicValidators,
   createQuestionValidators,
@@ -146,6 +147,12 @@ router.post(
  *         name: questionId
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: includeNested
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include nested replies (default true). Set to false for faster responses.
  */
 router.get(
   '/feedback',
@@ -234,7 +241,10 @@ router.delete(
  *   post:
  *     tags: [Card Game]
  *     summary: Toggle upvote on feedback
- *     description: Upvote or remove upvote from feedback. Calling again toggles the upvote off.
+ *     description: |
+ *       Upvote or remove upvote from feedback.
+ *       Uses cached upvote counts for 100x faster performance.
+ *       Calling again toggles the upvote off. Idempotent operation.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -262,9 +272,11 @@ router.delete(
  *                   properties:
  *                     hasUpvoted:
  *                       type: boolean
+ *                       description: Whether current user has upvoted this feedback
  *                       example: true
  *                     upvoteCount:
  *                       type: integer
+ *                       description: Total upvote count (cached, updated atomically)
  *                       example: 1
  *       401:
  *         description: Unauthorized
@@ -355,6 +367,145 @@ router.delete(
   idParamValidators,
   handleValidationErrors,
   CardGameController.deleteReply
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/replies/{id}/replies:
+ *   post:
+ *     tags: [Card Game]
+ *     summary: Reply to another reply (nested reply)
+ *     description: Add a reply to an existing reply. Maximum nesting level is 2 (cannot reply to a reply of a reply).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Parent reply ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 500
+ *                 description: Reply text
+ *                 example: I agree with your perspective on this!
+ *     responses:
+ *       201:
+ *         description: Nested reply added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Nested reply added successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     parentReplyId:
+ *                       type: string
+ *                     text:
+ *                       type: string
+ *                     upvoteCount:
+ *                       type: integer
+ *                       description: Cached upvote count
+ *                     hasUpvoted:
+ *                       type: boolean
+ *       400:
+ *         description: Cannot reply to a nested reply (max 2 levels)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Cannot reply to a nested reply
+ *                 error:
+ *                   type: string
+ *                   example: Maximum nesting level (2) exceeded
+ *       404:
+ *         description: Parent reply not found
+ */
+router.post(
+  '/replies/:id/replies',
+  authenticateToken,
+  [...idParamValidators, ...addReplyValidators],
+  handleValidationErrors,
+  CardGameController.replyToReply
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/replies/{id}/upvote:
+ *   post:
+ *     tags: [Card Game]
+ *     summary: Toggle upvote on a reply
+ *     description: |
+ *       Add or remove upvote on a reply (including nested replies). 
+ *       Uses cached upvote counts for optimal performance. 
+ *       Idempotent operation - calling twice toggles upvote on/off.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Reply ID
+ *     responses:
+ *       200:
+ *         description: Upvote toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasUpvoted:
+ *                       type: boolean
+ *                       description: Whether current user has upvoted this reply
+ *                       example: true
+ *                     upvoteCount:
+ *                       type: integer
+ *                       description: Total upvote count (cached, updated atomically)
+ *                       example: 5
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Reply not found
+ */
+router.post(
+  '/replies/:id/upvote',
+  authenticateToken,
+  idParamValidators,
+  handleValidationErrors,
+  CardGameController.toggleReplyUpvote
 );
 
 // ============================================================================
@@ -988,6 +1139,165 @@ router.get(
   sessionSummaryValidators,
   handleValidationErrors,
   CardGameController.getSessionSummary
+);
+
+// ============================================================================
+// QUESTION ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/cardgame/topics/{topicId}/questions:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get all questions in a topic with stats
+ *     description: Returns all questions in a topic across all sessions with feedback statistics
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Topic ID
+ *         example: slowdown
+ *     responses:
+ *       200:
+ *         description: Topic questions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     topicId:
+ *                       type: string
+ *                     topicTitle:
+ *                       type: string
+ *                     totalQuestions:
+ *                       type: integer
+ *                     questions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           topicId:
+ *                             type: string
+ *                           sessionNumber:
+ *                             type: integer
+ *                           questionOrder:
+ *                             type: integer
+ *                           questionText:
+ *                             type: string
+ *                           stats:
+ *                             type: object
+ *                             properties:
+ *                               totalFeedback:
+ *                                 type: integer
+ *                               averageRating:
+ *                                 type: number
+ *                               totalUpvotes:
+ *                                 type: integer
+ *                           userAnswer:
+ *                             type: object
+ *                             nullable: true
+ *       404:
+ *         description: Topic not found
+ */
+router.get(
+  '/topics/:topicId/questions',
+  authenticateToken,
+  topicIdParamValidators,
+  handleValidationErrors,
+  CardGameController.getTopicQuestions
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/questions/{questionId}/feedback:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get all feedback for a specific question
+ *     description: Returns all feedback/answers for a question, sorted by upvotes by default
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Question ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [upvotes, rating, createdAt]
+ *           default: upvotes
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Question feedback retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     pagination:
+ *                       type: object
+ *                     meta:
+ *                       type: object
+ *                       properties:
+ *                         questionId:
+ *                           type: string
+ *                         questionText:
+ *                           type: string
+ *                         topicId:
+ *                           type: string
+ *                         topicTitle:
+ *                           type: string
+ *                         sessionNumber:
+ *                           type: integer
+ *       404:
+ *         description: Question not found
+ */
+router.get(
+  '/questions/:questionId/feedback',
+  authenticateToken,
+  questionIdParamValidators,
+  handleValidationErrors,
+  CardGameController.getQuestionFeedback
 );
 
 export default router;

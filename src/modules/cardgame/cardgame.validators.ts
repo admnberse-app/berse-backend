@@ -284,3 +284,9 @@ export const userIdParamValidators = [
     .optional()
     .trim(),
 ];
+
+export const questionIdParamValidators = [
+  param('questionId')
+    .trim()
+    .notEmpty().withMessage('Question ID is required'),
+];

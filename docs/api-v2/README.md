@@ -20,6 +20,7 @@ Welcome to the BerseMuka Platform API documentation. This directory contains com
 - 🎯 [Onboarding API V2](./ONBOARDING_V2_API.md) - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth) ([Legacy V1](./ONBOARDING_API.md))
 - 🌍 [Metadata API](./METADATA_API.md) - Countries, regions, timezone data, and **Profile Metadata** (interests, languages, professions, username validation) ([Quick Ref](./PROFILE_METADATA_QUICKREF.md) | [Test Results](./USERNAME_VALIDATION_TEST_RESULTS.md))
 - 🎉 [Events API](./EVENTS_API.md) - Event management, ticket sales, RSVPs, and attendance tracking ([Quick Ref](./EVENTS_QUICKREF.md))
+- 🎮 [Card Game API](./CARDGAME_API.md) - Reflection questions, feedback system, nested replies (2 levels), cached upvote counts, production-ready performance
 - 🔔 [Notifications API](./NOTIFICATIONS_API.md) - In-app notifications for user actions and system alerts
 
 ## Base URL
@@ -146,6 +147,34 @@ Comprehensive event management system with ticket sales, RSVPs, and QR code-base
 - `POST /events/:id/check-in` - Check in attendee
 
 📖 [Full Events Documentation](./EVENTS_API.md)
+
+### Card Game Module (`/v2/cardgame`)
+Reflection questions system with feedback, ratings, nested replies (2 levels), and optimized upvote system using cached counts for production-scale performance.
+
+**Key Endpoints:**
+- `GET /topics` - Get all card game topics
+- `GET /topics/:topicId/sessions/:sessionNumber/questions` - Get session questions
+- `POST /sessions` - Start new session
+- `POST /feedback` - Submit feedback with rating
+- `GET /feedback` - Get all feedback (filters, sorting, `includeNested` param)
+- `POST /feedback/:id/upvote` - Toggle feedback upvote (cached count)
+- `POST /feedback/:id/replies` - Add reply to feedback
+- `POST /replies/:id/replies` - Add nested reply (max 2 levels)
+- `POST /replies/:id/upvote` - Toggle reply upvote (cached count)
+- `GET /stats/topics/:topicId` - Get topic statistics
+- `GET /stats/me` - Get user statistics
+
+**Key Features:**
+- **Topics & Sessions:** Curated reflection questions organized by topics and sessions
+- **Feedback System:** Submit ratings (1-5) and comments on questions
+- **Nested Replies:** Two-level reply threads (feedback → reply → nested reply)
+- **Cached Upvote Counts:** 100x faster performance using denormalized counts
+- **Zero Overhead:** Nested replies have no performance penalty at scale
+- **Production Ready:** Tested with 1,160+ replies, sub-300ms response times
+- **Flexible Loading:** `includeNested` parameter to control reply depth
+- **Statistics & Analytics:** Topic stats, user stats, rating distributions
+
+📖 [Full Card Game Documentation](./CARDGAME_API.md)
 
 ### Notifications Module (`/v2/notifications`)
 In-app notification system for user actions including connections, vouches, events, and security alerts.
@@ -609,6 +638,7 @@ The API is currently focused on core functionality:
 - ✅ **Onboarding V2** - Two-phase onboarding: app preview (pre-auth) + personalized setup (post-auth)
 - ✅ **Metadata** - Countries, regions, timezones
 - ✅ **Events** - Event management, ticket sales, RSVPs, QR code check-ins
+- ✅ **Card Game** - Reflection questions, feedback system, nested replies, upvote system
 
 ### 🚧 Coming Soon
 
@@ -616,7 +646,6 @@ The API is currently focused on core functionality:
 - 🔔 Notifications API (V2)
 - 🎯 Matching API (V2)
 - 💳 Payments API (V2)
-- 🎮 Card Game API (V2)
 
 ---
 

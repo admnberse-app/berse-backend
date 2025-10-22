@@ -158,10 +158,10 @@ export class CardGameService {
       }
     }
 
-    // Build orderBy clause
+    // Build orderBy clause using cached upvoteCount field
     const orderBy: Prisma.CardGameFeedbackOrderByWithRelationInput = {};
     if (query.sortBy === 'upvotes') {
-      orderBy.cardGameUpvotes = { _count: query.sortOrder || 'desc' };
+      orderBy.upvoteCount = query.sortOrder || 'desc';
     } else {
       orderBy[query.sortBy || 'createdAt'] = query.sortOrder || 'desc';
     }
@@ -263,19 +263,8 @@ export class CardGameService {
             }
           : true,
         cardGameReplies: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                profile: {
-                  select: {
-                    profilePicture: true,
-                  },
-                },
-              },
-            },
-          },
+          where: { parentReplyId: null },
+          include: this.getReplyInclude(currentUserId),
           orderBy: { createdAt: 'asc' },
         },
         _count: {
@@ -415,28 +404,41 @@ export class CardGameService {
     let hasUpvoted: boolean;
 
     if (existingUpvote) {
-      // Remove upvote
-      await prisma.cardGameUpvote.delete({
-        where: { id: existingUpvote.id },
-      });
+      // Remove upvote and decrement count
+      await prisma.$transaction([
+        prisma.cardGameUpvote.delete({
+          where: { id: existingUpvote.id },
+        }),
+        prisma.cardGameFeedback.update({
+          where: { id: feedbackId },
+          data: { upvoteCount: { decrement: 1 } },
+        }),
+      ]);
       hasUpvoted = false;
     } else {
-      // Add upvote
-      await prisma.cardGameUpvote.create({
-        data: {
-          userId,
-          feedbackId,
-        },
-      });
+      // Add upvote and increment count
+      await prisma.$transaction([
+        prisma.cardGameUpvote.create({
+          data: {
+            userId,
+            feedbackId,
+          },
+        }),
+        prisma.cardGameFeedback.update({
+          where: { id: feedbackId },
+          data: { upvoteCount: { increment: 1 } },
+        }),
+      ]);
       hasUpvoted = true;
     }
 
-    // Get updated upvote count
-    const upvoteCount = await prisma.cardGameUpvote.count({
-      where: { feedbackId },
+    // Get updated count from cached field
+    const updatedFeedback = await prisma.cardGameFeedback.findUnique({
+      where: { id: feedbackId },
+      select: { upvoteCount: true },
     });
 
-    return { hasUpvoted, upvoteCount };
+    return { hasUpvoted, upvoteCount: updatedFeedback?.upvoteCount || 0 };
   }
 
   // ============================================================================
@@ -507,6 +509,181 @@ export class CardGameService {
     await prisma.cardGameReply.delete({
       where: { id: replyId },
     });
+  }
+
+  /**
+   * Reply to another reply (nested reply)
+   */
+  static async replyToReply(
+    parentReplyId: string,
+    userId: string,
+    data: AddReplyRequest
+  ): Promise<ReplyResponse> {
+    // Verify parent reply exists
+    const parentReply = await prisma.cardGameReply.findUnique({
+      where: { id: parentReplyId },
+    });
+
+    if (!parentReply) {
+      throw new AppError('Parent reply not found', 404);
+    }
+
+    // Prevent deeply nested replies (max 2 levels: reply -> reply -> reply)
+    if (parentReply.parentReplyId) {
+      throw new AppError('Cannot reply to a nested reply. Reply to the parent reply instead.', 400);
+    }
+
+    // Create the nested reply
+    const reply = await prisma.cardGameReply.create({
+      data: {
+        userId,
+        feedbackId: parentReply.feedbackId,
+        parentReplyId,
+        text: data.text,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return reply;
+  }
+
+  /**
+   * Toggle upvote on a reply
+   */
+  static async toggleReplyUpvote(
+    replyId: string,
+    userId: string
+  ): Promise<{ hasUpvoted: boolean; upvoteCount: number }> {
+    // Check if reply exists
+    const reply = await prisma.cardGameReply.findUnique({
+      where: { id: replyId },
+    });
+
+    if (!reply) {
+      throw new AppError('Reply not found', 404);
+    }
+
+    // Check if already upvoted
+    const existingUpvote = await prisma.cardGameReplyUpvote.findUnique({
+      where: {
+        userId_replyId: {
+          userId,
+          replyId,
+        },
+      },
+    });
+
+    let hasUpvoted: boolean;
+
+    if (existingUpvote) {
+      // Remove upvote and decrement count
+      await prisma.$transaction([
+        prisma.cardGameReplyUpvote.delete({
+          where: { id: existingUpvote.id },
+        }),
+        prisma.cardGameReply.update({
+          where: { id: replyId },
+          data: { upvoteCount: { decrement: 1 } },
+        }),
+      ]);
+      hasUpvoted = false;
+    } else {
+      // Add upvote and increment count
+      await prisma.$transaction([
+        prisma.cardGameReplyUpvote.create({
+          data: {
+            userId,
+            replyId,
+          },
+        }),
+        prisma.cardGameReply.update({
+          where: { id: replyId },
+          data: { upvoteCount: { increment: 1 } },
+        }),
+      ]);
+      hasUpvoted = true;
+    }
+
+    // Get updated count from cached field
+    const updatedReply = await prisma.cardGameReply.findUnique({
+      where: { id: replyId },
+      select: { upvoteCount: true },
+    });
+
+    return { hasUpvoted, upvoteCount: updatedReply?.upvoteCount || 0 };
+  }
+
+  /**
+   * Helper to get reply include object with nested replies and upvote info
+   * Optimized: Uses cached upvoteCount field for fast sorting
+   */
+  private static getReplyInclude(currentUserId?: string, includeNested: boolean = true) {
+    const baseInclude = {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          profile: {
+            select: {
+              profilePicture: true,
+            },
+          },
+        },
+      },
+      cardGameReplyUpvotes: currentUserId
+        ? {
+            where: { userId: currentUserId },
+            select: { userId: true },
+          }
+        : false,
+      _count: {
+        select: {
+          childReplies: true,
+        },
+      },
+    };
+
+    if (includeNested) {
+      return {
+        ...baseInclude,
+        childReplies: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+            cardGameReplyUpvotes: currentUserId
+              ? {
+                  where: { userId: currentUserId },
+                  select: { userId: true },
+                }
+              : false,
+          },
+          orderBy: { createdAt: 'asc' as const },
+        },
+      };
+    }
+
+    return baseInclude;
   }
 
   // ============================================================================
@@ -752,11 +929,11 @@ export class CardGameService {
       createdAt: feedback.createdAt,
       updatedAt: feedback.updatedAt,
       user: feedback.user,
-      upvoteCount: feedback._count?.cardGameUpvotes || 0,
+      upvoteCount: feedback.upvoteCount || 0,
       hasUpvoted: currentUserId
         ? feedback.cardGameUpvotes?.some((u: any) => u.userId === currentUserId) || false
         : false,
-      replies: feedback.cardGameReplies?.map((r: any) => this.formatReply(r)),
+      replies: feedback.cardGameReplies?.map((r: any) => this.formatReply(r, currentUserId)),
       _count: feedback._count,
     };
   }
@@ -764,15 +941,22 @@ export class CardGameService {
   /**
    * Format reply response
    */
-  private static formatReply(reply: any): ReplyResponse {
+  private static formatReply(reply: any, currentUserId?: string): ReplyResponse {
     return {
       id: reply.id,
       userId: reply.userId,
       feedbackId: reply.feedbackId,
+      parentReplyId: reply.parentReplyId,
       text: reply.text,
+      upvoteCount: reply.upvoteCount || 0,
+      hasUpvoted: currentUserId
+        ? reply.cardGameReplyUpvotes?.some((u: any) => u.userId === currentUserId) || false
+        : false,
       createdAt: reply.createdAt,
       updatedAt: reply.updatedAt,
       user: reply.user,
+      childReplies: reply.childReplies?.map((r: any) => this.formatReply(r, currentUserId)),
+      _count: reply._count,
     };
   }
 
@@ -1381,5 +1565,200 @@ export class CardGameService {
           : undefined,
       },
     });
+  }
+
+  // ============================================================================
+  // QUESTION METHODS
+  // ============================================================================
+
+  /**
+   * Get all questions in a topic with stats
+   */
+  static async getTopicQuestions(topicId: string, currentUserId?: string) {
+    // Verify topic exists
+    const topic = await prisma.cardGameTopic.findUnique({
+      where: { id: topicId },
+    });
+
+    if (!topic) {
+      throw new AppError('Topic not found', 404);
+    }
+
+    // Get all questions for this topic
+    const questions = await prisma.cardGameQuestion.findMany({
+      where: { topicId, isActive: true },
+      orderBy: [
+        { sessionNumber: 'asc' },
+        { questionOrder: 'asc' },
+      ],
+    });
+
+    // Get feedback stats for each question
+    const questionStats = await Promise.all(
+      questions.map(async (question) => {
+        const stats = await prisma.cardGameFeedback.aggregate({
+          where: { questionId: question.id },
+          _count: { id: true },
+          _avg: { rating: true },
+        });
+
+        const upvoteCount = await prisma.cardGameUpvote.count({
+          where: {
+            cardGameFeedbacks: {
+              questionId: question.id,
+            },
+          },
+        });
+
+        // Check if current user has answered this question
+        let userAnswer = null;
+        if (currentUserId) {
+          userAnswer = await prisma.cardGameFeedback.findFirst({
+            where: {
+              questionId: question.id,
+              userId: currentUserId,
+            },
+            select: {
+              id: true,
+              rating: true,
+              comment: true,
+              createdAt: true,
+            },
+          });
+        }
+
+        return {
+          id: question.id,
+          topicId: question.topicId,
+          sessionNumber: question.sessionNumber,
+          questionOrder: question.questionOrder,
+          questionText: question.questionText,
+          stats: {
+            totalFeedback: stats._count.id,
+            averageRating: stats._avg.rating ? Math.round(stats._avg.rating * 10) / 10 : 0,
+            totalUpvotes: upvoteCount,
+          },
+          userAnswer,
+        };
+      })
+    );
+
+    return {
+      topicId,
+      topicTitle: topic.title,
+      totalQuestions: questions.length,
+      questions: questionStats,
+    };
+  }
+
+  /**
+   * Get all feedback for a specific question (sorted by upvotes)
+   */
+  static async getQuestionFeedback(
+    questionId: string,
+    currentUserId: string | undefined,
+    query: FeedbackQuery
+  ): Promise<PaginatedFeedbackResponse> {
+    // Verify question exists
+    const question = await prisma.cardGameQuestion.findUnique({
+      where: { id: questionId },
+      include: {
+        topic: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (!question) {
+      throw new AppError('Question not found', 404);
+    }
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const skip = (page - 1) * limit;
+
+    // Build where clause for this question
+    const where: Prisma.CardGameFeedbackWhereInput = {
+      questionId,
+    };
+
+    // Build orderBy - default to upvotes descending using cached field
+    const orderBy: Prisma.CardGameFeedbackOrderByWithRelationInput = {};
+    if (query.sortBy === 'upvotes' || !query.sortBy) {
+      orderBy.upvoteCount = 'desc';
+    } else if (query.sortBy === 'rating') {
+      orderBy.rating = query.sortOrder || 'desc';
+    } else {
+      orderBy.createdAt = query.sortOrder || 'desc';
+    }
+
+    // Determine whether to include nested replies (default: true)
+    const includeNested = query.includeNested !== false;
+
+    // Get feedback with all relations
+    const [feedbackList, total] = await Promise.all([
+      prisma.cardGameFeedback.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+          cardGameUpvotes: currentUserId
+            ? {
+                where: { userId: currentUserId },
+                select: { userId: true },
+              }
+            : false,
+          cardGameReplies: {
+            where: { parentReplyId: null },
+            include: this.getReplyInclude(currentUserId, includeNested),
+            orderBy: [
+              { upvoteCount: 'desc' },
+              { createdAt: 'asc' },
+            ],
+          },
+          _count: {
+            select: {
+              cardGameUpvotes: true,
+              cardGameReplies: true,
+            },
+          },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.cardGameFeedback.count({ where }),
+    ]);
+
+    return {
+      data: feedbackList.map((feedback) => this.formatFeedback(feedback)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+      meta: {
+        questionId: question.id,
+        questionText: question.questionText,
+        topicId: question.topic.id,
+        topicTitle: question.topic.title,
+        sessionNumber: question.sessionNumber,
+      },
+    };
   }
 }

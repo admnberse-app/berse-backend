@@ -190,6 +190,43 @@ export class CardGameController {
     }
   }
 
+  /**
+   * Reply to another reply (nested reply)
+   * @route POST /v2/cardgame/replies/:id/replies
+   */
+  static async replyToReply(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      const data: AddReplyRequest = req.body;
+
+      const reply = await CardGameService.replyToReply(id, userId, data);
+
+      logger.info(`Nested reply added to reply ${id} by user ${userId}`);
+      sendSuccess(res, reply, 'Reply added successfully', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Toggle upvote on a reply
+   * @route POST /v2/cardgame/replies/:id/upvote
+   */
+  static async toggleReplyUpvote(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+
+      const result = await CardGameService.toggleReplyUpvote(id, userId);
+
+      logger.info(`Upvote toggled on reply ${id} by user ${userId}: ${result.hasUpvoted}`);
+      sendSuccess(res, result, result.hasUpvoted ? 'Upvote added' : 'Upvote removed');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ============================================================================
   // STATISTICS ENDPOINTS
   // ============================================================================
@@ -498,6 +535,51 @@ export class CardGameController {
       const summary = await CardGameService.getSessionSummary(userId, topicId, sessionNum);
 
       sendSuccess(res, summary, 'Session summary retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ============================================================================
+  // QUESTION ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get all questions in a topic with stats
+   * @route GET /v2/cardgame/topics/:topicId/questions
+   */
+  static async getTopicQuestions(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { topicId } = req.params;
+      const userId = req.user?.id;
+
+      const questions = await CardGameService.getTopicQuestions(topicId, userId);
+
+      sendSuccess(res, questions, 'Topic questions retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get all feedback for a specific question
+   * @route GET /v2/cardgame/questions/:questionId/feedback
+   */
+  static async getQuestionFeedback(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { questionId } = req.params;
+      const userId = req.user?.id;
+      
+      const query: FeedbackQuery = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 20,
+        sortBy: (req.query.sortBy as any) || 'upvotes', // Default to upvotes
+        sortOrder: (req.query.sortOrder as any) || 'desc',
+      };
+
+      const result = await CardGameService.getQuestionFeedback(questionId, userId, query);
+
+      sendSuccess(res, result, 'Question feedback retrieved successfully');
     } catch (error) {
       next(error);
     }

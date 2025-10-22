@@ -85,6 +85,7 @@ export interface FeedbackQuery {
   sortBy?: 'createdAt' | 'rating' | 'upvotes';
   sortOrder?: 'asc' | 'desc';
   filters?: FeedbackFilters;
+  includeNested?: boolean; // Whether to include nested replies (default: true)
 }
 
 // ============================================================================
@@ -213,7 +214,10 @@ export interface ReplyResponse {
   id: string;
   userId: string;
   feedbackId: string;
+  parentReplyId?: string | null;
   text: string;
+  upvoteCount?: number;
+  hasUpvoted?: boolean;
   createdAt: Date;
   updatedAt: Date;
   
@@ -224,6 +228,10 @@ export interface ReplyResponse {
     profile?: {
       profilePicture?: string;
     };
+  };
+  childReplies?: ReplyResponse[]; // Nested replies
+  _count?: {
+    childReplies: number;
   };
 }
 
@@ -291,5 +299,12 @@ export interface PaginatedFeedbackResponse {
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;
+  };
+  meta?: {
+    questionId?: string;
+    questionText?: string;
+    topicId?: string;
+    topicTitle?: string;
+    sessionNumber?: number;
   };
 }
