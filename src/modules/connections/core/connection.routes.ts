@@ -388,6 +388,49 @@ router.put(
 
 /**
  * @swagger
+ * /v2/connections/status/{userId}:
+ *   get:
+ *     summary: Get connection status with another user
+ *     description: Check the connection status between current user and another user
+ *     tags: [Connections]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID to check connection status with
+ *     responses:
+ *       200:
+ *         description: Connection status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [CONNECTED, PENDING, BLOCKED, NONE]
+ *                       example: CONNECTED
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get(
+  '/status/:userId',
+  authenticateToken,
+  ConnectionController.getConnectionStatus
+);
+
+/**
+ * @swagger
  * /v2/connections/stats:
  *   get:
  *     summary: Get connection statistics

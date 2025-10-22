@@ -54,6 +54,49 @@ router.get('/profile', authenticateToken, UserController.getProfile);
 
 /**
  * @swagger
+ * /v2/users/me:
+ *   get:
+ *     summary: Get own profile (comprehensive)
+ *     description: |
+ *       Get complete profile information for the authenticated user.
+ *       This endpoint returns full profile data including statistics and trust information,
+ *       but excludes relationship and shared activities sections (use GET /users/:id for that).
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     profile:
+ *                       type: object
+ *                       description: Complete profile information (all fields visible)
+ *                     trust:
+ *                       type: object
+ *                       description: Trust score, badges, vouches, verifications
+ *                     statistics:
+ *                       type: object
+ *                       description: Connections, communities, events, marketplace, travel stats
+ *                     privacy:
+ *                       type: object
+ *                       description: Privacy settings
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/me', authenticateToken, UserController.getMyProfile);
+
+/**
+ * @swagger
  * /v2/users/profile:
  *   put:
  *     summary: Update user profile
@@ -1421,8 +1464,55 @@ router.get(
  * @swagger
  * /v2/users/{id}:
  *   get:
- *     summary: Get user by ID
- *     description: Get detailed profile information for a specific user
+ *     summary: Get user profile by ID (view another user)
+ *     description: |
+ *       Get complete profile information for **another user** with relationship context, statistics, 
+ *       shared activities, and privacy-aware data exposure.
+ *       
+ *       **⚠️ Important:** Cannot view your own profile via this endpoint. Use `GET /users/me` instead.
+ *       Attempting to view your own profile will return a 400 error directing you to `/users/me`.
+ *       
+ *       ## Response Sections:
+ *       
+ *       ### 1. Relationship (only when viewing another user)
+ *       - **Connection Status**: CONNECTED | PENDING | BLOCKED | NONE
+ *       - **Vouch Status**: GIVEN | RECEIVED | MUTUAL | PENDING_OFFER | NONE
+ *       - **Trust Match**: Compatibility score and level difference
+ *       - **Mutual Connections**: Count + top 5 mutual connections
+ *       
+ *       ### 2. Profile
+ *       - Basic information (name, username, bio, location)
+ *       - Privacy-controlled fields (email only shown if connected)
+ *       - Social links and interests
+ *       - Profile and cover photos
+ *       
+ *       ### 3. Trust & Reputation
+ *       - Trust score and level
+ *       - Badges earned
+ *       - Vouch counts (received/given/primary/secondary)
+ *       - Verifications (email, phone, identity, background)
+ *       
+ *       ### 4. Statistics
+ *       - Connections: total, this month
+ *       - Communities: member/moderator/founder counts
+ *       - Events: attended, hosting, upcoming
+ *       - Marketplace: active listings, sold items, rating
+ *       - Travel: trips completed, cities visited
+ *       - Card game: played, won, current streak
+ *       
+ *       ### 5. Shared Activities (only when viewing another user)
+ *       - Shared communities with roles
+ *       - Events attended together
+ *       - Travel trips together
+ *       - Marketplace interactions
+ *       
+ *       ### 6. Recent Activity
+ *       - Activity highlights (respecting visibility)
+ *       - Recent trust moments
+ *       
+ *       ### 7. Privacy & Permissions
+ *       - What actions are allowed (message, vouch, connect)
+ *       - Field visibility settings
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -1436,7 +1526,7 @@ router.get(
  *         description: User ID
  *     responses:
  *       200:
- *         description: User profile retrieved
+ *         description: Comprehensive user profile retrieved
  *         content:
  *           application/json:
  *             schema:
@@ -1446,7 +1536,355 @@ router.get(
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/User'
+ *                   type: object
+ *                   properties:
+ *                     relationship:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Only present when viewing another user's profile
+ *                       properties:
+ *                         connection:
+ *                           type: object
+ *                           properties:
+ *                             status:
+ *                               type: string
+ *                               enum: [CONNECTED, PENDING, BLOCKED, NONE]
+ *                             details:
+ *                               type: object
+ *                               nullable: true
+ *                               properties:
+ *                                 id:
+ *                                   type: string
+ *                                 status:
+ *                                   type: string
+ *                                 isInitiator:
+ *                                   type: boolean
+ *                                 relationshipType:
+ *                                   type: string
+ *                                 connectedAt:
+ *                                   type: string
+ *                                   format: date-time
+ *                                 requestedAt:
+ *                                   type: string
+ *                                   format: date-time
+ *                         vouch:
+ *                           type: object
+ *                           properties:
+ *                             status:
+ *                               type: string
+ *                               enum: [GIVEN, RECEIVED, MUTUAL, PENDING_OFFER, NONE]
+ *                             details:
+ *                               type: object
+ *                               nullable: true
+ *                         trustMatch:
+ *                           type: object
+ *                           nullable: true
+ *                           properties:
+ *                             compatible:
+ *                               type: boolean
+ *                             currentUserLevel:
+ *                               type: string
+ *                             profileUserLevel:
+ *                               type: string
+ *                             difference:
+ *                               type: integer
+ *                             canVouch:
+ *                               type: boolean
+ *                         mutualConnections:
+ *                           type: object
+ *                           properties:
+ *                             count:
+ *                               type: integer
+ *                             topConnections:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: string
+ *                                   fullName:
+ *                                     type: string
+ *                                   username:
+ *                                     type: string
+ *                                   profilePicture:
+ *                                     type: string
+ *                     profile:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         fullName:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                           nullable: true
+ *                           description: Only shown if connected or own profile
+ *                         phone:
+ *                           type: string
+ *                           nullable: true
+ *                         profilePicture:
+ *                           type: string
+ *                         coverPhoto:
+ *                           type: string
+ *                         bio:
+ *                           type: string
+ *                         tagline:
+ *                           type: string
+ *                         location:
+ *                           type: object
+ *                           nullable: true
+ *                           properties:
+ *                             city:
+ *                               type: string
+ *                             state:
+ *                               type: string
+ *                             country:
+ *                               type: string
+ *                             coordinates:
+ *                               type: object
+ *                               properties:
+ *                                 lat:
+ *                                   type: number
+ *                                 lng:
+ *                                   type: number
+ *                         birthDate:
+ *                           type: string
+ *                           format: date
+ *                           nullable: true
+ *                         gender:
+ *                           type: string
+ *                         interests:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         languages:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         occupation:
+ *                           type: string
+ *                         website:
+ *                           type: string
+ *                         socialLinks:
+ *                           type: object
+ *                           properties:
+ *                             instagram:
+ *                               type: string
+ *                             linkedin:
+ *                               type: string
+ *                         joinedAt:
+ *                           type: string
+ *                           format: date-time
+ *                         lastActiveAt:
+ *                           type: string
+ *                           format: date-time
+ *                     trust:
+ *                       type: object
+ *                       properties:
+ *                         score:
+ *                           type: number
+ *                         level:
+ *                           type: string
+ *                         badges:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               icon:
+ *                                 type: string
+ *                               earnedAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                         vouches:
+ *                           type: object
+ *                           properties:
+ *                             received:
+ *                               type: integer
+ *                             given:
+ *                               type: integer
+ *                             activePrimary:
+ *                               type: integer
+ *                             activeSecondary:
+ *                               type: integer
+ *                         verifications:
+ *                           type: object
+ *                           properties:
+ *                             email:
+ *                               type: boolean
+ *                             phone:
+ *                               type: boolean
+ *                             identity:
+ *                               type: boolean
+ *                             background:
+ *                               type: boolean
+ *                     statistics:
+ *                       type: object
+ *                       properties:
+ *                         connections:
+ *                           type: object
+ *                           properties:
+ *                             total:
+ *                               type: integer
+ *                             thisMonth:
+ *                               type: integer
+ *                         communities:
+ *                           type: object
+ *                           properties:
+ *                             member:
+ *                               type: integer
+ *                             moderator:
+ *                               type: integer
+ *                             founder:
+ *                               type: integer
+ *                         events:
+ *                           type: object
+ *                           properties:
+ *                             attended:
+ *                               type: integer
+ *                             hosting:
+ *                               type: integer
+ *                             upcoming:
+ *                               type: integer
+ *                         marketplace:
+ *                           type: object
+ *                           properties:
+ *                             activeListings:
+ *                               type: integer
+ *                             soldItems:
+ *                               type: integer
+ *                             rating:
+ *                               type: number
+ *                             transactions:
+ *                               type: integer
+ *                         travel:
+ *                           type: object
+ *                           properties:
+ *                             tripsCompleted:
+ *                               type: integer
+ *                             citiesVisited:
+ *                               type: integer
+ *                             upcomingTrips:
+ *                               type: integer
+ *                         cardGame:
+ *                           type: object
+ *                           properties:
+ *                             played:
+ *                               type: integer
+ *                             won:
+ *                               type: integer
+ *                             currentStreak:
+ *                               type: integer
+ *                     sharedActivities:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Only present when viewing another user's profile
+ *                       properties:
+ *                         communities:
+ *                           type: object
+ *                           properties:
+ *                             count:
+ *                               type: integer
+ *                             list:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                         events:
+ *                           type: object
+ *                           properties:
+ *                             count:
+ *                               type: integer
+ *                             recent:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                         travelTrips:
+ *                           type: object
+ *                           properties:
+ *                             count:
+ *                               type: integer
+ *                             trips:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                         marketplaceInteractions:
+ *                           type: object
+ *                           properties:
+ *                             transactionCount:
+ *                               type: integer
+ *                             hasOpenConversations:
+ *                               type: boolean
+ *                     recentActivity:
+ *                       type: object
+ *                       properties:
+ *                         highlights:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               type:
+ *                                 type: string
+ *                               title:
+ *                                 type: string
+ *                               date:
+ *                                 type: string
+ *                                 format: date-time
+ *                               visibility:
+ *                                 type: string
+ *                         trustMoments:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               type:
+ *                                 type: string
+ *                               description:
+ *                                 type: string
+ *                               points:
+ *                                 type: number
+ *                               date:
+ *                                 type: string
+ *                                 format: date-time
+ *                     privacy:
+ *                       type: object
+ *                       properties:
+ *                         profileVisibility:
+ *                           type: string
+ *                           enum: [PUBLIC, CONNECTIONS_ONLY, PRIVATE]
+ *                         canMessage:
+ *                           type: boolean
+ *                         canVouch:
+ *                           type: boolean
+ *                         canConnect:
+ *                           type: boolean
+ *                         showEmail:
+ *                           type: boolean
+ *                         showPhone:
+ *                           type: boolean
+ *                         showBirthDate:
+ *                           type: boolean
+ *                         showLocation:
+ *                           type: boolean
+ *       400:
+ *         description: Cannot view own profile via this endpoint
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Use /users/me to view your own profile"
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:

@@ -9,6 +9,7 @@ import { createId } from '@paralleldrive/cuid2';
 import crypto from 'crypto';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { RecommendationsService } from '../../services/recommendations.service';
+import { ConnectionStatus } from '@prisma/client';
 
 export class UserController {
   /**
@@ -1123,109 +1124,24 @@ export class UserController {
   }
 
   /**
-   * Get user by ID
-   * @route GET /v2/users/:id
+   * Get current user's profile (own profile)
+   * @route GET /v2/users/me
    */
-  static async getUserById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getMyProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
-      const currentUserId = req.user?.id;
+      const userId = req.user!.id;
 
+      // Fetch base user data
       const user = await prisma.user.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          fullName: true,
-          username: true,
-          role: true,
-          trustScore: true,
-          trustLevel: true,
-          createdAt: true,
-          profile: {
-            select: {
-              profilePicture: true,
-              bio: true,
-              shortBio: true,
-              interests: true,
-              languages: true,
-              profession: true,
-              occupation: true,
-              age: true,
-              gender: true,
-              personalityType: true,
-              travelStyle: true,
-              instagramHandle: true,
-              linkedinHandle: true,
-            },
-          },
-          location: {
-            select: {
-              currentCity: true,
-              originallyFrom: true,
-              countryOfResidence: true,
-              nationality: true,
-            },
-          },
-          _count: {
-            select: {
-              events: true,
-              eventParticipants: true,
-              userBadges: true,
-              connectionsInitiated: true,
-              connectionsReceived: true,
-            },
-          },
-          connectionStats: {
-            select: {
-              totalConnections: true,
-              averageRating: true,
-              connectionQuality: true,
-            },
-          },
-          // Include actual data for detailed display
-          eventParticipants: {
-            where: {
-              status: 'CHECKED_IN',
-            },
-            select: {
-              id: true,
-              eventId: true,
-              status: true,
-              qrCode: true,
-              checkedInAt: true,
-              events: {
-                select: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  type: true,
-                  images: true,
-                  date: true,
-                  location: true,
-                  mapLink: true,
-                },
-              },
-              createdAt: true,
-            },
-            orderBy: {
-              createdAt: 'desc',
-            },
-          },
+        where: { id: userId },
+        include: {
+          profile: true,
+          location: true,
+          privacy: true,
+          security: true,
           userBadges: {
-            select: {
-              id: true,
-              badgeId: true,
-              badges: {
-                select: {
-                  id: true,
-                  type: true,
-                  name: true,
-                  description: true,
-                  criteria: true,
-                  imageUrl: true,
-                },
-              },
-              earnedAt: true,
+            include: {
+              badges: true,
             },
             orderBy: {
               earnedAt: 'desc',
@@ -1238,277 +1154,944 @@ export class UserController {
         throw new AppError('User not found', 404);
       }
 
-      // Fetch communities the user is a member of
-      const communities = await prisma.communityMember.findMany({
-        where: {
-          userId: id,
-          isApproved: true,
+      // ==================== STATISTICS ====================
+      const [
+        connectionsCount,
+        connectionsThisMonth,
+        communitiesCounts,
+        eventsAttended,
+        eventsHosting,
+        eventsUpcoming,
+        marketplaceListings,
+        travelTrips,
+      ] = await Promise.all([
+        // Total connections
+        prisma.userConnection.count({
+          where: {
+            OR: [
+              { initiatorId: userId, status: ConnectionStatus.ACCEPTED },
+              { receiverId: userId, status: ConnectionStatus.ACCEPTED },
+            ],
+          },
+        }),
+        // Connections this month
+        prisma.userConnection.count({
+          where: {
+            OR: [
+              { initiatorId: userId, status: ConnectionStatus.ACCEPTED },
+              { receiverId: userId, status: ConnectionStatus.ACCEPTED },
+            ],
+            connectedAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
+          },
+        }),
+        // Communities grouped by role
+        prisma.communityMember.groupBy({
+          by: ['role'],
+          where: { userId, isApproved: true },
+          _count: true,
+        }),
+        // Events attended (checked in)
+        prisma.eventParticipant.count({
+          where: {
+            userId,
+            status: 'CHECKED_IN',
+          },
+        }),
+        // Events hosting
+        prisma.event.count({
+          where: {
+            hostId: userId,
+            status: 'PUBLISHED',
+          },
+        }),
+        // Events upcoming
+        prisma.eventParticipant.count({
+          where: {
+            userId,
+            status: 'REGISTERED',
+            events: {
+              date: { gte: new Date() },
+            },
+          },
+        }),
+        // Marketplace stats
+        prisma.marketplaceListing.groupBy({
+          by: ['status'],
+          where: { userId },
+          _count: true,
+        }),
+        // Travel stats
+        prisma.travelTrip.findMany({
+          where: { userId },
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+          },
+        }),
+      ]);
+
+      const statistics = {
+        connections: {
+          total: connectionsCount,
+          thisMonth: connectionsThisMonth,
         },
-        select: {
-          id: true,
-          role: true,
-          joinedAt: true,
-          communities: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              category: true,
-              imageUrl: true,
-              isVerified: true,
+        communities: {
+          member: communitiesCounts.find(c => c.role === 'MEMBER')?._count || 0,
+          moderator: communitiesCounts.find(c => c.role === 'MODERATOR')?._count || 0,
+          owner: communitiesCounts.find(c => c.role === 'OWNER')?._count || 0,
+        },
+        events: {
+          attended: eventsAttended,
+          hosting: eventsHosting,
+          upcoming: eventsUpcoming,
+        },
+        marketplace: {
+          activeListings: marketplaceListings.find(l => l.status === 'ACTIVE')?._count || 0,
+          soldItems: marketplaceListings.find(l => l.status === 'SOLD')?._count || 0,
+          rating: 0, // TODO: Calculate from reviews
+          transactions: marketplaceListings.reduce((sum, l) => sum + l._count, 0),
+        },
+        travel: {
+          tripsCompleted: travelTrips.filter(t => t.endDate && t.endDate < new Date()).length,
+          upcomingTrips: travelTrips.filter(t => t.startDate && t.startDate > new Date()).length,
+        },
+        cardGame: {
+          played: 0, // TODO: Implement when card game stats are available
+          won: 0,
+          currentStreak: 0,
+        },
+      };
+
+      // ==================== TRUST & REPUTATION ====================
+      const [vouchesReceived, vouchesGiven, activePrimaryVouches, activeSecondaryVouches] = await Promise.all([
+        prisma.vouch.count({
+          where: { voucheeId: userId, status: { in: ['APPROVED', 'ACTIVE'] } },
+        }),
+        prisma.vouch.count({
+          where: { voucherId: userId, status: { in: ['APPROVED', 'ACTIVE'] } },
+        }),
+        prisma.vouch.count({
+          where: { voucheeId: userId, vouchType: 'PRIMARY', status: 'ACTIVE' },
+        }),
+        prisma.vouch.count({
+          where: { voucheeId: userId, vouchType: 'SECONDARY', status: 'ACTIVE' },
+        }),
+      ]);
+
+      const trust = {
+        score: user.trustScore,
+        level: user.trustLevel,
+        badges: (user.userBadges || []).map(ub => ({
+          id: ub.badges.id,
+          name: ub.badges.name,
+          description: ub.badges.description,
+          imageUrl: ub.badges.imageUrl,
+          earnedAt: ub.earnedAt,
+        })),
+        vouches: {
+          received: vouchesReceived,
+          given: vouchesGiven,
+          activePrimary: activePrimaryVouches,
+          activeSecondary: activeSecondaryVouches,
+        },
+        verifications: {
+          email: !!user.security?.emailVerifiedAt,
+          phone: !!user.security?.phoneVerifiedAt,
+          identity: false, // TODO: Implement identity verification
+          background: false, // TODO: Implement background check
+        },
+      };
+
+      // ==================== BUILD RESPONSE ====================
+      const response = {
+        profile: {
+          id: user.id,
+          fullName: user.fullName,
+          displayName: user.profile?.displayName || null,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          profilePicture: user.profile?.profilePicture || null,
+          bio: user.profile?.bio || null,
+          shortBio: user.profile?.shortBio || null,
+          location: {
+            city: user.location?.currentCity || null,
+            country: user.location?.countryOfResidence || null,
+            coordinates: user.location?.latitude && user.location?.longitude ? {
+              lat: user.location.latitude,
+              lng: user.location.longitude,
+            } : null,
+          },
+          birthDate: user.profile?.dateOfBirth || null,
+          age: user.profile?.age || null,
+          gender: user.profile?.gender || null,
+          interests: user.profile?.interests || [],
+          languages: user.profile?.languages || [],
+          profession: user.profile?.profession || null,
+          occupation: user.profile?.occupation || null,
+          personalityType: user.profile?.personalityType || null,
+          travelStyle: user.profile?.travelStyle || null,
+          bucketList: user.profile?.bucketList || [],
+          travelBio: user.profile?.travelBio || null,
+          website: user.profile?.website || null,
+          socialLinks: {
+            instagram: user.profile?.instagramHandle || null,
+            linkedin: user.profile?.linkedinHandle || null,
+          },
+          joinedAt: user.createdAt,
+          lastActiveAt: user.security?.lastSeenAt || null,
+        },
+        trust,
+        statistics,
+        privacy: {
+          profileVisibility: user.privacy?.profileVisibility || 'public',
+          allowDirectMessages: user.privacy?.allowDirectMessages ?? true,
+        },
+      };
+
+      const finalResponse = UserController.transformUserResponse(response);
+      sendSuccess(res, finalResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user by ID (view another user's profile)
+   * @route GET /v2/users/:id
+   */
+  static async getUserById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const currentUserId = req.user?.id;
+
+      // Prevent using this endpoint for own profile
+      if (currentUserId === id) {
+        throw new AppError('Use /users/me to view your own profile', 400);
+      }
+
+      // Fetch base user data
+      const user = await prisma.user.findUnique({
+        where: { id },
+        include: {
+          profile: true,
+          location: true,
+          privacy: true,
+          security: true,
+          userBadges: {
+            include: {
+              badges: true,
+            },
+            orderBy: {
+              earnedAt: 'desc',
             },
           },
         },
-        orderBy: {
-          joinedAt: 'desc',
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // ==================== SECTION 1: RELATIONSHIP STATUS ====================
+      let relationship = {
+        connection: {
+          status: 'NONE' as 'CONNECTED' | 'PENDING' | 'BLOCKED' | 'NONE',
+          details: null as any,
         },
-      });
-
-      // Fetch marketplace listings
-      const marketplaceListings = await prisma.marketplaceListing.findMany({
-        where: {
-          userId: id,
-          status: 'ACTIVE',
+        vouch: {
+          status: 'NONE' as 'GIVEN' | 'RECEIVED' | 'MUTUAL' | 'PENDING_OFFER' | 'NONE',
+          details: null as any,
         },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          category: true,
-          price: true,
-          currency: true,
-          quantity: true,
-          images: true,
-          status: true,
-          location: true,
-          createdAt: true,
+        trustMatch: null as any,
+        mutualConnections: {
+          count: 0,
+          topConnections: [] as any[],
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+      };
 
-      // Count connections (accepted status)
-      const connectionsCount = await prisma.userConnection.count({
-        where: {
-          OR: [
-            { initiatorId: id, status: 'ACCEPTED' },
-            { receiverId: id, status: 'ACCEPTED' }
-          ]
-        }
-      });
-
-      // Count trust moments received (public only)
-      const trustMomentsReceived = await prisma.trustMoment.count({
-        where: {
-          receiverId: id,
-          isPublic: true
-        }
-      });
-
-      // Count trust moments given (public only)
-      const trustMomentsGiven = await prisma.trustMoment.count({
-        where: {
-          giverId: id,
-          isPublic: true
-        }
-      });
-
-      // Calculate mutual connections if viewing user is authenticated
-      let mutualConnectionsCount = 0;
-      let mutualConnections: any[] = [];
-      if (currentUserId && currentUserId !== id) {
-        // Get viewing user's connections
-        const viewerConnections = await prisma.userConnection.findMany({
-          where: {
-            OR: [
-              { initiatorId: currentUserId, status: 'ACCEPTED' },
-              { receiverId: currentUserId, status: 'ACCEPTED' }
-            ]
-          },
-          select: {
-            initiatorId: true,
-            receiverId: true
+      if (currentUserId) {
+        // Get connection status
+        const { ConnectionService } = await import('../connections/core/connection.service');
+        relationship.connection.status = await ConnectionService.getConnectionStatus(currentUserId, id);
+        
+        // Get connection details if exists
+        if (relationship.connection.status === 'CONNECTED' || relationship.connection.status === 'PENDING') {
+          const connection = await prisma.userConnection.findFirst({
+            where: {
+              OR: [
+                { initiatorId: currentUserId, receiverId: id },
+                { initiatorId: id, receiverId: currentUserId },
+              ],
+            },
+            select: {
+              id: true,
+              status: true,
+              initiatorId: true,
+              receiverId: true,
+              relationshipType: true,
+              connectedAt: true,
+              createdAt: true,
+            },
+          });
+          
+          if (connection) {
+            relationship.connection.details = {
+              id: connection.id,
+              status: connection.status,
+              isInitiator: connection.initiatorId === currentUserId,
+              relationshipType: connection.relationshipType,
+              connectedAt: connection.connectedAt,
+              requestedAt: connection.createdAt,
+            };
           }
+        }
+
+        // Get vouch status - check for MUTUAL first
+        const [vouchGiven, vouchReceived, vouchOffer] = await Promise.all([
+          prisma.vouch.findFirst({
+            where: {
+              voucherId: currentUserId,
+              voucheeId: id,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+            },
+            select: {
+              id: true,
+              vouchType: true,
+              status: true,
+              message: true,
+              isCommunityVouch: true,
+              communityId: true,
+              approvedAt: true,
+              activatedAt: true,
+              createdAt: true,
+            },
+          }),
+          prisma.vouch.findFirst({
+            where: {
+              voucherId: id,
+              voucheeId: currentUserId,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+            },
+            select: {
+              id: true,
+              vouchType: true,
+              status: true,
+              message: true,
+              isCommunityVouch: true,
+              communityId: true,
+              approvedAt: true,
+              activatedAt: true,
+              createdAt: true,
+            },
+          }),
+          prisma.communityVouchOffer.findFirst({
+            where: {
+              userId: id,
+              status: 'PENDING',
+            },
+            select: {
+              id: true,
+              communityId: true,
+              eligibilityReason: true,
+              createdAt: true,
+              expiresAt: true,
+              community: {
+                select: {
+                  id: true,
+                  name: true,
+                  imageUrl: true,
+                },
+              },
+            },
+          }),
+        ]);
+
+        // Determine vouch status
+        if (vouchGiven && vouchReceived) {
+          relationship.vouch.status = 'MUTUAL';
+          relationship.vouch.details = {
+            yourVouch: {
+              id: vouchGiven.id,
+              type: vouchGiven.vouchType,
+              message: vouchGiven.message,
+              givenAt: vouchGiven.createdAt,
+            },
+            theirVouch: {
+              id: vouchReceived.id,
+              type: vouchReceived.vouchType,
+              message: vouchReceived.message,
+              givenAt: vouchReceived.createdAt,
+            },
+          };
+        } else if (vouchGiven) {
+          relationship.vouch.status = 'GIVEN';
+          relationship.vouch.details = {
+            id: vouchGiven.id,
+            type: vouchGiven.vouchType,
+            status: vouchGiven.status,
+            message: vouchGiven.message,
+            isCommunityVouch: vouchGiven.isCommunityVouch,
+            communityId: vouchGiven.communityId,
+            givenAt: vouchGiven.createdAt,
+            direction: 'given',
+          };
+        } else if (vouchReceived) {
+          relationship.vouch.status = 'RECEIVED';
+          relationship.vouch.details = {
+            id: vouchReceived.id,
+            type: vouchReceived.vouchType,
+            status: vouchReceived.status,
+            message: vouchReceived.message,
+            isCommunityVouch: vouchReceived.isCommunityVouch,
+            communityId: vouchReceived.communityId,
+            givenAt: vouchReceived.createdAt,
+            direction: 'received',
+          };
+        } else if (vouchOffer) {
+          relationship.vouch.status = 'PENDING_OFFER';
+          relationship.vouch.details = {
+            id: vouchOffer.id,
+            communityId: vouchOffer.communityId,
+            community: vouchOffer.community,
+            eligibilityReason: vouchOffer.eligibilityReason,
+            expiresAt: vouchOffer.expiresAt,
+            direction: 'offer',
+          };
+        }
+
+        // Get trust match information
+        const { getTrustLevelInfo } = await import('../../middleware/trust-level.middleware');
+        const currentUserData = await prisma.user.findUnique({
+          where: { id: currentUserId },
+          select: { trustScore: true, trustLevel: true },
         });
+
+        if (currentUserData) {
+          const currentUserTrustInfo = await getTrustLevelInfo(currentUserData.trustScore);
+          const profileUserTrustInfo = await getTrustLevelInfo(user.trustScore);
+          
+          // Calculate trust level difference
+          const trustLevels = ['starter', 'trusted', 'scout', 'leader'];
+          const currentUserLevelIndex = trustLevels.indexOf(currentUserTrustInfo.level.toLowerCase());
+          const profileUserLevelIndex = trustLevels.indexOf(profileUserTrustInfo.level.toLowerCase());
+          const difference = Math.abs(currentUserLevelIndex - profileUserLevelIndex);
+
+          relationship.trustMatch = {
+            compatible: difference <= 1, // Within 1 level
+            currentUserLevel: currentUserTrustInfo.label,
+            profileUserLevel: profileUserTrustInfo.label,
+            difference,
+            canVouch: currentUserData.trustScore >= 50, // Minimum trust to vouch
+          };
+        }
+
+        // Get mutual connections
+        const [viewerConnections, profileConnections] = await Promise.all([
+          prisma.userConnection.findMany({
+            where: {
+              OR: [
+                { initiatorId: currentUserId, status: 'ACCEPTED' },
+                { receiverId: currentUserId, status: 'ACCEPTED' },
+              ],
+            },
+            select: { initiatorId: true, receiverId: true },
+          }),
+          prisma.userConnection.findMany({
+            where: {
+              OR: [
+                { initiatorId: id, status: 'ACCEPTED' },
+                { receiverId: id, status: 'ACCEPTED' },
+              ],
+            },
+            select: { initiatorId: true, receiverId: true },
+          }),
+        ]);
 
         const viewerConnectionIds = viewerConnections.map(conn => 
           conn.initiatorId === currentUserId ? conn.receiverId : conn.initiatorId
         );
-
-        // Get profile user's connections
-        const profileConnections = await prisma.userConnection.findMany({
-          where: {
-            OR: [
-              { initiatorId: id, status: 'ACCEPTED' },
-              { receiverId: id, status: 'ACCEPTED' }
-            ]
-          },
-          select: {
-            initiatorId: true,
-            receiverId: true
-          }
-        });
-
         const profileConnectionIds = profileConnections.map(conn => 
           conn.initiatorId === id ? conn.receiverId : conn.initiatorId
         );
 
-        // Find mutual connections
         const mutualIds = viewerConnectionIds.filter(connId => 
           profileConnectionIds.includes(connId)
         );
 
-        mutualConnectionsCount = mutualIds.length;
+        relationship.mutualConnections.count = mutualIds.length;
 
-        // Optionally fetch mutual connection details (first 5)
         if (mutualIds.length > 0) {
-          mutualConnections = await prisma.user.findMany({
-            where: {
-              id: { in: mutualIds.slice(0, 5) }
-            },
+          const mutualUsers = await prisma.user.findMany({
+            where: { id: { in: mutualIds.slice(0, 5) } },
             select: {
               id: true,
               fullName: true,
               username: true,
               profile: {
-                select: {
-                  profilePicture: true
-                }
-              }
-            }
+                select: { profilePicture: true },
+              },
+            },
           });
+
+          relationship.mutualConnections.topConnections = mutualUsers.map(u => ({
+            id: u.id,
+            fullName: u.fullName,
+            username: u.username,
+            profilePicture: u.profile?.profilePicture || null,
+          }));
         }
       }
 
-      // Get trust level gating information
-      const { getTrustLevelInfo, FEATURE_REQUIREMENTS } = await import('../../middleware/trust-level.middleware');
-      const trustLevelInfo = await getTrustLevelInfo(user.trustScore);
-
-      // Determine available features based on trust score (for viewing user's perspective)
-      const availableFeatures: string[] = [];
-      const lockedFeatures: Array<{ feature: string; requiredScore: number }> = [];
-
-      Object.entries(FEATURE_REQUIREMENTS).forEach(([feature, requiredScore]) => {
-        if (user.trustScore >= requiredScore) {
-          availableFeatures.push(feature);
-        } else {
-          lockedFeatures.push({ feature, requiredScore });
-        }
-      });
-
-      // Transform response with expanded details (unified format)
-      const transformedUser = {
-        ...user,
-        // Member since (month and year only)
-        memberSince: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { 
-          month: 'long', 
-          year: 'numeric' 
-        }) : null,
-        // Trust Level Gating Information
-        trustLevelGating: {
-          currentLevel: {
-            name: trustLevelInfo.level,
-            label: trustLevelInfo.label,
-            minScore: trustLevelInfo.min,
-            maxScore: trustLevelInfo.max,
-            currentScore: Math.round(user.trustScore * 10) / 10,
-            percentage: Math.round((user.trustScore / trustLevelInfo.max) * 100),
+      // ==================== SECTION 2: STATISTICS ====================
+      const [
+        connectionsCount,
+        connectionsThisMonth,
+        communitiesCounts,
+        eventsAttendedCount,
+        eventsHostingCount,
+        eventsUpcomingCount,
+        marketplaceStats,
+        travelStatsData,
+        cardGameCount,
+        vouchCounts,
+      ] = await Promise.all([
+        // Connections total
+        prisma.userConnection.count({
+          where: {
+            OR: [
+              { initiatorId: id, status: 'ACCEPTED' },
+              { receiverId: id, status: 'ACCEPTED' },
+            ],
           },
-          nextLevel: trustLevelInfo.nextLevel || null,
-          availableFeatures,
-          lockedFeatures: lockedFeatures.slice(0, 5), // Show top 5 locked features
-          totalFeaturesAvailable: availableFeatures.length,
-          totalFeaturesLocked: lockedFeatures.length,
-        },
-        // Connection and trust metrics
-        connections: {
-          count: connectionsCount,
-          mutualConnections: currentUserId && currentUserId !== id ? {
-            count: mutualConnectionsCount,
-            users: mutualConnections.map(u => ({
-              id: u.id,
-              fullName: u.fullName,
-              username: u.username,
-              profilePicture: u.profile?.profilePicture || null
-            }))
-          } : undefined
-        },
-        trustMoments: {
-          received: trustMomentsReceived,
-          given: trustMomentsGiven,
-          total: trustMomentsReceived + trustMomentsGiven
-        },
+        }),
+        // Connections this month
+        prisma.userConnection.count({
+          where: {
+            OR: [
+              { initiatorId: id, status: 'ACCEPTED' },
+              { receiverId: id, status: 'ACCEPTED' },
+            ],
+            connectedAt: {
+              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            },
+          },
+        }),
+        // Communities counts
+        prisma.communityMember.groupBy({
+          by: ['role'],
+          where: {
+            userId: id,
+            isApproved: true,
+          },
+          _count: true,
+        }),
         // Events attended
-        eventsAttended: {
-          count: user.eventParticipants.length,
-          events: user.eventParticipants.map(participant => ({
-            id: participant.events.id,
-            title: participant.events.title,
-            description: participant.events.description,
-            type: participant.events.type,
-            eventImage: participant.events.images?.[0] || null,
-            date: participant.events.date,
-            location: participant.events.location,
-            mapLink: participant.events.mapLink,
-            participationDate: participant.createdAt,
-            checkedInAt: participant.checkedInAt,
-          })),
+        prisma.eventParticipant.count({
+          where: {
+            userId: id,
+            status: 'CHECKED_IN',
+          },
+        }),
+        // Events hosting
+        prisma.event.count({
+          where: {
+            hostId: id,
+            status: 'PUBLISHED',
+          },
+        }),
+        // Events upcoming
+        prisma.eventParticipant.count({
+          where: {
+            userId: id,
+            status: 'REGISTERED',
+            events: {
+              date: { gte: new Date() },
+            },
+          },
+        }),
+        // Marketplace stats
+        prisma.marketplaceListing.groupBy({
+          by: ['status'],
+          where: { userId: id },
+          _count: true,
+        }),
+        // Travel stats
+        prisma.travelTrip.findMany({
+          where: { userId: id },
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            endDate: true,
+          },
+        }),
+        // Card game stats - count sessions
+        prisma.cardGameSession.count({
+          where: { userId: id },
+        }),
+        // Vouch counts
+        Promise.all([
+          prisma.vouch.count({
+            where: {
+              voucheeId: id,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+            },
+          }),
+          prisma.vouch.count({
+            where: {
+              voucherId: id,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+            },
+          }),
+          prisma.vouch.count({
+            where: {
+              voucheeId: id,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+              vouchType: 'PRIMARY',
+            },
+          }),
+          prisma.vouch.count({
+            where: {
+              voucheeId: id,
+              status: { in: ['APPROVED', 'ACTIVE'] },
+              vouchType: 'SECONDARY',
+            },
+          }),
+        ]),
+      ]);
+
+      const statistics = {
+        connections: {
+          total: connectionsCount,
+          thisMonth: connectionsThisMonth,
         },
-        // Communities
         communities: {
-          count: communities.length,
-          list: communities.map(member => ({
-            id: member.communities.id,
-            name: member.communities.name,
-            description: member.communities.description,
-            category: member.communities.category,
-            imageUrl: member.communities.imageUrl,
-            isVerified: member.communities.isVerified,
-            userRole: member.role,
-            joinedAt: member.joinedAt,
-          })),
+          member: communitiesCounts.find(c => c.role === 'MEMBER')?._count || 0,
+          moderator: communitiesCounts.find(c => c.role === 'MODERATOR')?._count || 0,
+          // founder: communitiesCounts.find(c => c.role === 'ADMIN')?._count || 0,
         },
-        // Marketplace listings
-        marketplaceListings: {
-          count: marketplaceListings.length,
-          listings: marketplaceListings.map(listing => ({
-            id: listing.id,
-            title: listing.title,
-            description: listing.description,
-            category: listing.category,
-            price: listing.price,
-            currency: listing.currency,
-            quantity: listing.quantity,
-            images: listing.images,
-            status: listing.status,
-            location: listing.location,
-            createdAt: listing.createdAt,
-          })),
+        events: {
+          attended: eventsAttendedCount,
+          hosting: eventsHostingCount,
+          upcoming: eventsUpcomingCount,
         },
-        // Badges
-        badges: {
-          count: user.userBadges.length,
-          list: user.userBadges.map(ub => ({
-            id: ub.badges.id,
-            type: ub.badges.type,
-            name: ub.badges.name,
-            description: ub.badges.description,
-            criteria: ub.badges.criteria,
-            imageUrl: ub.badges.imageUrl,
-            earnedAt: ub.earnedAt,
-          })),
+        marketplace: {
+          activeListings: marketplaceStats.find(s => s.status === 'ACTIVE')?._count || 0,
+          soldItems: marketplaceStats.find(s => s.status === 'SOLD')?._count || 0,
+          rating: 0, // TODO: Calculate from marketplace reviews
+          transactions: marketplaceStats.reduce((sum, s) => sum + s._count, 0),
+        },
+        travel: {
+          tripsCompleted: travelStatsData.filter(t => new Date(t.endDate) < new Date()).length,
+          citiesVisited: new Set(travelStatsData.map(t => t.title)).size,
+          upcomingTrips: travelStatsData.filter(t => new Date(t.startDate) > new Date()).length,
+        },
+        cardGame: {
+          played: cardGameCount,
+          won: 0, // TODO: Track wins separately
+          currentStreak: 0, // TODO: Calculate streak
         },
       };
 
-      // Remove raw eventParticipants and userBadges arrays (now in formatted sections)
-      delete (transformedUser as any).eventParticipants;
-      delete (transformedUser as any).userBadges;
+      // ==================== SECTION 3: SHARED ACTIVITIES ====================
+      let sharedActivities = {
+        communities: { count: 0, list: [] as any[] },
+        events: { count: 0, recent: [] as any[] },
+        travelTrips: { count: 0, trips: [] as any[] },
+        marketplaceInteractions: {
+          transactionCount: 0,
+          hasOpenConversations: false,
+        },
+      };
+
+      if (currentUserId) {
+        // Shared communities
+        const sharedCommunities = await prisma.communityMember.findMany({
+          where: {
+            userId: id,
+            isApproved: true,
+            communities: {
+              communityMembers: {
+                some: {
+                  userId: currentUserId,
+                  isApproved: true,
+                },
+            },
+          },
+        },
+        include: {
+          communities: {
+            include: {
+              communityMembers: {
+                where: { userId: currentUserId },
+              },
+            },
+          },
+        },
+        take: 10,
+      });
+
+      sharedActivities.communities = {
+        count: sharedCommunities.length,
+        list: sharedCommunities.map(cm => ({
+          id: cm.communities.id,
+          name: cm.communities.name,
+          logo: cm.communities.imageUrl,
+          memberSince: cm.joinedAt,
+          roles: {
+            currentUser: cm.communities.communityMembers[0]?.role || 'MEMBER',
+            profileUser: cm.role,
+          },
+        })),
+      };        // Shared events
+        const sharedEvents = await prisma.eventParticipant.findMany({
+          where: {
+            userId: id,
+            events: {
+              eventParticipants: {
+                some: {
+                  userId: currentUserId,
+                },
+              },
+            },
+          },
+          select: {
+            events: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                type: true,
+                eventParticipants: {
+                  where: {
+                    OR: [
+                      { userId: currentUserId },
+                      { userId: id },
+                    ],
+                  },
+                  select: {
+                    userId: true,
+                    status: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            events: {
+              date: 'desc',
+            },
+          },
+          take: 5,
+        });
+
+        sharedActivities.events = {
+          count: sharedEvents.length,
+          recent: sharedEvents.map(ep => ({
+            id: ep.events.id,
+            title: ep.events.title,
+            date: ep.events.date,
+            type: ep.events.type,
+            attendedTogether: ep.events.eventParticipants.every(p => p.status === 'CHECKED_IN'),
+          })),
+        };
+
+        // Shared travel trips (via companions)
+        const sharedTrips = await prisma.travelCompanion.findMany({
+          where: {
+            OR: [
+              {
+                userId: id,
+                companionId: currentUserId,
+              },
+              {
+                userId: currentUserId,
+                companionId: id,
+              },
+            ],
+          },
+          include: {
+            travelTrips: true,
+          },
+          take: 5,
+        });
+
+        sharedActivities.travelTrips = {
+          count: sharedTrips.length,
+          trips: sharedTrips.map(tc => tc.travelTrips),
+        };
+
+        // Marketplace interactions
+        const marketplaceTransactions = await prisma.marketplaceOrder.count({
+          where: {
+            OR: [
+              { buyerId: currentUserId, sellerId: id },
+              { buyerId: id, sellerId: currentUserId },
+            ],
+          },
+        });
+
+        sharedActivities.marketplaceInteractions = {
+          transactionCount: marketplaceTransactions,
+          hasOpenConversations: false, // TODO: Check messages
+        };
+      }
+
+      // ==================== SECTION 4: RECENT ACTIVITY ====================
+      const [recentActivities, recentTrustMoments] = await Promise.all([
+        prisma.userActivity.findMany({
+          where: {
+            userId: id,
+            visibility: 'PUBLIC',
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            activityType: true,
+            createdAt: true,
+            visibility: true,
+          },
+        }),
+        prisma.trustMoment.findMany({
+          where: {
+            receiverId: id,
+            isPublic: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: {
+            id: true,
+            momentType: true,
+            experienceDescription: true,
+            trustImpact: true,
+            createdAt: true,
+          },
+        }),
+      ]);
+
+      const recentActivity = {
+        highlights: recentActivities.map(activity => ({
+          type: activity.activityType,
+          title: activity.activityType, // Use activityType as title
+          date: activity.createdAt,
+          visibility: activity.visibility,
+        })),
+        trustMoments: recentTrustMoments.map(tm => ({
+          id: tm.id,
+          type: tm.momentType,
+          description: tm.experienceDescription || '',
+          points: tm.trustImpact,
+          date: tm.createdAt,
+        })),
+      };
+
+      // ==================== SECTION 5: PRIVACY & PERMISSIONS ====================
+      const isConnected = relationship.connection.status === 'CONNECTED';
+      const privacy = {
+        profileVisibility: user.privacy?.profileVisibility || 'public',
+        canMessage: isConnected || (user.privacy?.allowDirectMessages ?? true),
+        canVouch: isConnected && (relationship.vouch.status === 'NONE'),
+        canConnect: relationship.connection.status === 'NONE',
+        showEmail: isConnected,
+        showPhone: isConnected,
+        showBirthDate: false, // Never show birth date when viewing others
+        showLocation: true, // Always show location
+      };
+
+      // ==================== SECTION 6: TRUST & REPUTATION ====================
+      const { getTrustLevelInfo } = await import('../../middleware/trust-level.middleware');
+      const trustLevelInfo = await getTrustLevelInfo(user.trustScore);
+
+      const trust = {
+        score: Math.round(user.trustScore * 10) / 10,
+        level: user.trustLevel,
+        badges: (user.userBadges || []).map(ub => ({
+          id: ub.badges.id,
+          name: ub.badges.name,
+          icon: ub.badges.imageUrl,
+          earnedAt: ub.earnedAt,
+        })),
+        vouches: {
+          received: vouchCounts[0],
+          given: vouchCounts[1],
+          activePrimary: vouchCounts[2],
+          activeSecondary: vouchCounts[3],
+        },
+        verifications: {
+          email: !!user.security?.emailVerifiedAt,
+          phone: !!user.security?.phoneVerifiedAt,
+          identity: false, // Not tracked in schema
+          background: false, // Not tracked in schema
+        },
+      };
+
+      // ==================== SECTION 7: BUILD FINAL RESPONSE ====================
+      const response = {
+        // Relationship status (always included when viewing others)
+        relationship: currentUserId ? relationship : undefined,
+
+        // Basic profile information
+        profile: {
+        id: user.id,
+        fullName: user.fullName,
+        displayName: user.profile?.displayName || null,
+        username: user.username,
+        email: privacy.showEmail ? user.email : null,
+        phone: privacy.showPhone ? user.phone : null,
+        profilePicture: user.profile?.profilePicture || null,
+        bio: user.profile?.bio || null,
+        shortBio: user.profile?.shortBio || null,
+        location: privacy.showLocation ? {
+          city: user.location?.currentCity || null,
+          country: user.location?.countryOfResidence || null,
+          coordinates: user.location?.latitude && user.location?.longitude ? {
+            lat: user.location.latitude,
+            lng: user.location.longitude,
+          } : null,
+        } : null,
+        birthDate: privacy.showBirthDate ? user.profile?.dateOfBirth : null,
+        age: user.profile?.age || null,
+        gender: user.profile?.gender || null,
+        interests: user.profile?.interests || [],
+        languages: user.profile?.languages || [],
+        profession: user.profile?.profession || null,
+        occupation: user.profile?.occupation || null,
+        personalityType: user.profile?.personalityType || null,
+        travelStyle: user.profile?.travelStyle || null,
+        bucketList: user.profile?.bucketList || [],
+        travelBio: user.profile?.travelBio || null,
+        website: user.profile?.website || null,
+        socialLinks: {
+          instagram: user.profile?.instagramHandle || null,
+          linkedin: user.profile?.linkedinHandle || null,
+        },
+        joinedAt: user.createdAt,
+        lastActiveAt: user.security?.lastSeenAt || null,
+      },
+
+        // Trust & reputation
+        trust,
+
+        // Activity statistics
+        statistics,
+
+        // Shared activities (always included when viewing others)
+        sharedActivities: currentUserId ? sharedActivities : undefined,
+
+        // Recent activity
+        recentActivity,
+
+        // Privacy & visibility controls
+        privacy,
+      };
 
       // Apply URL transformations
-      const finalUser = UserController.transformUserResponse(transformedUser);
+      const finalResponse = UserController.transformUserResponse(response);
 
-      sendSuccess(res, finalUser);
+      sendSuccess(res, finalResponse);
     } catch (error) {
       next(error);
     }

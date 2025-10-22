@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v2.2.0] - 2025-10-21
+
+### 🎉 Enhanced - Profile Metadata & Documentation
+
+#### Profile Metadata API
+- **Enhanced Username Validation** with user-friendly messaging
+  - Context-specific messages for different validation scenarios
+  - Mobile-optimized responses for better UX
+  - Smart suggestions when username is unavailable
+  - Clear guidance instead of technical validation data
+
+#### Documentation Organization
+- **Unified Documentation Structure** in `/docs/api-v2/`
+- **Comprehensive Profile Metadata Guide** with integration examples
+- **Enhanced Swagger Documentation** with detailed response examples
+- **Mobile Integration Patterns** for Flutter/mobile apps
+
+#### New Documentation Files
+- `PROFILE_METADATA_INDEX.md` - Profile metadata documentation hub
+- `PROFILE_METADATA_QUICKREF.md` - Developer quick reference
+- `USERNAME_VALIDATION_TEST_RESULTS.md` - Comprehensive test results
+- `API_DOCUMENTATION_STRUCTURE.md` - Documentation organization guide
+
+#### API Improvements
+- **Better Response Structure** for username validation
+- **User-Friendly Messages** in API responses
+- **Enhanced Error Handling** with contextual messages
+- **Mobile-First Design** for profile completion flows
+
+---
+
 ## [v2.1.0] - 2025-10-15
 
 ### 🆕 Added - Device & Location Tracking

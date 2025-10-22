@@ -274,6 +274,27 @@ export class ConnectionController {
   }
 
   /**
+   * Get connection status with another user
+   * @route GET /v2/connections/status/:userId
+   */
+  static async getConnectionStatus(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const currentUserId = req.user!.id;
+      const { userId } = req.params;
+
+      const status = await ConnectionService.getConnectionStatus(currentUserId, userId);
+
+      sendSuccess(res, { status }, 'Connection status retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get connection stats
    * @route GET /v2/connections/stats
    */

@@ -9,18 +9,23 @@ The User API provides endpoints for managing user profiles, searching users, and
 
 **Authentication:** All endpoints require a valid JWT access token.
 
-**Version:** v2.1.0 (Updated: October 17, 2025)
+**Version:** v2.2.0 (Updated: October 22, 2025)
 
 > **Note:** v2 endpoints do not include the `/api/` prefix. Legacy v1 endpoints are still available at `/api/v1/users` for backward compatibility.
 
 ## 🚀 Quick Start
 
-**1. Get User Profile:**
+**1. Get Your Own Profile:**
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3001/v2/users/profile
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3001/v2/users/me
 ```
 
-**2. Find Users:**
+**2. View Another User's Profile:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3001/v2/users/USER_ID
+```
+
+**3. Find Users:**
 ```bash
 # Get all users (discovery)
 curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3001/v2/users/all?limit=10"
@@ -32,7 +37,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3001/v2/users/searc
 curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3001/v2/users/search?city=kuala%20lumpur"
 ```
 
-**3. Send Connection Request:**
+**4. Send Connection Request:**
 ```bash
 curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
@@ -40,7 +45,7 @@ curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
   "http://localhost:3001/v2/users/connections/USER_ID/request"
 ```
 
-**4. Nearby Users (Geospatial Search):**
+**5. Nearby Users (Geospatial Search):**
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
   "http://localhost:3001/v2/users/nearby?latitude=3.1390&longitude=101.6869&radius=10"
@@ -50,9 +55,16 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ---
 
-## ⚠️ Important Updates (v2.1.0)
+## ⚠️ Important Updates (v2.2.0)
 
-**Latest Features (October 17, 2025):**
+**Latest Features (October 22, 2025):**
+- ✅ **Endpoint Separation**: New `/users/me` for own profile, `/users/:id` for viewing others with relationship context
+- ✅ **Relationship-Aware Profiles**: `/users/:id` now shows connection status, vouch status, trust match, and mutual connections
+- ✅ **Shared Activities**: View shared communities, events, travel trips, and marketplace interactions with other users
+- ✅ **Privacy Controls**: Enhanced privacy settings control what data is visible based on connection status
+- ✅ **Trust Compatibility**: Automatic trust level compatibility calculation when viewing other users
+
+**Previous Features (v2.1.0 - October 17, 2025):**
 - ✅ **Trust Score System**: `trustScore` and `trustLevel` now included in user profile (calculated from vouches, activity, trust moments)
 - ✅ **Security Fields**: New `security` object with `emailVerifiedAt`, `phoneVerifiedAt`, `mfaEnabled`, `lastLoginAt`
 - ✅ **Notification System**: Complete in-app notification system for user actions
@@ -80,7 +92,8 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ## Table of Contents
 - [Profile Management](#profile-management)
-  - [Get Profile](#get-profile)
+  - [Get Own Profile (NEW)](#get-own-profile)
+  - [Get User Profile by ID (ENHANCED)](#get-user-profile-by-id)
   - [Update Profile](#update-profile)
   - [Upload Avatar](#upload-avatar)
 - [User Discovery](#user-discovery)
@@ -114,10 +127,29 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 
 ## Profile Management
 
-### Get Profile
-Get the current user's complete profile.
+### Endpoint Comparison: `/users/me` vs `/users/:id`
 
-**Endpoint:** `GET /v2/users/profile`
+| Feature | `/users/me` | `/users/:id` |
+|---------|-------------|--------------|
+| **Purpose** | View your own profile | View another user's profile |
+| **Use Case** | Profile settings, edit screens | Profile discovery, community browsing |
+| **Relationship Section** | ❌ No | ✅ Yes (connection, vouch, trust match) |
+| **Shared Activities** | ❌ No | ✅ Yes (communities, events, travel, marketplace) |
+| **Privacy Controls** | ✅ Full visibility | ⚠️ Privacy-controlled (based on connection) |
+| **Email/Phone** | ✅ Always shown | ⚠️ Only if connected or public |
+| **Birth Date** | ✅ Always shown | ❌ Never shown (privacy) |
+| **Statistics** | ✅ Yes | ✅ Yes |
+| **Action Permissions** | ✅ Basic privacy settings | ✅ Full (canMessage, canVouch, canConnect) |
+| **Self-Viewing** | ✅ Allowed | ❌ Returns error → use `/users/me` |
+
+---
+
+### Get Own Profile
+Get your own complete profile with full visibility and statistics. Use this endpoint for profile settings and edit screens.
+
+**Endpoint:** `GET /v2/users/me`
+
+**🆕 NEW (v2.2.0):** Replaces `/users/profile` for viewing your own profile. Attempting to view your own profile via `/users/:id` will return an error directing you here.
 
 **Headers:**
 ```
@@ -129,77 +161,102 @@ Authorization: Bearer <access_token>
 {
   "success": true,
   "data": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "phone": "+60123456789",
-    "fullName": "John Doe",
-    "username": "johndoe",
-    "role": "GENERAL_USER",
-    "totalPoints": 150,
-    "trustScore": 72.5,
-    "trustLevel": "ESTABLISHED",
-    "createdAt": "2024-01-01T00:00:00.000Z",
-    "updatedAt": "2024-01-15T10:30:00.000Z",
     "profile": {
-      "displayName": "Johnny",
-      "profilePicture": "https://cdn.bersemuka.com/avatars/uuid.jpg",
-      "bio": "Adventurous traveler exploring Southeast Asia...",
-      "shortBio": "Traveler | Photographer | Coffee Enthusiast",
-      "dateOfBirth": "1990-01-15T00:00:00.000Z",
+      "id": "cmh09ovv70004cp7n6qtne205",
+      "fullName": "David Lim",
+      "displayName": "David L",
+      "username": "davidtech",
+      "email": "david.tech@berseapp.com",
+      "phone": "+60123456793",
+      "profilePicture": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+      "bio": "Software engineer at a fintech startup. Love attending tech meetups...",
+      "shortBio": "Software engineer & tech enthusiast",
+      "location": {
+        "city": "Alor Setar",
+        "country": "Malaysia",
+        "coordinates": null
+      },
+      "birthDate": "1995-09-18T00:00:00.000Z",
+      "age": null,
       "gender": "male",
-      "age": 34,
+      "interests": ["technology", "coding", "ai", "blockchain", "gaming"],
+      "languages": ["en", "zh", "ms"],
       "profession": "Software Engineer",
-      "occupation": "Full Stack Developer",
-      "website": "https://johndoe.com",
-      "personalityType": "ENFP",
-      "interests": ["travel", "photography", "coffee", "hiking"],
-      "languages": ["English", "Bahasa Malaysia", "Spanish"],
-      "instagramHandle": "johndoe",
-      "linkedinHandle": "john-doe",
-      "travelStyle": "backpacker",
-      "bucketList": ["Japan", "Iceland", "New Zealand"],
-      "travelBio": "Slow traveler seeking authentic experiences",
-      "locationPrivacy": "friends"
+      "occupation": "mobile",
+      "personalityType": null,
+      "travelStyle": "Adventure Seeker",
+      "bucketList": ["indonesia"],
+      "travelBio": "Love exploring new places",
+      "website": null,
+      "socialLinks": {
+        "instagram": "myig",
+        "linkedin": null
+      },
+      "joinedAt": "2025-10-21T07:53:07.411Z",
+      "lastActiveAt": null
     },
-    "location": {
-      "currentCity": "Kuala Lumpur",
-      "countryOfResidence": "Malaysia",
-      "currentLocation": "KLCC Area",
-      "nationality": "American",
-      "originallyFrom": "San Francisco",
-      "latitude": 3.1390,
-      "longitude": 101.6869,
-      "lastLocationUpdate": "2024-01-15T10:30:00.000Z",
-      "timezone": "Asia/Kuala_Lumpur",
-      "preferredLanguage": "en",
-      "currency": "MYR"
+    "trust": {
+      "score": 68,
+      "level": "trusted",
+      "badges": [],
+      "vouches": {
+        "received": 0,
+        "given": 1,
+        "activePrimary": 0,
+        "activeSecondary": 0
+      },
+      "verifications": {
+        "email": true,
+        "phone": true,
+        "identity": false,
+        "background": false
+      }
     },
-    "security": {
-      "emailVerifiedAt": "2024-01-01T12:00:00.000Z",
-      "phoneVerifiedAt": null,
-      "mfaEnabled": false,
-      "lastLoginAt": "2024-01-15T10:00:00.000Z"
+    "statistics": {
+      "connections": {
+        "total": 4,
+        "thisMonth": 1
+      },
+      "communities": {
+        "member": 2,
+        "moderator": 1,
+        "owner": 0
+      },
+      "events": {
+        "attended": 0,
+        "hosting": 2,
+        "upcoming": 0
+      },
+      "marketplace": {
+        "activeListings": 2,
+        "soldItems": 0,
+        "rating": 0,
+        "transactions": 2
+      },
+      "travel": {
+        "tripsCompleted": 0,
+        "upcomingTrips": 0
+      },
+      "cardGame": {
+        "played": 0,
+        "won": 0,
+        "currentStreak": 0
+      }
     },
-    "metadata": {
-      "membershipId": "BM-123456",
-      "referralCode": "JOHNDOE2024"
-    },
-    "connectionStats": {
-      "totalConnections": 18,
-      "pendingRequests": 2,
-      "averageRating": 4.8
-    },
-    "_count": {
-      "events": 5,
-      "eventRsvps": 23,
-      "userBadges": 7,
-      "connectionsInitiated": 10,
-      "connectionsReceived": 8,
-      "referralsMade": 3
+    "privacy": {
+      "profileVisibility": "public",
+      "allowDirectMessages": true
     }
   }
 }
 ```
+
+**Notes:**
+- ❌ No `relationship` section (not applicable for own profile)
+- ❌ No `sharedActivities` section (not applicable for own profile)
+- ✅ Full visibility of all fields including email, phone, birthDate
+- ✅ Complete statistics with detailed breakdowns
+- ✅ Use this endpoint for profile editing and settings screens
 
 ---
 
@@ -1081,10 +1138,12 @@ if (navigator.geolocation) {
 
 ---
 
-### Get User by ID
-Get public profile of a specific user.
+### Get User Profile by ID
+View another user's profile with comprehensive relationship context, shared activities, and privacy-controlled data exposure. Use this for profile discovery, viewing community members, and connection management.
 
 **Endpoint:** `GET /v2/users/:id`
+
+**🔥 ENHANCED (v2.2.0):** Now includes relationship status, vouch information, trust compatibility, mutual connections, and shared activities.
 
 **Headers:**
 ```
@@ -1092,55 +1151,285 @@ Authorization: Bearer <access_token>
 ```
 
 **URL Parameters:**
-- `id`: User UUID (must be valid UUID format)
+- `id`: User UUID or CUID (the user you want to view)
 
 **Example:**
-```
-GET /v2/users/550e8400-e29b-41d4-a716-446655440000
+```bash
+GET /v2/users/cmh09ov6n0001cp7npzl1ahe2
 ```
 
-**Important Note:** *(v2.0.1)* This route is defined after all specific routes (like `/connections`, `/profile`, `/search`, `/nearby`) to prevent path conflicts. The route matching follows Express.js precedence rules.
+**Important Notes:**
+- ⚠️ **Cannot view your own profile** - Returns error directing you to `/users/me`
+- Route defined after specific routes to prevent path conflicts
+- Privacy settings control what data is visible based on your relationship
 
-**Success Response (200):**
+**Success Response (200) - Not Connected:**
 ```json
 {
   "success": true,
   "data": {
-    "id": "uuid",
-    "fullName": "Jane Smith",
-    "username": "janesmith",
-    "role": "GENERAL_USER",
-    "totalPoints": 250,
-    "createdAt": "2024-01-01T00:00:00.000Z",
+    "relationship": {
+      "connection": {
+        "status": "NONE",
+        "details": null
+      },
+      "vouch": {
+        "status": "NONE",
+        "details": null
+      },
+      "trustMatch": {
+        "compatible": false,
+        "currentUserLevel": "Established",
+        "profileUserLevel": "Trusted",
+        "difference": 2,
+        "canVouch": true
+      },
+      "mutualConnections": {
+        "count": 0,
+        "topConnections": []
+      }
+    },
     "profile": {
+      "id": "cmh09ov6n0001cp7npzl1ahe2",
+      "fullName": "Sarah Ahmad",
+      "displayName": "Sarah",
+      "username": "sarahhost",
+      "email": null,
+      "phone": null,
       "profilePicture": "https://...",
-      "bio": "Travel enthusiast...",
-      "interests": ["travel", "art", "food"],
-      "languages": ["English", "French"],
-      "profession": "Graphic Designer"
+      "bio": "Certified event host in KL...",
+      "shortBio": "Event host & community builder",
+      "location": {
+        "city": "Kuala Lumpur",
+        "country": "Malaysia",
+        "coordinates": null
+      },
+      "birthDate": null,
+      "age": null,
+      "gender": "Female",
+      "interests": ["events", "networking", "food"],
+      "languages": ["en", "ms", "ar"],
+      "profession": "Event Coordinator",
+      "occupation": null,
+      "personalityType": null,
+      "travelStyle": null,
+      "bucketList": [],
+      "travelBio": null,
+      "website": null,
+      "socialLinks": {
+        "instagram": "@sarah.events.kl",
+        "linkedin": "sarahahmad"
+      },
+      "joinedAt": "2025-10-21T07:53:06.527Z",
+      "lastActiveAt": null
     },
-    "location": {
-      "currentCity": "Penang",
-      "originallyFrom": "Paris"
+    "trust": {
+      "score": 88,
+      "level": "scout",
+      "badges": [],
+      "vouches": {
+        "received": 1,
+        "given": 3,
+        "activePrimary": 1,
+        "activeSecondary": 0
+      },
+      "verifications": {
+        "email": true,
+        "phone": true,
+        "identity": false,
+        "background": false
+      }
     },
-    "_count": {
-      "events": 3,
-      "eventRsvps": 15,
-      "userBadges": 5,
-      "connectionsInitiated": 8,
-      "connectionsReceived": 12,
-      "referralsMade": 2
+    "statistics": {
+      "connections": {
+        "total": 5,
+        "thisMonth": 0
+      },
+      "communities": {
+        "member": 0,
+        "moderator": 0,
+        "owner": 0
+      },
+      "events": {
+        "attended": 0,
+        "hosting": 3,
+        "upcoming": 0
+      },
+      "marketplace": {
+        "activeListings": 0,
+        "soldItems": 0,
+        "rating": 0,
+        "transactions": 0
+      },
+      "travel": {
+        "tripsCompleted": 0,
+        "upcomingTrips": 0
+      },
+      "cardGame": {
+        "played": 0,
+        "won": 0,
+        "currentStreak": 0
+      }
+    },
+    "sharedActivities": {
+      "communities": {
+        "count": 1,
+        "list": [
+          {
+            "id": "cmh09ozez0009cpb2v5p79f0u",
+            "name": "Fitness & Wellness Warriors",
+            "logo": "https://...",
+            "memberSince": "2025-10-21T07:53:12.037Z",
+            "roles": {
+              "currentUser": "MEMBER",
+              "profileUser": "OWNER"
+            }
+          }
+        ]
+      },
+      "events": {
+        "count": 0,
+        "recent": []
+      },
+      "travelTrips": {
+        "count": 0,
+        "trips": []
+      },
+      "marketplaceInteractions": {
+        "transactionCount": 0,
+        "hasOpenConversations": false
+      }
+    },
+    "recentActivity": {
+      "highlights": [],
+      "trustMoments": []
+    },
+    "privacy": {
+      "profileVisibility": "public",
+      "canMessage": true,
+      "canVouch": false,
+      "canConnect": true,
+      "showEmail": false,
+      "showPhone": false,
+      "showBirthDate": false,
+      "showLocation": true
     }
   }
 }
 ```
 
+**Success Response (200) - Pending Connection:**
+```json
+{
+  "relationship": {
+    "connection": {
+      "status": "PENDING",
+      "details": {
+        "id": "conn_xyz123",
+        "status": "PENDING",
+        "isInitiator": true,
+        "relationshipType": null,
+        "connectedAt": null,
+        "requestedAt": "2025-10-21T17:35:11.829Z"
+      }
+    },
+    "vouch": {
+      "status": "NONE",
+      "details": null
+    },
+    "trustMatch": {
+      "compatible": true,
+      "currentUserLevel": "Established",
+      "profileUserLevel": "Starter",
+      "difference": 1,
+      "canVouch": true
+    },
+    "mutualConnections": {
+      "count": 2,
+      "topConnections": [
+        {
+          "id": "user123",
+          "fullName": "John Doe",
+          "username": "johndoe",
+          "profilePicture": "https://...",
+          "trustScore": 72
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "canMessage": true,
+    "canVouch": false,
+    "canConnect": false
+  }
+}
+```
+
+**Response Sections:**
+
+1. **relationship** (always present when viewing others)
+   - `connection.status`: NONE | PENDING | CONNECTED | BLOCKED
+   - `vouch.status`: NONE | GIVEN | RECEIVED | MUTUAL | PENDING_OFFER
+   - `trustMatch`: Compatibility between your trust levels
+   - `mutualConnections`: Connections you have in common
+
+2. **profile** (privacy-controlled)
+   - `email`, `phone`, `birthDate`: Only shown if connected or privacy allows
+   - All other profile fields follow user's privacy settings
+
+3. **trust**
+   - Trust score, level, badges
+   - Vouch statistics (received, given, active)
+   - Verification status
+
+4. **statistics**
+   - Comprehensive activity breakdown
+   - 6 categories: connections, communities, events, marketplace, travel, cardGame
+
+5. **sharedActivities** (always present, may be empty)
+   - `communities`: Communities you both belong to
+   - `events`: Events attended together
+   - `travelTrips`: Shared travel experiences
+   - `marketplaceInteractions`: Transaction history
+
+6. **recentActivity**
+   - Public activity highlights
+   - Recent trust moments
+
+7. **privacy**
+   - Action permissions (canMessage, canVouch, canConnect)
+   - Visibility flags (showEmail, showPhone, showBirthDate, showLocation)
+
 **Error Responses:**
+- `400` - "Use /users/me to view your own profile" (if viewing self)
 - `404` - User not found
 
-**Notes:**
-- Returns limited public profile information
-- Excludes sensitive data (email, phone, etc.)
+**Connection Status Values:**
+- `NONE`: No relationship
+- `PENDING`: Connection request sent/received
+- `CONNECTED`: Active connection (note: stored as ACCEPTED in database)
+- `BLOCKED`: One user has blocked the other
+
+**Vouch Status Values:**
+- `NONE`: No vouch relationship
+- `GIVEN`: You vouched for this user
+- `RECEIVED`: This user vouched for you
+- `MUTUAL`: Both users vouched for each other
+- `PENDING_OFFER`: Community vouch offer pending
+
+**Use Cases:**
+- Profile discovery and browsing
+- Viewing community member profiles
+- Checking connection status before sending request
+- Seeing shared activities and communities
+- Evaluating trust compatibility
+- Finding mutual connections
+
+**Privacy Behavior:**
+- **Not Connected**: Only public profile data visible
+- **Connected**: Email, phone visible (if privacy allows)
+- **Blocked**: Minimal information, no shared activities
+- **Birth Date**: Never shown when viewing others (privacy)
 
 ---
 
@@ -2980,9 +3269,15 @@ const terminateOtherSessions = async () => {
 
 ### cURL Examples
 
-**Get Profile:**
+**Get Your Own Profile:**
 ```bash
-curl -X GET https://api.berse-app.com/v2/users/profile \
+curl -X GET https://api.berse-app.com/v2/users/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+**View Another User's Profile:**
+```bash
+curl -X GET https://api.berse-app.com/v2/users/USER_ID \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -3069,7 +3364,84 @@ curl -X DELETE https://api.berse-app.com/v2/users/sessions/SESSION_TOKEN_HERE \
 
 ---
 
+## 📝 Migration Guide (v2.2.0)
+
+### Breaking Changes
+
+**Profile Endpoint Separation**
+
+The `GET /v2/users/profile` endpoint has been split into two distinct endpoints:
+
+| Old Endpoint | New Endpoint | Purpose |
+|--------------|--------------|---------|
+| `GET /v2/users/profile` | `GET /v2/users/me` | View your own profile |
+| `GET /v2/users/:id` (limited) | `GET /v2/users/:id` (enhanced) | View another user's profile |
+
+### Migration Steps
+
+**1. Update "View Own Profile" calls:**
+
+```javascript
+// Before (v2.1.0)
+const response = await fetch('https://api.berse-app.com/v2/users/profile', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+
+// After (v2.2.0)
+const response = await fetch('https://api.berse-app.com/v2/users/me', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+```
+
+**2. Handle Self-Viewing Prevention:**
+
+```javascript
+async function getUserProfile(userId, currentUserId) {
+  if (userId === currentUserId) {
+    return await fetch('https://api.berse-app.com/v2/users/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  } else {
+    return await fetch(`https://api.berse-app.com/v2/users/${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }
+}
+```
+
+**3. Handle New Response Structure for `/users/:id`:**
+
+The response now includes:
+- `relationship` section (connection, vouch, trust match, mutual connections)
+- `sharedActivities` section (communities, events, travel, marketplace)
+- Enhanced `privacy` section with action permissions
+
+See [Get User Profile by ID](#get-user-profile-by-id) for complete response examples.
+
+---
+
 ## Changelog
+
+### v2.2.0 (2025-10-22)
+**Major Profile System Overhaul:**
+- ✅ **Endpoint Separation**: New `GET /v2/users/me` for own profile, `GET /v2/users/:id` enhanced for viewing others
+- ✅ **Relationship Context**: `/users/:id` now includes connection status, vouch status, trust compatibility, mutual connections
+- ✅ **Shared Activities**: Shows shared communities, events, travel trips, marketplace interactions
+- ✅ **Privacy Enhancements**: Enhanced privacy controls based on connection status (email/phone/birthDate visibility)
+- ✅ **Trust Compatibility**: Automatic trust level compatibility calculation when viewing other users
+- ✅ **Self-Viewing Prevention**: Attempting to view own profile via `/users/:id` returns error directing to `/users/me`
+- ✅ **Statistics Enhancement**: Detailed breakdowns for all 6 categories (connections, communities, events, marketplace, travel, cardGame)
+
+**Breaking Changes:**
+- `GET /users/profile` deprecated → use `GET /users/me` for own profile
+- `/users/:id` no longer works for viewing your own profile (returns 400 error)
+- Response structure for `/users/:id` significantly enhanced with new sections
+
+**New Response Sections:**
+- `relationship`: Connection/vouch status, trust match, mutual connections
+- `sharedActivities`: Communities, events, travel, marketplace (always present, may be empty)
+- Enhanced `privacy`: Action permissions (canMessage, canVouch, canConnect) + visibility flags
+- `recentActivity`: Public activity highlights and trust moments
 
 ### v2.0.3 (2025-10-15)
 **New Features - Activity & Security Endpoints:**
