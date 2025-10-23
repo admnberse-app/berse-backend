@@ -20,6 +20,8 @@ import discoverRoutes from '../../modules/discover/discover.routes';
 import adminRevenueRoutes from '../../modules/admin/revenue.routes';
 import constantsRoutes from '../../modules/app-constants/constants.routes';
 import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
+import { homeSurfRoutes } from '../../modules/homesurf';
+import { berseGuideRoutes } from '../../modules/berseguide';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -187,6 +189,18 @@ router.use('/admin/revenue', adminRevenueRoutes);
  */
 router.use('/admin', vouchOfferRoutes);
 
+/**
+ * HomeSurf routes (Accommodation hosting)
+ * Base path: /v2/homesurf
+ */
+router.use('/homesurf', homeSurfRoutes);
+
+/**
+ * BerseGuide routes (Local tour guide)
+ * Base path: /v2/berseguide
+ */
+router.use('/berseguide', berseGuideRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -248,6 +262,8 @@ router.get('/health', (req, res) => {
       discover: '/v2/discover',
       dashboard: '/v2/dashboard',
       appConstants: '/v2/app-constants',
+      homesurf: '/v2/homesurf',
+      berseguide: '/v2/berseguide',
     },
   });
 });
@@ -508,6 +524,64 @@ router.get('/docs', (req, res) => {
         'GET /v2/app-constants/validation-rules': 'Get validation rules for fields',
         'GET /v2/app-constants/config': 'Get app configuration and limits',
         'GET /v2/app-constants/all': 'Get all constants (enums + validation + config)',
+      },
+      homesurf: {
+        'GET /v2/homesurf/profile': 'Get my HomeSurf profile (auth required)',
+        'GET /v2/homesurf/profile/:userId': 'Get HomeSurf profile by ID',
+        'POST /v2/homesurf/profile': 'Create HomeSurf profile (auth required)',
+        'PATCH /v2/homesurf/profile': 'Update HomeSurf profile (auth required)',
+        'PATCH /v2/homesurf/profile/toggle': 'Toggle profile on/off (auth required)',
+        'DELETE /v2/homesurf/profile': 'Delete profile (auth required)',
+        'GET /v2/homesurf/eligibility': 'Check eligibility (auth required)',
+        'POST /v2/homesurf/payment-options': 'Add payment option (auth required)',
+        'PATCH /v2/homesurf/payment-options/:optionId': 'Update payment option (auth required)',
+        'DELETE /v2/homesurf/payment-options/:optionId': 'Delete payment option (auth required)',
+        'POST /v2/homesurf/bookings': 'Create booking request (auth required)',
+        'POST /v2/homesurf/availability': 'Check availability',
+        'GET /v2/homesurf/bookings/:bookingId': 'Get booking details (auth required)',
+        'GET /v2/homesurf/bookings/host': 'Get bookings as host (auth required)',
+        'GET /v2/homesurf/bookings/guest': 'Get stays as guest (auth required)',
+        'PATCH /v2/homesurf/bookings/:bookingId/approve': 'Approve booking (auth required)',
+        'PATCH /v2/homesurf/bookings/:bookingId/reject': 'Reject booking (auth required)',
+        'PATCH /v2/homesurf/bookings/:bookingId/cancel': 'Cancel booking (auth required)',
+        'POST /v2/homesurf/bookings/:bookingId/check-in': 'Check-in guest (auth required)',
+        'POST /v2/homesurf/bookings/:bookingId/check-out': 'Check-out guest (auth required)',
+        'POST /v2/homesurf/reviews': 'Create review (auth required)',
+        'GET /v2/homesurf/reviews/given': 'Get reviews given (auth required)',
+        'GET /v2/homesurf/reviews/received': 'Get reviews received (auth required)',
+        'GET /v2/homesurf/reviews/user/:userId': 'Get public reviews for user',
+        'GET /v2/homesurf/search': 'Search HomeSurf profiles',
+        'GET /v2/homesurf/dashboard': 'Get HomeSurf dashboard (auth required)',
+      },
+      berseguide: {
+        'GET /v2/berseguide/profile': 'Get my BerseGuide profile (auth required)',
+        'GET /v2/berseguide/profile/:userId': 'Get BerseGuide profile by ID',
+        'POST /v2/berseguide/profile': 'Create BerseGuide profile (auth required)',
+        'PATCH /v2/berseguide/profile': 'Update BerseGuide profile (auth required)',
+        'PATCH /v2/berseguide/profile/toggle': 'Toggle profile on/off (auth required)',
+        'DELETE /v2/berseguide/profile': 'Delete profile (auth required)',
+        'GET /v2/berseguide/eligibility': 'Check eligibility (auth required)',
+        'POST /v2/berseguide/payment-options': 'Add payment option (auth required)',
+        'PATCH /v2/berseguide/payment-options/:optionId': 'Update payment option (auth required)',
+        'DELETE /v2/berseguide/payment-options/:optionId': 'Delete payment option (auth required)',
+        'POST /v2/berseguide/bookings': 'Create booking request (auth required)',
+        'POST /v2/berseguide/availability': 'Check availability',
+        'GET /v2/berseguide/bookings/:bookingId': 'Get booking details (auth required)',
+        'GET /v2/berseguide/bookings/guide': 'Get bookings as guide (auth required)',
+        'GET /v2/berseguide/bookings/tourist': 'Get bookings as tourist (auth required)',
+        'PATCH /v2/berseguide/bookings/:bookingId/approve': 'Approve booking (auth required)',
+        'PATCH /v2/berseguide/bookings/:bookingId/reject': 'Reject booking (auth required)',
+        'PATCH /v2/berseguide/bookings/:bookingId/cancel': 'Cancel booking (auth required)',
+        'POST /v2/berseguide/sessions/start': 'Start session (auth required)',
+        'PATCH /v2/berseguide/sessions/:sessionId': 'Update session (auth required)',
+        'POST /v2/berseguide/sessions/:sessionId/end': 'End session (auth required)',
+        'GET /v2/berseguide/bookings/:bookingId/sessions': 'Get sessions for booking (auth required)',
+        'POST /v2/berseguide/reviews': 'Create review (auth required)',
+        'GET /v2/berseguide/reviews/given': 'Get reviews given (auth required)',
+        'GET /v2/berseguide/reviews/received': 'Get reviews received (auth required)',
+        'GET /v2/berseguide/reviews/user/:userId': 'Get public reviews for user',
+        'GET /v2/berseguide/search': 'Search BerseGuide profiles',
+        'GET /v2/berseguide/dashboard': 'Get BerseGuide dashboard (auth required)',
       },
     },
     authentication: {

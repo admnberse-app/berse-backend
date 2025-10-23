@@ -2442,6 +2442,22 @@ model User {
   accountabilityLogsAsVouchee AccountabilityLog[]      @relation("accountability_logs_voucheeIdTousers")
   communityVouchOffers        CommunityVouchOffer[]
 
+  // HomeSurf relations
+  homeSurf                    UserHomeSurf?
+  homeSurfBookingsAsHost      HomeSurfBooking[]        @relation("homesurf_host")
+  homeSurfBookingsAsGuest     HomeSurfBooking[]        @relation("homesurf_guest")
+  homeSurfReviewsGiven        HomeSurfReview[]         @relation("homesurf_reviews_given")
+  homeSurfReviewsReceived     HomeSurfReview[]         @relation("homesurf_reviews_received")
+
+  // BerseGuide relations
+  berseGuide                   UserBerseGuide?
+  berseGuideBookingsAsGuide    BerseGuideBooking[]     @relation("berseguide_guide")
+  berseGuideBookingsAsTraveler BerseGuideBooking[]     @relation("berseguide_traveler")
+  berseGuideSessionsGiven      BerseGuideSession[]     @relation("guide_sessions_given")
+  berseGuideSessionsReceived   BerseGuideSession[]     @relation("guide_sessions_received")
+  berseGuideReviewsGiven       BerseGuideReview[]      @relation("guide_reviews_given")
+  berseGuideReviewsReceived    BerseGuideReview[]      @relation("guide_reviews_received")
+
   @@index([createdAt])
   @@index([deletedAt])
   @@index([email])
@@ -2891,6 +2907,432 @@ enum VouchType {
   PRIMARY
   SECONDARY
   COMMUNITY
+}
+
+enum AccommodationType {
+  PRIVATE_ROOM // Guest gets a private bedroom
+  SHARED_ROOM // Guest shares a room with others
+  COUCH // Couch/sofa in common area
+  ENTIRE_PLACE // Guest has entire apartment/house
+}
+
+enum PaymentType {
+  MONEY // Cash or digital payment
+  SKILL_TRADE // Exchange skills (teach language, cook, etc.)
+  TREAT_ME // Buy me food/drinks (lunch, dinner, groceries, coffee, etc.)
+  BERSE_POINTS // Pay with platform points
+  FREE // Free, no payment
+  NEGOTIABLE // To be discussed
+}
+
+enum GuideType {
+  FOOD_TOUR // Restaurant hopping, street food, markets
+  CULTURAL_TOUR // Museums, temples, historical sites
+  NIGHTLIFE // Bars, clubs, entertainment
+  HIKING // Nature walks, mountain trails
+  CYCLING // Bike tours around city
+  PHOTOGRAPHY // Photo spots, photography tips
+  SHOPPING // Best stores, markets, malls
+  LOCAL_EXPERIENCE // Live like a local
+  HISTORICAL_SITES // History-focused tours
+  NATURE_WALKS // Parks, gardens, nature
+  BAR_HOPPING // Bar crawl
+  COFFEE_CRAWL // Best coffee shops
+  STREET_ART // Graffiti, murals, art scene
+  HIDDEN_GEMS // Off-the-beaten-path spots
+  FAMILY_FRIENDLY // Suitable for families with kids
+  ADVENTURE_SPORTS // Extreme activities
+}
+
+enum HomeSurfBookingStatus {
+  PENDING // Initial request sent
+  DISCUSSING // Host and guest are messaging
+  APPROVED // Host approved the request
+  REJECTED // Host declined
+  CANCELLED_BY_GUEST // Guest cancelled
+  CANCELLED_BY_HOST // Host cancelled
+  CHECKED_IN // Guest has checked in
+  COMPLETED // Stay is over, ready for reviews
+}
+
+enum BerseGuideBookingStatus {
+  PENDING // Initial request sent
+  DISCUSSING // Guide and traveler are messaging
+  APPROVED // Guide approved the request
+  REJECTED // Guide declined
+  CANCELLED_BY_TRAVELER // Traveler cancelled
+  CANCELLED_BY_GUIDE // Guide cancelled
+  IN_PROGRESS // Tour is happening now
+  COMPLETED // Tour finished, ready for review
+}
+
+enum ReviewerRole {
+  HOST // Writing review as a host
+  GUEST // Writing review as a guest
+  GUIDE // Writing review as a guide
+  TRAVELER // Writing review as a traveler
+}
+
+// ==================== HOMESURF MODELS ====================
+
+model UserHomeSurf {
+  userId      String   @id
+  isEnabled   Boolean  @default(false)
+
+  // Basic Info
+  title               String // "Cozy apartment in San Francisco"
+  description         String // Detailed description
+  accommodationType   AccommodationType // PRIVATE_ROOM, SHARED_ROOM, COUCH, ENTIRE_PLACE
+  maxGuests           Int      @default(1)
+
+  // Amenities & Rules
+  amenities   String[] // ["wifi", "kitchen", "parking", "washing_machine", "workspace"]
+  houseRules  String? // "No smoking, no parties, quiet after 10pm"
+  photos      String[] @default([])
+
+  // Multiple Payment Options (user can offer multiple)
+  paymentOptions HomeSurfPaymentOption[]
+
+  // Availability
+  availabilityNotes String? // "Available weekends mostly", "Need 1 week notice"
+  minimumStay       Int? // Minimum nights
+  maximumStay       Int? // Maximum nights
+  advanceNotice     Int? // Days notice needed before check-in
+
+  // Location
+  city         String // For search/discovery
+  neighborhood String?
+  address      Json? // Private, only shown after approval
+  coordinates  Json? // For map display (approximate)
+
+  // Stats & Trust
+  responseRate        Float?   @default(0) // % of requests responded to
+  averageResponseTime Int? // In hours
+  totalGuests         Int      @default(0) // Total guests hosted
+  rating              Float?   @default(0) // Average rating (1-5)
+  reviewCount         Int      @default(0)
+
+  // Metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastActiveAt DateTime @default(now()) // Last time profile was edited
+
+  // Relations
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings HomeSurfBooking[]
+  reviews  HomeSurfReview[]
+
+  @@index([isEnabled, city])
+  @@index([city, isEnabled])
+  @@map("user_homesurf")
+}
+
+model HomeSurfPaymentOption {
+  id          String      @id @default(cuid())
+  homeSurfId  String
+  paymentType PaymentType // MONEY, SKILL_TRADE, TREAT_ME, BERSE_POINTS, FREE
+  amount      Float? // If MONEY, the amount per night
+  currency    String?     @default("USD")
+  description String? // "Help with gardening 2 hours", "Buy me lunch", "Groceries for the week"
+  isPreferred Boolean     @default(false) // Host's preferred option
+
+  homeSurf UserHomeSurf @relation(fields: [homeSurfId], references: [userId], onDelete: Cascade)
+
+  @@index([homeSurfId])
+  @@map("homesurf_payment_options")
+}
+
+model HomeSurfBooking {
+  id          String   @id @default(cuid())
+  hostId      String
+  guestId     String
+
+  // Request Details
+  checkInDate    DateTime
+  checkOutDate   DateTime
+  numberOfGuests Int      @default(1)
+  message        String? // Guest's introduction/request
+
+  // Status & Timeline
+  status HomeSurfBookingStatus @default(PENDING)
+  // PENDING → DISCUSSING → APPROVED/REJECTED
+  // APPROVED → CHECKED_IN → COMPLETED
+  // Can be CANCELLED_BY_GUEST or CANCELLED_BY_HOST at any time
+
+  // Agreed Terms (after discussion via messages)
+  agreedPaymentType    PaymentType?
+  agreedPaymentAmount  Float?
+  agreedPaymentDetails String? // Details of the agreed exchange
+  specialRequests      String? // Dietary needs, accessibility, etc.
+  checkInInstructions  String? // Provided by host after approval (lockbox code, etc.)
+
+  // Communication
+  conversationId String? // Link to message thread
+
+  // Timestamps
+  requestedAt        DateTime  @default(now())
+  respondedAt        DateTime? // When host first responds
+  approvedAt         DateTime?
+  checkedInAt        DateTime? // Actual check-in time
+  checkedOutAt       DateTime? // Actual check-out time
+  completedAt        DateTime? // When both reviews are done
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  // Relations
+  host         User             @relation("homesurf_host", fields: [hostId], references: [id], onDelete: Cascade)
+  guest        User             @relation("homesurf_guest", fields: [guestId], references: [id], onDelete: Cascade)
+  homeSurf     UserHomeSurf     @relation(fields: [hostId], references: [userId], onDelete: Cascade, map: "homesurf_booking_homesurf_fkey")
+  hostReviews  HomeSurfReview[] @relation("BookingHostReviews")
+  guestReviews HomeSurfReview[] @relation("BookingGuestReviews")
+
+  @@index([hostId, status])
+  @@index([guestId, status])
+  @@index([checkInDate])
+  @@index([status])
+  @@map("homesurf_bookings")
+}
+
+model HomeSurfReview {
+  id           String       @id @default(cuid())
+  bookingId    String
+  reviewerId   String // Who's writing the review
+  revieweeId   String // Who's being reviewed
+  reviewerRole ReviewerRole // HOST or GUEST
+
+  // Overall Rating
+  rating Int    // 1-5 stars
+  review String? // Written review
+
+  // Specific Ratings (optional, for detailed feedback)
+  cleanliness   Int? // For accommodation (guest → host)
+  communication Int? // Both directions
+  location      Int? // For accommodation (guest → host)
+  hospitality   Int? // Host's friendliness (guest → host)
+  respect       Int? // Guest's behavior (host → guest)
+
+  // Recommendation
+  wouldHostAgain Boolean? // Host's perspective
+  wouldStayAgain Boolean? // Guest's perspective
+
+  // Media
+  photos   String[] @default([])
+  isPublic Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  bookingAsHost  HomeSurfBooking? @relation("BookingHostReviews", fields: [bookingId], references: [id], onDelete: Cascade, map: "homesurf_review_booking_host_fkey")
+  bookingAsGuest HomeSurfBooking? @relation("BookingGuestReviews", fields: [bookingId], references: [id], onDelete: Cascade, map: "homesurf_review_booking_guest_fkey")
+  reviewer       User             @relation("homesurf_reviews_given", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee       User             @relation("homesurf_reviews_received", fields: [revieweeId], references: [id], onDelete: Cascade)
+  homeSurf       UserHomeSurf     @relation(fields: [revieweeId], references: [userId], onDelete: Cascade, map: "homesurf_review_homesurf_fkey")
+
+  @@unique([bookingId, reviewerId])
+  @@index([revieweeId])
+  @@index([reviewerId])
+  @@map("homesurf_reviews")
+}
+
+// ==================== BERSEGUIDE MODELS ====================
+
+model UserBerseGuide {
+  userId    String  @id
+  isEnabled Boolean @default(false)
+
+  // Basic Info
+  title       String  // "Tokyo Food Adventure Guide"
+  description String  // Full description of what you offer
+  tagline     String? // Short catchy line: "Hidden gems & local flavors"
+
+  // Guide Specialties
+  guideTypes  GuideType[] // Array of enums (can select multiple)
+  customTypes String[] // Additional custom guide types
+  languages   String[] // ["English", "Japanese", "Spanish"]
+
+  // Coverage Area
+  city            String
+  neighborhoods   String[] // ["Shibuya", "Harajuku", "Shinjuku"]
+  coverageRadius  Int? // km from city center
+
+  // Multiple Payment Options
+  paymentOptions BerseGuidePaymentOption[]
+
+  // Logistics
+  availabilityNotes String? // "Weekends mostly", "Flexible schedule"
+  typicalDuration   Int? // Typical tour hours
+  minDuration       Int? // Minimum tour length
+  maxDuration       Int? // Maximum tour length
+  maxGroupSize      Int     @default(1) // How many people you can guide
+  advanceNotice     Int? // Days notice needed
+
+  // Experience
+  yearsGuiding    Int? // Years of experience
+  totalSessions   Int      @default(0) // Total tours given
+  photos          String[] @default([]) // Profile & tour photos
+  highlights      String[] // ["Best ramen spots", "Hidden temples", "Rooftop bars"]
+  sampleItinerary String? // Sample tour itinerary
+
+  // Stats
+  responseRate        Float? @default(0)
+  averageResponseTime Int? // Hours
+  rating              Float? @default(0)
+  reviewCount         Int    @default(0)
+
+  // Metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastActiveAt DateTime @default(now())
+
+  // Relations
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings BerseGuideBooking[]
+  reviews  BerseGuideReview[]
+  sessions BerseGuideSession[]
+
+  @@index([isEnabled, city])
+  @@index([city, isEnabled])
+  @@map("user_berseguide")
+}
+
+model BerseGuidePaymentOption {
+  id           String      @id @default(cuid())
+  berseGuideId String
+  paymentType  PaymentType // MONEY, SKILL_TRADE, TREAT_ME, BERSE_POINTS, FREE
+  amount       Float?
+  currency     String?     @default("USD")
+  description  String? // "Buy me lunch at a local spot", "Teach me basic photography"
+  isPreferred  Boolean     @default(false)
+
+  berseGuide UserBerseGuide @relation(fields: [berseGuideId], references: [userId], onDelete: Cascade)
+
+  @@index([berseGuideId])
+  @@map("berseguide_payment_options")
+}
+
+model BerseGuideBooking {
+  id         String @id @default(cuid())
+  guideId    String
+  travelerId String
+
+  // Request Details
+  preferredDate    DateTime? // Flexible, might change
+  alternativeDates DateTime[]    @default([])
+  preferredTime    String? // "morning", "afternoon", "evening", "flexible"
+  duration         Int? // Requested hours
+  numberOfPeople   Int           @default(1)
+  interests        String[] // ["food", "culture", "nature", "nightlife"]
+  specificRequests String? // "Want to see X, avoid Y"
+  message          String? // Initial message from traveler
+
+  // Status
+  status BerseGuideBookingStatus @default(PENDING)
+  // PENDING → DISCUSSING → APPROVED/REJECTED
+  // APPROVED → IN_PROGRESS → COMPLETED
+  // Can be CANCELLED_BY_TRAVELER or CANCELLED_BY_GUIDE
+
+  // Agreed Terms (after discussion)
+  agreedDate           DateTime?
+  agreedTime           String?
+  agreedDuration       Int?
+  agreedPaymentType    PaymentType?
+  agreedPaymentAmount  Float?
+  agreedPaymentDetails String?
+  meetingPoint         String? // "Starbucks at Shibuya Station"
+  itinerary            String? // Agreed plan for the tour
+
+  // Communication
+  conversationId String?
+
+  // Timestamps
+  requestedAt        DateTime  @default(now())
+  respondedAt        DateTime?
+  approvedAt         DateTime?
+  startedAt          DateTime? // When tour actually starts
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  // Relations
+  guide      User               @relation("berseguide_guide", fields: [guideId], references: [id], onDelete: Cascade)
+  traveler   User               @relation("berseguide_traveler", fields: [travelerId], references: [id], onDelete: Cascade)
+  berseGuide UserBerseGuide     @relation(fields: [guideId], references: [userId], onDelete: Cascade, map: "berseguide_booking_guide_fkey")
+  session    BerseGuideSession?
+  review     BerseGuideReview?
+
+  @@index([guideId, status])
+  @@index([travelerId, status])
+  @@index([agreedDate])
+  @@index([status])
+  @@map("berseguide_bookings")
+}
+
+model BerseGuideSession {
+  id         String @id @default(cuid())
+  bookingId  String @unique
+  guideId    String
+  travelerId String
+
+  // Session Details
+  date             DateTime // Actual date
+  startTime        DateTime // Actual start time
+  endTime          DateTime? // Actual end time
+  actualDuration   Int? // Minutes (calculated from start/end)
+  locationsCovered String[] // ["Tsukiji Market", "Senso-ji Temple", "Shibuya Crossing"]
+  photos           String[]  @default([]) // Photos from the tour
+  notes            String? // Guide's notes about the session
+
+  // Payment
+  paymentType      PaymentType?
+  paymentAmount    Float?
+  paymentCompleted Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  booking    BerseGuideBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guide      User              @relation("guide_sessions_given", fields: [guideId], references: [id], onDelete: Cascade)
+  traveler   User              @relation("guide_sessions_received", fields: [travelerId], references: [id], onDelete: Cascade)
+  berseGuide UserBerseGuide    @relation(fields: [guideId], references: [userId], onDelete: Cascade, map: "berseguide_session_guide_fkey")
+
+  @@index([guideId])
+  @@index([date])
+  @@map("berseguide_sessions")
+}
+
+model BerseGuideReview {
+  id         String @id @default(cuid())
+  bookingId  String @unique
+  guideId    String
+  travelerId String
+
+  // Overall Rating
+  rating Int    // 1-5 stars
+  review String? // Written review
+
+  // Specific Ratings
+  knowledge      Int? // Guide's expertise about area
+  communication  Int? // How well they communicated
+  friendliness   Int? // Friendliness and hospitality
+  value          Int? // Was it worth the payment?
+  wouldRecommend Boolean? // Would recommend this guide?
+
+  // Highlights
+  highlights String[] // ["Great food spots", "Fun personality", "Lots of history"]
+  photos     String[] @default([])
+  isPublic   Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  booking    BerseGuideBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  guide      User              @relation("guide_reviews_received", fields: [guideId], references: [id], onDelete: Cascade)
+  reviewer   User              @relation("guide_reviews_given", fields: [travelerId], references: [id], onDelete: Cascade)
+  berseGuide UserBerseGuide    @relation(fields: [guideId], references: [userId], onDelete: Cascade, map: "berseguide_review_guide_fkey")
+
+  @@index([guideId])
+  @@index([rating])
+  @@map("berseguide_reviews")
 }
 
 model PlatformConfig {
