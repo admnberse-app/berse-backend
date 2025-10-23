@@ -19,6 +19,7 @@ import { PaymentController } from '../../modules/payments/payment.controller';
 import discoverRoutes from '../../modules/discover/discover.routes';
 import adminRevenueRoutes from '../../modules/admin/revenue.routes';
 import constantsRoutes from '../../modules/app-constants/constants.routes';
+import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -163,6 +164,12 @@ router.use('/payments', paymentRoutes);
 router.use('/discover', discoverRoutes);
 
 /**
+ * Dashboard routes (User's personalized dashboard)
+ * Base path: /v2/dashboard
+ */
+router.use('/dashboard', dashboardRoutes);
+
+/**
  * App Constants routes (Enums, validation rules, config)
  * Base path: /v2/app-constants
  */
@@ -239,6 +246,7 @@ router.get('/health', (req, res) => {
       marketplace: '/v2/marketplace',
       payments: '/v2/payments',
       discover: '/v2/discover',
+      dashboard: '/v2/dashboard',
       appConstants: '/v2/app-constants',
     },
   });
@@ -487,6 +495,13 @@ router.get('/docs', (req, res) => {
       },
       discover: {
         'GET /v2/discover/feed': 'Get unified discover feed with events, communities, and marketplace (personalized when authenticated)',
+      },
+      dashboard: {
+        'GET /v2/dashboard/summary': 'Get comprehensive dashboard overview (auth required)',
+        'GET /v2/dashboard/communities': 'Get user\'s communities with role info (auth required)',
+        'GET /v2/dashboard/events': 'Get user\'s events - hosting and attending (auth required)',
+        'GET /v2/dashboard/listings': 'Get user\'s marketplace listings (auth required)',
+        'GET /v2/dashboard/activity': 'Get user\'s recent activity feed (auth required)',
       },
       appConstants: {
         'GET /v2/app-constants/enums': 'Get all application enums',
