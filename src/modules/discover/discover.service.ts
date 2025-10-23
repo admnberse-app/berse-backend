@@ -15,7 +15,6 @@ import {
   CommunityItem,
   MarketplaceItem,
   ServiceItem,
-  UserItem,
   UserContext,
   LocationInfo,
   PaginationInfo
@@ -52,6 +51,182 @@ export class DiscoverService {
 
     // Otherwise, return default sections
     return this.getDefaultSections(userId, validatedParams, locationInfo);
+  }
+
+  /**
+   * Get all filter options and enums
+   */
+  async getFilterOptions(): Promise<any> {
+    // Fetch dynamic options from database
+    const [eventCategories, productCategories, serviceTypes, communityInterests, cities] = await Promise.all([
+      // Get unique event types/categories
+      prisma.event.findMany({
+        where: { status: 'PUBLISHED', type: { not: null } },
+        select: { type: true },
+        distinct: ['type']
+      }),
+      // Get unique product categories from marketplace
+      prisma.marketplaceListing.findMany({
+        where: { 
+          status: 'ACTIVE',
+          type: 'PRODUCT',
+          category: { not: null }
+        },
+        select: { category: true },
+        distinct: ['category']
+      }),
+      // Get unique service types from marketplace
+      prisma.marketplaceListing.findMany({
+        where: { 
+          status: 'ACTIVE',
+          type: 'SERVICE',
+          serviceType: { not: null }
+        },
+        select: { serviceType: true },
+        distinct: ['serviceType']
+      }),
+      // Get all unique community interests
+      prisma.community.findMany({
+        select: { interests: true }
+      }).then(communities => {
+        // Flatten and get unique interests
+        const allInterests = communities.flatMap(c => c.interests || []);
+        return [...new Set(allInterests)].map(interest => ({ interest }));
+      }),
+      // Get popular cities from user locations
+      prisma.userLocation.groupBy({
+        by: ['currentCity'],
+        where: {
+          currentCity: { not: null }
+        },
+        _count: {
+          currentCity: true
+        },
+        orderBy: {
+          _count: {
+            currentCity: 'desc'
+          }
+        },
+        take: 20
+      })
+    ]);
+
+    return {
+      success: true,
+      data: {
+        // Content types
+        contentTypes: [
+          { value: DiscoverContentType.ALL, label: 'All Content' },
+          { value: DiscoverContentType.EVENTS, label: 'Events' },
+          { value: DiscoverContentType.COMMUNITIES, label: 'Communities' },
+          { value: DiscoverContentType.MARKETPLACE, label: 'Marketplace & Services' }
+        ],
+
+        // Listing types (for filtering within marketplace)
+        listingTypes: [
+          { value: 'PRODUCT', label: 'Products' },
+          { value: 'SERVICE', label: 'Services' }
+        ],
+
+        // Sort options
+        sortOptions: [
+          { value: DiscoverSortBy.RELEVANCE, label: 'Most Relevant' },
+          { value: DiscoverSortBy.DATE, label: 'Date' },
+          { value: DiscoverSortBy.DISTANCE, label: 'Nearest' },
+          { value: DiscoverSortBy.POPULAR, label: 'Most Popular' },
+          { value: DiscoverSortBy.PRICE_ASC, label: 'Price: Low to High' },
+          { value: DiscoverSortBy.PRICE_DESC, label: 'Price: High to Low' }
+        ],
+
+        // Event categories
+        eventCategories: eventCategories
+          .filter(e => e.type)
+          .map(e => ({
+            value: e.type,
+            label: this.formatCategoryLabel(e.type!)
+          })),
+
+        // Service types (from marketplace SERVICE type)
+        serviceTypes: serviceTypes
+          .filter(s => s.serviceType)
+          .map(s => ({
+            value: s.serviceType,
+            label: this.formatCategoryLabel(s.serviceType!)
+          })),
+
+        // Community interests (dynamic from communities)
+        communityInterests: communityInterests
+          .filter(c => c.interest)
+          .map(c => ({
+            value: c.interest,
+            label: this.formatCategoryLabel(c.interest!)
+          })),
+
+        // Popular cities
+        cities: cities
+          .filter(c => c.currentCity)
+          .map(c => ({
+            value: c.currentCity,
+            label: c.currentCity,
+            count: c._count.currentCity
+          })),
+
+        // Price ranges (suggested)
+        priceRanges: [
+          { label: 'Free', min: 0, max: 0 },
+          { label: 'Under MYR 50', min: 0, max: 50 },
+          { label: 'MYR 50 - MYR 100', min: 50, max: 100 },
+          { label: 'MYR 100 - MYR 200', min: 100, max: 200 },
+          { label: 'Above MYR 200', min: 200, max: null }
+        ],
+
+        // Radius options (in km)
+        radiusOptions: [
+          { value: 5, label: '5 km' },
+          { value: 10, label: '10 km' },
+          { value: 25, label: '25 km' },
+          { value: 50, label: '50 km' },
+          { value: 100, label: '100 km' },
+          { value: 200, label: '200 km' }
+        ],
+
+        // Trust score ranges
+        trustScoreRanges: [
+          { label: 'Starter (0-30%)', min: 0, max: 30 },
+          { label: 'Trusted (31-60%)', min: 31, max: 60 },
+          { label: 'Leader (61-100%)', min: 61, max: 100 }
+        ],
+
+        // Section types (for filtering specific sections)
+        sectionTypes: [
+          { value: DiscoverSectionType.TRENDING, label: 'Trending' },
+          { value: DiscoverSectionType.NEARBY, label: 'Nearby' },
+          { value: DiscoverSectionType.COMMUNITIES, label: 'Communities' },
+          { value: DiscoverSectionType.FEATURED, label: 'Featured' },
+          { value: DiscoverSectionType.MARKETPLACE, label: 'Marketplace' },
+          { value: DiscoverSectionType.UPCOMING, label: 'Upcoming Events' },
+          { value: DiscoverSectionType.NEW, label: 'New' }
+        ],
+
+        // Boolean filters
+        booleanFilters: [
+          { key: 'freeOnly', label: 'Free Only', description: 'Show only free events and items' },
+          { key: 'verifiedOnly', label: 'Verified Only', description: 'Show only verified communities' },
+          { key: 'availableNow', label: 'Available Now', description: 'Show only currently available items' },
+          { key: 'userInterests', label: 'Personalized', description: 'Show content based on your interests' }
+        ]
+      }
+    };
+  }
+
+  /**
+   * Format category label (convert snake_case to Title Case)
+   */
+  private formatCategoryLabel(category: string): string {
+    return category
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   }
 
   /**
@@ -308,26 +483,20 @@ export class DiscoverService {
     const limit = params.limit || 20;
 
     // Search across different content types in parallel
-    const [events, communities, users, marketplace, services] = await Promise.all([
+    const [events, communities, marketplace] = await Promise.all([
       params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.EVENTS
         ? this.searchEvents(query, params)
         : [],
       params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.COMMUNITIES
         ? this.searchCommunities(query, params)
         : [],
-      params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.USERS
-        ? this.searchUsers(query, params)
-        : [],
       params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.MARKETPLACE
         ? this.searchMarketplace(query, params)
-        : [],
-      params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.SERVICES
-        ? this.searchServices(query, params)
         : []
     ]);
 
     // Calculate total results
-    const totalResults = events.length + communities.length + users.length + marketplace.length + services.length;
+    const totalResults = events.length + communities.length + marketplace.length;
 
     return {
       success: true,
@@ -337,9 +506,7 @@ export class DiscoverService {
         results: {
           events: events.length > 0 ? events : undefined,
           communities: communities.length > 0 ? communities : undefined,
-          users: users.length > 0 ? users : undefined,
-          marketplace: marketplace.length > 0 ? marketplace : undefined,
-          services: services.length > 0 ? services : undefined
+          marketplace: marketplace.length > 0 ? marketplace : undefined
         },
         pagination: this.buildPagination(totalResults, page, limit)
       }
@@ -855,53 +1022,6 @@ export class DiscoverService {
   }
 
   /**
-   * Search users
-   */
-  private async searchUsers(query: string, params: DiscoverQueryParams): Promise<UserItem[]> {
-    const where: any = {
-      status: 'ACTIVE',
-      OR: [
-        { fullName: { contains: query, mode: 'insensitive' } },
-        { username: { contains: query, mode: 'insensitive' } }
-      ]
-    };
-
-    if (params.verifiedOnly) {
-      where.isVerified = true;
-    }
-
-    if (params.trustScoreMin) {
-      where.trustScore = {
-        gte: params.trustScoreMin
-      };
-    }
-
-    const users = await prisma.user.findMany({
-      where,
-      take: 20,
-      orderBy: {
-        trustScore: 'desc'
-      },
-      include: {
-        profile: {
-          select: {
-            bio: true,
-            interests: true
-          }
-        },
-        location: {
-          select: {
-            currentCity: true,
-            countryOfResidence: true
-          }
-        }
-      }
-    });
-
-    return users.map(u => this.transformUser(u));
-  }
-
-  /**
    * Search marketplace
    */
   private async searchMarketplace(query: string, params: DiscoverQueryParams): Promise<MarketplaceItem[]> {
@@ -932,14 +1052,6 @@ export class DiscoverService {
     });
 
     return items.map(i => this.transformMarketplaceItem(i));
-  }
-
-  /**
-   * Search services - placeholder
-   */
-  private async searchServices(query: string, params: DiscoverQueryParams): Promise<ServiceItem[]> {
-    // TODO: Implement when services module is ready
-    return [];
   }
 
   /**
@@ -1036,32 +1148,6 @@ export class DiscoverService {
     };
   }
 
-  /**
-   * Transform user to UserItem
-   */
-  private transformUser(user: any): UserItem {
-    return {
-      id: user.id,
-      type: 'user',
-      displayName: user.fullName,
-      bio: user.profile?.bio,
-      avatarUrl: undefined,
-      location: user.location ? {
-        city: user.location.currentCity,
-        country: user.location.countryOfResidence
-      } : undefined,
-      trustScore: user.trustScore || 0,
-      connectionStatus: 'not_connected', // TODO: Check actual status
-      mutualConnections: 0, // TODO: Calculate
-      interests: Array.isArray(user.profile?.interests) ? user.profile.interests as string[] : [],
-      memberSince: user.createdAt.toISOString(),
-      profileUrl: `/v2/users/${user.id}`
-    };
-  }
-
-  /**
-   * Build empty response
-   */
   /**
    * Try expanding search radius progressively to find content
    */

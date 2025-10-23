@@ -4,8 +4,8 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import accessControlService from '../services/accessControl.service';
-import { FeatureCode } from '../types/subscription.types';
+import accessControlService from '../modules/subscription/access-control/access-control.service';
+import { FeatureCode } from '../modules/subscription/subscription.types';
 
 /**
  * Extended Request with user info
@@ -124,7 +124,7 @@ export const requireSubscription = (minTier: 'FREE' | 'BASIC' | 'PREMIUM') => {
  * Middleware to require minimum trust level
  * Usage: router.post('/vouches/give', requireTrustLevel('trusted'), controller.giveVouch)
  */
-export const requireTrustLevel = (minLevel: 'starter' | 'trusted' | 'scout' | 'leader') => {
+export const requireTrustLevel = (minLevel: 'starter' | 'trusted' | 'leader') => {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       if (!req.user || !req.user.id) {
@@ -153,7 +153,7 @@ export const requireTrustLevel = (minLevel: 'starter' | 'trusted' | 'scout' | 'l
       }
 
       // Check trust level
-      const levels = ['starter', 'trusted', 'scout', 'leader'];
+      const levels = ['starter', 'trusted', 'leader'];
       const userLevelIndex = levels.indexOf(user.trustLevel);
       const requiredLevelIndex = levels.indexOf(minLevel);
 

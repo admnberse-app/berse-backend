@@ -17,7 +17,7 @@ import logger, { stream } from './utils/logger';
 
 // Import API routers
 import apiV2Router from './routes/v2';
-import subscriptionRoutes from './routes/subscription.routes';
+import subscriptionRoutes from './modules/subscription/subscription.routes';
 import adminSubscriptionRoutes from './routes/admin/subscription.admin.routes';
 import paymentWebhookRoutes from './routes/webhooks/payment-webhook.routes';
 

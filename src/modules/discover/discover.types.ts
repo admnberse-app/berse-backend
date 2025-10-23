@@ -4,8 +4,6 @@ export enum DiscoverContentType {
   EVENTS = 'events',
   COMMUNITIES = 'communities',
   MARKETPLACE = 'marketplace',
-  SERVICES = 'services',
-  USERS = 'users',
   ALL = 'all'
 }
 
@@ -15,8 +13,6 @@ export enum DiscoverSectionType {
   COMMUNITIES = 'communities',
   FEATURED = 'featured',
   MARKETPLACE = 'marketplace',
-  SERVICES = 'services',
-  USERS = 'users',
   UPCOMING = 'upcoming',
   NEW = 'new',
   PROMOTIONS = 'promotions',
@@ -240,27 +236,7 @@ export interface ServiceItem extends BaseDiscoverItem {
   detailsUrl?: string;
 }
 
-/**
- * User item
- */
-export interface UserItem extends BaseDiscoverItem {
-  type: 'user';
-  displayName: string;
-  bio?: string;
-  avatarUrl?: string;
-  location?: {
-    city?: string;
-    country?: string;
-  };
-  trustScore?: number;
-  connectionStatus?: string;
-  mutualConnections?: number;
-  interests?: string[];
-  memberSince?: string;
-  profileUrl?: string;
-}
-
-export type DiscoverItem = EventItem | CommunityItem | MarketplaceItem | ServiceItem | UserItem;
+export type DiscoverItem = EventItem | CommunityItem | MarketplaceItem | ServiceItem;
 
 /**
  * Section configuration
@@ -319,9 +295,7 @@ export interface SearchDiscoverResponse {
     results: {
       events?: EventItem[];
       communities?: CommunityItem[];
-      users?: UserItem[];
       marketplace?: MarketplaceItem[];
-      services?: ServiceItem[];
     };
     pagination: PaginationInfo;
   };

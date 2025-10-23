@@ -51,7 +51,7 @@ export const subscriptionSwaggerDocs = {
       },
       TrustLevel: {
         type: 'string',
-        enum: ['starter', 'trusted', 'scout', 'leader'],
+        enum: ['starter', 'trusted', 'leader'],
         description: 'User trust level tier',
       },
       PaymentGateway: {

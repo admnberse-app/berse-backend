@@ -1681,7 +1681,7 @@ export class UserController {
           const profileUserTrustInfo = await getTrustLevelInfo(user.trustScore);
           
           // Calculate trust level difference
-          const trustLevels = ['starter', 'trusted', 'scout', 'leader'];
+          const trustLevels = ['starter', 'trusted', 'leader'];
           const currentUserLevelIndex = trustLevels.indexOf(currentUserTrustInfo.level.toLowerCase());
           const profileUserLevelIndex = trustLevels.indexOf(profileUserTrustInfo.level.toLowerCase());
           const difference = Math.abs(currentUserLevelIndex - profileUserLevelIndex);

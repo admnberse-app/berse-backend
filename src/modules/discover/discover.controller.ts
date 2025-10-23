@@ -4,6 +4,19 @@ import { DiscoverQueryParams, DiscoverContentType, DiscoverSortBy } from './disc
 
 export class DiscoverController {
   /**
+   * Get filter options - GET /v2/discover/filters
+   * Returns all available filter enums and options
+   */
+  async getFilterOptions(req: Request, res: Response) {
+    try {
+      const result = await discoverService.getFilterOptions();
+      res.json(result);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Main discover endpoint - GET /v2/discover
    * Returns sections or search results based on query parameters
    */

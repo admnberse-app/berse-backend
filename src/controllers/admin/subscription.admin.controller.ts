@@ -6,7 +6,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middlewares/featureAccess.middleware';
 import { prisma } from '../../config/database';
-import { SubscriptionTier, TierFeatures } from '../../types/subscription.types';
+import { SubscriptionTier, TierFeatures } from '../../modules/subscription/subscription.types';
 
 class AdminSubscriptionController {
   /**
