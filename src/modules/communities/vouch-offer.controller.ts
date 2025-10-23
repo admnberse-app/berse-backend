@@ -45,7 +45,8 @@ export class CommunityVouchOfferController {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
         },
@@ -311,7 +312,8 @@ export class CommunityVouchOfferController {
               select: {
                 id: true,
                 name: true,
-                imageUrl: true,
+                logoUrl: true,
+                coverImageUrl: true,
               },
             },
           },

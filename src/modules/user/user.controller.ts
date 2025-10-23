@@ -1147,6 +1147,8 @@ export class UserController {
               earnedAt: 'desc',
             },
           },
+          homeSurf: true,
+          berseGuide: true,
         },
       });
 
@@ -1303,6 +1305,18 @@ export class UserController {
         },
       };
 
+      // ==================== SERVICES SUMMARY ====================
+      const services = {
+        homeSurf: {
+          isEnabled: user.homeSurf?.isEnabled || false,
+          hasProfile: !!user.homeSurf,
+        },
+        berseGuide: {
+          isEnabled: user.berseGuide?.isEnabled || false,
+          hasProfile: !!user.berseGuide,
+        },
+      };
+
       // ==================== BUILD RESPONSE ====================
       const response = {
         profile: {
@@ -1342,6 +1356,7 @@ export class UserController {
           joinedAt: user.createdAt,
           lastActiveAt: user.security?.lastSeenAt || null,
         },
+        services,
         trust,
         statistics,
         privacy: {
@@ -1501,7 +1516,8 @@ export class UserController {
                 select: {
                   id: true,
                   name: true,
-                  imageUrl: true,
+                  logoUrl: true,
+                  coverImageUrl: true,
                 },
               },
             },
@@ -1838,7 +1854,7 @@ export class UserController {
         list: sharedCommunities.map(cm => ({
           id: cm.communities.id,
           name: cm.communities.name,
-          logo: cm.communities.imageUrl,
+          logo: cm.communities.logoUrl,
           memberSince: cm.joinedAt,
           roles: {
             currentUser: cm.communities.communityMembers[0]?.role || 'MEMBER',

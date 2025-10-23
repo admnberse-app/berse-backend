@@ -363,4 +363,58 @@ export class CommunityController {
     const communities = await communityService.getCommunitiesFromConnections(userId, limit);
     sendSuccess(res, { communities });
   }
+
+  // ============================================================================
+  // IMAGE UPLOADS
+  // ============================================================================
+
+  /**
+   * @route POST /v2/communities/upload-logo
+   * @desc Upload community logo image
+   * @access Private
+   */
+  async uploadLogo(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const file = req.file;
+
+    if (!file) {
+      throw new AppError('No logo file provided', 400);
+    }
+
+    // Upload to storage
+    const { storageService } = await import('../../services/storage.service');
+    
+    const uploadResult = await storageService.uploadFile(file, 'communities', {
+      optimize: true,
+      isPublic: true,
+      userId,
+    });
+
+    sendSuccess(res, { logoUrl: uploadResult.url }, 'Community logo uploaded successfully');
+  }
+
+  /**
+   * @route POST /v2/communities/upload-cover-image
+   * @desc Upload community cover/banner image
+   * @access Private
+   */
+  async uploadCoverImage(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const file = req.file;
+
+    if (!file) {
+      throw new AppError('No cover image file provided', 400);
+    }
+
+    // Upload to storage
+    const { storageService } = await import('../../services/storage.service');
+    
+    const uploadResult = await storageService.uploadFile(file, 'communities', {
+      optimize: true,
+      isPublic: true,
+      userId,
+    });
+
+    sendSuccess(res, { coverImageUrl: uploadResult.url }, 'Community cover image uploaded successfully');
+  }
 }

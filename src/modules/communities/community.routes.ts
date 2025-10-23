@@ -4,6 +4,7 @@ import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireTrustLevel } from '../../middleware/trust-level.middleware';
+import { uploadImage } from '../../middleware/upload';
 import vouchOfferRoutes from './vouch-offer.routes';
 import {
   createCommunityValidators,
@@ -52,12 +53,28 @@ const communityController = new CommunityController();
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "Fitness Enthusiasts KL"
  *               description:
  *                 type: string
- *               imageUrl:
+ *                 example: "A community for fitness lovers in Kuala Lumpur"
+ *               logoUrl:
  *                 type: string
+ *                 description: "Community logo image URL (upload via /v2/communities/upload-logo)"
+ *                 example: "https://cdn.example.com/communities/logos/abc123.jpg"
+ *               coverImageUrl:
+ *                 type: string
+ *                 description: "Community cover/banner image URL (upload via /v2/communities/upload-cover-image)"
+ *                 example: "https://cdn.example.com/communities/covers/abc123.jpg"
  *               category:
  *                 type: string
+ *                 description: "DEPRECATED - Use interests instead"
+ *                 example: "Sports & Fitness"
+ *               interests:
+ *                 type: array
+ *                 description: "Array of interest values from profile metadata (max 10)"
+ *                 items:
+ *                   type: string
+ *                 example: ["fitness", "yoga", "running"]
  *     responses:
  *       201:
  *         description: Community created successfully
@@ -105,7 +122,17 @@ router.post(
  *         name: category
  *         schema:
  *           type: string
- *         description: Filter by category
+ *         description: "Filter by category (DEPRECATED - use interests instead)"
+ *       - in: query
+ *         name: interests
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         style: form
+ *         explode: false
+ *         description: "Filter by interests (comma-separated values, max 5). Example: interests=fitness,yoga"
+ *         example: "fitness,yoga,running"
  *       - in: query
  *         name: search
  *         schema:
@@ -351,6 +378,26 @@ router.get(
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               logoUrl:
+ *                 type: string
+ *                 description: "Community logo image URL (upload via /v2/communities/upload-logo)"
+ *               coverImageUrl:
+ *                 type: string
+ *                 description: "Community cover/banner image URL (upload via /v2/communities/upload-cover-image)"
+ *               interests:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Community updated successfully
@@ -638,5 +685,117 @@ router.delete(
 
 // Mount vouch offer routes
 router.use('/', vouchOfferRoutes);
+
+// ============================================================================
+// IMAGE UPLOAD ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/communities/upload-logo:
+ *   post:
+ *     summary: Upload community logo image
+ *     description: Upload a logo image for a community. Returns the image URL to be used in community creation/update.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - logo
+ *             properties:
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *                 description: Community logo image file (JPEG, PNG, GIF, WebP)
+ *     responses:
+ *       200:
+ *         description: Logo uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Community logo uploaded successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     logoUrl:
+ *                       type: string
+ *                       example: https://cdn.example.com/communities/logos/abc123.jpg
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+router.post(
+  '/upload-logo',
+  authenticateToken,
+  uploadImage.single('logo'),
+  asyncHandler(communityController.uploadLogo.bind(communityController))
+);asyncHandler(communityController.uploadLogo.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/upload-cover-image:
+ *   post:
+ *     summary: Upload community cover/banner image
+ *     description: Upload a cover image for a community. Returns the image URL to be used in community creation/update.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - coverImage
+ *             properties:
+ *               coverImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Community cover/banner image file (JPEG, PNG, GIF, WebP)
+ *     responses:
+ *       200:
+ *         description: Cover image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Community cover image uploaded successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     coverImageUrl:
+ *                       type: string
+ *                       example: https://cdn.example.com/communities/covers/abc123.jpg
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post(
+  '/upload-cover-image',
+  authenticateToken,
+  uploadImage.single('coverImage'),
+  asyncHandler(communityController.uploadCoverImage.bind(communityController))
+);
 
 export const communityRoutes = router;

@@ -1,6 +1,7 @@
 import { PrismaClient, HomeSurfBookingStatus, ReviewerRole, Prisma } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { HomeSurfNotifications } from './homesurf.notifications';
 import type {
   CreateHomeSurfProfileDTO,
   UpdateHomeSurfProfileDTO,
@@ -517,6 +518,13 @@ export class HomeSurfService {
 
       logger.info('Booking request created', { bookingId: booking.id, guestId, hostId: data.hostId });
 
+      // Send notification to host
+      await HomeSurfNotifications.notifyHostOfNewRequest(
+        data.hostId,
+        booking.guest.fullName,
+        booking.id
+      );
+
       return this.formatBookingResponse(booking);
     } catch (error) {
       logger.error('Failed to create booking request', { error, guestId, data });
@@ -823,6 +831,13 @@ export class HomeSurfService {
 
       logger.info('Booking approved', { bookingId, hostId });
 
+      // Send notification to guest
+      await HomeSurfNotifications.notifyGuestOfApproval(
+        booking.guestId,
+        updatedBooking.host.fullName,
+        bookingId
+      );
+
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
       logger.error('Failed to approve booking', { error, hostId, bookingId, data });
@@ -894,6 +909,14 @@ export class HomeSurfService {
 
       logger.info('Booking rejected', { bookingId, hostId });
 
+      // Send notification to guest
+      await HomeSurfNotifications.notifyGuestOfRejection(
+        booking.guestId,
+        updatedBooking.host.fullName,
+        bookingId,
+        data.cancellationReason
+      );
+
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
       logger.error('Failed to reject booking', { error, hostId, bookingId, data });
@@ -962,6 +985,15 @@ export class HomeSurfService {
 
       logger.info('Booking cancelled', { bookingId, userId, cancelledBy: isHost ? 'host' : 'guest' });
 
+      // Send notification to the other party
+      const otherUserId = isHost ? booking.guestId : booking.hostId;
+      await HomeSurfNotifications.notifyOfCancellation(
+        otherUserId,
+        isHost ? 'host' : 'guest',
+        bookingId,
+        isHost
+      );
+
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
       logger.error('Failed to cancel booking', { error, userId, bookingId, data });
@@ -1023,6 +1055,13 @@ export class HomeSurfService {
       });
 
       logger.info('Guest checked in', { bookingId, hostId });
+
+      // Send notification to host
+      await HomeSurfNotifications.notifyHostOfCheckIn(
+        hostId,
+        updatedBooking.guest.fullName,
+        bookingId
+      );
 
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
@@ -1095,6 +1134,13 @@ export class HomeSurfService {
       });
 
       logger.info('Guest checked out', { bookingId, hostId });
+
+      // Send notification to both host and guest
+      await HomeSurfNotifications.notifyAfterCheckOut(
+        hostId,
+        booking.guestId,
+        bookingId
+      );
 
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
@@ -1202,6 +1248,14 @@ export class HomeSurfService {
       }
 
       logger.info('Review created', { reviewId: review.id, userId, bookingId: data.bookingId });
+
+      // Send notification to reviewee
+      await HomeSurfNotifications.notifyOfNewReview(
+        data.revieweeId,
+        review.reviewer.fullName,
+        data.rating,
+        review.id
+      );
 
       return this.formatReviewResponse(review);
     } catch (error) {

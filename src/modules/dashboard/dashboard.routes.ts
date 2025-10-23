@@ -24,6 +24,7 @@ router.use(authenticateToken);
  *       - Quick stats (communities, events, listings, connections, events attended/hosted)
  *       - Alerts (pending approvals, upcoming events)
  *       - Summary breakdowns (admin/member communities, hosting/attending events, active/sold listings)
+ *       - Services (HomeSurf and BerseGuide status, bookings, ratings)
  *       - Recent activity feed (last 10 activities)
  *     tags: [Dashboard]
  *     security:
@@ -140,6 +141,52 @@ router.use(authenticateToken);
  *                           type: integer
  *                         draft:
  *                           type: integer
+ *                     services:
+ *                       type: object
+ *                       properties:
+ *                         homeSurf:
+ *                           type: object
+ *                           properties:
+ *                             isEnabled:
+ *                               type: boolean
+ *                             hasProfile:
+ *                               type: boolean
+ *                             totalBookings:
+ *                               type: integer
+ *                             averageRating:
+ *                               type: number
+ *                               nullable: true
+ *                             city:
+ *                               type: string
+ *                               nullable: true
+ *                             accommodationType:
+ *                               type: string
+ *                               nullable: true
+ *                         berseGuide:
+ *                           type: object
+ *                           properties:
+ *                             isEnabled:
+ *                               type: boolean
+ *                             hasProfile:
+ *                               type: boolean
+ *                             totalBookings:
+ *                               type: integer
+ *                             averageRating:
+ *                               type: number
+ *                               nullable: true
+ *                             city:
+ *                               type: string
+ *                               nullable: true
+ *                             guideTypes:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               description: Types of tours offered
+ *                             highlights:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               description: Tour highlights and specialties
  *                     recentActivity:
  *                       type: array
  *                       items:

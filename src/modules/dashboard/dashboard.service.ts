@@ -58,12 +58,14 @@ export class DashboardService {
       eventsData,
       listingsData,
       connectionsCount,
+      servicesData,
       recentActivity,
     ] = await Promise.all([
       this.getCommunitiesSummary(userId),
       this.getEventsSummary(userId),
       this.getListingsSummary(userId),
       this.getConnectionsCount(userId),
+      this.getServicesSummary(userId),
       this.getRecentActivity(userId, 10),
     ]);
 
@@ -95,6 +97,16 @@ export class DashboardService {
         connections: connectionsCount,
         eventsAttended: user.stats?.eventsAttended || 0,
         eventsHosted: user.stats?.eventsHosted || 0,
+        homeSurf: {
+          isEnabled: servicesData.homeSurf.isEnabled,
+          totalBookings: servicesData.homeSurf.totalBookings,
+          pendingRequests: servicesData.homeSurf.pendingRequests,
+        },
+        berseGuide: {
+          isEnabled: servicesData.berseGuide.isEnabled,
+          totalSessions: servicesData.berseGuide.totalSessions,
+          upcomingTours: servicesData.berseGuide.upcomingTours,
+        },
       },
       alerts,
       communitySummary: {
@@ -114,6 +126,7 @@ export class DashboardService {
         sold: listingsData.sold,
         draft: listingsData.draft,
       },
+      services: servicesData,
       recentActivity,
     };
   }
@@ -144,7 +157,8 @@ export class DashboardService {
       select: {
         id: true,
         name: true,
-        imageUrl: true,
+        logoUrl: true,
+        coverImageUrl: true,
         category: true,
         isVerified: true,
       },
@@ -181,7 +195,7 @@ export class DashboardService {
         id: community.id,
         name: community.name,
         slug: community.name.toLowerCase().replace(/\s+/g, '-'), // Generate slug from name
-        profileImage: community.imageUrl || undefined,
+        profileImage: community.logoUrl || undefined,
         location: undefined, // Not in schema
         memberCount,
         userRole: membership.role.toLowerCase() as 'admin' | 'member',
@@ -607,6 +621,114 @@ export class DashboardService {
     });
 
     return count;
+  }
+
+  private async getServicesSummary(userId: string) {
+    const [homeSurf, berseGuide] = await Promise.all([
+      prisma.userHomeSurf.findUnique({
+        where: { userId },
+        select: {
+          isEnabled: true,
+          city: true,
+          accommodationType: true,
+        },
+      }),
+      prisma.userBerseGuide.findUnique({
+        where: { userId },
+        select: {
+          isEnabled: true,
+          city: true,
+          guideTypes: true,
+          highlights: true,
+        },
+      }),
+    ]);
+
+    // Get booking counts and pending requests
+    const now = new Date();
+    const [
+      homeSurfBookings,
+      homeSurfPending,
+      berseGuideBookings,
+      berseGuideSessions,
+      berseGuideUpcoming,
+    ] = await Promise.all([
+      homeSurf ? prisma.homeSurfBooking.count({
+        where: {
+          hostId: userId,
+        },
+      }) : 0,
+      homeSurf ? prisma.homeSurfBooking.count({
+        where: {
+          hostId: userId,
+          status: 'PENDING',
+        },
+      }) : 0,
+      berseGuide ? prisma.berseGuideBooking.count({
+        where: {
+          guideId: userId,
+        },
+      }) : 0,
+      berseGuide ? prisma.berseGuideSession.count({
+        where: {
+          booking: {
+            guideId: userId,
+          },
+        },
+      }) : 0,
+      berseGuide ? prisma.berseGuideBooking.count({
+        where: {
+          guideId: userId,
+          status: 'APPROVED',
+          agreedDate: {
+            gte: now,
+          },
+        },
+      }) : 0,
+    ]);
+
+    // Get average ratings
+    const [homeSurfRating, berseGuideRating] = await Promise.all([
+      homeSurf ? prisma.homeSurfReview.aggregate({
+        where: {
+          revieweeId: userId,
+        },
+        _avg: {
+          rating: true,
+        },
+      }) : null,
+      berseGuide ? prisma.berseGuideReview.aggregate({
+        where: {
+          guideId: userId,
+        },
+        _avg: {
+          rating: true,
+        },
+      }) : null,
+    ]);
+
+    return {
+      homeSurf: {
+        isEnabled: homeSurf?.isEnabled || false,
+        hasProfile: !!homeSurf,
+        totalBookings: homeSurfBookings,
+        pendingRequests: homeSurfPending,
+        averageRating: homeSurfRating?._avg.rating || null,
+        city: homeSurf?.city || null,
+        accommodationType: homeSurf?.accommodationType || null,
+      },
+      berseGuide: {
+        isEnabled: berseGuide?.isEnabled || false,
+        hasProfile: !!berseGuide,
+        totalBookings: berseGuideBookings,
+        totalSessions: berseGuideSessions,
+        upcomingTours: berseGuideUpcoming,
+        averageRating: berseGuideRating?._avg.rating || null,
+        city: berseGuide?.city || null,
+        guideTypes: berseGuide?.guideTypes || [],
+        highlights: berseGuide?.highlights || [],
+      },
+    };
   }
 
   private async generateAlerts(userId: string): Promise<Alert[]> {

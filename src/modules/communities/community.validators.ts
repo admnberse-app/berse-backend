@@ -1,5 +1,6 @@
 import { body, param, query } from 'express-validator';
 import { CommunityRole } from '@prisma/client';
+import { validateInterests } from './community.utils';
 
 // ============================================================================
 // COMMUNITY MANAGEMENT VALIDATORS
@@ -11,20 +12,50 @@ export const createCommunityValidators = [
     .notEmpty().withMessage('Community name is required')
     .isLength({ min: 3, max: 100 }).withMessage('Name must be between 3 and 100 characters')
     .matches(/^[a-zA-Z0-9\s\-&']+$/).withMessage('Name contains invalid characters'),
-  
+
   body('description')
     .optional()
     .trim()
     .isLength({ max: 1000 }).withMessage('Description cannot exceed 1000 characters'),
-  
-  body('imageUrl')
+
+  body('logoUrl')
     .optional()
     .trim(),
-  
+
+  body('coverImageUrl')
+    .optional()
+    .trim(),
+
   body('category')
     .optional()
     .trim()
-    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters'),
+    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters (DEPRECATED - use interests instead)'),
+
+  body('interests')
+    .optional()
+    .isArray().withMessage('Interests must be an array')
+    .custom(async (value) => {
+      if (!Array.isArray(value) || value.length === 0) {
+        return true; // Optional field, empty is ok
+      }
+
+      if (value.length > 10) {
+        throw new Error('Cannot select more than 10 interests');
+      }
+
+      if (value.some((interest: any) => typeof interest !== 'string')) {
+        throw new Error('All interests must be strings');
+      }
+
+      const validation = await validateInterests(value);
+      if (!validation.isValid) {
+        throw new Error(
+          `Invalid interests: ${validation.invalidInterests.join(', ')}. Please use values from the profile metadata interests list.`
+        );
+      }
+    }
+
+  ),
 ];
 
 export const updateCommunityValidators = [
@@ -32,27 +63,61 @@ export const updateCommunityValidators = [
     .trim()
     .notEmpty().withMessage('Community ID is required')
     .isString().withMessage('Community ID must be a string'),
-  
+
   body('name')
     .optional()
     .trim()
     .isLength({ min: 3, max: 100 }).withMessage('Name must be between 3 and 100 characters')
     .matches(/^[a-zA-Z0-9\s\-&']+$/).withMessage('Name contains invalid characters'),
-  
+
   body('description')
     .optional()
     .trim()
     .isLength({ max: 1000 }).withMessage('Description cannot exceed 1000 characters'),
-  
-  body('imageUrl')
+
+  body('logoUrl')
     .optional()
     .trim(),
-  
+
+  body('coverImageUrl')
+    .optional()
+    .trim(),
+
   body('category')
     .optional()
     .trim()
-    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters'),
-  
+    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters (DEPRECATED - use interests instead)'),
+
+  body('interests')
+    .trim()
+    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters (DEPRECATED - use interests instead)'),
+
+  body('interests')
+    .optional()
+    .isArray().withMessage('Interests must be an array')
+    .custom(async (value) => {
+      if (!Array.isArray(value) || value.length === 0) {
+        return true; // Optional field, empty is ok
+      }
+
+      if (value.length > 10) {
+        throw new Error('Cannot select more than 10 interests');
+      }
+
+      if (value.some((interest: any) => typeof interest !== 'string')) {
+        throw new Error('All interests must be strings');
+      }
+
+      const validation = await validateInterests(value);
+      if (!validation.isValid) {
+        throw new Error(
+          `Invalid interests: ${validation.invalidInterests.join(', ')}. Please use values from the profile metadata interests list.`
+        );
+      }
+
+      return true;
+    }),
+
   body('isVerified')
     .optional()
     .isBoolean().withMessage('isVerified must be a boolean'),
@@ -131,32 +196,61 @@ export const communityQueryValidators = [
     .optional()
     .isInt({ min: 1 }).withMessage('Page must be a positive integer')
     .toInt(),
-  
+
   query('limit')
     .optional()
     .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
     .toInt(),
-  
+
   query('category')
     .optional()
     .trim()
-    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters'),
-  
+    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters (DEPRECATED - use interests instead)'),
+
+  query('interests')
+    .optional()
+    .customSanitizer((value) => {
+      // Support comma-separated string or array
+      if (typeof value === 'string') {
+        return value.split(',').map((v: string) => v.trim()).filter(Boolean);
+      }
+      return value;
+    })
+    .isArray().withMessage('Interests must be an array or comma-separated string')
+    .custom(async (value) => {
+      if (!Array.isArray(value) || value.length === 0) {
+        return true;
+      }
+
+      if (value.length > 5) {
+        throw new Error('Cannot filter by more than 5 interests at once');
+      }
+
+      const validation = await validateInterests(value);
+      if (!validation.isValid) {
+        throw new Error(
+          `Invalid interests: ${validation.invalidInterests.join(', ')}`
+        );
+      }
+
+      return true;
+    }),
+
   query('search')
     .optional()
     .trim()
     .isLength({ max: 100 }).withMessage('Search query cannot exceed 100 characters'),
-  
+
   query('isVerified')
     .optional()
     .isBoolean().withMessage('isVerified must be a boolean')
     .toBoolean(),
-  
+
   query('sortBy')
     .optional()
     .isIn(['createdAt', 'name', 'memberCount'])
     .withMessage('Invalid sort field'),
-  
+
   query('sortOrder')
     .optional()
     .isIn(['asc', 'desc'])

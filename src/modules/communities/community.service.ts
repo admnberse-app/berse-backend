@@ -47,8 +47,10 @@ export class CommunityService {
           data: {
             name: input.name,
             description: input.description,
-            imageUrl: input.imageUrl,
+            logoUrl: input.logoUrl,
+            coverImageUrl: input.coverImageUrl,
             category: input.category,
+            interests: input.interests || [],
             createdById: userId,
           },
           include: {
@@ -339,6 +341,7 @@ export class CommunityService {
         page = 1,
         limit = 20,
         category,
+        interests,
         search,
         isVerified,
         sortBy = 'createdAt',
@@ -350,7 +353,13 @@ export class CommunityService {
       // Build where clause
       const where: Prisma.CommunityWhereInput = {};
 
-      if (category) {
+      // Filter by interests (preferred over category)
+      if (interests && interests.length > 0) {
+        where.interests = {
+          hasSome: interests, // Matches if community has ANY of the specified interests
+        };
+      } else if (category) {
+        // Fallback to category for backward compatibility
         where.category = category;
       }
 
@@ -459,6 +468,7 @@ export class CommunityService {
         page = 1,
         limit = 20,
         category,
+        interests,
         search,
       } = query;
 
@@ -474,7 +484,13 @@ export class CommunityService {
         },
       };
 
-      if (category) {
+      // Filter by interests (preferred over category)
+      if (interests && interests.length > 0) {
+        where.interests = {
+          hasSome: interests,
+        };
+      } else if (category) {
+        // Fallback to category for backward compatibility
         where.category = category;
       }
 
@@ -1401,8 +1417,10 @@ export class CommunityService {
       id: community.id,
       name: community.name,
       description: community.description,
-      imageUrl: community.imageUrl,
+      logoUrl: community.logoUrl,
+      coverImageUrl: community.coverImageUrl,
       category: community.category,
+      interests: community.interests || [],
       isVerified: community.isVerified,
       createdAt: community.createdAt.toISOString(),
       updatedAt: community.updatedAt.toISOString(),
@@ -1669,7 +1687,7 @@ export class CommunityService {
   }
 
   /**
-   * Get communities by interest/category
+   * Get communities by interest (using interests array)
    */
   async getCommunitiesByInterest(
     interest: string,
@@ -1679,9 +1697,8 @@ export class CommunityService {
     try {
       const communities = await prisma.community.findMany({
         where: {
-          category: {
-            contains: interest,
-            mode: 'insensitive',
+          interests: {
+            has: interest, // Exact match for the interest value
           },
         },
         take: limit,

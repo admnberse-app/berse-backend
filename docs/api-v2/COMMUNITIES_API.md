@@ -61,7 +61,8 @@ Create a new community. The creator is automatically assigned as ADMIN.
   "name": "Tech Enthusiasts Malaysia",
   "description": "A vibrant community for technology lovers in Malaysia. Join us for meetups, workshops, and networking events.",
   "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-  "category": "Technology"
+  "interests": ["technology", "startups", "innovation"],
+  "category": "Technology"  // @deprecated - Use interests array instead
 }
 ```
 
@@ -69,7 +70,8 @@ Create a new community. The creator is automatically assigned as ADMIN.
 - `name` (required): 3-100 characters, must be unique
 - `description` (optional): 10-2000 characters
 - `imageUrl` (optional): Valid URL
-- `category` (optional): Max 50 characters
+- `interests` (optional): Array of valid interest values from profile metadata
+- `category` (optional, deprecated): Max 50 characters - use `interests` array instead
 
 **Response:** `201 Created`
 ```json
@@ -80,7 +82,8 @@ Create a new community. The creator is automatically assigned as ADMIN.
     "name": "Tech Enthusiasts Malaysia",
     "description": "A vibrant community for technology lovers in Malaysia...",
     "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-    "category": "Technology",
+    "interests": ["technology", "startups", "innovation"],
+    "category": "Technology",  // @deprecated
     "isVerified": false,
     "createdBy": "user123",
     "createdAt": "2025-10-17T10:00:00.000Z",
@@ -120,7 +123,8 @@ Get all communities with optional filtering, search, and pagination.
 **Query Parameters:**
 - `page` (optional): Page number (default: 1, min: 1)
 - `limit` (optional): Items per page (default: 20, max: 100)
-- `category` (optional): Filter by category
+- `interests` (optional): Filter by interests (comma-separated, e.g., "technology,startups")
+- `category` (optional, deprecated): Filter by category - use `interests` instead
 - `search` (optional): Search in name or description (case-insensitive)
 - `isVerified` (optional): Filter by verification status (true/false)
 - `sortBy` (optional): Sort field - `name`, `createdAt`, `memberCount` (default: `createdAt`)
@@ -128,7 +132,7 @@ Get all communities with optional filtering, search, and pagination.
 
 **Example Request:**
 ```
-GET /v2/communities?page=1&limit=20&category=Technology&search=malaysia&isVerified=true&sortBy=memberCount&sortOrder=desc
+GET /v2/communities?page=1&limit=20&interests=technology,startups&search=malaysia&isVerified=true&sortBy=memberCount&sortOrder=desc
 ```
 
 **Response:** `200 OK`
@@ -141,7 +145,8 @@ GET /v2/communities?page=1&limit=20&category=Technology&search=malaysia&isVerifi
       "name": "Tech Enthusiasts Malaysia",
       "description": "A vibrant community for technology lovers...",
       "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-      "category": "Technology",
+      "interests": ["technology", "startups", "innovation"],
+      "category": "Technology",  // @deprecated
       "isVerified": true,
       "createdBy": "user123",
       "createdAt": "2025-10-17T10:00:00.000Z",
@@ -189,7 +194,8 @@ Get all communities where the user is an approved member.
       "name": "Tech Enthusiasts Malaysia",
       "description": "A vibrant community for technology lovers...",
       "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-      "category": "Technology",
+      "interests": ["technology", "startups", "innovation"],
+      "category": "Technology",  // @deprecated
       "isVerified": true,
       "memberCount": 250,
       "eventCount": 12,
@@ -237,7 +243,8 @@ Get detailed information about a specific community.
     "name": "Tech Enthusiasts Malaysia",
     "description": "A vibrant community for technology lovers in Malaysia. Join us for meetups, workshops, and networking events.",
     "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-    "category": "Technology",
+    "interests": ["technology", "startups", "innovation"],
+    "category": "Technology",  // @deprecated
     "isVerified": true,
     "createdBy": "user123",
     "createdAt": "2025-10-17T10:00:00.000Z",
@@ -281,7 +288,8 @@ Update community details. Requires ADMIN or MODERATOR role.
   "name": "Tech Enthusiasts KL",
   "description": "Updated description for the community",
   "imageUrl": "https://cdn.berse.com/communities/tech-kl.jpg",
-  "category": "Technology & Innovation"
+  "interests": ["technology", "innovation", "ai"],
+  "category": "Technology & Innovation"  // @deprecated
 }
 ```
 
@@ -289,7 +297,8 @@ Update community details. Requires ADMIN or MODERATOR role.
 - `name` (optional): 3-100 characters, must be unique
 - `description` (optional): 10-2000 characters
 - `imageUrl` (optional): Valid URL
-- `category` (optional): Max 50 characters
+- `interests` (optional): Array of valid interest values from profile metadata
+- `category` (optional, deprecated): Max 50 characters - use `interests` array instead
 
 **Response:** `200 OK`
 ```json
@@ -300,7 +309,8 @@ Update community details. Requires ADMIN or MODERATOR role.
     "name": "Tech Enthusiasts KL",
     "description": "Updated description for the community",
     "imageUrl": "https://cdn.berse.com/communities/tech-kl.jpg",
-    "category": "Technology & Innovation",
+    "interests": ["technology", "innovation", "ai"],
+    "category": "Technology & Innovation",  // @deprecated
     "isVerified": true,
     "memberCount": 250,
     "eventCount": 12,
@@ -410,7 +420,8 @@ Get recently created communities (last 30 days).
       "name": "Startup Founders KL",
       "description": "Connect with fellow startup founders...",
       "imageUrl": "https://cdn.berse.com/communities/startup-kl.jpg",
-      "category": "Business",
+      "interests": ["startups", "entrepreneurship", "business"],
+      "category": "Business",  // @deprecated
       "isVerified": false,
       "memberCount": 45,
       "eventCount": 3,
@@ -449,7 +460,8 @@ Get personalized community recommendations based on user interests and connectio
       "name": "Photography Enthusiasts",
       "description": "Share your passion for photography...",
       "imageUrl": "https://cdn.berse.com/communities/photo.jpg",
-      "category": "Arts & Photography",
+      "interests": ["photography", "arts", "creative"],
+      "category": "Arts & Photography",  // @deprecated
       "isVerified": true,
       "memberCount": 580,
       "eventCount": 18,
@@ -466,27 +478,29 @@ Get personalized community recommendations based on user interests and connectio
 ```
 
 **Recommendation Criteria:**
-- User's listed interests match community category
+- User's profile interests match community interests (array intersection)
 - Communities that user's connections are members of
-- Similar communities to ones user already joined
+- Similar communities to ones user already joined (based on shared interests)
+
+**Note:** Interest values must match valid interest values from the profile metadata system. Use the `/v2/profile/metadata/interests` endpoint to get available interest values.
 
 ---
 
 ### Get Communities by Interest
 
-Get communities filtered by a specific category/interest.
+Get communities filtered by a specific interest value. Searches the `interests` array for exact matches.
 
 **Endpoint:** `GET /v2/communities/discovery/by-interest`
 
 **Authentication:** Optional (shows user role if authenticated)
 
 **Query Parameters:**
-- `interest` (required): Category/interest to filter by (e.g., "Technology", "Sports", "Arts")
+- `interest` (required): Interest value to filter by (e.g., "technology", "sports", "photography"). Must match valid interest values from profile metadata.
 - `limit` (optional): Number of results (default: 20, max: 100)
 
 **Example Request:**
 ```
-GET /v2/communities/discovery/by-interest?interest=Technology&limit=10
+GET /v2/communities/discovery/by-interest?interest=technology&limit=10
 ```
 
 **Response:** `200 OK`
@@ -499,7 +513,8 @@ GET /v2/communities/discovery/by-interest?interest=Technology&limit=10
       "name": "Tech Enthusiasts Malaysia",
       "description": "A vibrant community for technology lovers...",
       "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-      "category": "Technology",
+      "interests": ["technology", "startups", "innovation"],
+      "category": "Technology",  // @deprecated
       "isVerified": true,
       "memberCount": 1250,
       "eventCount": 42,
@@ -513,6 +528,8 @@ GET /v2/communities/discovery/by-interest?interest=Technology&limit=10
   ]
 }
 ```
+
+**Note:** The endpoint searches for an exact match of the interest value within the community's `interests` array.
 
 **Error Responses:**
 - `400 Bad Request` - Interest parameter is required
@@ -540,7 +557,8 @@ Get a curated mix of trending, new, and recommended communities.
       "name": "Tech Enthusiasts Malaysia",
       "description": "A vibrant community for technology lovers...",
       "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
-      "category": "Technology",
+      "interests": ["technology", "startups", "innovation"],
+      "category": "Technology",  // @deprecated
       "isVerified": true,
       "memberCount": 1250,
       "eventCount": 42,
@@ -557,7 +575,8 @@ Get a curated mix of trending, new, and recommended communities.
       "name": "Startup Founders KL",
       "description": "Connect with fellow startup founders...",
       "imageUrl": "https://cdn.berse.com/communities/startup-kl.jpg",
-      "category": "Business",
+      "interests": ["startups", "entrepreneurship", "business"],
+      "category": "Business",  // @deprecated
       "isVerified": false,
       "memberCount": 45,
       "eventCount": 3,
@@ -602,7 +621,8 @@ Get communities that your connections (friends) are members of.
       "name": "Hiking Adventures KL",
       "description": "Join us for weekend hiking trips...",
       "imageUrl": "https://cdn.berse.com/communities/hiking-kl.jpg",
-      "category": "Sports & Outdoors",
+      "interests": ["hiking", "outdoors", "fitness"],
+      "category": "Sports & Outdoors",  // @deprecated
       "isVerified": true,
       "memberCount": 320,
       "eventCount": 25,
@@ -1224,7 +1244,8 @@ curl -X POST https://api.berse-app.com/v2/communities \
   -d '{
     "name": "Startup Founders KL",
     "description": "Community for startup founders in Kuala Lumpur",
-    "category": "Business"
+    "interests": ["startups", "entrepreneurship", "business"],
+    "category": "Business"  // @deprecated
   }'
 ```
 
@@ -1265,8 +1286,11 @@ curl -X POST https://api.berse-app.com/v2/communities/cm123/members/userB/vouch 
 ### Search and Filter Communities
 
 ```bash
-# Get verified tech communities, sorted by member count
-curl -X GET "https://api.berse-app.com/v2/communities?category=Technology&isVerified=true&sortBy=memberCount&sortOrder=desc&limit=10"
+# Get verified tech communities by interests, sorted by member count
+curl -X GET "https://api.berse-app.com/v2/communities?interests=technology,startups&isVerified=true&sortBy=memberCount&sortOrder=desc&limit=10"
+
+# Get communities by single interest
+curl -X GET "https://api.berse-app.com/v2/communities/discovery/by-interest?interest=photography&limit=10"
 
 # Search for communities with "startup" in name/description
 curl -X GET "https://api.berse-app.com/v2/communities?search=startup&page=1&limit=20"
@@ -1346,6 +1370,15 @@ X-RateLimit-Reset: 1634567890
 
 ## Changelog
 
+### Version 2.3.0 (October 23, 2025)
+- ✅ **Schema Update:** Changed from single `category` field to `interests` array
+  - `category` field is now deprecated but maintained for backward compatibility
+  - `interests` array accepts multiple interest values from profile metadata
+  - Enhanced filtering with multi-interest support
+- ✅ Updated `/v2/communities/discovery/by-interest` to search `interests` array
+- ✅ All endpoints now return `interests` array in responses
+- ✅ Query parameter `interests` added to main communities list endpoint
+
 ### Version 2.2.0 (October 17, 2025)
 - ✅ Added 6 Community Discovery endpoints
   - Trending communities (by member count & verification)
@@ -1380,6 +1413,6 @@ For API support, please contact:
 
 ---
 
-**API Version:** 2.2.0  
-**Last Updated:** October 17, 2025  
+**API Version:** 2.3.0  
+**Last Updated:** October 23, 2025  
 **Status:** ✅ Production Ready

@@ -7,16 +7,20 @@ import { CommunityRole } from '@prisma/client';
 export interface CreateCommunityInput {
   name: string;
   description?: string;
-  imageUrl?: string;
-  category?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  category?: string; // @deprecated - Use interests instead
+  interests?: string[]; // Array of interest values from profile metadata
 }
 
 export interface UpdateCommunityInput {
   communityId: string;
   name?: string;
   description?: string;
-  imageUrl?: string;
-  category?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  category?: string; // @deprecated - Use interests instead
+  interests?: string[]; // Array of interest values from profile metadata
   isVerified?: boolean;
 }
 
@@ -67,7 +71,8 @@ export interface RejectMemberInput {
 export interface CommunityQuery {
   page?: number;
   limit?: number;
-  category?: string;
+  category?: string; // @deprecated - Use interests instead
+  interests?: string[]; // Filter by multiple interests
   search?: string;
   isVerified?: boolean;
   sortBy?: 'createdAt' | 'name' | 'memberCount';
@@ -88,7 +93,8 @@ export interface MyCommunityQuery {
   page?: number;
   limit?: number;
   role?: CommunityRole;
-  category?: string;
+  category?: string; // @deprecated - Use interests instead
+  interests?: string[]; // Filter by multiple interests
   search?: string;
 }
 
@@ -100,8 +106,10 @@ export interface CommunityResponse {
   id: string;
   name: string;
   description?: string;
-  imageUrl?: string;
-  category?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  category?: string; // @deprecated - Use interests instead
+  interests: string[]; // Array of interest values matching profile metadata
   isVerified: boolean;
   createdAt: string;
   updatedAt: string;

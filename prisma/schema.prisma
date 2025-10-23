@@ -332,8 +332,10 @@ model Community {
   id               String                @id @default(cuid())
   name             String                @unique
   description      String?
-  imageUrl         String?
-  category         String?
+  logoUrl          String?               // Community logo image
+  coverImageUrl    String?               // Community cover/banner image
+  category         String?               // @deprecated - Use interests array instead
+  interests        String[]              @default([]) // Array of interest values matching profile metadata
   isVerified       Boolean               @default(false)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt

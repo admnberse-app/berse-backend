@@ -84,7 +84,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -199,7 +200,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           tier: {
@@ -380,7 +382,8 @@ export class EventService {
           select: {
             id: true,
             name: true,
-            imageUrl: true,
+            logoUrl: true,
+            coverImageUrl: true,
           },
         },
         _count: {
@@ -485,7 +488,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1412,7 +1416,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1501,7 +1506,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1623,7 +1629,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1672,7 +1679,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1744,7 +1752,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1831,7 +1840,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -1947,7 +1957,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -2051,7 +2062,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {
@@ -2151,7 +2163,8 @@ export class EventService {
             select: {
               id: true,
               name: true,
-              imageUrl: true,
+              logoUrl: true,
+              coverImageUrl: true,
             },
           },
           _count: {

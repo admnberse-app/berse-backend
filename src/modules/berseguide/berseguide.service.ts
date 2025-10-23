@@ -1,6 +1,7 @@
 import { PrismaClient, BerseGuideBookingStatus, ReviewerRole, Prisma } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { BerseGuideNotifications } from './berseguide.notifications';
 import type {
   CreateBerseGuideProfileDTO,
   UpdateBerseGuideProfileDTO,
@@ -502,6 +503,13 @@ export class BerseGuideService {
 
       logger.info('Booking request created', { bookingId: booking.id, travelerId, guideId: data.guideId });
 
+      // Send notification to guide
+      await BerseGuideNotifications.notifyGuideOfNewRequest(
+        data.guideId,
+        booking.traveler.fullName,
+        booking.id
+      );
+
       return this.formatBookingResponse(booking);
     } catch (error) {
       logger.error('Failed to create booking request', { error, travelerId, data });
@@ -770,6 +778,13 @@ export class BerseGuideService {
 
       logger.info('Booking approved', { bookingId, guideId });
 
+      // Send notification to traveler
+      await BerseGuideNotifications.notifyTravelerOfApproval(
+        booking.travelerId,
+        updatedBooking.guide.fullName,
+        bookingId
+      );
+
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
       logger.error('Failed to approve booking', { error, guideId, bookingId, data });
@@ -841,6 +856,14 @@ export class BerseGuideService {
 
       logger.info('Booking rejected', { bookingId, guideId });
 
+      // Send notification to traveler
+      await BerseGuideNotifications.notifyTravelerOfRejection(
+        booking.travelerId,
+        updatedBooking.guide.fullName,
+        bookingId,
+        data.cancellationReason
+      );
+
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
       logger.error('Failed to reject booking', { error, guideId, bookingId, data });
@@ -909,6 +932,15 @@ export class BerseGuideService {
 
       logger.info('Booking cancelled', { bookingId, userId, cancelledBy: isGuide ? 'guide' : 'traveler' });
 
+      // Send notification to the other party
+      const otherUserId = isGuide ? booking.travelerId : booking.guideId;
+      await BerseGuideNotifications.notifyOfCancellation(
+        otherUserId,
+        isGuide ? 'guide' : 'traveler',
+        bookingId,
+        isGuide
+      );
+
       return this.formatBookingResponse(updatedBooking);
     } catch (error) {
       logger.error('Failed to cancel booking', { error, userId, bookingId, data });
@@ -976,6 +1008,22 @@ export class BerseGuideService {
 
       logger.info('Session started', { sessionId: session.id, bookingId: data.bookingId, guideId });
 
+      // Get guide info for notification
+      const guide = await prisma.user.findUnique({
+        where: { id: guideId },
+        select: { fullName: true },
+      });
+
+      // Send notification to traveler
+      if (guide) {
+        await BerseGuideNotifications.notifyTravelerOfSessionStart(
+          booking.travelerId,
+          guide.fullName,
+          session.id,
+          data.bookingId
+        );
+      }
+
       return this.formatSessionResponse(session);
     } catch (error) {
       logger.error('Failed to start session', { error, guideId, data });
@@ -1017,6 +1065,24 @@ export class BerseGuideService {
       });
 
       logger.info('Session updated', { sessionId, guideId });
+
+      // Send notification to traveler if places or notes are added
+      if (data.placesVisited || data.highlights || data.notes) {
+        const guide = await prisma.user.findUnique({
+          where: { id: guideId },
+          select: { fullName: true },
+        });
+
+        if (guide) {
+          const updateType = data.placesVisited ? 'locations' : data.highlights ? 'photos' : 'notes';
+          await BerseGuideNotifications.notifyOfSessionUpdate(
+            session.travelerId,
+            guide.fullName,
+            sessionId,
+            updateType
+          );
+        }
+      }
 
       return this.formatSessionResponse(updatedSession);
     } catch (error) {
@@ -1082,6 +1148,14 @@ export class BerseGuideService {
       });
 
       logger.info('Session ended', { sessionId, bookingId: session.bookingId, guideId, duration });
+
+      // Send notification to both guide and traveler
+      await BerseGuideNotifications.notifyOfSessionEnd(
+        session.guideId,
+        session.travelerId,
+        sessionId,
+        session.bookingId
+      );
 
       return this.formatSessionResponse(updatedSession);
     } catch (error) {
@@ -1204,6 +1278,15 @@ export class BerseGuideService {
       await this.updateGuideRating(data.revieweeId);
 
       logger.info('Review created', { reviewId: review.id, userId, bookingId: data.bookingId });
+
+      // Send notification to reviewee
+      const revieweeId = booking.guideId === userId ? booking.travelerId : booking.guideId;
+      await BerseGuideNotifications.notifyOfNewReview(
+        revieweeId,
+        review.reviewer.fullName,
+        data.rating,
+        review.id
+      );
 
       return this.formatReviewResponse(review);
     } catch (error) {

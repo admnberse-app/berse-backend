@@ -23,6 +23,16 @@ export interface DashboardSummary {
     connections: number;
     eventsAttended: number;
     eventsHosted: number;
+    homeSurf: {
+      isEnabled: boolean;
+      totalBookings: number;
+      pendingRequests: number;
+    };
+    berseGuide: {
+      isEnabled: boolean;
+      totalSessions: number;
+      upcomingTours: number;
+    };
   };
   alerts: Alert[];
   communitySummary: {
@@ -41,6 +51,28 @@ export interface DashboardSummary {
     active: number;
     sold: number;
     draft: number;
+  };
+  services: {
+    homeSurf: {
+      isEnabled: boolean;
+      hasProfile: boolean;
+      totalBookings: number;
+      pendingRequests: number;
+      averageRating: number | null;
+      city: string | null;
+      accommodationType: string | null;
+    };
+    berseGuide: {
+      isEnabled: boolean;
+      hasProfile: boolean;
+      totalBookings: number;
+      totalSessions: number;
+      upcomingTours: number;
+      averageRating: number | null;
+      city: string | null;
+      guideTypes: string[];
+      highlights: string[];
+    };
   };
   recentActivity: Activity[];
 }
