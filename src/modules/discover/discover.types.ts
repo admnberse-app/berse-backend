@@ -4,6 +4,8 @@ export enum DiscoverContentType {
   EVENTS = 'events',
   COMMUNITIES = 'communities',
   MARKETPLACE = 'marketplace',
+  HOMESURF = 'homesurf',
+  BERSEGUIDE = 'berseguide',
   ALL = 'all'
 }
 
@@ -19,7 +21,10 @@ export enum DiscoverSectionType {
   GLOBAL_TRENDING = 'global_trending',
   GLOBAL_COMMUNITIES = 'global_communities',
   NEARBY_COUNTRIES = 'nearby_countries',
-  CALL_TO_ACTION = 'call_to_action'
+  CALL_TO_ACTION = 'call_to_action',
+  HOMESURF = 'homesurf',
+  BERSEGUIDE = 'berseguide',
+  POPULAR_EVENTS = 'popular_events'
 }
 
 export enum DiscoverLayoutType {
@@ -145,6 +150,7 @@ export interface EventItem extends BaseDiscoverItem {
   };
   categories?: string[];
   detailsUrl?: string;
+  detailRoute: 'event';
 }
 
 /**
@@ -171,6 +177,7 @@ export interface CommunityItem extends BaseDiscoverItem {
     avatarUrl?: string;
   };
   detailsUrl?: string;
+  detailRoute: 'community';
 }
 
 /**
@@ -202,41 +209,97 @@ export interface MarketplaceItem extends BaseDiscoverItem {
   };
   postedAt?: string;
   detailsUrl?: string;
+  detailRoute: 'marketplace';
 }
 
 /**
- * Service item
+ * HomeSurf item
  */
-export interface ServiceItem extends BaseDiscoverItem {
-  type: 'service';
+export interface HomeSurfItem extends BaseDiscoverItem {
+  type: 'homesurf';
   title: string;
   description?: string;
   imageUrl?: string;
-  category?: string;
-  pricing?: {
-    startingPrice: number;
-    currency: string;
-    unit?: string;
+  images?: string[];
+  accommodationType: string;
+  maxGuests: number;
+  amenities?: string[];
+  paymentOptions?: Array<{
+    type: string;
+    amount?: number;
+    currency?: string;
+    description?: string;
+    isPreferred?: boolean;
+  }>;
+  location?: {
+    city: string;
+    neighborhood?: string;
+    distance?: string;
   };
-  provider?: {
+  host?: {
     id: string;
     displayName: string;
     avatarUrl?: string;
     trustScore?: number;
-    rating?: number;
-    reviewCount?: number;
+    responseRate?: number;
+    averageResponseTime?: number;
   };
-  location?: {
-    city?: string;
-    serviceArea?: string;
-    distance?: string;
-  };
-  availability?: string;
-  isVerified?: boolean;
+  rating?: number;
+  reviewCount?: number;
+  totalGuests?: number;
+  minimumStay?: number;
+  maximumStay?: number;
+  availabilityNotes?: string;
   detailsUrl?: string;
+  detailRoute: 'homesurf';
 }
 
-export type DiscoverItem = EventItem | CommunityItem | MarketplaceItem | ServiceItem;
+/**
+ * BerseGuide item
+ */
+export interface BerseGuideItem extends BaseDiscoverItem {
+  type: 'berseguide';
+  title: string;
+  description?: string;
+  tagline?: string;
+  imageUrl?: string;
+  images?: string[];
+  guideTypes?: string[];
+  languages?: string[];
+  paymentOptions?: Array<{
+    type: string;
+    amount?: number;
+    currency?: string;
+    description?: string;
+    isPreferred?: boolean;
+  }>;
+  location?: {
+    city: string;
+    neighborhoods?: string[];
+    coverageRadius?: number;
+    distance?: string;
+  };
+  guide?: {
+    id: string;
+    displayName: string;
+    avatarUrl?: string;
+    trustScore?: number;
+    responseRate?: number;
+    averageResponseTime?: number;
+  };
+  rating?: number;
+  reviewCount?: number;
+  totalSessions?: number;
+  yearsGuiding?: number;
+  typicalDuration?: number;
+  maxGroupSize?: number;
+  highlights?: string[];
+  availabilityNotes?: string;
+  detailsUrl?: string;
+  detailRoute: 'berseguide';
+}
+
+export type DiscoverItem = EventItem | CommunityItem | MarketplaceItem | HomeSurfItem | BerseGuideItem;
 
 /**
  * Section configuration
@@ -296,6 +359,8 @@ export interface SearchDiscoverResponse {
       events?: EventItem[];
       communities?: CommunityItem[];
       marketplace?: MarketplaceItem[];
+      homesurf?: HomeSurfItem[];
+      berseguide?: BerseGuideItem[];
     };
     pagination: PaginationInfo;
   };

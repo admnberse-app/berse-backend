@@ -325,7 +325,6 @@ router.post(
 router.post(
   '/refresh-token',
   authLimiter,
-  handleValidationErrors,
   AuthController.refreshToken
 );
 

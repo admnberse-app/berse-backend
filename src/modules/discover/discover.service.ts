@@ -14,7 +14,8 @@ import {
   EventItem,
   CommunityItem,
   MarketplaceItem,
-  ServiceItem,
+  HomeSurfItem,
+  BerseGuideItem,
   UserContext,
   LocationInfo,
   PaginationInfo
@@ -30,6 +31,49 @@ export class DiscoverService {
   private readonly DEFAULT_LIMIT = 10;
   private readonly MAX_LIMIT = 50;
   private readonly CACHE_EXPIRY = 300; // 5 minutes
+
+  /**
+   * Calculate distance between two coordinates using Haversine formula
+   * Returns distance in kilometers
+   */
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = this.toRadians(lat2 - lat1);
+    const dLon = this.toRadians(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) *
+        Math.cos(this.toRadians(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  /**
+   * Convert degrees to radians
+   */
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * Format distance for display (e.g., "1.5 km", "500 m")
+   */
+  private formatDistance(distanceKm: number): string {
+    if (distanceKm < 1) {
+      return `${Math.round(distanceKm * 1000)} m`;
+    } else if (distanceKm < 10) {
+      return `${distanceKm.toFixed(1)} km`;
+    } else {
+      return `${Math.round(distanceKm)} km`;
+    }
+  }
 
   /**
    * Main discover endpoint - returns sections or search results
@@ -61,7 +105,7 @@ export class DiscoverService {
     const [eventCategories, productCategories, serviceTypes, communityInterests, cities] = await Promise.all([
       // Get unique event types/categories
       prisma.event.findMany({
-        where: { status: 'PUBLISHED', type: { not: null } },
+        where: { status: 'PUBLISHED' },
         select: { type: true },
         distinct: ['type']
       }),
@@ -69,8 +113,7 @@ export class DiscoverService {
       prisma.marketplaceListing.findMany({
         where: { 
           status: 'ACTIVE',
-          type: 'PRODUCT',
-          category: { not: null }
+          type: 'PRODUCT'
         },
         select: { category: true },
         distinct: ['category']
@@ -79,8 +122,7 @@ export class DiscoverService {
       prisma.marketplaceListing.findMany({
         where: { 
           status: 'ACTIVE',
-          type: 'SERVICE',
-          serviceType: { not: null }
+          type: 'SERVICE'
         },
         select: { serviceType: true },
         distinct: ['serviceType']
@@ -96,9 +138,6 @@ export class DiscoverService {
       // Get popular cities from user locations
       prisma.userLocation.groupBy({
         by: ['currentCity'],
-        where: {
-          currentCity: { not: null }
-        },
         _count: {
           currentCity: true
         },
@@ -119,7 +158,9 @@ export class DiscoverService {
           { value: DiscoverContentType.ALL, label: 'All Content' },
           { value: DiscoverContentType.EVENTS, label: 'Events' },
           { value: DiscoverContentType.COMMUNITIES, label: 'Communities' },
-          { value: DiscoverContentType.MARKETPLACE, label: 'Marketplace & Services' }
+          { value: DiscoverContentType.MARKETPLACE, label: 'Marketplace & Services' },
+          { value: DiscoverContentType.HOMESURF, label: 'HomeSurf' },
+          { value: DiscoverContentType.BERSEGUIDE, label: 'BerseGuide' }
         ],
 
         // Listing types (for filtering within marketplace)
@@ -170,6 +211,42 @@ export class DiscoverService {
             label: c.currentCity,
             count: c._count.currentCity
           })),
+
+        // Accommodation types (for homesurf)
+        accommodationTypes: [
+          { value: 'PRIVATE_ROOM', label: 'Private Room' },
+          { value: 'SHARED_ROOM', label: 'Shared Room' },
+          { value: 'COUCH', label: 'Couch/Sofa' },
+          { value: 'ENTIRE_PLACE', label: 'Entire Place' }
+        ],
+
+        // Guide types (for berseguide)
+        guideTypes: [
+          { value: 'FOOD_TOUR', label: 'Food Tour' },
+          { value: 'CULTURAL_TOUR', label: 'Cultural Tour' },
+          { value: 'NIGHTLIFE', label: 'Nightlife' },
+          { value: 'HIKING', label: 'Hiking' },
+          { value: 'CYCLING', label: 'Cycling' },
+          { value: 'PHOTOGRAPHY', label: 'Photography' },
+          { value: 'SHOPPING', label: 'Shopping' },
+          { value: 'LOCAL_EXPERIENCE', label: 'Local Experience' },
+          { value: 'HISTORICAL_SITES', label: 'Historical Sites' },
+          { value: 'NATURE_WALKS', label: 'Nature Walks' },
+          { value: 'BAR_HOPPING', label: 'Bar Hopping' },
+          { value: 'COFFEE_CRAWL', label: 'Coffee Crawl' },
+          { value: 'STREET_ART', label: 'Street Art' },
+          { value: 'HIDDEN_GEMS', label: 'Hidden Gems' }
+        ],
+
+        // Payment types (for homesurf and berseguide)
+        paymentTypes: [
+          { value: 'MONEY', label: 'Money', description: 'Cash or digital payment' },
+          { value: 'SKILL_TRADE', label: 'Skill Trade', description: 'Exchange skills (teach, cook, etc.)' },
+          { value: 'TREAT_ME', label: 'Treat Me', description: 'Buy me food/drinks' },
+          { value: 'BERSE_POINTS', label: 'Berse Points', description: 'Pay with platform points' },
+          { value: 'FREE', label: 'Free', description: 'Free, no payment' },
+          { value: 'NEGOTIABLE', label: 'Negotiable', description: 'To be discussed' }
+        ],
 
         // Price ranges (suggested)
         priceRanges: [
@@ -239,7 +316,14 @@ export class DiscoverService {
     const validatedParams = this.validateParams(params);
     const locationInfo = await this.getLocationInfo(userId, validatedParams);
 
-    const items = await this.fetchTrendingItems(userId, validatedParams, locationInfo);
+    const items = await this.fetchEvents(
+      userId, 
+      { ...validatedParams, sortBy: DiscoverSortBy.POPULAR }, 
+      locationInfo, 
+      undefined,
+      validatedParams.latitude,
+      validatedParams.longitude
+    );
 
     return {
       success: true,
@@ -265,7 +349,14 @@ export class DiscoverService {
     const validatedParams = this.validateParams(params);
     const locationInfo = await this.getLocationInfo(userId, validatedParams);
 
-    const items = await this.fetchNearbyItems(userId, validatedParams, locationInfo);
+    const items = await this.fetchEvents(
+      userId, 
+      { ...validatedParams, sortBy: DiscoverSortBy.DISTANCE }, 
+      locationInfo,
+      undefined,
+      validatedParams.latitude,
+      validatedParams.longitude
+    );
 
     return {
       success: true,
@@ -429,6 +520,23 @@ export class DiscoverService {
       sectionPromises.push(this.buildMarketplaceSection(userId, params, locationInfo, userContext));
     }
 
+    // Add more general sections that aren't strictly location-filtered
+    if (this.shouldIncludeSection('featured', requestedSections, excludedSections)) {
+      sectionPromises.push(this.buildFeaturedCommunitiesSection(userId, params, userContext));
+    }
+
+    if (this.shouldIncludeSection('homesurf', requestedSections, excludedSections)) {
+      sectionPromises.push(this.buildHomeSurfSection(userId, params, locationInfo, userContext));
+    }
+
+    if (this.shouldIncludeSection('berseguide', requestedSections, excludedSections)) {
+      sectionPromises.push(this.buildBerseGuideSection(userId, params, locationInfo, userContext));
+    }
+
+    if (this.shouldIncludeSection('popular_events', requestedSections, excludedSections)) {
+      sectionPromises.push(this.buildPopularEventsSection(userId, params, userContext));
+    }
+
     const resolvedSections = await Promise.all(sectionPromises);
 
     // Filter out null sections
@@ -482,21 +590,31 @@ export class DiscoverService {
     const page = params.page || 1;
     const limit = params.limit || 20;
 
+    // Get user coordinates for distance calculation
+    const userLat = params.latitude;
+    const userLon = params.longitude;
+
     // Search across different content types in parallel
-    const [events, communities, marketplace] = await Promise.all([
+    const [events, communities, marketplace, homesurf, berseguide] = await Promise.all([
       params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.EVENTS
-        ? this.searchEvents(query, params)
+        ? this.searchEvents(query, params, userLat, userLon)
         : [],
       params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.COMMUNITIES
         ? this.searchCommunities(query, params)
         : [],
       params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.MARKETPLACE
-        ? this.searchMarketplace(query, params)
+        ? this.searchMarketplace(query, params, userLat, userLon)
+        : [],
+      params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.HOMESURF
+        ? this.searchHomeSurf(query, params, userLat, userLon)
+        : [],
+      params.contentType === DiscoverContentType.ALL || params.contentType === DiscoverContentType.BERSEGUIDE
+        ? this.searchBerseGuide(query, params, userLat, userLon)
         : []
     ]);
 
     // Calculate total results
-    const totalResults = events.length + communities.length + marketplace.length;
+    const totalResults = events.length + communities.length + marketplace.length + homesurf.length + berseguide.length;
 
     return {
       success: true,
@@ -506,7 +624,9 @@ export class DiscoverService {
         results: {
           events: events.length > 0 ? events : undefined,
           communities: communities.length > 0 ? communities : undefined,
-          marketplace: marketplace.length > 0 ? marketplace : undefined
+          marketplace: marketplace.length > 0 ? marketplace : undefined,
+          homesurf: homesurf.length > 0 ? homesurf : undefined,
+          berseguide: berseguide.length > 0 ? berseguide : undefined
         },
         pagination: this.buildPagination(totalResults, page, limit)
       }
@@ -514,7 +634,7 @@ export class DiscoverService {
   }
 
   /**
-   * Build trending section
+   * Build trending events section
    */
   private async buildTrendingSection(
     userId: string | undefined,
@@ -522,19 +642,26 @@ export class DiscoverService {
     locationInfo: LocationInfo,
     userContext?: UserContext
   ): Promise<DiscoverSection | null> {
-    const items = await this.fetchTrendingItems(userId, params, locationInfo);
+    const events = await this.fetchEvents(
+      userId, 
+      { ...params, sortBy: DiscoverSortBy.POPULAR }, 
+      locationInfo, 
+      params.limit || 10,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    );
 
-    if (items.length === 0) return null;
+    if (events.length === 0) return null;
 
     return {
       type: DiscoverSectionType.TRENDING,
-      title: 'Trending',
-      subtitle: 'Popular right now in your area',
+      title: 'Trending Events',
+      subtitle: 'Popular events right now in your area',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: items.slice(0, params.limit || 10),
-      hasMore: items.length > (params.limit || 10),
-      viewAllEndpoint: '/v2/discover/trending',
+      items: events,
+      hasMore: false,
+      viewAllEndpoint: '/v2/discover/trending?contentType=events',
       metadata: {
         icon: 'fire',
         color: '#FF5722'
@@ -551,7 +678,17 @@ export class DiscoverService {
     locationInfo: LocationInfo,
     userContext?: UserContext
   ): Promise<DiscoverSection | null> {
-    const items = await this.fetchNearbyItems(userId, params, locationInfo, userContext);
+    const lat = params.latitude || userContext?.latitude;
+    const lon = params.longitude || userContext?.longitude;
+    
+    const items = await this.fetchEvents(
+      userId, 
+      { ...params, sortBy: DiscoverSortBy.DISTANCE }, 
+      locationInfo,
+      params.limit || 10,
+      lat,
+      lon
+    );
 
     if (items.length === 0) return null;
 
@@ -576,13 +713,23 @@ export class DiscoverService {
     locationInfo: LocationInfo,
     userContext?: UserContext
   ): Promise<DiscoverSection | null> {
-    const communities = await this.fetchCommunities(userId, params, locationInfo);
+    // Try location-specific first
+    let communities = await this.fetchCommunities(userId, params, locationInfo);
+
+    // If no results with location filter, try without location for broader results
+    if (communities.length === 0 && locationInfo.city) {
+      communities = await this.fetchCommunities(userId, params, {});
+    }
 
     if (communities.length === 0) return null;
 
+    const title = locationInfo.city && communities.length > 0 
+      ? `Communities in ${locationInfo.city}`
+      : 'Popular Communities';
+
     return {
       type: DiscoverSectionType.COMMUNITIES,
-      title: 'Popular Communities',
+      title,
       subtitle: 'Join communities with active members',
       layout: DiscoverLayoutType.VERTICAL,
       itemLayout: DiscoverItemLayout.LIST,
@@ -601,7 +748,13 @@ export class DiscoverService {
     locationInfo: LocationInfo,
     userContext?: UserContext
   ): Promise<DiscoverSection | null> {
-    const events = await this.fetchUpcomingEvents(userId, params, locationInfo);
+    const events = await this.fetchUpcomingEvents(
+      userId, 
+      params, 
+      locationInfo,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    );
 
     if (events.length === 0) return null;
 
@@ -618,7 +771,7 @@ export class DiscoverService {
   }
 
   /**
-   * Build new content section
+   * Build new events section
    */
   private async buildNewSection(
     userId: string | undefined,
@@ -626,19 +779,222 @@ export class DiscoverService {
     locationInfo: LocationInfo,
     userContext?: UserContext
   ): Promise<DiscoverSection | null> {
-    const items = await this.fetchNewItems(userId, params, locationInfo);
+    const events = await this.fetchEvents(
+      userId, 
+      { ...params, sortBy: DiscoverSortBy.DATE }, 
+      locationInfo, 
+      params.limit || 10,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    );
 
-    if (items.length === 0) return null;
+    if (events.length === 0) return null;
 
     return {
       type: DiscoverSectionType.NEW,
-      title: 'New',
-      subtitle: 'Recently added content',
+      title: 'New Events',
+      subtitle: 'Recently added events',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: items.slice(0, params.limit || 10),
-      hasMore: items.length > (params.limit || 10),
-      viewAllEndpoint: '/v2/discover/new'
+      items: events,
+      hasMore: false,
+      viewAllEndpoint: '/v2/discover/new?contentType=events'
+    };
+  }
+
+  /**
+   * Build featured communities section (not location-filtered)
+   */
+  private async buildFeaturedCommunitiesSection(
+    userId: string | undefined,
+    params: DiscoverQueryParams,
+    userContext?: UserContext
+  ): Promise<DiscoverSection | null> {
+    // Fetch verified and popular communities globally
+    const communities = await this.fetchCommunities(
+      userId, 
+      { ...params, verifiedOnly: true, limit: 10 }, 
+      {} // No location filter
+    );
+
+    if (communities.length === 0) return null;
+
+    return {
+      type: DiscoverSectionType.FEATURED,
+      title: 'Featured Communities',
+      subtitle: 'Verified communities you might like',
+      layout: DiscoverLayoutType.HORIZONTAL,
+      itemLayout: DiscoverItemLayout.CARD,
+      items: communities,
+      hasMore: false,
+      viewAllEndpoint: '/v2/communities?verified=true',
+      metadata: {
+        icon: 'star',
+        color: '#FFD700'
+      }
+    };
+  }
+
+  /**
+   * Build popular events section (not strictly location-filtered)
+   */
+  private async buildPopularEventsSection(
+    userId: string | undefined,
+    params: DiscoverQueryParams,
+    userContext?: UserContext
+  ): Promise<DiscoverSection | null> {
+    const events = await this.fetchEvents(
+      userId,
+      { ...params, sortBy: DiscoverSortBy.POPULAR, limit: 10 },
+      {}, // No strict location filter
+      undefined,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    );
+
+    if (events.length === 0) return null;
+
+    return {
+      type: 'popular_events' as any,
+      title: 'Popular Events',
+      subtitle: 'Events people are excited about',
+      layout: DiscoverLayoutType.HORIZONTAL,
+      itemLayout: DiscoverItemLayout.CARD,
+      items: events,
+      hasMore: false,
+      viewAllEndpoint: '/v2/events?popular=true',
+      metadata: {
+        icon: 'trending_up',
+        color: '#9C27B0'
+      }
+    };
+  }
+
+  /**
+   * Build HomeSurf section
+   */
+  private async buildHomeSurfSection(
+    userId: string | undefined,
+    params: DiscoverQueryParams,
+    locationInfo: LocationInfo,
+    userContext?: UserContext
+  ): Promise<DiscoverSection | null> {
+    const where: any = {
+      isEnabled: true
+    };
+
+    // Add location filter if available
+    if (locationInfo.city) {
+      where.city = {
+        contains: locationInfo.city,
+        mode: 'insensitive'
+      };
+    }
+
+    const listings = await prisma.userHomeSurf.findMany({
+      where,
+      take: 10,
+      orderBy: {
+        lastActiveAt: 'desc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            trustScore: true
+          }
+        },
+        paymentOptions: true
+      }
+    });
+
+    if (listings.length === 0) return null;
+
+    const items = listings.map(l => this.transformHomeSurf(
+      l, 
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    ));
+
+    return {
+      type: 'homesurf' as any,
+      title: locationInfo.city ? `HomeSurf in ${locationInfo.city}` : 'HomeSurf Hosts',
+      subtitle: 'Stay with locals and make new friends',
+      layout: DiscoverLayoutType.HORIZONTAL,
+      itemLayout: DiscoverItemLayout.CARD,
+      items,
+      hasMore: false,
+      viewAllEndpoint: `/v2/homesurf${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
+      metadata: {
+        icon: 'home',
+        color: '#FF6B6B'
+      }
+    };
+  }
+
+  /**
+   * Build BerseGuide section
+   */
+  private async buildBerseGuideSection(
+    userId: string | undefined,
+    params: DiscoverQueryParams,
+    locationInfo: LocationInfo,
+    userContext?: UserContext
+  ): Promise<DiscoverSection | null> {
+    const where: any = {
+      isEnabled: true
+    };
+
+    // Add location filter if available
+    if (locationInfo.city) {
+      where.city = {
+        contains: locationInfo.city,
+        mode: 'insensitive'
+      };
+    }
+
+    const listings = await prisma.userBerseGuide.findMany({
+      where,
+      take: 10,
+      orderBy: {
+        lastActiveAt: 'desc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            trustScore: true
+          }
+        },
+        paymentOptions: true
+      }
+    });
+
+    if (listings.length === 0) return null;
+
+    const items = listings.map(l => this.transformBerseGuide(
+      l,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    ));
+
+    return {
+      type: 'berseguide' as any,
+      title: locationInfo.city ? `Local Guides in ${locationInfo.city}` : 'BerseGuide',
+      subtitle: 'Discover hidden gems with local guides',
+      layout: DiscoverLayoutType.HORIZONTAL,
+      itemLayout: DiscoverItemLayout.CARD,
+      items,
+      hasMore: false,
+      viewAllEndpoint: `/v2/berseguide${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
+      metadata: {
+        icon: 'map',
+        color: '#4CAF50'
+      }
     };
   }
 
@@ -651,7 +1007,14 @@ export class DiscoverService {
     locationInfo: LocationInfo,
     userContext?: UserContext
   ): Promise<DiscoverSection | null> {
-    const items = await this.fetchMarketplaceItems(userId, params, locationInfo);
+    const items = await this.fetchMarketplaceItems(
+      userId, 
+      params, 
+      locationInfo,
+      params.limit || 10,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    );
 
     if (items.length === 0) return null;
 
@@ -659,7 +1022,7 @@ export class DiscoverService {
       type: DiscoverSectionType.MARKETPLACE,
       title: 'Marketplace',
       subtitle: 'Latest listings',
-      layout: DiscoverLayoutType.GRID,
+      layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
       items: items.slice(0, params.limit || 10),
       hasMore: items.length > (params.limit || 10),
@@ -667,61 +1030,11 @@ export class DiscoverService {
     };
   }
 
-  /**
-   * Fetch trending items
-   */
-  private async fetchTrendingItems(
-    userId: string | undefined,
-    params: DiscoverQueryParams,
-    locationInfo: LocationInfo
-  ): Promise<DiscoverItem[]> {
-    // Mix of trending events and communities
-    const [events, communities] = await Promise.all([
-      this.fetchEvents(userId, { ...params, sortBy: DiscoverSortBy.POPULAR }, locationInfo, 5),
-      this.fetchCommunities(userId, params, locationInfo, 5)
-    ]);
 
-    return this.interleaveItems([events, communities]);
-  }
 
-  /**
-   * Fetch nearby items
-   */
-  private async fetchNearbyItems(
-    userId: string | undefined,
-    params: DiscoverQueryParams,
-    locationInfo: LocationInfo,
-    userContext?: UserContext
-  ): Promise<DiscoverItem[]> {
-    if (!params.latitude && !params.longitude && !userContext?.latitude && !userContext?.longitude) {
-      return [];
-    }
 
-    const lat = params.latitude || userContext?.latitude!;
-    const lng = params.longitude || userContext?.longitude!;
 
-    // Fetch nearby events
-    const events = await this.fetchEvents(userId, { ...params, sortBy: DiscoverSortBy.DISTANCE }, locationInfo);
 
-    return events;
-  }
-
-  /**
-   * Fetch new items
-   */
-  private async fetchNewItems(
-    userId: string | undefined,
-    params: DiscoverQueryParams,
-    locationInfo: LocationInfo
-  ): Promise<DiscoverItem[]> {
-    const [events, communities, marketplace] = await Promise.all([
-      this.fetchEvents(userId, { ...params, sortBy: DiscoverSortBy.DATE }, locationInfo, 4),
-      this.fetchCommunities(userId, params, locationInfo, 3),
-      this.fetchMarketplaceItems(userId, params, locationInfo, 3)
-    ]);
-
-    return this.interleaveItems([events, communities, marketplace]);
-  }
 
   /**
    * Fetch events
@@ -730,7 +1043,9 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    limit?: number
+    limit?: number,
+    userLat?: number,
+    userLon?: number
   ): Promise<EventItem[]> {
     const where: any = {
       status: 'PUBLISHED'
@@ -793,7 +1108,7 @@ export class DiscoverService {
       }
     });
 
-    return events.map(e => this.transformEvent(e));
+    return events.map(e => this.transformEvent(e, userLat, userLon));
   }
 
   /**
@@ -802,7 +1117,9 @@ export class DiscoverService {
   private async fetchUpcomingEvents(
     userId: string | undefined,
     params: DiscoverQueryParams,
-    locationInfo: LocationInfo
+    locationInfo: LocationInfo,
+    userLat?: number,
+    userLon?: number
   ): Promise<EventItem[]> {
     const where: any = {
       status: 'PUBLISHED',
@@ -840,7 +1157,7 @@ export class DiscoverService {
       }
     });
 
-    return events.map(e => this.transformEvent(e));
+    return events.map(e => this.transformEvent(e, userLat, userLon));
   }
 
   /**
@@ -899,7 +1216,9 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    limit?: number
+    limit?: number,
+    userLat?: number,
+    userLon?: number
   ): Promise<MarketplaceItem[]> {
     const where: any = {
       status: 'ACTIVE'
@@ -944,13 +1263,13 @@ export class DiscoverService {
       }
     });
 
-    return items.map(i => this.transformMarketplaceItem(i));
+    return items.map(i => this.transformMarketplaceItem(i, userLat, userLon));
   }
 
   /**
    * Search events
    */
-  private async searchEvents(query: string, params: DiscoverQueryParams): Promise<EventItem[]> {
+  private async searchEvents(query: string, params: DiscoverQueryParams, userLat?: number, userLon?: number): Promise<EventItem[]> {
     const where: any = {
       status: 'PUBLISHED',
       OR: [
@@ -981,11 +1300,9 @@ export class DiscoverService {
       }
     });
 
-    return events.map(e => this.transformEvent(e));
+    return events.map(e => this.transformEvent(e, userLat, userLon));
   }
 
-  /**
-   * Search communities
   /**
    * Search communities
    */
@@ -1024,7 +1341,7 @@ export class DiscoverService {
   /**
    * Search marketplace
    */
-  private async searchMarketplace(query: string, params: DiscoverQueryParams): Promise<MarketplaceItem[]> {
+  private async searchMarketplace(query: string, params: DiscoverQueryParams, userLat?: number, userLon?: number): Promise<MarketplaceItem[]> {
     const where: any = {
       status: 'ACTIVE',
       OR: [
@@ -1051,13 +1368,113 @@ export class DiscoverService {
       }
     });
 
-    return items.map(i => this.transformMarketplaceItem(i));
+    return items.map(i => this.transformMarketplaceItem(i, userLat, userLon));
+  }
+
+  /**
+   * Search homesurf listings
+   */
+  private async searchHomeSurf(query: string, params: DiscoverQueryParams, userLat?: number, userLon?: number): Promise<any[]> {
+    const where: any = {
+      isEnabled: true,
+      OR: [
+        { title: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { city: { contains: query, mode: 'insensitive' } }
+      ]
+    };
+
+    // Location filter
+    if (params.city) {
+      where.city = {
+        contains: params.city,
+        mode: 'insensitive'
+      };
+    }
+
+    const listings = await prisma.userHomeSurf.findMany({
+      where,
+      take: 20,
+      orderBy: {
+        lastActiveAt: 'desc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            trustScore: true
+          }
+        },
+        paymentOptions: true
+      }
+    });
+
+    return listings.map(l => this.transformHomeSurf(l, userLat, userLon));
+  }
+
+  /**
+   * Search berseguide listings
+   */
+  private async searchBerseGuide(query: string, params: DiscoverQueryParams, userLat?: number, userLon?: number): Promise<any[]> {
+    const where: any = {
+      isEnabled: true,
+      OR: [
+        { title: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { tagline: { contains: query, mode: 'insensitive' } },
+        { city: { contains: query, mode: 'insensitive' } }
+      ]
+    };
+
+    // Location filter
+    if (params.city) {
+      where.city = {
+        contains: params.city,
+        mode: 'insensitive'
+      };
+    }
+
+    const listings = await prisma.userBerseGuide.findMany({
+      where,
+      take: 20,
+      orderBy: {
+        lastActiveAt: 'desc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            trustScore: true
+          }
+        },
+        paymentOptions: true
+      }
+    });
+
+    return listings.map(l => this.transformBerseGuide(l, userLat, userLon));
   }
 
   /**
    * Transform event to EventItem
    */
-  private transformEvent(event: any): EventItem {
+  private transformEvent(event: any, userLat?: number, userLon?: number): EventItem {
+    let distance: string | undefined;
+    
+    // Calculate distance if user location and event coordinates are available
+    if (userLat && userLon && event.latitude && event.longitude) {
+      const distanceKm = this.calculateDistance(
+        userLat,
+        userLon,
+        parseFloat(event.latitude),
+        parseFloat(event.longitude)
+      );
+      distance = this.formatDistance(distanceKm);
+    }
+
     return {
       id: event.id,
       type: 'event',
@@ -1069,7 +1486,7 @@ export class DiscoverService {
       location: event.location ? {
         name: event.location,
         city: event.location,
-        distance: undefined // TODO: Calculate distance
+        distance
       } : undefined,
       attendeeCount: event._count?.eventParticipants || 0,
       maxAttendees: event.maxAttendees || undefined,
@@ -1084,7 +1501,8 @@ export class DiscoverService {
         avatarUrl: undefined
       } : undefined,
       categories: event.type ? [event.type] : [],
-      detailsUrl: `/v2/events/${event.id}`
+      detailsUrl: `/v2/events/${event.id}`,
+      detailRoute: 'event' as const
     };
   }
 
@@ -1111,13 +1529,27 @@ export class DiscoverService {
         displayName: community.user.fullName,
         avatarUrl: undefined
       } : undefined,
-      detailsUrl: `/v2/communities/${community.id}`
+      detailsUrl: `/v2/communities/${community.id}`,
+      detailRoute: 'community' as const
     };
   }
   /**
    * Transform marketplace item to MarketplaceItem
    */
-  private transformMarketplaceItem(item: any): MarketplaceItem {
+  private transformMarketplaceItem(item: any, userLat?: number, userLon?: number): MarketplaceItem {
+    let distance: string | undefined;
+    
+    // Calculate distance if user location and item coordinates are available
+    if (userLat && userLon && item.latitude && item.longitude) {
+      const distanceKm = this.calculateDistance(
+        userLat,
+        userLon,
+        parseFloat(item.latitude),
+        parseFloat(item.longitude)
+      );
+      distance = this.formatDistance(distanceKm);
+    }
+
     return {
       id: item.id,
       type: 'marketplace_item',
@@ -1134,7 +1566,7 @@ export class DiscoverService {
       category: item.category,
       location: item.location ? {
         city: item.location,
-        distance: undefined
+        distance
       } : undefined,
       seller: item.user ? {
         id: item.user.id,
@@ -1144,7 +1576,129 @@ export class DiscoverService {
         responseRate: undefined // TODO: Calculate
       } : undefined,
       postedAt: item.createdAt.toISOString(),
-      detailsUrl: `/v2/marketplace/listings/${item.id}`
+      detailsUrl: `/v2/marketplace/listings/${item.id}`,
+      detailRoute: 'marketplace' as const
+    };
+  }
+
+  /**
+   * Transform homesurf listing to HomeSurfItem
+   */
+  private transformHomeSurf(listing: any, userLat?: number, userLon?: number): HomeSurfItem {
+    let distance: string | undefined;
+    
+    // Calculate distance if user location and listing coordinates are available
+    if (userLat && userLon && listing.coordinates) {
+      try {
+        const coords = typeof listing.coordinates === 'string' 
+          ? JSON.parse(listing.coordinates) 
+          : listing.coordinates;
+        if (coords.latitude && coords.longitude) {
+          const distanceKm = this.calculateDistance(
+            userLat,
+            userLon,
+            parseFloat(coords.latitude),
+            parseFloat(coords.longitude)
+          );
+          distance = this.formatDistance(distanceKm);
+        }
+      } catch (e) {
+        // If coordinates parsing fails, distance remains undefined
+      }
+    }
+
+    return {
+      id: listing.userId,
+      type: 'homesurf',
+      title: listing.title,
+      description: listing.description,
+      imageUrl: listing.photos?.[0],
+      images: listing.photos || [],
+      accommodationType: listing.accommodationType,
+      maxGuests: listing.maxGuests,
+      amenities: listing.amenities || [],
+      paymentOptions: listing.paymentOptions?.map((po: any) => ({
+        type: po.paymentType,
+        amount: po.amount,
+        currency: po.currency,
+        description: po.description,
+        isPreferred: po.isPreferred
+      })),
+      location: {
+        city: listing.city,
+        neighborhood: listing.neighborhood,
+        distance
+      },
+      host: listing.user ? {
+        id: listing.user.id,
+        displayName: listing.user.fullName,
+        avatarUrl: undefined,
+        trustScore: listing.user.trustScore || 0,
+        responseRate: listing.responseRate,
+        averageResponseTime: listing.averageResponseTime
+      } : undefined,
+      rating: listing.rating,
+      reviewCount: listing.reviewCount,
+      totalGuests: listing.totalGuests,
+      minimumStay: listing.minimumStay,
+      maximumStay: listing.maximumStay,
+      availabilityNotes: listing.availabilityNotes,
+      detailsUrl: `/v2/homesurf/${listing.userId}`,
+      detailRoute: 'homesurf' as const
+    };
+  }
+
+  /**
+   * Transform berseguide listing to BerseGuideItem
+   */
+  private transformBerseGuide(listing: any, userLat?: number, userLon?: number): BerseGuideItem {
+    let distance: string | undefined;
+    
+    // Calculate distance based on city center or guide's base location
+    // BerseGuide doesn't have exact coordinates in schema, distance calculated from city
+    // You can enhance this later with geocoding of the city
+    
+    return {
+      id: listing.userId,
+      type: 'berseguide',
+      title: listing.title,
+      description: listing.description,
+      tagline: listing.tagline,
+      imageUrl: listing.photos?.[0],
+      images: listing.photos || [],
+      guideTypes: listing.guideTypes || [],
+      languages: listing.languages || [],
+      paymentOptions: listing.paymentOptions?.map((po: any) => ({
+        type: po.paymentType,
+        amount: po.amount,
+        currency: po.currency,
+        description: po.description,
+        isPreferred: po.isPreferred
+      })),
+      location: {
+        city: listing.city,
+        neighborhoods: listing.neighborhoods || [],
+        coverageRadius: listing.coverageRadius,
+        distance
+      },
+      guide: listing.user ? {
+        id: listing.user.id,
+        displayName: listing.user.fullName,
+        avatarUrl: undefined,
+        trustScore: listing.user.trustScore || 0,
+        responseRate: listing.responseRate,
+        averageResponseTime: listing.averageResponseTime
+      } : undefined,
+      rating: listing.rating,
+      reviewCount: listing.reviewCount,
+      totalSessions: listing.totalSessions,
+      yearsGuiding: listing.yearsGuiding,
+      typicalDuration: listing.typicalDuration,
+      maxGroupSize: listing.maxGroupSize,
+      highlights: listing.highlights || [],
+      availabilityNotes: listing.availabilityNotes,
+      detailsUrl: `/v2/berseguide/${listing.userId}`,
+      detailRoute: 'berseguide' as const
     };
   }
 
@@ -1224,18 +1778,25 @@ export class DiscoverService {
 
     const sections: DiscoverSection[] = [];
 
-    // Global trending section
-    const trendingItems = await this.fetchTrendingItems(userId, { ...params, limit: 10 }, globalLocationInfo);
-    if (trendingItems.length > 0) {
+    // Global trending events
+    const trendingEvents = await this.fetchEvents(
+      userId, 
+      { ...params, sortBy: DiscoverSortBy.POPULAR, limit: 10 }, 
+      globalLocationInfo,
+      undefined,
+      params.latitude || userContext?.latitude,
+      params.longitude || userContext?.longitude
+    );
+    if (trendingEvents.length > 0) {
       sections.push({
         type: 'global_trending' as any,
-        title: 'Trending Worldwide',
-        subtitle: 'Popular content from around the globe',
+        title: 'Trending Events Worldwide',
+        subtitle: 'Popular events from around the globe',
         layout: DiscoverLayoutType.HORIZONTAL,
         itemLayout: DiscoverItemLayout.CARD,
-        items: trendingItems.slice(0, 10),
-        hasMore: trendingItems.length > 10,
-        viewAllEndpoint: '/v2/discover/trending'
+        items: trendingEvents,
+        hasMore: false,
+        viewAllEndpoint: '/v2/discover/trending?contentType=events'
       });
     }
 
@@ -1248,8 +1809,8 @@ export class DiscoverService {
         subtitle: 'Connect with people worldwide',
         layout: DiscoverLayoutType.VERTICAL,
         itemLayout: DiscoverItemLayout.LIST,
-        items: communities.slice(0, 10),
-        hasMore: communities.length > 10,
+        items: communities,
+        hasMore: false,
         viewAllEndpoint: '/v2/communities?popular=true'
       });
     }
@@ -1359,23 +1920,7 @@ export class DiscoverService {
     return true;
   }
 
-  /**
-   * Interleave items from multiple arrays
-   */
-  private interleaveItems(arrays: DiscoverItem[][]): DiscoverItem[] {
-    const result: DiscoverItem[] = [];
-    const maxLength = Math.max(...arrays.map(arr => arr.length));
 
-    for (let i = 0; i < maxLength; i++) {
-      for (const arr of arrays) {
-        if (i < arr.length) {
-          result.push(arr[i]);
-        }
-      }
-    }
-
-    return result;
-  }
 
   /**
    * Get event order by clause
