@@ -1369,6 +1369,47 @@ export class UserController {
       };
 
       // ==================== BUILD RESPONSE ====================
+      // Parse phone number into dialCode and number
+      let phoneData = null;
+      if (user.phone) {
+        // If dialCode is stored separately, use it
+        if (user.dialCode) {
+          phoneData = {
+            dialCode: user.dialCode,
+            number: user.phone.replace(user.dialCode, ''),
+            full: user.phone,
+          };
+        } else {
+          // Parse from full phone number
+          // Try to match common dial code patterns (1-4 digits after +)
+          // Prioritize shorter dial codes (most countries use 1-3 digits)
+          let dialCode = null;
+          let number = user.phone;
+          
+          // Check for +XX pattern (2 digit country codes like +60, +65, +44)
+          if (user.phone.match(/^\+\d{2}\d{7,}/)) {
+            dialCode = user.phone.substring(0, 3);
+            number = user.phone.substring(3);
+          }
+          // Check for +XXX pattern (3 digit codes)
+          else if (user.phone.match(/^\+\d{3}\d{6,}/)) {
+            dialCode = user.phone.substring(0, 4);
+            number = user.phone.substring(4);
+          }
+          // Check for +X pattern (1 digit codes like +1)
+          else if (user.phone.match(/^\+\d{1}\d{7,}/)) {
+            dialCode = user.phone.substring(0, 2);
+            number = user.phone.substring(2);
+          }
+          
+          phoneData = {
+            dialCode: dialCode,
+            number: number,
+            full: user.phone,
+          };
+        }
+      }
+
       const response = {
         profile: {
           id: user.id,
@@ -1376,7 +1417,7 @@ export class UserController {
           displayName: user.profile?.displayName || null,
           username: user.username,
           email: user.email,
-          phone: user.phone,
+          phone: phoneData,
           profilePicture: user.profile?.profilePicture || null,
           bio: user.profile?.bio || null,
           shortBio: user.profile?.shortBio || null,

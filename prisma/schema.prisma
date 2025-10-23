@@ -2452,6 +2452,7 @@ model User {
   id                          String                   @id @default(cuid())
   email                       String?                  @unique
   phone                       String?                  @unique
+  dialCode                    String?                  // e.g., "+60", "+65", "+1"
   password                    String?
   fullName                    String
   role                        UserRole                 @default(GENERAL_USER)
