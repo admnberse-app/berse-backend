@@ -233,3 +233,40 @@ export interface CommunityInviteResponse {
   createdAt: string;
   expiresAt: string;
 }
+
+// ============================================================================
+// COMMUNITY QR CODE & PUBLIC PREVIEW TYPES
+// ============================================================================
+
+export interface CommunityQRCodeResponse {
+  communityId: string;
+  qrCodeDataUrl: string; // Base64 data URL of QR code image
+  previewUrl: string; // Public URL to preview page
+  webUrl: string; // Deep link URL that works for both web and app
+}
+
+export interface PublicCommunityPreview {
+  id: string;
+  name: string;
+  description?: string;
+  logoUrl?: string;
+  coverImageUrl?: string;
+  interests: string[];
+  isVerified: boolean;
+  memberCount: number;
+  upcomingEvents: Array<{
+    id: string;
+    title: string;
+    type: string;
+    date: string;
+    location: string;
+    images: string[];
+    isFree: boolean;
+    price?: number;
+  }>;
+  downloadLinks: {
+    ios: string;
+    android: string;
+    deepLink: string; // Universal link for app deep linking
+  };
+}

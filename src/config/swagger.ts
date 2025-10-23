@@ -214,7 +214,7 @@ const swaggerDefinition = {
     },
     {
       name: 'Communities',
-      description: 'Community management, membership, and vouching system. Create communities, manage members with role-based permissions (ADMIN, MODERATOR, MEMBER), and grant community vouches integrated with trust scores.',
+      description: 'Community management, membership, and vouching system. Create communities, manage members with role-based permissions (ADMIN, MODERATOR, MEMBER), grant community vouches integrated with trust scores, and generate QR codes for community promotion with public preview pages.',
     },
     {
       name: 'Card Game',
@@ -924,6 +924,139 @@ const swaggerDefinition = {
             type: 'string',
             description: 'Base64-encoded PNG QR code image (Data URL format). Contains signed JWT token with RSVP details. Valid for 30 days or until 24 hours after event.',
             example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
+          },
+        },
+      },
+      CommunityQRCodeResponse: {
+        type: 'object',
+        required: ['communityId', 'qrCodeDataUrl', 'previewUrl', 'webUrl'],
+        properties: {
+          communityId: { 
+            type: 'string', 
+            description: 'Community ID',
+            example: 'cmh09ozdw0005cpb2rj7vus2n',
+          },
+          qrCodeDataUrl: {
+            type: 'string',
+            description: 'Base64-encoded PNG QR code image (400x400px). Encodes the preview URL for sharing.',
+            example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQ...',
+          },
+          previewUrl: {
+            type: 'string',
+            format: 'uri',
+            description: 'Public preview URL (no auth required). This is what the QR code encodes.',
+            example: 'https://app.berse.com/community-preview/cmh09ozdw0005cpb2rj7vus2n',
+          },
+          webUrl: {
+            type: 'string',
+            format: 'uri',
+            description: 'Deep link URL for in-app navigation. Opens the app if installed.',
+            example: 'https://app.berse.com/communities/cmh09ozdw0005cpb2rj7vus2n',
+          },
+        },
+      },
+      PublicCommunityPreview: {
+        type: 'object',
+        required: ['id', 'name', 'interests', 'isVerified', 'memberCount', 'upcomingEvents', 'downloadLinks'],
+        properties: {
+          id: { 
+            type: 'string', 
+            description: 'Community ID',
+            example: 'cmh09ozdw0005cpb2rj7vus2n',
+          },
+          name: { 
+            type: 'string', 
+            description: 'Community name',
+            example: 'Tech Innovators KL',
+          },
+          description: { 
+            type: 'string', 
+            nullable: true,
+            description: 'Community description',
+            example: 'Hub for developers, entrepreneurs, and tech enthusiasts in KL.',
+          },
+          logoUrl: { 
+            type: 'string', 
+            format: 'uri',
+            nullable: true,
+            description: 'Community logo URL',
+            example: 'https://cdn.berse.com/logos/tech-kl.jpg',
+          },
+          coverImageUrl: { 
+            type: 'string', 
+            format: 'uri',
+            nullable: true,
+            description: 'Community cover image URL',
+            example: 'https://cdn.berse.com/covers/tech-kl.jpg',
+          },
+          interests: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Community interests/tags',
+            example: ['technology', 'startups', 'innovation'],
+          },
+          isVerified: { 
+            type: 'boolean', 
+            description: 'Whether community is verified',
+            example: true,
+          },
+          memberCount: { 
+            type: 'integer', 
+            description: 'Total number of approved members',
+            example: 247,
+          },
+          upcomingEvents: {
+            type: 'array',
+            description: 'Upcoming published events (max 10)',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                title: { type: 'string' },
+                type: { type: 'string' },
+                date: { type: 'string', format: 'date-time' },
+                location: { type: 'string' },
+                images: { type: 'array', items: { type: 'string' } },
+                isFree: { type: 'boolean' },
+                price: { type: 'number', nullable: true },
+              },
+            },
+            example: [
+              {
+                id: 'evt-001',
+                title: 'Tech Meetup',
+                type: 'MEETUP',
+                date: '2025-10-30T18:00:00Z',
+                location: 'KL Sentral',
+                images: ['https://cdn.berse.com/events/tech-meetup.jpg'],
+                isFree: true,
+                price: null,
+              },
+            ],
+          },
+          downloadLinks: {
+            type: 'object',
+            required: ['ios', 'android', 'deepLink'],
+            properties: {
+              ios: {
+                type: 'string',
+                format: 'uri',
+                description: 'Apple App Store URL',
+                example: 'https://apps.apple.com/app/berse',
+              },
+              android: {
+                type: 'string',
+                format: 'uri',
+                description: 'Google Play Store URL',
+                example: 'https://play.google.com/store/apps/details?id=com.berse.app',
+              },
+              deepLink: {
+                type: 'string',
+                format: 'uri',
+                description: 'Universal/deep link URL',
+                example: 'https://app.berse.com/communities/cmh09ozdw0005cpb2rj7vus2n',
+              },
+            },
           },
         },
       },

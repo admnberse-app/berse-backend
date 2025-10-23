@@ -2,6 +2,7 @@ import { PrismaClient, CommunityRole, Prisma } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import { NotificationService } from '../../services/notification.service';
 import logger from '../../utils/logger';
+import QRCode from 'qrcode';
 import type {
   CreateCommunityInput,
   UpdateCommunityInput,
@@ -17,6 +18,8 @@ import type {
   PaginatedCommunityMembersResponse,
   CommunityVouchEligibilityResponse,
   UserBasicInfo,
+  CommunityQRCodeResponse,
+  PublicCommunityPreview,
 } from './community.types';
 
 const prisma = new PrismaClient();
@@ -1870,6 +1873,139 @@ export class CommunityService {
       return communitiesWithConnections.map(c => this.formatCommunityResponse(c, userId));
     } catch (error) {
       logger.error('Failed to get communities from connections', { error, userId, limit });
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // QR CODE & PUBLIC PREVIEW
+  // ============================================================================
+
+  /**
+   * Generate QR code for community preview page
+   */
+  async generateCommunityQRCode(userId: string, communityId: string): Promise<CommunityQRCodeResponse> {
+    try {
+      // Check if community exists
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Check admin/moderator permissions
+      await this.checkPermission(userId, communityId, ['ADMIN', 'MODERATOR']);
+
+      // Construct the public preview URL
+      const baseUrl = process.env.APP_URL || process.env.FRONTEND_URL || 'https://app.berse.com';
+      const previewUrl = `${baseUrl}/community-preview/${communityId}`;
+      
+      // Deep link URL that works for both web and app
+      const webUrl = `${baseUrl}/communities/${communityId}`;
+
+      // Generate QR code as data URL
+      const qrCodeDataUrl = await QRCode.toDataURL(previewUrl, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        width: 400,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+
+      logger.info('QR code generated for community', { communityId, userId });
+
+      return {
+        communityId,
+        qrCodeDataUrl,
+        previewUrl,
+        webUrl,
+      };
+    } catch (error) {
+      logger.error('Failed to generate QR code', { error, userId, communityId });
+      throw error;
+    }
+  }
+
+  /**
+   * Get public community preview (no auth required)
+   * This is what users see when they scan the QR code
+   */
+  async getPublicCommunityPreview(communityId: string): Promise<PublicCommunityPreview> {
+    try {
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+        include: {
+          _count: {
+            select: {
+              communityMembers: true,
+            },
+          },
+        },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Get upcoming events (next 10)
+      const upcomingEvents = await prisma.event.findMany({
+        where: {
+          communityId,
+          status: 'PUBLISHED',
+          date: { gte: new Date() },
+        },
+        take: 10,
+        orderBy: { date: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          date: true,
+          location: true,
+          images: true,
+          isFree: true,
+          price: true,
+        },
+      });
+
+      // App download links
+      const baseUrl = process.env.APP_URL || process.env.FRONTEND_URL || 'https://app.berse.com';
+      const downloadLinks = {
+        ios: process.env.IOS_APP_STORE_URL || 'https://apps.apple.com/app/berse',
+        android: process.env.ANDROID_PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=com.berse.app',
+        deepLink: `${baseUrl}/communities/${communityId}`,
+      };
+
+      logger.info('Public community preview accessed', { communityId });
+
+      return {
+        id: community.id,
+        name: community.name,
+        description: community.description || undefined,
+        logoUrl: community.logoUrl || undefined,
+        coverImageUrl: community.coverImageUrl || undefined,
+        interests: community.interests || [],
+        isVerified: community.isVerified,
+        memberCount: community._count.communityMembers,
+        upcomingEvents: upcomingEvents.map(e => ({
+          id: e.id,
+          title: e.title,
+          type: e.type,
+          date: e.date.toISOString(),
+          location: e.location,
+          images: e.images,
+          isFree: e.isFree,
+          price: e.price || undefined,
+        })),
+        downloadLinks,
+      };
+    } catch (error) {
+      logger.error('Failed to get public community preview', { error, communityId });
       throw error;
     }
   }

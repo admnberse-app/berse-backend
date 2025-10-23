@@ -31,6 +31,81 @@ const communityController = new CommunityController();
  */
 
 // ============================================================================
+// PUBLIC PREVIEW ROUTES (must come before authenticated routes)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/communities/preview/{communityId}:
+ *   get:
+ *     summary: Get public community preview (for QR code scanning)
+ *     description: |
+ *       Public endpoint that shows community details and upcoming events.
+ *       Designed for users who scan a QR code and may not have the app installed yet.
+ *       No authentication required.
+ *     tags: [Communities]
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Community ID
+ *     responses:
+ *       200:
+ *         description: Community preview retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                     logoUrl:
+ *                       type: string
+ *                     coverImageUrl:
+ *                       type: string
+ *                     interests:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     isVerified:
+ *                       type: boolean
+ *                     memberCount:
+ *                       type: integer
+ *                     upcomingEvents:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     downloadLinks:
+ *                       type: object
+ *                       properties:
+ *                         ios:
+ *                           type: string
+ *                         android:
+ *                           type: string
+ *                         deepLink:
+ *                           type: string
+ *       404:
+ *         description: Community not found
+ */
+router.get(
+  '/preview/:communityId',
+  communityIdValidator,
+  handleValidationErrors,
+  asyncHandler(communityController.getPublicPreview.bind(communityController))
+);
+
+// ============================================================================
 // COMMUNITY MANAGEMENT ROUTES
 // ============================================================================
 
@@ -617,6 +692,71 @@ router.get(
   communityIdValidator,
   handleValidationErrors,
   asyncHandler(communityController.getCommunityStats.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/{communityId}/qr-code:
+ *   get:
+ *     summary: Generate QR code for community preview
+ *     description: |
+ *       Generate a QR code that links to the public community preview page.
+ *       When scanned, users will see community details and upcoming events,
+ *       with clear CTAs to download the app.
+ *       
+ *       Only admins and moderators can generate QR codes for their communities.
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Community ID
+ *     responses:
+ *       200:
+ *         description: QR code generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: QR code generated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communityId:
+ *                       type: string
+ *                     qrCodeDataUrl:
+ *                       type: string
+ *                       description: Base64 encoded QR code image (PNG)
+ *                       example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
+ *                     previewUrl:
+ *                       type: string
+ *                       description: Public URL to the preview page
+ *                       example: https://app.berse.com/community-preview/abc123
+ *                     webUrl:
+ *                       type: string
+ *                       description: Deep link URL for app navigation
+ *                       example: https://app.berse.com/communities/abc123
+ *       403:
+ *         description: Insufficient permissions (must be admin or moderator)
+ *       404:
+ *         description: Community not found
+ */
+router.get(
+  '/:communityId/qr-code',
+  authenticateToken,
+  communityIdValidator,
+  handleValidationErrors,
+  asyncHandler(communityController.generateQRCode.bind(communityController))
 );
 
 // ============================================================================

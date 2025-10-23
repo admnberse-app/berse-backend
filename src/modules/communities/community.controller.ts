@@ -417,4 +417,33 @@ export class CommunityController {
 
     sendSuccess(res, { coverImageUrl: uploadResult.url }, 'Community cover image uploaded successfully');
   }
+
+  // ============================================================================
+  // QR CODE & PUBLIC PREVIEW
+  // ============================================================================
+
+  /**
+   * @route GET /v2/communities/:communityId/qr-code
+   * @desc Generate QR code for community preview
+   * @access Private (Admin/Moderator)
+   */
+  async generateQRCode(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const { communityId } = req.params;
+
+    const qrCode = await communityService.generateCommunityQRCode(userId, communityId);
+    sendSuccess(res, qrCode, 'QR code generated successfully');
+  }
+
+  /**
+   * @route GET /v2/communities/preview/:communityId
+   * @desc Get public community preview (no auth required)
+   * @access Public
+   */
+  async getPublicPreview(req: Request, res: Response): Promise<void> {
+    const { communityId } = req.params;
+
+    const preview = await communityService.getPublicCommunityPreview(communityId);
+    sendSuccess(res, preview, 'Community preview retrieved successfully');
+  }
 }
