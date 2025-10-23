@@ -6,6 +6,11 @@
  * 
  * Usage:
  *   npx ts-node prisma/seeds/index.ts
+ *   npm run seed
+ *   npm run prisma:seed:all
+ * 
+ * Note: This file is functionally identical to prisma/seed.ts
+ * Both serve as entry points for the same modular seeding system.
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
@@ -128,7 +133,6 @@ async function displayFinalSummary() {
       events: await prisma.event.count(),
       connections: await prisma.userConnection.count(),
       vouches: await prisma.vouch.count(),
-      services: await prisma.service.count(),
       marketplaceListings: await prisma.marketplaceListing.count(),
       appPreviewScreens: await prisma.appPreviewScreen.count(),
       userSetupScreens: await prisma.userSetupScreen.count(),
@@ -147,7 +151,6 @@ async function displayFinalSummary() {
       'Events': stats.events,
       'User Connections': stats.connections,
       'Vouches': stats.vouches,
-      'Services': stats.services,
       'Marketplace Listings': stats.marketplaceListings,
     'App Preview Screens': stats.appPreviewScreens,
     'User Setup Screens': stats.userSetupScreens,
@@ -224,6 +227,10 @@ async function main() {
     {
       path: 'prisma/seeds/core/subscription-tiers.seed.ts',
       description: 'Subscription Tiers (FREE, BASIC, PREMIUM)',
+    },
+    {
+      path: 'prisma/seeds/core/payment-providers.seed.ts',
+      description: 'Payment Providers',
     },
     {
       path: 'prisma/seeds/core/platform-fees.seed.ts',

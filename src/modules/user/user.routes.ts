@@ -97,7 +97,7 @@ router.get('/me', authenticateToken, UserController.getMyProfile);
 
 /**
  * @swagger
- * /v2/users/profile:
+ * /v2/users/me:
  *   put:
  *     summary: Update user profile
  *     description: Update profile information for the authenticated user
@@ -187,7 +187,7 @@ router.get('/me', authenticateToken, UserController.getMyProfile);
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.put(
-  '/profile',
+  '/me',
   authenticateToken,
   updateProfileValidators,
   handleValidationErrors,

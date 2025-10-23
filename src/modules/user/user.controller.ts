@@ -46,7 +46,7 @@ export class UserController {
     try {
       const userId = req.user?.id;
 
-      const user = await prisma.user.findUnique({
+      const user: any = await prisma.user.findUnique({
         where: { id: userId },
         select: {
           id: true,
@@ -109,6 +109,32 @@ export class UserController {
               referralCode: true,
             },
           },
+          homeSurf: {
+            select: {
+              isEnabled: true,
+              title: true,
+              maxGuests: true,
+              responseRate: true,
+              averageResponseTime: true,
+              totalGuests: true,
+              rating: true,
+              reviewCount: true,
+            },
+          },
+          berseGuide: {
+            select: {
+              isEnabled: true,
+              title: true,
+              description: true,
+              languages: true,
+              guideTypes: true,
+              responseRate: true,
+              averageResponseTime: true,
+              totalSessions: true,
+              rating: true,
+              reviewCount: true,
+            },
+          },
           _count: {
             select: {
               events: true,
@@ -117,6 +143,10 @@ export class UserController {
               userBadges: true,
               connectionsInitiated: true,
               connectionsReceived: true,
+              homeSurfBookingsAsHost: true,
+              homeSurfBookingsAsGuest: true,
+              berseGuideBookingsAsGuide: true,
+              berseGuideBookingsAsTraveler: true,
             },
           },
           connectionStats: {
@@ -158,6 +188,16 @@ export class UserController {
           month: 'long', 
           year: 'numeric' 
         }) : null,
+        // HomeSurf status
+        homeSurf: user.homeSurf || {
+          isEnabled: false,
+          status: 'NOT_SETUP',
+        },
+        // BerseGuide status
+        berseGuide: user.berseGuide || {
+          isEnabled: false,
+          status: 'NOT_SETUP',
+        },
         // Trust Level Gating Information
         trustLevelGating: {
           currentLevel: {
@@ -214,9 +254,20 @@ export class UserController {
       if (data.bio !== undefined) profileUpdate.bio = data.bio;
       if (data.fullBio !== undefined) profileUpdate.bio = data.fullBio;  // Alias
       if (data.shortBio !== undefined) profileUpdate.shortBio = data.shortBio;
-      if (data.dateOfBirth !== undefined) profileUpdate.dateOfBirth = new Date(data.dateOfBirth);
+      if (data.dateOfBirth !== undefined) {
+        profileUpdate.dateOfBirth = new Date(data.dateOfBirth);
+        // Auto-calculate age from date of birth
+        const birthDate = new Date(data.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        profileUpdate.age = age;
+      }
       if (data.gender !== undefined) profileUpdate.gender = data.gender;
-      if (data.age !== undefined) profileUpdate.age = data.age;
+      // Remove manual age input - age is now auto-calculated from dateOfBirth
       if (data.profession !== undefined) profileUpdate.profession = data.profession;
       if (data.occupation !== undefined) profileUpdate.occupation = data.occupation;
       if (data.website !== undefined) profileUpdate.website = data.website;

@@ -1583,22 +1583,6 @@ export class PaymentService {
           }
           break;
 
-        case 'SERVICE_BOOKING':
-          // Get service provider from booking
-          if (transaction.referenceId) {
-            const booking = await prisma.serviceBooking.findUnique({
-              where: { id: transaction.referenceId },
-              select: { providerId: true },
-            });
-            recipientId = booking?.providerId || transaction.userId;
-            recipientType = 'service_provider';
-            metadata = { bookingId: transaction.referenceId };
-          } else {
-            recipientId = transaction.userId;
-            recipientType = 'service_provider';
-          }
-          break;
-
         default:
           recipientId = transaction.userId;
           recipientType = 'user';

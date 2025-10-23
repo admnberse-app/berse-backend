@@ -60,7 +60,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&h=600&fit=crop'],
     },
     {
       title: 'Badminton Tournament - Singles & Doubles',
@@ -77,7 +77,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&h=600&fit=crop'],
     },
     {
       title: 'Weekend Hiking: Bukit Tabur',
@@ -91,7 +91,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.PERSONAL,
-      images: ['https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&h=600&fit=crop'],
     },
 
     // Food & Social Events
@@ -110,7 +110,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=600&fit=crop'],
     },
     {
       title: 'Cooking Class: Nasi Lemak Workshop',
@@ -126,7 +126,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&h=600&fit=crop'],
     },
     {
       title: 'Brunch & Board Games Sunday',
@@ -139,7 +139,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.PERSONAL,
-      images: ['https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=800&h=600&fit=crop'],
     },
 
     // Tech & Professional Events
@@ -156,7 +156,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&h=600&fit=crop'],
     },
     {
       title: 'Web3 & Blockchain Workshop',
@@ -173,7 +173,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800&h=600&fit=crop'],
     },
 
     // Music & Arts Events
@@ -192,7 +192,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop'],
     },
     {
       title: 'Photography Walk: Golden Hour KL',
@@ -207,7 +207,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1606933248010-ef7e86ec21e9?w=800&h=600&fit=crop'],
     },
 
     // Travel Events
@@ -226,7 +226,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&h=600&fit=crop'],
     },
     {
       title: 'Weekend Getaway: Cameron Highlands',
@@ -242,7 +242,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1464817739973-0128fe77aaa1?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1586508887700-bf20f8ef9da7?w=800&h=600&fit=crop'],
     },
 
     // Gaming & Family Events
@@ -260,7 +260,7 @@ export async function seedEvents() {
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&h=600&fit=crop'],
     },
     {
       title: 'Family Picnic Day',
@@ -275,7 +275,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
-      images: ['https://images.unsplash.com/photo-1527525443983-6e60c75fff46?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1527525443983-6e60c75fff46?w=800&h=600&fit=crop'],
     },
 
     // Volunteer & Community Service
@@ -291,7 +291,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.PERSONAL,
-      images: ['https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop'],
     },
     {
       title: 'Community Garden Planting Day',
@@ -304,7 +304,7 @@ export async function seedEvents() {
       isFree: true,
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.PERSONAL,
-      images: ['https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=800&h=600&fit=crop'],
     },
 
     // Past Event (for testing historical data)
@@ -322,7 +322,7 @@ export async function seedEvents() {
       status: EventStatus.COMPLETED,
       hostType: EventHostType.PERSONAL,
       ticketsSold: 95,
-      images: ['https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=800&h=400&fit=crop'],
+      images: ['https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=800&h=600&fit=crop'],
     },
   ];
 

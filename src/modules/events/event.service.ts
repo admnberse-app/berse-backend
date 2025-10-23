@@ -1268,6 +1268,16 @@ export class EventService {
         event.title
       ).catch(err => logger.error('Failed to send check-in notification:', err));
 
+      // Check and award badges after event check-in
+      try {
+        const { BadgeService } = await import('../../services/badge.service');
+        await BadgeService.checkAndAwardBadges(targetUserId);
+        logger.info(`Badge check completed for user ${targetUserId} after event check-in`);
+      } catch (error) {
+        // Non-critical error - log but don't fail the check-in
+        logger.error('Failed to check/award badges after event check-in:', error);
+      }
+
       return {
         id: participant.id,
         eventId: participant.eventId,

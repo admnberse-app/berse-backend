@@ -40,12 +40,12 @@ export class EscrowService {
         holdReason = 'awaiting_event_completion';
         break;
 
-      case TransactionType.SERVICE_BOOKING:
-        // Hold until service date + 2 days
-        const serviceDate = metadata?.serviceDate ? new Date(metadata.serviceDate) : now;
-        releaseDate = new Date(serviceDate.getTime() + 2 * 24 * 60 * 60 * 1000);
-        canReleaseAt = new Date(serviceDate.getTime() + 1 * 24 * 60 * 60 * 1000);
-        holdReason = 'awaiting_service_completion';
+      case TransactionType.MARKETPLACE_ORDER:
+        // Hold for marketplace orders (can be products or services)
+        const fulfillmentDate = metadata?.fulfillmentDate ? new Date(metadata.fulfillmentDate) : now;
+        releaseDate = new Date(fulfillmentDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+        canReleaseAt = new Date(fulfillmentDate.getTime() + 1 * 24 * 60 * 60 * 1000);
+        holdReason = 'awaiting_order_completion';
         break;
 
       case TransactionType.SUBSCRIPTION:

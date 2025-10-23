@@ -26,6 +26,48 @@ export async function seedVouchConfig() {
       autoVouchRequireZeroNegativity: true,
       reconnectionCooldownDays: 30,
       effectiveFrom: new Date(),
+      
+      // Trust Score Brackets (applies to Basic & Premium tiers)
+      perTier: {
+        // Trust score brackets - determines vouching power
+        trustScoreBrackets: [
+          {
+            minScore: 0,
+            maxScore: 30,
+            bracket: 'STARTER',
+            maxVouches: 5,
+            description: 'Building trust - limited vouching capability'
+          },
+          {
+            minScore: 31,
+            maxScore: 60,
+            bracket: 'TRUSTED',
+            maxVouches: 25,
+            description: 'Trusted member - moderate vouching capability'
+          },
+          {
+            minScore: 61,
+            maxScore: 100,
+            bracket: 'LEADER',
+            maxVouches: 50,
+            description: 'Community leader - high vouching capability'
+          }
+        ],
+        
+        // Tier-specific overrides
+        tierLimits: {
+          FREE: {
+            maxVouches: 5, // Hard cap regardless of trust score
+            overridesTrustScore: true,
+            description: 'Free tier capped at 5 vouches'
+          },
+          BASIC: {
+            maxVouches: -1, // Uses trust score brackets
+            overridesTrustScore: false,
+            description: 'Uses trust score brackets (5/25/50)'
+          }
+        }
+      },
     },
   });
   

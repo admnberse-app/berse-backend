@@ -357,25 +357,31 @@ export class DashboardService {
 
     const listings = await prisma.marketplaceListing.findMany({
       where: whereClause,
+      include: {
+        pricingOptions: true
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
 
-    return listings.map(listing => ({
-      id: listing.id,
-      title: listing.title,
-      description: listing.description || undefined,
-      price: listing.price,
-      currency: listing.currency,
-      images: listing.images,
-      location: listing.location || undefined,
-      status: listing.status.toLowerCase() as 'active' | 'sold' | 'draft' | 'archived',
-      viewCount: 0, // Schema doesn't have viewCount
-      messageCount: 0, // TODO: Add message count when messaging is implemented
-      createdAt: listing.createdAt,
-      updatedAt: listing.updatedAt,
-      category: listing.category || undefined,
-    }));
+    return listings.map(listing => {
+      const defaultPricing = listing.pricingOptions?.find(p => p.isDefault) || listing.pricingOptions?.[0];
+      return {
+        id: listing.id,
+        title: listing.title,
+        description: listing.description || undefined,
+        price: defaultPricing?.price || 0,
+        currency: defaultPricing?.currency || 'MYR',
+        images: listing.images,
+        location: listing.location || undefined,
+        status: listing.status.toLowerCase() as 'active' | 'sold' | 'draft' | 'archived',
+        viewCount: listing.viewCount || 0,
+        messageCount: 0, // TODO: Add message count when messaging is implemented
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        category: listing.category || undefined,
+      };
+    });
   }
 
   /**

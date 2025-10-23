@@ -14,30 +14,37 @@ const tiers = [
     billingCycle: 'MONTHLY',
     features: {
       // Basic features
-      maxEventsPerMonth: -1, // Unlimited viewing, joining limited by trust
-      maxConnections: 100,
+      maxConnectionsPerMonth: 10, // 10 connection requests per month
+      maxSwipesPerMonth: 10, // Tinder-like swipe limit
       profileBoost: false,
       customBadges: false,
       prioritySupport: false,
       analytics: false,
+      canMessage: false, // Cannot send messages
 
-      // Event access (trust-gated)
+      // Event access
       eventAccess: {
         canView: true,
-        canJoin: true, // Trust-gated: Starter can join 3/month, Trusted 5/month, Scout 8/month
-        canCreate: false,
+        canJoin: true, // Unlimited event joining
+        canCreate: false, // Cannot create events
         canHost: false,
-        maxEventsPerMonth: -1,
+        maxEventsPerMonth: -1, // Unlimited joining
         maxHostedPerMonth: 0,
         canCreatePaidEvents: false,
       },
 
-      // Marketplace (view only)
+      // Marketplace
       marketplaceAccess: {
-        canBuy: false,
-        canSell: false,
-        maxTransactionAmount: 0,
+        canBuy: true, // Can buy from marketplace
+        canSell: false, // Cannot sell
+        maxTransactionAmount: -1,
         maxListings: 0,
+      },
+
+      // Vouching
+      vouchingLimits: {
+        maxVouches: 5, // Hard cap at 5 vouches regardless of trust score
+        overridesTrustScore: true,
       },
 
       // Travel (not available)
@@ -66,7 +73,7 @@ const tiers = [
         canCreate: false,
         canModerate: false,
         canAdmin: false,
-        maxCommunities: 2,
+        maxCommunities: 2, // Max 2 communities
       },
 
       // Advanced features
@@ -83,36 +90,43 @@ const tiers = [
   {
     tierCode: 'BASIC',
     tierName: 'Basic',
-    description: 'Active Participation & Commerce - Travel & stays, marketplace, create events',
-    price: 30.0,
+    description: 'Active Participation & Commerce - Create events, marketplace trading, messaging',
+    price: 29.99,
     currency: 'MYR',
     billingCycle: 'MONTHLY',
     features: {
       // Basic features
-      maxEventsPerMonth: -1,
-      maxConnections: 500,
+      maxConnectionsPerMonth: -1, // Unlimited connections
+      maxSwipesPerMonth: -1, // Unlimited swipes
       profileBoost: true,
       customBadges: false,
       prioritySupport: false,
       analytics: false,
+      canMessage: true, // Can send messages
 
-      // Event access (trust-gated)
+      // Event access
       eventAccess: {
         canView: true,
-        canJoin: true,
-        canCreate: true, // Trust-gated: Trusted 2/month, Scout 5/month, Leader unlimited
-        canHost: true,   // Trust-gated: Scout 2/month, Leader unlimited
-        maxEventsPerMonth: -1,
-        maxHostedPerMonth: -1, // Limited by trust level
+        canJoin: true, // Unlimited joining
+        canCreate: true, // Can create events
+        canHost: true,
+        maxEventsPerMonth: -1, // Unlimited joining
+        maxHostedPerMonth: 5, // Max 5 events created per month
         canCreatePaidEvents: false,
       },
 
-      // Marketplace (trust-gated)
+      // Marketplace
       marketplaceAccess: {
-        canBuy: true,    // Trust-gated: Starter max RM100, Trusted unlimited
-        canSell: true,   // Trust-gated: Trusted 5 listings, Scout 15, Leader unlimited
-        maxTransactionAmount: -1, // Limited by trust
-        maxListings: -1,          // Limited by trust
+        canBuy: true, // Can buy
+        canSell: true, // Can sell
+        maxTransactionAmount: -1,
+        maxListings: -1,
+      },
+
+      // Vouching
+      vouchingLimits: {
+        maxVouches: -1, // No tier cap - uses trust score brackets
+        overridesTrustScore: false, // Trust score determines actual limit
       },
 
       // Travel (trust-gated)
@@ -138,10 +152,10 @@ const tiers = [
       // Community
       communityAccess: {
         canJoin: true,
-        canCreate: true, // Trust-gated: Trusted+
-        canModerate: true, // Trust-gated: Scout+
-        canAdmin: false,   // Trust-gated: Leader only
-        maxCommunities: 5,
+        canCreate: true,
+        canModerate: true,
+        canAdmin: false,
+        maxCommunities: -1, // Unlimited
       },
 
       // Advanced features
@@ -154,84 +168,6 @@ const tiers = [
     isActive: true,
     isPublic: true,
     trialDays: 7,
-  },
-  {
-    tierCode: 'PREMIUM',
-    tierName: 'Premium',
-    description: 'Professional Services & Leadership - Service matching, mentorship, priority everything',
-    price: 50.0,
-    currency: 'MYR',
-    billingCycle: 'MONTHLY',
-    features: {
-      // Basic features
-      maxEventsPerMonth: -1,
-      maxConnections: -1, // Unlimited
-      profileBoost: true,
-      customBadges: true,
-      prioritySupport: true,
-      analytics: true,
-
-      // Event access (trust-gated)
-      eventAccess: {
-        canView: true,
-        canJoin: true,
-        canCreate: true,
-        canHost: true,
-        maxEventsPerMonth: -1,
-        maxHostedPerMonth: -1,
-        canCreatePaidEvents: true, // Trust-gated: Scout+
-      },
-
-      // Marketplace (trust-gated)
-      marketplaceAccess: {
-        canBuy: true,
-        canSell: true,
-        maxTransactionAmount: -1,
-        maxListings: -1,
-      },
-
-      // Travel (trust-gated)
-      travelAccess: {
-        canJoin: true,
-        canHost: true,
-        canHostHomestay: true,
-        canBeHomestayGuest: true,
-      },
-
-      // Services (trust-gated)
-      serviceAccess: {
-        canUseAsClient: true,    // Trust-gated: Trusted+
-        canOfferServices: true,  // Trust-gated: Scout+
-        maxActiveServices: -1,
-      },
-
-      // Mentorship (trust-gated)
-      mentorshipAccess: {
-        canSeek: true,   // Trust-gated: Trusted+
-        canMentor: true, // Trust-gated: Leader only
-        maxMentees: -1,
-        maxMentors: 3,
-      },
-
-      // Community
-      communityAccess: {
-        canJoin: true,
-        canCreate: true,
-        canModerate: true,
-        canAdmin: true, // Trust-gated: Leader only
-        maxCommunities: -1,
-      },
-
-      // Advanced features (trust-gated)
-      fundraisingAccess: true,      // Trust-gated: Leader only
-      platformAmbassador: true,     // Trust-gated: Leader only
-      revenueSharing: true,         // Trust-gated: Leader only
-      customEventPages: true,
-    },
-    displayOrder: 3,
-    isActive: true,
-    isPublic: true,
-    trialDays: 14,
   },
 ];
 

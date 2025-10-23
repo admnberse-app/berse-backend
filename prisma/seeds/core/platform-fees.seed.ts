@@ -31,18 +31,6 @@ const feeConfigs = [
     description: 'Platform fee for marketplace transactions',
   },
   {
-    configName: 'Service Booking Fee',
-    transactionType: TransactionType.SERVICE_BOOKING,
-    feePercentage: 15.0,
-    feeFixed: 2.0,
-    minFee: 2.0,
-    currency: 'MYR',
-    recipientType: 'platform',
-    isActive: true,
-    priority: 1,
-    description: 'Platform fee for service bookings',
-  },
-  {
     configName: 'Subscription Fee',
     transactionType: TransactionType.SUBSCRIPTION,
     feePercentage: 0.0,

@@ -116,11 +116,44 @@ export async function seed30DaysEvents() {
         eventData.communityId = getRandomElement(communities).id;
       }
 
-      // Add some random images
-      if (Math.random() > 0.7) {
-        eventData.images = [
-          `https://picsum.photos/seed/${Date.now()}-${i}/800/600`,
-        ];
+      // Add relevant stock images based on event type
+      const imagesByType: Record<string, string[]> = {
+        [EventType.SPORTS]: [
+          'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&h=600&fit=crop',
+        ],
+        [EventType.CAFE_MEETUP]: [
+          'https://images.unsplash.com/photo-1511920170033-f8396924c348?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1445116572660-236099ec97a0?w=800&h=600&fit=crop',
+        ],
+        [EventType.ILM]: [
+          'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
+        ],
+        [EventType.SOCIAL]: [
+          'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=600&fit=crop',
+        ],
+        [EventType.TRIP]: [
+          'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=600&fit=crop',
+        ],
+        [EventType.LOCAL_TRIP]: [
+          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+        ],
+        [EventType.VOLUNTEER]: [
+          'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop',
+          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop',
+        ],
+        [EventType.MONTHLY_EVENT]: [
+          'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop',
+        ],
+      };
+
+      const eventTypeImages = imagesByType[template.type] || [];
+      if (eventTypeImages.length > 0) {
+        eventData.images = [getRandomElement(eventTypeImages)];
       }
 
       // Add notes for some events

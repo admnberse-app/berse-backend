@@ -1,4 +1,4 @@
-import { PrismaClient, ListingStatus, OrderStatus, DisputeStatus, PaymentStatus, TransactionType } from '@prisma/client';
+import { PrismaClient, ListingStatus, OrderStatus, DisputeStatus, PaymentStatus, TransactionType, PaymentMethodType, PriceStructureType, ListingType } from '@prisma/client';
 import {
   CreateListingRequest,
   UpdateListingRequest,
@@ -48,15 +48,24 @@ export class MarketplaceService {
     const listing = await prisma.marketplaceListing.create({
       data: {
         userId,
+        type: data.type || ListingType.PRODUCT,
         title: data.title,
         description: data.description,
         category: data.category,
-        price: data.price,
-        currency: data.currency || MARKETPLACE_CONSTANTS.CURRENCY,
         quantity: data.quantity,
         location: data.location,
         images: data.images || [],
-        status: data.status || ListingStatus.DRAFT
+        status: data.status || ListingStatus.DRAFT,
+        pricingOptions: {
+          create: {
+            pricingType: PaymentMethodType.MONEY,
+            priceStructure: PriceStructureType.FIXED,
+            price: data.price,
+            currency: data.currency || MARKETPLACE_CONSTANTS.CURRENCY,
+            isDefault: true,
+            displayOrder: 1
+          }
+        }
       },
       include: {
         user: {
@@ -67,6 +76,7 @@ export class MarketplaceService {
             trustScore: true
           }
         },
+        pricingOptions: true,
         priceHistory: true
       }
     });
@@ -102,16 +112,37 @@ export class MarketplaceService {
       throw new AppError('You do not have permission to update this listing', 403);
     }
 
-    // Track price change
-    if (data.price && data.price !== existingListing.price) {
+    // Track price change in pricingOptions if needed
+    const existingPricing = await prisma.marketplacePricingOption.findFirst({
+      where: { listingId, isDefault: true }
+    });
+    
+    if (data.price && existingPricing && data.price !== existingPricing.price) {
       await prisma.listingPriceHistory.create({
         data: {
           listingId,
           price: data.price,
-          currency: data.currency || existingListing.currency,
+          currency: data.currency || existingPricing.currency || MARKETPLACE_CONSTANTS.CURRENCY,
           reason: 'Price updated by seller'
         }
       });
+    }
+
+    // Update pricing option if price changed
+    if (data.price !== undefined || data.currency !== undefined) {
+      const defaultPricing = await prisma.marketplacePricingOption.findFirst({
+        where: { listingId, isDefault: true }
+      });
+      
+      if (defaultPricing) {
+        await prisma.marketplacePricingOption.update({
+          where: { id: defaultPricing.id },
+          data: {
+            price: data.price,
+            currency: data.currency
+          }
+        });
+      }
     }
 
     const listing = await prisma.marketplaceListing.update({
@@ -120,8 +151,6 @@ export class MarketplaceService {
         title: data.title,
         description: data.description,
         category: data.category,
-        price: data.price,
-        currency: data.currency,
         quantity: data.quantity,
         location: data.location,
         images: data.images,
@@ -136,6 +165,7 @@ export class MarketplaceService {
             trustScore: true
           }
         },
+        pricingOptions: true,
         priceHistory: true
       }
     });
@@ -213,13 +243,12 @@ export class MarketplaceService {
       select: {
         id: true,
         title: true,
-        price: true,
-        currency: true,
         images: true,
         status: true,
         location: true,
         category: true,
-        createdAt: true
+        createdAt: true,
+        pricingOptions: true
       },
       take: 6,
       orderBy: { createdAt: 'desc' }
@@ -247,13 +276,12 @@ export class MarketplaceService {
       select: {
         id: true,
         title: true,
-        price: true,
-        currency: true,
         images: true,
         status: true,
         location: true,
         category: true,
-        createdAt: true
+        createdAt: true,
+        pricingOptions: true
       },
       take: 6,
       orderBy: { createdAt: 'desc' }
@@ -301,11 +329,8 @@ export class MarketplaceService {
     if (excludeUserId) where.userId = { not: excludeUserId };
     if (location) where.location = { contains: location, mode: 'insensitive' };
     
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      where.price = {};
-      if (minPrice !== undefined) where.price.gte = minPrice;
-      if (maxPrice !== undefined) where.price.lte = maxPrice;
-    }
+    // Price filtering now needs to be done via pricingOptions relation
+    // TODO: Implement price filtering with pricingOptions join
 
     const [listings, total] = await Promise.all([
       prisma.marketplaceListing.findMany({
@@ -548,10 +573,13 @@ export class MarketplaceService {
   // ============= ORDER METHODS =============
 
   async createOrder(userId: string, data: CreateOrderRequest): Promise<OrderResponse> {
-    // Get listing details
+    // Get listing details with pricing
     const listing = await prisma.marketplaceListing.findUnique({
       where: { id: data.listingId },
-      include: { user: true }
+      include: { 
+        user: true,
+        pricingOptions: true
+      }
     });
 
     if (!listing) {
@@ -571,10 +599,16 @@ export class MarketplaceService {
       throw new AppError('Requested quantity not available', 400);
     }
 
+    // Get default pricing option
+    const defaultPricing = listing.pricingOptions.find(p => p.isDefault) || listing.pricingOptions[0];
+    if (!defaultPricing || !defaultPricing.price) {
+      throw new AppError('Listing has no valid pricing', 400);
+    }
+
     // Calculate amounts
-    const unitPrice = listing.price;
+    const unitPrice = defaultPricing.price;
     const subtotal = unitPrice * data.quantity;
-    const shippingFee = 0; // TODO: Calculate based on location
+    const shippingFee = listing.shippingFee || 0;
     const platformFee = subtotal * (MARKETPLACE_CONSTANTS.PLATFORM_FEE_PERCENTAGE / 100);
     const sellerPayout = subtotal - platformFee;
     const totalAmount = subtotal + shippingFee;
@@ -582,7 +616,7 @@ export class MarketplaceService {
     // Create payment intent
     const paymentIntent = await paymentService.createPaymentIntent(userId, {
       amount: totalAmount,
-      currency: listing.currency,
+      currency: defaultPricing.currency || MARKETPLACE_CONSTANTS.CURRENCY,
       transactionType: TransactionType.MARKETPLACE_ORDER,
       referenceType: 'MARKETPLACE_ORDER',
       referenceId: '', // Will be updated with order ID
@@ -599,18 +633,22 @@ export class MarketplaceService {
     const order = await prisma.marketplaceOrder.create({
       data: {
         listingId: data.listingId,
+        pricingOptionId: defaultPricing.id,
         buyerId: userId,
         sellerId: listing.userId,
+        orderType: listing.type,
         quantity: data.quantity,
+        pricingType: defaultPricing.pricingType,
+        priceStructure: defaultPricing.priceStructure,
         unitPrice,
         subtotal,
         shippingFee,
         totalAmount,
         platformFee,
         sellerPayout,
-        currency: listing.currency,
+        currency: defaultPricing.currency || MARKETPLACE_CONSTANTS.CURRENCY,
         shippingAddress: data.shippingAddress,
-        notes: data.notes,
+        buyerNotes: data.notes,
         status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.PENDING,
         paymentTransactionId: paymentIntent.transactionId,
@@ -1851,17 +1889,22 @@ export class MarketplaceService {
       key.startsWith('http') ? key : storageService.getPublicUrl(key)
     ) || [];
 
+    // Get default pricing
+    const defaultPricing = item.marketplaceListings.pricingOptions?.find((p: any) => p.isDefault) 
+      || item.marketplaceListings.pricingOptions?.[0];
+
     return {
       ...item,
       listing: {
         id: item.marketplaceListings.id,
         title: item.marketplaceListings.title,
-        price: item.marketplaceListings.price,
-        currency: item.marketplaceListings.currency,
+        price: defaultPricing?.price,
+        currency: defaultPricing?.currency,
         images,
         status: item.marketplaceListings.status,
         quantity: item.marketplaceListings.quantity,
-        seller: item.marketplaceListings.user
+        seller: item.marketplaceListings.user,
+        pricingOptions: item.marketplaceListings.pricingOptions
       }
     };
   }

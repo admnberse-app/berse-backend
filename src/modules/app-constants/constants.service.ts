@@ -40,9 +40,7 @@ class ConstantsService {
         transactionType: this.getTransactionTypeEnum(),
         listingStatus: this.getListingStatusEnum(),
         orderStatus: this.getOrderStatusEnum(),
-        bookingStatus: this.getBookingStatusEnum(),
         serviceType: this.getServiceTypeEnum(),
-        serviceStatus: this.getServiceStatusEnum(),
         pricingType: this.getPricingTypeEnum(),
         badgeType: this.getBadgeTypeEnum(),
         communityRole: this.getCommunityRoleEnum(),
@@ -441,7 +439,6 @@ class ConstantsService {
       values: [
         { key: 'EVENT_TICKET', value: 'EVENT_TICKET', label: 'Event Ticket', description: 'Event ticket purchase' },
         { key: 'MARKETPLACE_ORDER', value: 'MARKETPLACE_ORDER', label: 'Marketplace Order', description: 'Marketplace purchase' },
-        { key: 'SERVICE_BOOKING', value: 'SERVICE_BOOKING', label: 'Service Booking', description: 'Service booking payment' },
         { key: 'SUBSCRIPTION', value: 'SUBSCRIPTION', label: 'Subscription', description: 'Subscription payment' },
         { key: 'DONATION', value: 'DONATION', label: 'Donation', description: 'Donation' },
         { key: 'REFUND', value: 'REFUND', label: 'Refund', description: 'Refund transaction' },
@@ -480,46 +477,18 @@ class ConstantsService {
     };
   }
 
-  private getBookingStatusEnum(): EnumCategory {
-    return {
-      category: 'Booking Status',
-      description: 'Status of service bookings',
-      values: [
-        { key: 'PENDING', value: 'PENDING', label: 'Pending', description: 'Booking pending' },
-        { key: 'CONFIRMED', value: 'CONFIRMED', label: 'Confirmed', description: 'Booking confirmed' },
-        { key: 'ACTIVE', value: 'ACTIVE', label: 'Active', description: 'Booking active' },
-        { key: 'COMPLETED', value: 'COMPLETED', label: 'Completed', description: 'Booking completed' },
-        { key: 'CANCELED', value: 'CANCELED', label: 'Canceled', description: 'Booking canceled' },
-        { key: 'REFUNDED', value: 'REFUNDED', label: 'Refunded', description: 'Booking refunded' },
-      ],
-    };
-  }
-
   private getServiceTypeEnum(): EnumCategory {
     return {
       category: 'Service Type',
       description: 'Types of services',
       values: [
-        { key: 'GUIDING', value: 'GUIDING', label: 'Guiding', description: 'Tour guiding service' },
-        { key: 'HOMESTAY', value: 'HOMESTAY', label: 'Homestay', description: 'Homestay accommodation' },
         { key: 'TUTORING', value: 'TUTORING', label: 'Tutoring', description: 'Tutoring service' },
         { key: 'CONSULTATION', value: 'CONSULTATION', label: 'Consultation', description: 'Consultation service' },
         { key: 'TRANSPORT', value: 'TRANSPORT', label: 'Transport', description: 'Transportation service' },
+        { key: 'HOME_SERVICES', value: 'HOME_SERVICES', label: 'Home Services', description: 'Home services' },
+        { key: 'PROFESSIONAL', value: 'PROFESSIONAL', label: 'Professional', description: 'Professional services' },
+        { key: 'WELLNESS', value: 'WELLNESS', label: 'Wellness', description: 'Wellness services' },
         { key: 'OTHER', value: 'OTHER', label: 'Other', description: 'Other service' },
-      ],
-    };
-  }
-
-  private getServiceStatusEnum(): EnumCategory {
-    return {
-      category: 'Service Status',
-      description: 'Status of services',
-      values: [
-        { key: 'DRAFT', value: 'DRAFT', label: 'Draft', description: 'Service is in draft' },
-        { key: 'ACTIVE', value: 'ACTIVE', label: 'Active', description: 'Service is active' },
-        { key: 'PAUSED', value: 'PAUSED', label: 'Paused', description: 'Service is paused' },
-        { key: 'INACTIVE', value: 'INACTIVE', label: 'Inactive', description: 'Service is inactive' },
-        { key: 'SUSPENDED', value: 'SUSPENDED', label: 'Suspended', description: 'Service is suspended' },
       ],
     };
   }
@@ -532,7 +501,7 @@ class ConstantsService {
         { key: 'PER_HOUR', value: 'PER_HOUR', label: 'Per Hour', description: 'Charged per hour' },
         { key: 'PER_DAY', value: 'PER_DAY', label: 'Per Day', description: 'Charged per day' },
         { key: 'PER_PERSON', value: 'PER_PERSON', label: 'Per Person', description: 'Charged per person' },
-        { key: 'PER_NIGHT', value: 'PER_NIGHT', label: 'Per Night', description: 'Charged per night' },
+        { key: 'PER_SESSION', value: 'PER_SESSION', label: 'Per Session', description: 'Charged per session' },
         { key: 'FIXED', value: 'FIXED', label: 'Fixed', description: 'Fixed price' },
       ],
     };
@@ -648,13 +617,14 @@ class ConstantsService {
       category: 'Payout Status',
       description: 'Status of payouts',
       values: [
-        { key: 'PENDING', value: 'PENDING', label: 'Pending', description: 'Payout pending' },
-        { key: 'PROCESSING', value: 'PROCESSING', label: 'Processing', description: 'Payout processing' },
-        { key: 'RELEASED', value: 'RELEASED', label: 'Released', description: 'Payout released' },
-        { key: 'HELD', value: 'HELD', label: 'Held', description: 'Payout held in escrow' },
-        { key: 'FROZEN', value: 'FROZEN', label: 'Frozen', description: 'Payout frozen' },
-        { key: 'FAILED', value: 'FAILED', label: 'Failed', description: 'Payout failed' },
-        { key: 'CANCELED', value: 'CANCELED', label: 'Canceled', description: 'Payout canceled' },
+        { key: 'PENDING', value: 'PENDING', label: 'Pending', description: 'Ready for processing/release' },
+        { key: 'PROCESSING', value: 'PROCESSING', label: 'Processing', description: 'Being processed by payment gateway' },
+        { key: 'PAID', value: 'PAID', label: 'Paid', description: 'Successfully paid out' },
+        { key: 'RELEASED', value: 'RELEASED', label: 'Released', description: 'Successfully paid out (alias)' },
+        { key: 'HELD', value: 'HELD', label: 'Held', description: 'In escrow, waiting for release conditions' },
+        { key: 'FROZEN', value: 'FROZEN', label: 'Frozen', description: 'Frozen due to dispute or investigation' },
+        { key: 'FAILED', value: 'FAILED', label: 'Failed', description: 'Payout attempt failed' },
+        { key: 'CANCELED', value: 'CANCELED', label: 'Canceled', description: 'Payout canceled (refunded to buyer)' },
       ],
     };
   }

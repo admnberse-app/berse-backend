@@ -10,7 +10,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../../.env') });
 
 import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 

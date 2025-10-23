@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model AnnouncementAnalytic {
@@ -173,14 +173,32 @@ model AuthIdentity {
 }
 
 model Badge {
-  id          String      @id @default(cuid())
-  type        BadgeType   @unique
-  name        String
-  description String
-  criteria    String
-  imageUrl    String?
-  userBadges  UserBadge[]
+  id              String      @id @default(cuid())
+  type            BadgeType   @unique
+  name            String
+  description     String
+  criteria        String // Human-readable description
+  imageUrl        String?
+  isActive        Boolean     @default(true) // Can disable badges without deleting
+  
+  // Dynamic criteria configuration stored as JSON
+  criteriaConfig  Json? // { "type": "event_attendance", "eventType": "SPORTS", "count": 5 }
+  
+  // Progression tracking
+  requiredCount   Int         @default(1) // How many actions needed
+  
+  // Metadata for display and categorization
+  category        String?     // "Social", "Events", "Community", etc.
+  tier            String?     // "Bronze", "Silver", "Gold" for progression
+  points          Int         @default(0) // Optional: points awarded for earning this badge
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  userBadges      UserBadge[]
 
+  @@index([isActive])
+  @@index([category])
   @@map("badges")
 }
 
@@ -332,9 +350,9 @@ model Community {
   id               String                @id @default(cuid())
   name             String                @unique
   description      String?
-  logoUrl          String?               // Community logo image
-  coverImageUrl    String?               // Community cover/banner image
-  category         String?               // @deprecated - Use interests array instead
+  logoUrl          String? // Community logo image
+  coverImageUrl    String? // Community cover/banner image
+  category         String? // @deprecated - Use interests array instead
   interests        String[]              @default([]) // Array of interest values matching profile metadata
   isVerified       Boolean               @default(false)
   createdAt        DateTime              @default(now())
@@ -954,70 +972,221 @@ model MarketplaceDispute {
 }
 
 model MarketplaceListing {
-  id                   String                @id @default(cuid())
-  userId               String
-  title                String
-  description          String?
-  category             String?
-  price                Float
-  currency             String                @default("MYR")
-  quantity             Int?
-  location             String?
-  images               String[]              @default([])
-  status               ListingStatus         @default(DRAFT)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  id     String      @id @default(cuid())
+  userId String
+  type   ListingType // PRODUCT or SERVICE
+
+  // Basic Information
+  title       String
+  description String?
+  category    String?
+  tags        String[] @default([])
+  images      String[] @default([])
+
+  // Location Data
+  location        String? // City/area name
+  address         String? // Full address
+  latitude        Float? // For proximity search
+  longitude       Float? // For proximity search
+  serviceLocation ServiceLocationType? // Where service is provided
+
+  // Product-specific fields (nullable for services)
+  quantity          Int? // Stock quantity
+  condition         ProductCondition? // NEW, LIKE_NEW, GOOD, FAIR, POOR
+  shippingAvailable Boolean           @default(false)
+  shippingFee       Float?
+
+  // Service-specific fields (nullable for products)
+  serviceType  ServiceType? // TUTORING, CONSULTATION, etc.
+  duration     Int? // Duration in minutes
+  durationUnit DurationUnit? // MINUTES, HOURS, DAYS
+  maxGuests    Int? // Max participants/guests
+  requirements Json? // Prerequisites, materials needed
+
+  // Pricing & Negotiation
+  isNegotiable     Boolean @default(false)
+  isPriceOnRequest Boolean @default(false)
+
+  // Contact Preferences
+  allowDirectContact     Boolean @default(false)
+  preferredContactMethod String? // 'in_app', 'phone', 'whatsapp', 'telegram'
+
+  // Status & Visibility
+  status     ListingStatus @default(DRAFT)
+  isActive   Boolean       @default(true)
+  isFeatured Boolean       @default(false)
+  viewCount  Int           @default(0)
+
+  // Future: Promotions/Discounts
+  hasActivePromotion Boolean   @default(false)
+  promotionId        String?
+  discountPercentage Float?
+  discountAmount     Float?
+  discountValidUntil DateTime?
+
+  // Timestamps
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  publishedAt  DateTime?
+  expiresAt    DateTime?
+  lastBumpedAt DateTime?
+
+  // Relations
+  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pricingOptions       MarketplacePricingOption[]
+  orders               MarketplaceOrder[]
   priceHistory         ListingPriceHistory[]
   marketplaceCartItems MarketplaceCartItem[]
-  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  marketplace_orders   MarketplaceOrder[]
 
-  @@index([category])
-  @@index([createdAt])
-  @@index([status])
   @@index([userId, status])
+  @@index([type, status, isActive])
+  @@index([category, status])
+  @@index([location])
+  @@index([latitude, longitude])
+  @@index([createdAt])
+  @@index([publishedAt])
+  @@index([isFeatured, isActive, publishedAt])
+  @@index([hasActivePromotion, isActive])
   @@map("marketplace_listings")
 }
 
+model MarketplacePricingOption {
+  id        String @id @default(cuid())
+  listingId String
+
+  // Pricing Type
+  pricingType PaymentMethodType // MONEY, FREE, TREATS, BARTER
+
+  // Money Pricing
+  price          Float?
+  currency       String?             @default("MYR")
+  priceStructure PriceStructureType? // FIXED, PER_HOUR, PER_DAY, PER_SESSION, PACKAGE
+
+  // Treats/Barter Pricing
+  exchangeDescription String?
+  exchangeCategory    ExchangeCategory?
+  estimatedValue      Float?
+
+  // Package Details
+  packageDetails Json?
+
+  // Display & Ordering
+  isDefault    Boolean @default(false)
+  displayOrder Int     @default(0)
+  label        String?
+
+  // Future: Discount/Voucher Support
+  allowsVouchers Boolean @default(true)
+  minOrderAmount Float?
+  maxOrderAmount Float?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  listing MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  orders  MarketplaceOrder[]
+
+  @@index([listingId])
+  @@index([pricingType])
+  @@index([isDefault])
+  @@map("marketplace_pricing_options")
+}
+
 model MarketplaceOrder {
-  id                                       String               @id @default(cuid())
-  listingId                                String
-  buyerId                                  String
-  sellerId                                 String
-  quantity                                 Int
-  unitPrice                                Float
-  subtotal                                 Float
-  shippingFee                              Float                @default(0.0)
-  totalAmount                              Float
-  currency                                 String               @default("MYR")
-  paymentTransactionId                     String?
-  paymentStatus                            PaymentStatus        @default(PENDING)
-  platformFee                              Float?
-  sellerPayout                             Float?
-  status                                   OrderStatus          @default(PENDING)
-  shippingAddress                          Json?
-  trackingNumber                           String?
-  notes                                    String?
-  createdAt                                DateTime             @default(now())
-  updatedAt                                DateTime             @updatedAt
-  confirmedAt                              DateTime?
-  shippedAt                                DateTime?
-  deliveredAt                              DateTime?
-  canceledAt                               DateTime?
+  id              String @id @default(cuid())
+  listingId       String
+  pricingOptionId String
+  buyerId         String
+  sellerId        String
+
+  // Order Type
+  orderType ListingType // PRODUCT or SERVICE
+
+  // Quantity/Sessions
+  quantity Int @default(1)
+
+  // Service Booking Details
+  scheduledDate   DateTime?
+  scheduledTime   String?
+  duration        Int?
+  serviceLocation String?
+  specialRequests String?
+
+  // Pricing Snapshot
+  pricingType    PaymentMethodType // MONEY, FREE, TREATS, BARTER
+  priceStructure PriceStructureType?
+  unitPrice      Float?
+  subtotal       Float?
+  platformFee    Float?
+  shippingFee    Float?              @default(0.0)
+  totalAmount    Float?
+  currency       String?             @default("MYR")
+
+  // Exchange/Barter
+  exchangeDescription String?
+  exchangeFulfilled   Boolean? @default(false)
+
+  // Discount/Voucher
+  discountAmount Float?  @default(0)
+  voucherCode    String?
+  voucherId      String?
+  promotionId    String?
+
+  // Seller Payout
+  sellerPayout Float?
+  payoutStatus PayoutStatus?
+  payoutDate   DateTime?
+
+  // Status
+  status            OrderStatus        @default(PENDING)
+  paymentStatus     PaymentStatus      @default(PENDING)
+  fulfillmentStatus FulfillmentStatus? @default(PENDING)
+
+  // Communication
+  buyerNotes          String?
+  sellerNotes         String?
+  contactInfoRevealed Boolean   @default(false)
+  revealedAt          DateTime?
+
+  // Shipping (for products)
+  shippingAddress Json?
+  trackingNumber  String?
+
+  // Payment
+  paymentTransactionId String?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  paidAt      DateTime?
+  confirmedAt DateTime?
+  shippedAt   DateTime?
+  deliveredAt DateTime?
+  completedAt DateTime?
+  canceledAt  DateTime?
+  refundedAt  DateTime?
+
+  // Relations
   marketplaceDisputes                      MarketplaceDispute[]
-  users_marketplace_orders_buyerIdTousers  User                 @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
-  marketplaceListings                      MarketplaceListing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  paymentTransactions                      PaymentTransaction?  @relation(fields: [paymentTransactionId], references: [id])
-  users_marketplace_orders_sellerIdTousers User                 @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
+  users_marketplace_orders_buyerIdTousers  User                     @relation("marketplace_orders_buyerIdTousers", fields: [buyerId], references: [id], onDelete: Cascade)
+  marketplaceListings                      MarketplaceListing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  pricingOption                            MarketplacePricingOption @relation(fields: [pricingOptionId], references: [id])
+  paymentTransactions                      PaymentTransaction?      @relation(fields: [paymentTransactionId], references: [id])
+  users_marketplace_orders_sellerIdTousers User                     @relation("marketplace_orders_sellerIdTousers", fields: [sellerId], references: [id], onDelete: Cascade)
   reviews                                  MarketplaceReview[]
 
-  @@index([buyerId, status])
-  @@index([createdAt])
   @@index([listingId])
-  @@index([paymentStatus])
-  @@index([paymentTransactionId])
+  @@index([pricingOptionId])
+  @@index([buyerId, status])
   @@index([sellerId, status])
-  @@index([status])
+  @@index([status, createdAt])
+  @@index([paymentStatus])
+  @@index([fulfillmentStatus])
+  @@index([scheduledDate])
+  @@index([orderType, status])
+  @@index([paymentTransactionId])
   @@map("marketplace_orders")
 }
 
@@ -1395,7 +1564,6 @@ model PaymentTransaction {
   provider               PaymentProvider       @relation(fields: [providerId], references: [id])
   user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   payoutDistributions    PayoutDistribution[]
-  bookings               ServiceBooking[]
   subscriptionPayments   SubscriptionPayment[]
   fees                   TransactionFee[]
 
@@ -1736,73 +1904,6 @@ model SecurityEvent {
   @@index([severity])
   @@index([userId, createdAt])
   @@map("security_events")
-}
-
-model ServiceBooking {
-  id                                       String              @id @default(cuid())
-  serviceId                                String
-  customerId                               String
-  providerId                               String
-  bookingType                              ServiceType
-  startDate                                DateTime
-  endDate                                  DateTime
-  guestsCount                              Int                 @default(1)
-  baseAmount                               Float
-  additionalFees                           Float               @default(0.0)
-  totalAmount                              Float
-  currency                                 String              @default("MYR")
-  paymentTransactionId                     String?
-  paymentStatus                            PaymentStatus       @default(PENDING)
-  platformFee                              Float?
-  providerPayout                           Float?
-  status                                   BookingStatus       @default(PENDING)
-  specialRequests                          String?
-  bookingDetails                           Json?
-  createdAt                                DateTime            @default(now())
-  updatedAt                                DateTime            @updatedAt
-  confirmedAt                              DateTime?
-  completedAt                              DateTime?
-  canceledAt                               DateTime?
-  users_service_bookings_customerIdTousers User                @relation("service_bookings_customerIdTousers", fields: [customerId], references: [id], onDelete: Cascade)
-  paymentTransactions                      PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
-  users_service_bookings_providerIdTousers User                @relation("service_bookings_providerIdTousers", fields: [providerId], references: [id], onDelete: Cascade)
-  services                                 Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  @@index([customerId, status])
-  @@index([paymentStatus])
-  @@index([paymentTransactionId])
-  @@index([providerId, status])
-  @@index([serviceId])
-  @@index([startDate, endDate])
-  @@index([status])
-  @@map("service_bookings")
-}
-
-model Service {
-  id           String           @id @default(cuid())
-  providerId   String
-  title        String
-  description  String?
-  serviceType  ServiceType
-  category     String?
-  pricingType  PricingType
-  basePrice    Float
-  currency     String           @default("MYR")
-  maxGuests    Int?
-  location     String?
-  availability Json?
-  requirements Json?
-  images       String[]         @default([])
-  status       ServiceStatus    @default(DRAFT)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  bookings     ServiceBooking[]
-  users        User             @relation(fields: [providerId], references: [id], onDelete: Cascade)
-
-  @@index([providerId, status])
-  @@index([serviceType, status])
-  @@index([status])
-  @@map("services")
 }
 
 model SubscriptionPayment {
@@ -2407,9 +2508,6 @@ model User {
   referralsAsReferrer         Referral[]               @relation("referrals_referrerIdTousers")
   refreshTokens               RefreshToken[]
   securityEvents              SecurityEvent[]
-  bookingsAsCustomer          ServiceBooking[]         @relation("service_bookings_customerIdTousers")
-  bookingsAsProvider          ServiceBooking[]         @relation("service_bookings_providerIdTousers")
-  services                    Service[]
   subscriptionPayments        SubscriptionPayment[]
   travelCompanionsAsCompanion TravelCompanion[]        @relation("travel_companions_companionIdTousers")
   travelCompanionsAsUser      TravelCompanion[]        @relation("travel_companions_userIdTousers")
@@ -2445,20 +2543,20 @@ model User {
   communityVouchOffers        CommunityVouchOffer[]
 
   // HomeSurf relations
-  homeSurf                    UserHomeSurf?
-  homeSurfBookingsAsHost      HomeSurfBooking[]        @relation("homesurf_host")
-  homeSurfBookingsAsGuest     HomeSurfBooking[]        @relation("homesurf_guest")
-  homeSurfReviewsGiven        HomeSurfReview[]         @relation("homesurf_reviews_given")
-  homeSurfReviewsReceived     HomeSurfReview[]         @relation("homesurf_reviews_received")
+  homeSurf                UserHomeSurf?
+  homeSurfBookingsAsHost  HomeSurfBooking[] @relation("homesurf_host")
+  homeSurfBookingsAsGuest HomeSurfBooking[] @relation("homesurf_guest")
+  homeSurfReviewsGiven    HomeSurfReview[]  @relation("homesurf_reviews_given")
+  homeSurfReviewsReceived HomeSurfReview[]  @relation("homesurf_reviews_received")
 
   // BerseGuide relations
   berseGuide                   UserBerseGuide?
-  berseGuideBookingsAsGuide    BerseGuideBooking[]     @relation("berseguide_guide")
-  berseGuideBookingsAsTraveler BerseGuideBooking[]     @relation("berseguide_traveler")
-  berseGuideSessionsGiven      BerseGuideSession[]     @relation("guide_sessions_given")
-  berseGuideSessionsReceived   BerseGuideSession[]     @relation("guide_sessions_received")
-  berseGuideReviewsGiven       BerseGuideReview[]      @relation("guide_reviews_given")
-  berseGuideReviewsReceived    BerseGuideReview[]      @relation("guide_reviews_received")
+  berseGuideBookingsAsGuide    BerseGuideBooking[] @relation("berseguide_guide")
+  berseGuideBookingsAsTraveler BerseGuideBooking[] @relation("berseguide_traveler")
+  berseGuideSessionsGiven      BerseGuideSession[] @relation("guide_sessions_given")
+  berseGuideSessionsReceived   BerseGuideSession[] @relation("guide_sessions_received")
+  berseGuideReviewsGiven       BerseGuideReview[]  @relation("guide_reviews_given")
+  berseGuideReviewsReceived    BerseGuideReview[]  @relation("guide_reviews_received")
 
   @@index([createdAt])
   @@index([deletedAt])
@@ -2639,6 +2737,7 @@ enum AppPlatform {
 }
 
 enum BadgeType {
+  // Event & Social Badges
   FIRST_FACE
   CAFE_FRIEND
   SUKAN_SQUAD_MVP
@@ -2653,15 +2752,48 @@ enum BadgeType {
   KIND_SOUL
   KNOWLEDGE_SHARER
   ALL_ROUNDER
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  ACTIVE
-  COMPLETED
-  CANCELED
-  REFUNDED
+  
+  // Community Badges
+  COMMUNITY_BUILDER      // Created a community
+  COMMUNITY_CHAMPION     // Active member in 3+ communities
+  MODERATOR_PRO          // Became a community moderator
+  COMMUNITY_LEADER       // Manage a community with 50+ members
+  COMMUNITY_ORGANIZER    // Hosted 5+ community events
+  
+  // Marketplace Badges
+  FIRST_SALE             // Made your first sale
+  TRUSTED_SELLER         // 10+ successful transactions as seller
+  POWER_BUYER            // Purchased 10+ items
+  MARKETPLACE_PRO        // 50+ transactions (buying + selling)
+  FIVE_STAR_SELLER       // Maintained 5-star rating with 20+ reviews
+  
+  // Vouch System Badges
+  VOUCHED                // Received your first vouch
+  TRUST_BUILDER          // Received 3+ vouches
+  HIGHLY_VOUCHED         // Received 10+ vouches
+  VOUCH_GIVER            // Given 5+ vouches to others
+  COMMUNITY_VOUCHED      // Received community vouch
+  
+  // Travel & Guide Badges
+  GLOBE_TROTTER          // Attended trips in 3+ different cities
+  ADVENTURE_SEEKER       // Attended 5+ trip events
+  LOCAL_HOST             // Hosted travelers through Homesurf
+  SUPER_HOST             // 10+ positive Homesurf reviews
+  TOUR_GUIDE             // Guided 5+ tours through BerseGuide
+  
+  // Engagement Badges
+  EARLY_ADOPTER          // Joined in the first 1000 users
+  DAILY_ACTIVE           // Active 30 days in a row
+  FEEDBACK_CHAMPION      // Left 20+ helpful reviews
+  CONVERSATION_STARTER   // Started 50+ conversations
+  SUPER_RESPONDER        // Responded to 100+ messages
+  
+  // Achievement Badges
+  LEVEL_10               // Reached level 10
+  LEVEL_25               // Reached level 25
+  LEVEL_50               // Reached level 50
+  POINTS_MASTER          // Earned 10,000+ points
+  PERFECT_PROFILE        // Completed 100% of profile
 }
 
 enum CommunityRole {
@@ -2810,18 +2942,86 @@ enum PaymentStatus {
 enum PayoutStatus {
   PENDING // Ready for processing/release
   PROCESSING // Being processed by payment gateway
-  RELEASED // Successfully paid out
+  PAID // Successfully paid out
+  RELEASED // Successfully paid out (alias)
   HELD // In escrow, waiting for release conditions
   FROZEN // Frozen due to dispute or investigation
   FAILED // Payout attempt failed
   CANCELED // Payout canceled (refunded to buyer)
 }
 
+enum ListingType {
+  PRODUCT
+  SERVICE
+}
+
+enum PaymentMethodType {
+  MONEY
+  FREE
+  TREATS
+  BARTER
+}
+
+enum PriceStructureType {
+  FIXED
+  PER_HOUR
+  PER_DAY
+  PER_SESSION
+  PER_PERSON
+  PACKAGE
+  PROJECT
+}
+
+enum ExchangeCategory {
+  FOOD
+  BOOKS
+  ELECTRONICS
+  SERVICES
+  CLOTHING
+  EXPERIENCE
+  HOUSEHOLD
+  COLLECTIBLES
+  OTHER
+}
+
+enum ServiceLocationType {
+  PROVIDER_LOCATION
+  CUSTOMER_LOCATION
+  ONLINE
+  FLEXIBLE
+}
+
+enum ProductCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum DurationUnit {
+  MINUTES
+  HOURS
+  DAYS
+}
+
+enum FulfillmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  READY
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
 enum PricingType {
   PER_HOUR
   PER_DAY
   PER_PERSON
-  PER_NIGHT
+  PER_SESSION
   FIXED
 }
 
@@ -2840,20 +3040,13 @@ enum ReferralRewardStatus {
   CANCELED
 }
 
-enum ServiceStatus {
-  DRAFT
-  ACTIVE
-  PAUSED
-  INACTIVE
-  SUSPENDED
-}
-
 enum ServiceType {
-  GUIDING
-  HOMESTAY
   TUTORING
   CONSULTATION
   TRANSPORT
+  HOME_SERVICES
+  PROFESSIONAL
+  WELLNESS
   OTHER
 }
 
@@ -2870,7 +3063,6 @@ enum SubscriptionStatus {
 enum TransactionType {
   EVENT_TICKET
   MARKETPLACE_ORDER
-  SERVICE_BOOKING
   SUBSCRIPTION
   DONATION
   REFUND
@@ -2978,19 +3170,19 @@ enum ReviewerRole {
 // ==================== HOMESURF MODELS ====================
 
 model UserHomeSurf {
-  userId      String   @id
-  isEnabled   Boolean  @default(false)
+  userId    String  @id
+  isEnabled Boolean @default(false)
 
   // Basic Info
-  title               String // "Cozy apartment in San Francisco"
-  description         String // Detailed description
-  accommodationType   AccommodationType // PRIVATE_ROOM, SHARED_ROOM, COUCH, ENTIRE_PLACE
-  maxGuests           Int      @default(1)
+  title             String // "Cozy apartment in San Francisco"
+  description       String // Detailed description
+  accommodationType AccommodationType // PRIVATE_ROOM, SHARED_ROOM, COUCH, ENTIRE_PLACE
+  maxGuests         Int               @default(1)
 
   // Amenities & Rules
-  amenities   String[] // ["wifi", "kitchen", "parking", "washing_machine", "workspace"]
-  houseRules  String? // "No smoking, no parties, quiet after 10pm"
-  photos      String[] @default([])
+  amenities  String[] // ["wifi", "kitchen", "parking", "washing_machine", "workspace"]
+  houseRules String? // "No smoking, no parties, quiet after 10pm"
+  photos     String[] @default([])
 
   // Multiple Payment Options (user can offer multiple)
   paymentOptions HomeSurfPaymentOption[]
@@ -3008,11 +3200,11 @@ model UserHomeSurf {
   coordinates  Json? // For map display (approximate)
 
   // Stats & Trust
-  responseRate        Float?   @default(0) // % of requests responded to
+  responseRate        Float? @default(0) // % of requests responded to
   averageResponseTime Int? // In hours
-  totalGuests         Int      @default(0) // Total guests hosted
-  rating              Float?   @default(0) // Average rating (1-5)
-  reviewCount         Int      @default(0)
+  totalGuests         Int    @default(0) // Total guests hosted
+  rating              Float? @default(0) // Average rating (1-5)
+  reviewCount         Int    @default(0)
 
   // Metadata
   createdAt    DateTime @default(now())
@@ -3045,9 +3237,9 @@ model HomeSurfPaymentOption {
 }
 
 model HomeSurfBooking {
-  id          String   @id @default(cuid())
-  hostId      String
-  guestId     String
+  id      String @id @default(cuid())
+  hostId  String
+  guestId String
 
   // Request Details
   checkInDate    DateTime
@@ -3103,7 +3295,7 @@ model HomeSurfReview {
   reviewerRole ReviewerRole // HOST or GUEST
 
   // Overall Rating
-  rating Int    // 1-5 stars
+  rating Int // 1-5 stars
   review String? // Written review
 
   // Specific Ratings (optional, for detailed feedback)
@@ -3143,8 +3335,8 @@ model UserBerseGuide {
   isEnabled Boolean @default(false)
 
   // Basic Info
-  title       String  // "Tokyo Food Adventure Guide"
-  description String  // Full description of what you offer
+  title       String // "Tokyo Food Adventure Guide"
+  description String // Full description of what you offer
   tagline     String? // Short catchy line: "Hidden gems & local flavors"
 
   // Guide Specialties
@@ -3153,9 +3345,9 @@ model UserBerseGuide {
   languages   String[] // ["English", "Japanese", "Spanish"]
 
   // Coverage Area
-  city            String
-  neighborhoods   String[] // ["Shibuya", "Harajuku", "Shinjuku"]
-  coverageRadius  Int? // km from city center
+  city           String
+  neighborhoods  String[] // ["Shibuya", "Harajuku", "Shinjuku"]
+  coverageRadius Int? // km from city center
 
   // Multiple Payment Options
   paymentOptions BerseGuidePaymentOption[]
@@ -3219,10 +3411,10 @@ model BerseGuideBooking {
 
   // Request Details
   preferredDate    DateTime? // Flexible, might change
-  alternativeDates DateTime[]    @default([])
+  alternativeDates DateTime[] @default([])
   preferredTime    String? // "morning", "afternoon", "evening", "flexible"
   duration         Int? // Requested hours
-  numberOfPeople   Int           @default(1)
+  numberOfPeople   Int        @default(1)
   interests        String[] // ["food", "culture", "nature", "nightlife"]
   specificRequests String? // "Want to see X, avoid Y"
   message          String? // Initial message from traveler
@@ -3309,7 +3501,7 @@ model BerseGuideReview {
   travelerId String
 
   // Overall Rating
-  rating Int    // 1-5 stars
+  rating Int // 1-5 stars
   review String? // Written review
 
   // Specific Ratings

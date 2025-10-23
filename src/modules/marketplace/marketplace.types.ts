@@ -8,12 +8,14 @@ import {
   ListingStatus,
   OrderStatus,
   DisputeStatus,
-  PaymentStatus
+  PaymentStatus,
+  ListingType
 } from '@prisma/client';
 
 // ============= REQUEST TYPES =============
 
 export interface CreateListingRequest {
+  type?: ListingType;
   title: string;
   description?: string;
   category?: string;
