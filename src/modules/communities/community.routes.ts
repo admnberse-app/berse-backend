@@ -736,12 +736,12 @@ router.use('/', vouchOfferRoutes);
  *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ */
 router.post(
   '/upload-logo',
   authenticateToken,
   uploadImage.single('logo'),
   asyncHandler(communityController.uploadLogo.bind(communityController))
-);asyncHandler(communityController.uploadLogo.bind(communityController))
 );
 
 /**

@@ -97,17 +97,9 @@ export class DashboardService {
         connections: connectionsCount,
         eventsAttended: user.stats?.eventsAttended || 0,
         eventsHosted: user.stats?.eventsHosted || 0,
-        homeSurf: {
-          isEnabled: servicesData.homeSurf.isEnabled,
-          totalBookings: servicesData.homeSurf.totalBookings,
-          pendingRequests: servicesData.homeSurf.pendingRequests,
-        },
-        berseGuide: {
-          isEnabled: servicesData.berseGuide.isEnabled,
-          totalSessions: servicesData.berseGuide.totalSessions,
-          upcomingTours: servicesData.berseGuide.upcomingTours,
-        },
       },
+      homeSurf: servicesData.homeSurf,
+      berseGuide: servicesData.berseGuide,
       alerts,
       communitySummary: {
         total: communitiesData.total,
@@ -126,7 +118,6 @@ export class DashboardService {
         sold: listingsData.sold,
         draft: listingsData.draft,
       },
-      services: servicesData,
       recentActivity,
     };
   }

@@ -95,6 +95,57 @@ router.use(authenticateToken);
  *                         eventsHosted:
  *                           type: integer
  *                           example: 3
+ *                     homeSurf:
+ *                       type: object
+ *                       description: HomeSurf accommodation hosting feature
+ *                       properties:
+ *                         isEnabled:
+ *                           type: boolean
+ *                         hasProfile:
+ *                           type: boolean
+ *                         totalBookings:
+ *                           type: integer
+ *                         pendingRequests:
+ *                           type: integer
+ *                         averageRating:
+ *                           type: number
+ *                           nullable: true
+ *                         city:
+ *                           type: string
+ *                           nullable: true
+ *                         accommodationType:
+ *                           type: string
+ *                           nullable: true
+ *                     berseGuide:
+ *                       type: object
+ *                       description: BerseGuide tour guide feature
+ *                       properties:
+ *                         isEnabled:
+ *                           type: boolean
+ *                         hasProfile:
+ *                           type: boolean
+ *                         totalBookings:
+ *                           type: integer
+ *                         totalSessions:
+ *                           type: integer
+ *                         upcomingTours:
+ *                           type: integer
+ *                         averageRating:
+ *                           type: number
+ *                           nullable: true
+ *                         city:
+ *                           type: string
+ *                           nullable: true
+ *                         guideTypes:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           description: Types of tours offered
+ *                         highlights:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           description: Tour highlights and specialties
  *                     alerts:
  *                       type: array
  *                       items:
@@ -141,52 +192,6 @@ router.use(authenticateToken);
  *                           type: integer
  *                         draft:
  *                           type: integer
- *                     services:
- *                       type: object
- *                       properties:
- *                         homeSurf:
- *                           type: object
- *                           properties:
- *                             isEnabled:
- *                               type: boolean
- *                             hasProfile:
- *                               type: boolean
- *                             totalBookings:
- *                               type: integer
- *                             averageRating:
- *                               type: number
- *                               nullable: true
- *                             city:
- *                               type: string
- *                               nullable: true
- *                             accommodationType:
- *                               type: string
- *                               nullable: true
- *                         berseGuide:
- *                           type: object
- *                           properties:
- *                             isEnabled:
- *                               type: boolean
- *                             hasProfile:
- *                               type: boolean
- *                             totalBookings:
- *                               type: integer
- *                             averageRating:
- *                               type: number
- *                               nullable: true
- *                             city:
- *                               type: string
- *                               nullable: true
- *                             guideTypes:
- *                               type: array
- *                               items:
- *                                 type: string
- *                               description: Types of tours offered
- *                             highlights:
- *                               type: array
- *                               items:
- *                                 type: string
- *                               description: Tour highlights and specialties
  *                     recentActivity:
  *                       type: array
  *                       items:
