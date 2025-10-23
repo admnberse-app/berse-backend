@@ -8,7 +8,7 @@ const router = Router();
  * @swagger
  * /accountability/history:
  *   get:
- *     tags: [Accountability]
+ *     tags: [Connections - Accountability]
  *     summary: Get accountability history for authenticated user
  *     description: |
  *       Retrieve accountability logs where the authenticated user is the vouchee.
@@ -51,7 +51,7 @@ router.get(
  * @swagger
  * /accountability/impact:
  *   get:
- *     tags: [Accountability]
+ *     tags: [Connections - Accountability]
  *     summary: Get accountability impact summary for authenticated user
  *     description: |
  *       Get summary of how vouchees' behavior has affected the authenticated user's trust score.
@@ -75,7 +75,7 @@ router.get(
  * @swagger
  * /accountability/process/{logId}:
  *   post:
- *     tags: [Accountability]
+ *     tags: [Connections - Accountability]
  *     summary: Process a specific accountability log (admin only)
  *     description: Manually trigger processing of an accountability log to apply trust score impact
  *     security:
@@ -107,7 +107,7 @@ router.post(
  * @swagger
  * /accountability/process-all:
  *   post:
- *     tags: [Accountability]
+ *     tags: [Connections - Accountability]
  *     summary: Process all unprocessed accountability logs (admin only)
  *     description: Batch process all pending accountability logs
  *     security:

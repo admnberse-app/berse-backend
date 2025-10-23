@@ -156,89 +156,345 @@ const swaggerDefinition = {
     },
   ],
   tags: [
+    // ========================================================================
+    // 🔐 CORE - Authentication & Users
+    // ========================================================================
     {
       name: 'Authentication',
-      description: 'User authentication and authorization endpoints',
+      description: '🔐 User authentication and authorization endpoints. Login, register, refresh tokens, and password management.',
+      externalDocs: {
+        description: 'Authentication Guide',
+        url: '/docs/api-v2/AUTH.md',
+      },
     },
     {
       name: 'Users',
-      description: 'User profile and management endpoints',
+      description: '👤 User profile and account management. View, update profiles, manage settings, and handle user data.',
+      externalDocs: {
+        description: 'User Profile API',
+        url: '/docs/api-v2/USERS_API.md',
+      },
     },
     {
+      name: 'Users - Trust Score',
+      description: '📈 User trust score queries and analytics. View detailed trust breakdown, history, and contributing factors.',
+    },
+
+    // ========================================================================
+    // 🤝 SOCIAL - Connections & Trust
+    // ========================================================================
+    {
       name: 'Connections',
-      description: 'User connection and relationship management. Symmetric connection system with trust-based vouching.',
+      description: '🤝 User connections and relationship management. Send requests, accept connections, block users, and view mutual friends.',
+      externalDocs: {
+        description: 'Connections API',
+        url: '/docs/api-v2/CONNECTIONS_API.md',
+      },
     },
     {
       name: 'Connections - Vouching',
-      description: 'Trust-based vouching system. Request, approve, and manage vouches with impact on trust scores.',
+      description: '⭐ Trust-based vouching system. Request, approve, and manage vouches (Primary, Secondary, Community). Max limits: 1 primary + 3 secondary + 2 community.',
     },
     {
       name: 'Connections - Trust Moments',
-      description: 'Feedback and ratings after shared experiences. Leave trust moments after events, travels, and collaborations. Contributes 30% to trust score.',
+      description: '💬 Post-experience feedback and ratings. Leave trust moments after events, travels, or collaborations. Ratings: 1-5 stars, Trust impact: -5 to +5 points.',
     },
     {
-      name: 'Connections - Trust',
-      description: 'Trust score calculation and management. Algorithm: 40% vouches + 30% activity + 30% trust moments.',
+      name: 'Connections - Trust Score',
+      description: '🎯 Trust score calculation and analytics. Algorithm: 40% vouches + 30% activity + 30% trust moments. Levels: NEW → BUILDING → ESTABLISHED → TRUSTED → VERIFIED.',
     },
     {
-      name: 'Connections - Trust Moments',
-      description: 'Trust moment feedback system. Leave ratings/feedback after shared experiences (events, travel, collaboration). Contributes 30% to trust score.',
+      name: 'Connections - Accountability',
+      description: '⚖️ Accountability system. Track how vouchees\' behavior affects vouchers\' trust scores. Negative behavior = 40% penalty, Positive = 20% reward.',
     },
+
+    // ========================================================================
+    // 🏘️ COMMUNITIES
+    // ========================================================================
+    {
+      name: 'Communities',
+      description: '🏘️ Community management and membership. Create communities, manage roles (ADMIN/MODERATOR/MEMBER), approve members, and grant community vouches.',
+      externalDocs: {
+        description: 'Communities API',
+        url: '/docs/api-v2/COMMUNITIES_API.md',
+      },
+    },
+    {
+      name: 'Communities - QR Codes',
+      description: '📱 Generate QR codes for community promotion. Public preview pages with events and download links to encourage app installs.',
+      externalDocs: {
+        description: 'QR Code Feature Guide',
+        url: '/COMMUNITY_QR_CODE_QUICKREF.md',
+      },
+    },
+
+    // ========================================================================
+    // 🎉 EVENTS
+    // ========================================================================
     {
       name: 'Events',
-      description: 'Event creation, management, and discovery. Support for both free and paid events with comprehensive features.',
+      description: '🎉 Event creation and management. Create, update, delete events. Support for free and paid events with comprehensive features.',
+      externalDocs: {
+        description: 'Events API',
+        url: '/docs/api-v2/EVENTS_API.md',
+      },
     },
     {
       name: 'Events - Tickets',
-      description: 'Ticket tier management and purchase. Multi-tier pricing, capacity management, and payment integration.',
+      description: '🎫 Ticket tier management. Create multi-tier pricing, manage capacity, track sales, and handle payments.',
     },
     {
-      name: 'Events - RSVP',
-      description: 'RSVP management for free events. Includes secure QR code generation for check-ins.',
+      name: 'Events - Participants',
+      description: '👥 Event participant management. View, manage, and track event participants and RSVPs.',
     },
     {
       name: 'Events - Attendance',
-      description: 'Attendee check-in and attendance tracking. QR code-based check-in system with JWT security.',
+      description: '📋 Check-in and attendance tracking. QR code-based check-in with JWT security and real-time attendance reports.',
     },
     {
       name: 'Events - Discovery',
-      description: 'Event discovery features including trending events, nearby events, personalized recommendations, and community events.',
+      description: '🔍 Event discovery and recommendations. Find trending events, nearby events, personalized suggestions, and community events.',
     },
     {
-      name: 'Metadata',
-      description: 'Country, state, city, region, timezone, and location metadata endpoints. Provides comprehensive geographical data including countries, states/provinces, cities with coordinates, regions, and timezones for global coverage.',
+      name: 'Events - Calendar',
+      description: '📅 Calendar views and date-based queries. Today, week, month views with event counts for calendar UI.',
+    },
+
+    // ========================================================================
+    // 🎮 ENGAGEMENT & GAMIFICATION
+    // ========================================================================
+    {
+      name: 'Gamification',
+      description: '🎮 Points, badges, and rewards system. Earn points through activities, unlock achievements, redeem rewards, and compete on leaderboards.',
+      externalDocs: {
+        description: 'Gamification Guide',
+        url: '/GAMIFICATION_QUICKREF.md',
+      },
     },
     {
-      name: 'Notifications',
-      description: 'In-app notification system. Get, mark as read, and manage user notifications for connections, events, vouches, and system alerts.',
+      name: 'Gamification - Points',
+      description: '⭐ Points earning and tracking. View point history, balances, and point-earning activities.',
     },
     {
-      name: 'Communities',
-      description: 'Community management, membership, and vouching system. Create communities, manage members with role-based permissions (ADMIN, MODERATOR, MEMBER), grant community vouches integrated with trust scores, and generate QR codes for community promotion with public preview pages.',
+      name: 'Gamification - Badges',
+      description: '🏆 Badge unlocking and management. View earned badges, progress, and achievement criteria.',
+    },
+    {
+      name: 'Gamification - Rewards',
+      description: '🎁 Rewards catalog and redemption. Browse rewards, redeem points, and track redemption history.',
+    },
+    {
+      name: 'Gamification - Leaderboards',
+      description: '📊 Rankings and competition. View leaderboards by points, activities, trust scores, and categories.',
     },
     {
       name: 'Card Game',
-      description: 'Card game feedback and rating system. Submit feedback, rate topics, engage in discussions, and view statistics for the Berse card game experience.',
+      description: '🃏 Interactive card game experience. Submit feedback, rate discussion topics, engage in conversations, and view game statistics.',
     },
     {
-      name: 'Onboarding',
-      description: '⚠️ DEPRECATED: Legacy unified onboarding system. Use "Onboarding V2" instead for new implementations.',
+      name: 'Card Game - Admin',
+      description: '🔧 Admin controls for card game. Manage topics, moderate discussions, and view analytics.',
     },
     {
       name: 'Onboarding V2',
-      description: 'Two-phase onboarding system: App Preview (pre-auth) introduces the app to visitors, User Setup (post-auth) provides personalized onboarding after registration. Includes anonymous tracking, session linking, required screens, and comprehensive analytics.',
+      description: '🚀 Two-phase onboarding system. App Preview (pre-auth) + User Setup (post-auth). Includes session tracking and analytics.',
+      externalDocs: {
+        description: 'Onboarding V2 Guide',
+        url: '/ONBOARDING_V2_COMPLETE.md',
+      },
     },
     {
-      name: 'Gamification',
-      description: 'Points, badges, rewards, and leaderboard system. Earn points through activities, unlock badges, redeem rewards, and compete on leaderboards.',
+      name: 'BerseGuide',
+      description: '📖 Platform guide and tutorials. Interactive guides for features, tips, and best practices.',
     },
+
+    // ========================================================================
+    // 🛍️ MARKETPLACE & TRANSACTIONS
+    // ========================================================================
     {
       name: 'Marketplace',
-      description: 'Peer-to-peer marketplace for goods and services. Create listings, manage cart, process orders, leave reviews, and handle disputes.',
+      description: '🛍️ Peer-to-peer marketplace. Create listings, manage cart, process orders, payments, reviews, and dispute resolution.',
+      externalDocs: {
+        description: 'Marketplace Module',
+        url: '/MARKETPLACE_MODULE_COMPLETE.md',
+      },
     },
     {
+      name: 'Marketplace - Discovery',
+      description: '🔎 Search and browse marketplace listings. Filter by category, price, location, and recommendations.',
+    },
+    {
+      name: 'Marketplace - Metadata',
+      description: '🏷️ Marketplace categories, tags, and classification data. Listing types, conditions, and attributes.',
+    },
+    {
+      name: 'HomeSurf',
+      description: '🏠 Home sharing and accommodation marketplace. List properties, book stays, manage bookings and reviews.',
+    },
+
+    // ========================================================================
+    // 🔔 NOTIFICATIONS & COMMUNICATION
+    // ========================================================================
+    {
+      name: 'Notifications',
+      description: '🔔 Real-time notification system. In-app alerts for connections, events, vouches, security, and system updates. Priority-based delivery.',
+      externalDocs: {
+        description: 'Notifications API',
+        url: '/docs/api-v2/NOTIFICATIONS_API.md',
+      },
+    },
+
+    // ========================================================================
+    // � PAYMENTS & FINANCIALS
+    // ========================================================================
+    {
+      name: 'Payments',
+      description: '💳 Payment processing and transactions. Handle payments, refunds, and payment status tracking.',
+    },
+    {
+      name: 'Payment Methods',
+      description: '💰 Payment method management. Add, update, delete payment methods. Manage cards and wallets.',
+    },
+    {
+      name: 'Payouts',
+      description: '💸 Payout management for hosts and sellers. Configure payout methods, view payout history, request withdrawals.',
+    },
+    {
+      name: 'Webhooks',
+      description: '🔗 Webhook management for payment and event notifications. Register, test, and monitor webhook endpoints.',
+    },
+
+    // ========================================================================
+    // �📍 DATA & METADATA
+    // ========================================================================
+    {
+      name: 'Metadata',
+      description: '📍 Geographic and location data. Countries, states/provinces, cities with coordinates, regions, timezones, and location metadata.',
+    },
+    {
+      name: 'Profile Metadata',
+      description: '👤 User profile metadata. Interests, skills, languages, occupation types, and profile attributes.',
+    },
+    {
+      name: 'App Constants',
+      description: '⚙️ Application-wide constants and configuration. Feature flags, limits, categories, and system settings.',
+    },
+
+    // ========================================================================
+    // 🏥 SYSTEM & ADMIN
+    // ========================================================================
+    {
       name: 'Health',
-      description: 'API health and status checks',
+      description: '🏥 API health checks and system status monitoring. Verify service availability and performance metrics.',
+    },
+    {
+      name: 'Dashboard',
+      description: '📊 Admin dashboard. Overview of platform metrics, user statistics, and system health.',
+    },
+    {
+      name: 'Admin',
+      description: '🔐 Administrative operations. User management, content moderation, and system configuration.',
+    },
+    {
+      name: 'Admin - Revenue',
+      description: '💵 Revenue analytics and financial reporting. Track earnings, commissions, payouts, and financial metrics.',
+    },
+    {
+      name: 'Discover',
+      description: '🌟 Platform discovery feed. Explore trending content, featured users, communities, and events.',
+    },
+
+    // ========================================================================
+    // ⚠️ DEPRECATED
+    // ========================================================================
+    {
+      name: 'Onboarding',
+      description: '⚠️ DEPRECATED - Use "Onboarding V2" instead. Legacy unified onboarding system (v1).',
+    },
+  ],
+  'x-tagGroups': [
+    {
+      name: '🔐 Core Services',
+      tags: ['Authentication', 'Users', 'Users - Trust Score'],
+    },
+    {
+      name: '🤝 Social & Trust',
+      tags: [
+        'Connections', 
+        'Connections - Vouching', 
+        'Connections - Trust Moments', 
+        'Connections - Trust Score', 
+        'Connections - Accountability'
+      ],
+    },
+    {
+      name: '🏘️ Communities',
+      tags: ['Communities', 'Communities - QR Codes'],
+    },
+    {
+      name: '🎉 Events',
+      tags: [
+        'Events', 
+        'Events - Tickets', 
+        'Events - Participants', 
+        'Events - Attendance', 
+        'Events - Discovery', 
+        'Events - Calendar'
+      ],
+    },
+    {
+      name: '🎮 Engagement & Gamification',
+      tags: [
+        'Gamification',
+        'Gamification - Points',
+        'Gamification - Badges',
+        'Gamification - Rewards',
+        'Gamification - Leaderboards',
+        'Card Game',
+        'Card Game - Admin',
+        'BerseGuide',
+        'Onboarding V2',
+      ],
+    },
+    {
+      name: '🛍️ Commerce & Marketplace',
+      tags: [
+        'Marketplace',
+        'Marketplace - Discovery',
+        'Marketplace - Metadata',
+        'HomeSurf',
+      ],
+    },
+    {
+      name: '💰 Payments & Finance',
+      tags: [
+        'Payments',
+        'Payment Methods',
+        'Payouts',
+        'Webhooks',
+      ],
+    },
+    {
+      name: '🔔 Communication',
+      tags: ['Notifications'],
+    },
+    {
+      name: '📊 Data & Configuration',
+      tags: [
+        'Metadata',
+        'Profile Metadata',
+        'App Constants',
+      ],
+    },
+    {
+      name: '🏥 System & Administration',
+      tags: [
+        'Health',
+        'Dashboard',
+        'Admin',
+        'Admin - Revenue',
+        'Discover',
+      ],
     },
   ],
   components: {

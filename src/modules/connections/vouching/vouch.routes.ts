@@ -456,7 +456,7 @@ router.get(
  *       - ESTABLISHED: 40-60 points
  *       - TRUSTED: 60-80 points
  *       - VERIFIED: 80+ points
- *     tags: [Connections - Trust]
+ *     tags: [Connections - Trust Score]
  *     security:
  *       - bearerAuth: []
  *     responses:
