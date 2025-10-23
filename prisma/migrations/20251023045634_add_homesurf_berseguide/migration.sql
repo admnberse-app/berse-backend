@@ -320,10 +320,7 @@ ALTER TABLE "public"."homesurf_bookings" ADD CONSTRAINT "homesurf_bookings_guest
 ALTER TABLE "public"."homesurf_bookings" ADD CONSTRAINT "homesurf_booking_homesurf_fkey" FOREIGN KEY ("hostId") REFERENCES "public"."user_homesurf"("userId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."homesurf_reviews" ADD CONSTRAINT "homesurf_review_booking_host_fkey" FOREIGN KEY ("bookingId") REFERENCES "public"."homesurf_bookings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "public"."homesurf_reviews" ADD CONSTRAINT "homesurf_review_booking_guest_fkey" FOREIGN KEY ("bookingId") REFERENCES "public"."homesurf_bookings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."homesurf_reviews" ADD CONSTRAINT "homesurf_reviews_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "public"."homesurf_bookings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."homesurf_reviews" ADD CONSTRAINT "homesurf_reviews_reviewerId_fkey" FOREIGN KEY ("reviewerId") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

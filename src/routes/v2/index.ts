@@ -510,7 +510,9 @@ router.get('/docs', (req, res) => {
         'POST /v2/payments/webhooks/:provider': 'Handle payment provider webhooks',
       },
       discover: {
-        'GET /v2/discover/feed': 'Get unified discover feed with events, communities, and marketplace (personalized when authenticated)',
+        'GET /v2/discover': 'Get discover feed with sections or search results (personalized when authenticated)',
+        'GET /v2/discover/trending': 'Get trending content',
+        'GET /v2/discover/nearby': 'Get nearby content (requires location)',
       },
       dashboard: {
         'GET /v2/dashboard/summary': 'Get comprehensive dashboard overview (auth required)',

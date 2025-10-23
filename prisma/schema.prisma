@@ -354,6 +354,10 @@ model Community {
   coverImageUrl    String? // Community cover/banner image
   category         String? // @deprecated - Use interests array instead
   interests        String[]              @default([]) // Array of interest values matching profile metadata
+  city             String? // City name for filtering
+  country          String? // Country name for filtering
+  latitude         Float? // For proximity search
+  longitude        Float? // For proximity search
   isVerified       Boolean               @default(false)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
@@ -366,6 +370,9 @@ model Community {
   @@index([category])
   @@index([createdAt])
   @@index([name])
+  @@index([city])
+  @@index([country])
+  @@index([latitude, longitude])
   @@map("communities")
 }
 
@@ -595,6 +602,10 @@ model Event {
   type              EventType
   date              DateTime
   location          String
+  city              String? // City name for filtering
+  country           String? // Country name for filtering
+  latitude          Float? // For proximity search
+  longitude         Float? // For proximity search
   mapLink           String?
   maxAttendees      Int?
   notes             String?
@@ -628,6 +639,9 @@ model Event {
   @@index([hostType])
   @@index([isFree])
   @@index([location])
+  @@index([city])
+  @@index([country])
+  @@index([latitude, longitude])
   @@index([status])
   @@index([type, date])
   @@index([type])

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { discoverController } from './discover.controller';
-import { optionalAuth } from '../../middleware/auth';
-import { asyncHandler } from '../../utils/asyncHandler';
+import { discoverController } from '../../../modules/discover/discover.controller';
+import { optionalAuth } from '../../../middleware/auth';
+import { asyncHandler } from '../../../utils/asyncHandler';
 
 const router = Router();
 
