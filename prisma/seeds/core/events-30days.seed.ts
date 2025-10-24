@@ -109,11 +109,6 @@ export async function seed30DaysEvents() {
         hostType: useCommunity && communities.length > 0 ? EventHostType.COMMUNITY : EventHostType.PERSONAL,
       };
 
-      if (!template.isFree && template.price) {
-        eventData.price = template.price;
-        eventData.currency = 'MYR';
-      }
-
       if (useCommunity && communities.length > 0) {
         eventData.communityId = getRandomElement(communities).id;
       }

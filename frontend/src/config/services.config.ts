@@ -127,10 +127,7 @@ export const SERVICES_CONFIG = {
       profile: '/profile',
       'update-profile': '/profile/update',
       'upload-avatar': '/profile/avatar',
-      preferences: '/preferences',
-      'my-events': '/my-events',
-      'my-communities': '/my-communities',
-      'my-matches': '/my-matches'
+      preferences: '/preferences'
     }
   },
   
