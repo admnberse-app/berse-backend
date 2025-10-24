@@ -422,6 +422,28 @@ export class EventController {
   }
 
   /**
+   * Get all event participants (unified endpoint)
+   * @route GET /v2/events/:id/participants
+   */
+  static async getEventParticipants(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status, hasTicket, checkedIn } = req.query;
+
+      const filters: any = {}; 
+      if (status) filters.status = status as string;
+      if (hasTicket !== undefined) filters.hasTicket = hasTicket === 'true';
+      if (checkedIn !== undefined) filters.checkedIn = checkedIn === 'true';
+
+      const participants = await EventService.getEventParticipants(id, filters);
+
+      sendSuccess(res, participants, 'Participants retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get trending events
    * @route GET /v2/events/discovery/trending
    */

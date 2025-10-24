@@ -1423,6 +1423,79 @@ export class EventService {
     }
   }
 
+  /**
+   * Get all event participants (unified endpoint)
+   * Returns ALL participants with their status (registered, confirmed, checked-in, etc.)
+   */
+  static async getEventParticipants(eventId: string, filters?: {
+    status?: string;
+    hasTicket?: boolean;
+    checkedIn?: boolean;
+  }): Promise<any[]> {
+    try {
+      const whereClause: any = { eventId };
+
+      // Apply filters
+      if (filters?.status) {
+        whereClause.status = filters.status;
+      }
+      if (filters?.checkedIn !== undefined) {
+        whereClause.checkedInAt = filters.checkedIn ? { not: null } : null;
+      }
+
+      const participants = await prisma.eventParticipant.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              email: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          eventTickets: {
+            where: { status: { not: EventTicketStatus.CANCELED } },
+            select: {
+              id: true,
+              ticketNumber: true,
+              ticketType: true,
+              price: true,
+              currency: true,
+              status: true,
+              paymentStatus: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return participants.map(p => ({
+        id: p.id,
+        eventId: p.eventId,
+        userId: p.userId,
+        status: p.status,
+        qrCode: p.qrCode,
+        registeredAt: p.createdAt,
+        checkedInAt: p.checkedInAt,
+        canceledAt: p.canceledAt,
+        hasTicket: p.eventTickets.length > 0,
+        user: {
+          id: p.user.id,
+          fullName: p.user.fullName,
+          username: p.user.username,
+          email: p.user.email,
+          profilePicture: p.user.profile?.profilePicture,
+        },
+        tickets: p.eventTickets,
+      }));
+    } catch (error: any) {
+      logger.error('Error fetching participants:', error);
+      throw error;
+    }
+  }
+
   // ============================================================================
   // HELPER METHODS
   // ============================================================================

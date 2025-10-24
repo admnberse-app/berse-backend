@@ -1132,15 +1132,143 @@ router.post(
 
 /**
  * @swagger
+ * /v2/events/{id}/participants:
+ *   get:
+ *     summary: Get all event participants (RECOMMENDED - Unified Endpoint)
+ *     description: |
+ *       Retrieve ALL event participants with their complete status information.
+ *       This is the unified endpoint that shows everyone who registered/bought tickets,
+ *       along with their check-in status, ticket information, and more.
+ *       
+ *       **Use this instead of /attendees** - It provides complete participant data:
+ *       - All registered users (RSVP or ticket holders)
+ *       - Check-in status for each participant
+ *       - Ticket information if applicable
+ *       - Participant status (REGISTERED, CONFIRMED, CHECKED_IN, CANCELED, etc.)
+ *       
+ *       **Optional Filters:**
+ *       - `status`: Filter by participant status
+ *       - `checkedIn`: Filter by check-in status (true/false)
+ *       - `hasTicket`: Filter users with tickets (true/false)
+ *     tags: [Events - Participants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [REGISTERED, WAITLISTED, CONFIRMED, CHECKED_IN, CANCELED]
+ *         description: Filter by participant status
+ *       - in: query
+ *         name: checkedIn
+ *         schema:
+ *           type: boolean
+ *         description: Filter by check-in status (true = checked in, false = not checked in)
+ *       - in: query
+ *         name: hasTicket
+ *         schema:
+ *           type: boolean
+ *         description: Filter by ticket ownership
+ *     responses:
+ *       200:
+ *         description: All participants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       eventId:
+ *                         type: string
+ *                       userId:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [REGISTERED, WAITLISTED, CONFIRMED, CHECKED_IN, CANCELED]
+ *                       qrCode:
+ *                         type: string
+ *                       registeredAt:
+ *                         type: string
+ *                         format: date-time
+ *                       checkedInAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       canceledAt:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       hasTicket:
+ *                         type: boolean
+ *                       user:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           fullName:
+ *                             type: string
+ *                           username:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           profilePicture:
+ *                             type: string
+ *                       tickets:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             ticketNumber:
+ *                               type: string
+ *                             ticketType:
+ *                               type: string
+ *                             price:
+ *                               type: number
+ *                             currency:
+ *                               type: string
+ *                             status:
+ *                               type: string
+ *                             paymentStatus:
+ *                               type: string
+ */
+router.get(
+  '/:id/participants',
+  authenticateToken,
+  eventIdValidator,
+  handleValidationErrors,
+  EventController.getEventParticipants
+);
+
+/**
+ * @swagger
  * /v2/events/{id}/attendees:
  *   get:
- *     summary: Get event attendees
+ *     summary: Get event attendees (DEPRECATED - Use /participants instead)
  *     description: |
- *       Retrieve all participants who have checked in to an event.
+ *       Retrieve participants who have checked in to an event.
  *       
- *       **Database Change:** Now queries EventParticipant records where checkedInAt IS NOT NULL
- *       instead of querying EventAttendance table.
+ *       **DEPRECATED:** Use GET /v2/events/:id/participants?checkedIn=true instead.
+ *       This endpoint only returns checked-in users. The /participants endpoint
+ *       provides more complete information.
  *     tags: [Events - Attendance]
+ *     deprecated: true
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1163,28 +1291,6 @@ router.post(
  *                   type: array
  *                   items:
  *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                         description: Participant ID
- *                       eventId:
- *                         type: string
- *                       userId:
- *                         type: string
- *                       checkedInAt:
- *                         type: string
- *                         format: date-time
- *                       user:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                           fullName:
- *                             type: string
- *                           email:
- *                             type: string
- *                           profilePicture:
- *                             type: string
  */
 router.get(
   '/:id/attendees',
