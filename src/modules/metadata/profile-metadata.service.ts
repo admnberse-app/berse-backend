@@ -454,6 +454,7 @@ class ProfileMetadataService {
    * Generate username suggestions
    */
   private generateUsernameSuggestions(baseUsername: string): string[] {
+    const reservedWords = ['admin', 'root', 'system', 'api', 'www', 'app', 'berse', 'null', 'undefined'];
     const suggestions = [];
     
     // Clean the base username for suggestions
@@ -463,8 +464,8 @@ class ProfileMetadataService {
       .replace(/^[_-]+|[_-]+$/g, '') // Remove leading/trailing underscores/dashes
       .substring(0, 20); // Limit length for suggestions
     
-    // If cleaned base is too short or empty, use a generic base
-    if (cleanBase.length < 3) {
+    // If cleaned base is reserved or too short, use a generic base
+    if (cleanBase.length < 3 || reservedWords.includes(cleanBase)) {
       cleanBase = 'user';
     }
     
@@ -474,7 +475,7 @@ class ProfileMetadataService {
     // Add numbers
     numbers.forEach(num => {
       const suggestion = `${cleanBase}${num}`;
-      if (suggestion.length <= 30) {
+      if (suggestion.length <= 30 && !reservedWords.includes(suggestion)) {
         suggestions.push(suggestion);
       }
     });
@@ -482,7 +483,7 @@ class ProfileMetadataService {
     // Add suffixes
     suffixes.forEach(suffix => {
       const suggestion = `${cleanBase}${suffix}`;
-      if (suggestion.length <= 30) {
+      if (suggestion.length <= 30 && !reservedWords.includes(suggestion)) {
         suggestions.push(suggestion);
       }
     });
@@ -490,13 +491,13 @@ class ProfileMetadataService {
     // Random combinations
     const randomNum = Math.floor(Math.random() * 1000);
     const randomSuggestion = `${cleanBase}_${randomNum}`;
-    if (randomSuggestion.length <= 30) {
+    if (randomSuggestion.length <= 30 && !reservedWords.includes(randomSuggestion)) {
       suggestions.push(randomSuggestion);
     }
     
     const randomNum2 = Math.floor(Math.random() * 100);
     const randomSuggestion2 = `${cleanBase}${randomNum2}`;
-    if (randomSuggestion2.length <= 30) {
+    if (randomSuggestion2.length <= 30 && !reservedWords.includes(randomSuggestion2)) {
       suggestions.push(randomSuggestion2);
     }
 

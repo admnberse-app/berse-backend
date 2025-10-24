@@ -23,7 +23,7 @@ subscription/
 
 ### **Subscription Tiers**
 - **FREE** - Basic access (MYR 0/month)
-- **BASIC** - Enhanced features (MYR 30/month)
+- **BASIC** - Enhanced features (MYR 29.99/month)
 - **PREMIUM** - Full access (MYR 50/month)
 
 ### **Core Functionality**

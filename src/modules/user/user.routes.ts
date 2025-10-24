@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { UserController } from './user.controller';
 import { QRCodeController } from './qr-code.controller';
 import { TrustScoreController } from './trust-score.controller';
+import SettingsController from './settings.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { updateProfileValidators, searchUsersValidators } from './user.validators';
@@ -1890,6 +1891,44 @@ router.get(
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  */
+
+// ============================================================================
+// SETTINGS ROUTES (must be before /:id to avoid route matching issues)
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/users/settings:
+ *   get:
+ *     summary: Get user settings
+ *     description: Get all settings (privacy, notifications, preferences, account)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Settings retrieved successfully
+ */
+router.get('/settings', authenticateToken, SettingsController.getSettings);
+
+/**
+ * @swagger
+ * /v2/users/settings:
+ *   put:
+ *     summary: Update user settings
+ */
+router.put('/settings', authenticateToken, SettingsController.updateSettings);
+
+router.put('/settings/privacy', authenticateToken, SettingsController.updatePrivacy);
+router.put('/settings/notifications', authenticateToken, SettingsController.updateNotifications);
+router.put('/settings/preferences', authenticateToken, SettingsController.updatePreferences);
+router.post('/settings/reset', authenticateToken, SettingsController.resetSettings);
+router.get('/settings/export', authenticateToken, SettingsController.exportSettings);
+
+// ============================================================================
+// USER PROFILE ROUTES
+// ============================================================================
+
 router.get('/:id', authenticateToken, UserController.getUserById);
 
 // ============================================================================
