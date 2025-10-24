@@ -103,7 +103,12 @@ enum SubscriptionStatus {
 
 **Endpoint:** `GET /api/subscriptions/tiers`
 
-**Description:** Retrieve all active subscription tiers with pricing and features.
+**Description:** Retrieve all active subscription tiers with complete pricing, features, and limits. This is the tier catalog for display on pricing pages.
+
+**Use Cases:**
+- Display pricing table on subscription/upgrade pages
+- Compare tier features and limits
+- Show available upgrade options
 
 **Authentication:** None required
 
@@ -224,6 +229,30 @@ enum SubscriptionStatus {
 
 ---
 
+### Endpoint Comparison
+
+| Endpoint | Purpose | Returns | Auth Required | Use Case |
+|----------|---------|---------|---------------|----------|
+| `GET /api/subscriptions/tiers` | Tier catalog | All tiers with features, limits, pricing | No | Pricing page, upgrade comparison |
+| `GET /api/subscriptions/tiers/:tierCode` | Single tier details | One tier with features, limits, pricing | No | Feature limit lookup, tier comparison |
+| `GET /api/subscriptions/my` | User subscription status | Current subscription state, dates, billing info | Yes | Profile page, subscription status display |
+
+**Recommended Pattern:**
+```javascript
+// On Profile/Settings Page
+// 1. Get user's subscription status
+const subscription = await getMySubscription();
+// Shows: BASIC tier, active, renews Nov 1
+
+// 2. Only if showing feature limits, fetch tier details
+if (showingFeatureLimits) {
+  const tierDetails = await getTierDetails(subscription.tierCode);
+  // Shows: max 10 events/month, max 5 photos, etc.
+}
+```
+
+---
+
 ## User Endpoints
 
 ### 3. Get My Subscription
@@ -232,7 +261,20 @@ enum SubscriptionStatus {
 
 **Authentication:** Required
 
-**Description:** Get the authenticated user's current subscription details.
+**Description:** Get the authenticated user's current subscription status including tier, billing dates, and subscription state. 
+
+**Important:** This endpoint returns **subscription status only** (dates, billing info, current tier). It does NOT include feature limits or detailed tier features. To get feature limits and capabilities, use `GET /api/subscriptions/tiers/:tierCode` with the user's current `tierCode`.
+
+**Use Cases:**
+- Display user's current subscription status in profile/settings
+- Show billing cycle and renewal dates
+- Check subscription state (active, expired, canceled)
+- Get current tier for conditional UI rendering
+
+**NOT for:**
+- Checking feature limits (use `/tiers/:tierCode` instead)
+- Displaying tier features (use `/tiers/:tierCode` instead)
+- Pricing comparison (use `/tiers` instead)
 
 **Response:**
 ```json
@@ -247,14 +289,32 @@ enum SubscriptionStatus {
     "currentPeriodStart": "2025-10-01T00:00:00Z",
     "currentPeriodEnd": "2025-11-01T00:00:00Z",
     "canceledAt": null,
+    "createdAt": "2025-10-01T00:00:00Z",
+    "updatedAt": "2025-10-21T10:30:00Z",
     "tier": {
       "tierCode": "BASIC",
       "name": "Basic Plan",
       "price": 30,
-      "features": { ... }
+      "currency": "MYR",
+      "billingCycle": "MONTHLY"
     }
   }
 }
+```
+
+**Note:** The `tier` object contains only basic tier info (code, name, price). To get complete feature limits and capabilities, make a separate call to `GET /api/subscriptions/tiers/BASIC`.
+
+**Example - Getting Complete Subscription Info:**
+```javascript
+// 1. Get user's subscription status
+const mySubResponse = await fetch('/api/subscriptions/my');
+const { tierCode } = mySubResponse.data;
+// Result: { tierCode: "BASIC", status: "ACTIVE", currentPeriodEnd: "2025-11-01" }
+
+// 2. Get tier features and limits (if needed for UI)
+const tierDetailsResponse = await fetch(`/api/subscriptions/tiers/${tierCode}`);
+const tierFeatures = tierDetailsResponse.data.features;
+// Result: { maxEventsPerMonth: 10, maxEventPhotos: 5, ... }
 ```
 
 ---

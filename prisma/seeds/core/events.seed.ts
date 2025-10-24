@@ -73,7 +73,6 @@ export async function seedEvents() {
       hostId: admin.id,
       communityId: sportsCommunity?.id,
       isFree: false,
-      price: 20.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -106,7 +105,6 @@ export async function seedEvents() {
       hostId: maya?.id || sarah?.id || admin.id,
       communityId: foodiesCommunity?.id,
       isFree: false,
-      price: 50.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -122,7 +120,6 @@ export async function seedEvents() {
       hostId: maya?.id || admin.id,
       communityId: foodiesCommunity?.id,
       isFree: false,
-      price: 85.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -169,7 +166,6 @@ export async function seedEvents() {
       hostId: david?.id || admin.id,
       communityId: techCommunity?.id,
       isFree: false,
-      price: 120.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -188,7 +184,6 @@ export async function seedEvents() {
       hostId: nina?.id || admin.id,
       communityId: musicCommunity?.id,
       isFree: false,
-      price: 30.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -222,7 +217,6 @@ export async function seedEvents() {
       hostId: alex?.id || sarah?.id || admin.id,
       communityId: travelCommunity?.id,
       isFree: false,
-      price: 150.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -238,7 +232,6 @@ export async function seedEvents() {
       hostId: alex?.id || admin.id,
       communityId: travelCommunity?.id,
       isFree: false,
-      price: 380.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -256,7 +249,6 @@ export async function seedEvents() {
       hostId: admin.id,
       communityId: gamingCommunity?.id,
       isFree: false,
-      price: 15.0,
       currency: 'MYR',
       status: EventStatus.PUBLISHED,
       hostType: EventHostType.COMMUNITY,
@@ -317,11 +309,9 @@ export async function seedEvents() {
       maxAttendees: 100,
       hostId: sarah?.id || admin.id,
       isFree: false,
-      price: 180.0,
       currency: 'MYR',
       status: EventStatus.COMPLETED,
       hostType: EventHostType.PERSONAL,
-      ticketsSold: 95,
       images: ['https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=800&h=600&fit=crop'],
     },
   ];
@@ -335,6 +325,109 @@ export async function seedEvents() {
   }
   
   console.log(`✅ ${createdEvents.length} sample events created`);
+  
+  // Create ticket tiers for paid events
+  console.log('📊 Creating ticket tiers for paid events...');
+  
+  const paidEventsTiers: Array<{
+    eventTitle: string;
+    tiers: Array<{
+      tierName: string;
+      price: number;
+      totalQuantity: number;
+      description: string;
+      soldQuantity?: number;
+      minPurchase?: number;
+      maxPurchase?: number;
+      displayOrder?: number;
+    }>;
+  }> = [
+    {
+      eventTitle: 'Badminton Tournament - Singles & Doubles',
+      tiers: [
+        { tierName: 'General Admission', price: 20.0, totalQuantity: 32, description: 'Tournament entry with court rental and refreshments' }
+      ]
+    },
+    {
+      eventTitle: 'Malaysian Street Food Crawl',
+      tiers: [
+        { tierName: 'Standard', price: 50.0, totalQuantity: 12, description: 'Guided tour with first dish included' }
+      ]
+    },
+    {
+      eventTitle: 'Cooking Class: Nasi Lemak Workshop',
+      tiers: [
+        { tierName: 'Regular', price: 85.0, totalQuantity: 16, description: 'Cooking session with all ingredients and meal' }
+      ]
+    },
+    {
+      eventTitle: 'Web3 & Blockchain Workshop',
+      tiers: [
+        { tierName: 'Early Bird', price: 90.0, totalQuantity: 10, description: 'Early registration discount', displayOrder: 1 },
+        { tierName: 'Regular', price: 120.0, totalQuantity: 20, description: 'Standard workshop admission', displayOrder: 2 }
+      ]
+    },
+    {
+      eventTitle: 'Open Mic Night - Acoustic Session',
+      tiers: [
+        { tierName: 'General Admission', price: 30.0, totalQuantity: 50, description: 'Entry to the venue' }
+      ]
+    },
+    {
+      eventTitle: 'Day Trip: Batu Caves & Batik Factory',
+      tiers: [
+        { tierName: 'Standard', price: 150.0, totalQuantity: 25, description: 'Transportation, guide, and lunch included' }
+      ]
+    },
+    {
+      eventTitle: 'Weekend Getaway: Cameron Highlands',
+      tiers: [
+        { tierName: 'Twin Sharing', price: 380.0, totalQuantity: 12, description: 'Shared room accommodation', displayOrder: 1 },
+        { tierName: 'Single Room', price: 500.0, totalQuantity: 3, description: 'Private room upgrade', displayOrder: 2 }
+      ]
+    },
+    {
+      eventTitle: 'Mobile Legends Tournament',
+      tiers: [
+        { tierName: 'Team Entry', price: 15.0, totalQuantity: 40, description: 'Per player tournament fee', minPurchase: 5, maxPurchase: 5 }
+      ]
+    },
+    {
+      eventTitle: 'New Year Countdown Party 2025',
+      tiers: [
+        { tierName: 'Early Bird', price: 150.0, totalQuantity: 30, description: 'Early registration special', soldQuantity: 30, displayOrder: 1 },
+        { tierName: 'Regular', price: 180.0, totalQuantity: 70, description: 'Standard admission', soldQuantity: 65, displayOrder: 2 }
+      ]
+    }
+  ];
+  
+  let tiersCreated = 0;
+  for (const eventTier of paidEventsTiers) {
+    const event = createdEvents.find(e => e.title === eventTier.eventTitle);
+    if (event) {
+      for (const tier of eventTier.tiers) {
+        await prisma.eventTicketTier.create({
+          data: {
+            eventId: event.id,
+            tierName: tier.tierName,
+            price: tier.price,
+            currency: 'MYR',
+            totalQuantity: tier.totalQuantity,
+            soldQuantity: tier.soldQuantity || 0,
+            description: tier.description,
+            minPurchase: tier.minPurchase || 1,
+            maxPurchase: tier.maxPurchase || 10,
+            displayOrder: tier.displayOrder || 1,
+            isActive: true,
+          }
+        });
+        tiersCreated++;
+      }
+    }
+  }
+  
+  console.log(`✅ ${tiersCreated} ticket tiers created for paid events`);
+  
   return createdEvents;
 }
 

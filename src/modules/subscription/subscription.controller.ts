@@ -79,9 +79,12 @@ class SubscriptionController {
 
       const subscription = await subscriptionService.getUserSubscription(req.user.id);
 
+      // Strip out features field for /my endpoint - features should be fetched from /tiers/:tierCode
+      const { features, ...subscriptionStatus } = subscription || {};
+
       res.status(200).json({
         success: true,
-        data: subscription,
+        data: subscriptionStatus,
       });
     } catch (error) {
       console.error('Get my subscription error:', error);
@@ -528,7 +531,7 @@ class SubscriptionController {
       }
 
       const cost = await subscriptionService.calculateUpgradeCost(
-        currentSubscription.tier,
+        currentSubscription.tierCode as SubscriptionTier,
         targetTier,
         billingCycle || BillingCycle.MONTHLY
       );
@@ -536,7 +539,7 @@ class SubscriptionController {
       res.status(200).json({
         success: true,
         data: {
-          currentTier: currentSubscription.tier,
+          currentTier: currentSubscription.tierCode,
           targetTier,
           billingCycle: billingCycle || BillingCycle.MONTHLY,
           upgradeCost: cost,

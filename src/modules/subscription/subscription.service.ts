@@ -71,14 +71,21 @@ class SubscriptionService {
       return {
         id: subscription.id,
         userId: subscription.userId,
-        tier: subscription.tiers.tierCode as SubscriptionTier,
-        tierName: subscription.tiers.tierName,
+        tierCode: subscription.tiers.tierCode,
         status: subscription.status as SubscriptionStatus,
+        billingCycle: subscription.tiers.billingCycle,
         currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,
-        cancelAt: subscription.cancelAt || undefined,
-        trialEnd: subscription.trialEnd || undefined,
-        features: subscription.tiers.features as any,
+        canceledAt: subscription.canceledAt,
+        createdAt: subscription.createdAt,
+        updatedAt: subscription.updatedAt,
+        tier: {
+          tierCode: subscription.tiers.tierCode,
+          name: subscription.tiers.tierName,
+          price: subscription.tiers.price,
+          currency: subscription.tiers.currency,
+          billingCycle: subscription.tiers.billingCycle,
+        },
       };
     } catch (error) {
       console.error('Get user subscription error:', error);
@@ -144,11 +151,23 @@ class SubscriptionService {
       return {
         id: subscription.id,
         userId: subscription.userId,
-        tier: subscription.tiers.tierCode as SubscriptionTier,
-        tierName: subscription.tiers.tierName,
+        tierCode: subscription.tiers.tierCode,
         status: subscription.status as SubscriptionStatus,
+        billingCycle: subscription.tiers.billingCycle,
         currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,
+        canceledAt: subscription.canceledAt,
+        createdAt: subscription.createdAt,
+        updatedAt: subscription.updatedAt,
+        tier: {
+          tierCode: subscription.tiers.tierCode,
+          name: subscription.tiers.tierName,
+          price: subscription.tiers.price,
+          currency: subscription.tiers.currency,
+          billingCycle: subscription.tiers.billingCycle,
+        },
+        // Legacy fields for backward compatibility
+        tierName: subscription.tiers.tierName,
         trialEnd: subscription.trialEnd || undefined,
         features: subscription.tiers.features as any,
       };
@@ -173,8 +192,8 @@ class SubscriptionService {
       }
 
       // Check if it's actually an upgrade
-      const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
-      const currentIndex = currentTiers.indexOf(current.tier);
+      const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC, SubscriptionTier.PREMIUM];
+      const currentIndex = currentTiers.indexOf(current.tierCode as SubscriptionTier);
       const newIndex = currentTiers.indexOf(newTierCode);
 
       if (newIndex <= currentIndex) {
@@ -391,16 +410,35 @@ class SubscriptionService {
    */
   private async getDefaultFreeSubscription(userId: string): Promise<UserSubscriptionInfo> {
     const freeTier = await this.getTierByCode(SubscriptionTier.FREE);
+    const now = new Date();
+    
+    // Calculate period end based on billing cycle
+    const billingCycle = freeTier?.billingCycle || 'MONTHLY';
+    const periodEnd = new Date(now);
+    if (billingCycle === BillingCycle.MONTHLY) {
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+    } else {
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    }
 
     return {
       id: 'default-free',
       userId,
-      tier: SubscriptionTier.FREE,
-      tierName: 'Free',
+      tierCode: 'FREE',
       status: SubscriptionStatus.ACTIVE as any,
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-      features: (freeTier?.features as TierFeatures) || DEFAULT_FREE_TIER_FEATURES,
+      billingCycle: billingCycle,
+      currentPeriodStart: now,
+      currentPeriodEnd: periodEnd,
+      canceledAt: null,
+      createdAt: now,
+      updatedAt: now,
+      tier: {
+        tierCode: 'FREE',
+        name: freeTier?.tierName || 'Free',
+        price: freeTier?.price || 0,
+        currency: freeTier?.currency || 'MYR',
+        billingCycle: billingCycle,
+      },
     };
   }
 }

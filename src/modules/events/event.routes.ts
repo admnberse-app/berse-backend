@@ -105,7 +105,7 @@ router.get('/types', EventController.getEventTypes);
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [date, createdAt, price, title]
+ *           enum: [date, createdAt, title]
  *         description: Sort field
  *       - in: query
  *         name: sortOrder
@@ -168,18 +168,6 @@ router.get('/types', EventController.getEventTypes);
  *           type: string
  *           format: date-time
  *         description: Filter events ending before this date
- *       - in: query
- *         name: minPrice
- *         schema:
- *           type: number
- *           minimum: 0
- *         description: Minimum ticket price
- *       - in: query
- *         name: maxPrice
- *         schema:
- *           type: number
- *           minimum: 0
- *         description: Maximum ticket price
  *     responses:
  *       200:
  *         description: Events retrieved successfully. If no events match the filters, fallback events (upcoming published events) are returned with isFallback=true.
@@ -438,6 +426,21 @@ router.get(
  *       1. First upload event image using POST /v2/events/upload-image
  *       2. Use the returned imageUrl in the images array
  *       3. Create the event with the image URL
+ *       
+ *       **Pricing Model & Publishing Workflow:**
+ *       - For free events: Set `isFree: true`. Can publish immediately.
+ *       - For paid events: 
+ *         1. Create event with `isFree: false` and `status: DRAFT`
+ *         2. Create ticket tiers using POST /v2/events/ticket-tiers
+ *         3. Update event status to PUBLISHED using PUT /v2/events/:id
+ *       
+ *       **Important:** Paid events cannot be published without at least one active ticket tier.
+ *       
+ *       **Ticket Tiers:**
+ *       Ticket tiers enable flexible pricing strategies:
+ *       - Single tier: e.g., "General Admission" at RM 20
+ *       - Multiple tiers: e.g., "Early Bird" at RM 90, "Regular" at RM 120
+ *       - Each tier supports: custom pricing, quantity limits, purchase limits, availability windows
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -504,15 +507,11 @@ router.get(
  *               isFree:
  *                 type: boolean
  *                 example: false
- *               price:
- *                 type: number
- *                 minimum: 0
- *                 example: 50.00
- *                 description: Required if isFree is false
  *               currency:
  *                 type: string
  *                 default: MYR
  *                 example: MYR
+ *                 description: Currency code for ticket pricing
  *               hostType:
  *                 type: string
  *                 enum: [PERSONAL, COMMUNITY]
@@ -543,7 +542,12 @@ router.post(
  * /v2/events/{id}:
  *   put:
  *     summary: Update event
- *     description: Update an existing event (requires authentication and ownership)
+ *     description: |
+ *       Update an existing event (requires authentication and ownership).
+ *       
+ *       **Publishing Paid Events:**
+ *       To publish a paid event (set status to PUBLISHED), the event must have at least one active ticket tier.
+ *       Create ticket tiers using POST /v2/events/ticket-tiers before publishing.
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []

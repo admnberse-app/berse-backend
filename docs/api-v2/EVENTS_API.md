@@ -78,7 +78,6 @@ Create a new event (free or paid).
     "https://cdn.berse.com/events/summer-2025.jpg"
   ],
   "isFree": true,
-  "price": 0,
   "currency": "MYR",
   "status": "DRAFT",
   "hostType": "PERSONAL",
@@ -95,9 +94,9 @@ Create a new event (free or paid).
 - `mapLink` (optional): Valid URL
 - `maxAttendees` (optional): Positive integer
 - `isFree` (required): Boolean
-- `price` (required if not free): >= 0
-- `currency` (optional): Default "MYR"
+- `currency` (optional): Default "MYR" (used for ticket tier pricing)
 - `status` (optional): See [EventStatus enum](#eventstatus), default "DRAFT"
+  - **Important:** Paid events (`isFree: false`) cannot be created with `status: PUBLISHED`. Create as DRAFT first, add ticket tiers, then publish.
 - `hostType` (required): See [EventHostType enum](#eventhosttype)
 - `communityId` (optional): Required if hostType is "COMMUNITY"
 - `images` (optional): Array of image URLs (upload images first using [Upload Event Image](#upload-event-image) endpoint)
@@ -106,6 +105,15 @@ Create a new event (free or paid).
 1. First, upload your image using `POST /v2/events/upload-image` (see below)
 2. Get the returned `imageUrl` from the upload response
 3. Include the `imageUrl` in the `images` array when creating the event
+
+**Pricing Model & Publishing Workflow:**
+- **Free events:** Set `isFree: true`. Can publish immediately.
+- **Paid events:**
+  1. Create event with `isFree: false` and `status: DRAFT`
+  2. Create ticket tiers using `POST /v2/events/ticket-tiers` (at least one required)
+  3. Update event status to `PUBLISHED` using `PUT /v2/events/:id`
+  
+**Important:** Paid events cannot be published without at least one active ticket tier. This ensures all paid events have a clear pricing structure.
 
 **Response:** `201 Created`
 ```json
@@ -124,7 +132,6 @@ Create a new event (free or paid).
     "notes": "Bring your ID for check-in",
     "images": ["https://cdn.berse.com/events/summer-2025.jpg"],
     "isFree": true,
-    "price": 0,
     "currency": "MYR",
     "status": "DRAFT",
     "hostType": "PERSONAL",
@@ -141,8 +148,6 @@ Create a new event (free or paid).
       "imageUrl": "https://cdn.berse.com/communities/bm.jpg"
     },
     "attendeeCount": 0,
-    "ticketsSold": 0,
-    "totalRevenue": 0,
     "userRsvp": null,
     "userTicket": null,
     "createdAt": "2025-10-16T10:00:00.000Z",
@@ -282,7 +287,7 @@ Get a paginated, filterable list of events. **When no events match the applied f
 |-----------|------|----------|---------|-------------|
 | `page` | number | No | 1 | Page number (1-based) |
 | `limit` | number | No | 20 | Items per page (max: 100) |
-| `sortBy` | string | No | date | Sort field: `date`, `createdAt`, `title` |
+| `sortBy` | string | No | date | Sort field: `date`, `createdAt`, `title` (Note: `price` sorting removed - use ticket tier filtering instead) |
 | `sortOrder` | string | No | asc | Sort order: `asc`, `desc` |
 | `type` | EventType | No | - | Filter by event type |
 | `status` | EventStatus | No | - | Filter by status |
@@ -294,8 +299,6 @@ Get a paginated, filterable list of events. **When no events match the applied f
 | `search` | string | No | - | Search in title and description |
 | `communityId` | string | No | - | Filter by community |
 | `hostId` | string | No | - | Filter by host user |
-| `minPrice` | number | No | - | Minimum ticket price |
-| `maxPrice` | number | No | - | Maximum ticket price |
 
 **Fallback Behavior:**
 - When user's exact filters return no results, the API shows any upcoming published events as fallback
@@ -328,7 +331,6 @@ GET /v2/events?communityId=cm123456789&status=PUBLISHED
         "location": "KLCC Convention Center, Kuala Lumpur",
         "images": ["https://cdn.berse.com/events/summer-2025.jpg"],
         "isFree": true,
-        "price": 0,
         "currency": "MYR",
         "status": "PUBLISHED",
         "hostType": "PERSONAL",
@@ -372,7 +374,6 @@ GET /v2/events?communityId=cm123456789&status=PUBLISHED
         "date": "2025-10-20T10:00:00.000Z",
         "location": "Petaling Jaya",
         "isFree": true,
-        "price": 0,
         "currency": "MYR",
         "status": "PUBLISHED",
         "hostType": "PERSONAL",
@@ -451,7 +452,6 @@ Get detailed information about a specific event.
       "https://cdn.berse.com/events/summer-2025-2.jpg"
     ],
     "isFree": false,
-    "price": 50,
     "currency": "MYR",
     "status": "PUBLISHED",
     "hostType": "COMMUNITY",
@@ -469,8 +469,6 @@ Get detailed information about a specific event.
       "isVerified": true
     },
     "attendeeCount": 45,
-    "ticketsSold": 38,
-    "totalRevenue": 1900,
     "ticketTiers": [
       {
         "id": "tier_123",
@@ -562,6 +560,11 @@ Update an existing event.
 **Endpoint:** `PUT /v2/events/:id`
 
 **Authentication:** Required (must be event host or admin)
+
+**Publishing Paid Events:**
+To publish a paid event (set status to `PUBLISHED`), the event must have at least one active ticket tier. Create ticket tiers using `POST /v2/events/ticket-tiers` before publishing.
+
+**Validation:** The API will return a 400 error if you attempt to publish a paid event without ticket tiers.
 
 **Path Parameters:**
 - `id` (required): Event ID
@@ -2263,7 +2266,7 @@ enum PaymentStatus {
 ### Complete Event Creation Flow
 
 ```javascript
-// 1. Create a paid event
+// 1. Create a paid event (MUST be DRAFT initially)
 const createEventResponse = await fetch('https://api.berse-app.com/v2/events', {
   method: 'POST',
   headers: {
@@ -2277,8 +2280,8 @@ const createEventResponse = await fetch('https://api.berse-app.com/v2/events', {
     date: "2025-12-01T09:00:00Z",
     location: "Tech Hub, KL",
     isFree: false,
-    price: 100,
-    status: "DRAFT",
+    currency: "MYR",
+    status: "DRAFT",  // Required for paid events
     hostType: "COMMUNITY",
     communityId: "cm123"
   })
@@ -2303,7 +2306,7 @@ await fetch('https://api.berse-app.com/v2/events/ticket-tiers', {
   })
 });
 
-// 3. Publish event
+// 3. Publish event (now allowed since we have ticket tiers)
 await fetch(`https://api.berse-app.com/v2/events/${eventId}`, {
   method: 'PUT',
   headers: {

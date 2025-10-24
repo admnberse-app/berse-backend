@@ -52,6 +52,14 @@ export class EventService {
         }
       }
 
+      // Prevent publishing paid events without ticket tiers
+      if (!data.isFree && data.status === EventStatus.PUBLISHED) {
+        throw new AppError(
+          'Cannot publish a paid event without ticket tiers. Create the event as DRAFT first, then add ticket tiers before publishing.',
+          400
+        );
+      }
+
       const event = await prisma.event.create({
         data: {
           title: data.title,
@@ -66,7 +74,6 @@ export class EventService {
           communityId: data.communityId,
           images: data.images || [],
           isFree: data.isFree,
-          price: data.price,
           currency: data.currency || 'MYR',
           hostType: data.hostType || EventHostType.PERSONAL,
           status: data.status || EventStatus.DRAFT,
@@ -354,11 +361,22 @@ export class EventService {
         ...(query.filters?.endDate && { 
           date: { lte: new Date(query.filters.endDate) } 
         }),
-        ...(query.filters?.minPrice && { 
-          price: { gte: query.filters.minPrice } 
+        // Price filtering via ticket tiers
+        ...(query.filters?.minPrice && {
+          tier: {
+            some: {
+              price: { gte: query.filters.minPrice },
+              isActive: true
+            }
+          }
         }),
-        ...(query.filters?.maxPrice && { 
-          price: { lte: query.filters.maxPrice } 
+        ...(query.filters?.maxPrice && {
+          tier: {
+            some: {
+              price: { lte: query.filters.maxPrice },
+              isActive: true
+            }
+          }
         }),
         ...(query.filters?.search && {
           OR: [
@@ -459,6 +477,20 @@ export class EventService {
         throw new AppError('You do not have permission to update this event', 403);
       }
 
+      // If publishing a paid event, ensure it has at least one ticket tier
+      if (data.status === EventStatus.PUBLISHED && !event.isFree) {
+        const tierCount = await prisma.eventTicketTier.count({
+          where: { eventId, isActive: true },
+        });
+
+        if (tierCount === 0) {
+          throw new AppError(
+            'Cannot publish a paid event without ticket tiers. Please create at least one ticket tier first.',
+            400
+          );
+        }
+      }
+
       const updatedEvent = await prisma.event.update({
         where: { id: eventId },
         data: {
@@ -472,7 +504,6 @@ export class EventService {
           ...(data.notes !== undefined && { notes: data.notes }),
           ...(data.images !== undefined && { images: data.images }),
           ...(data.isFree !== undefined && { isFree: data.isFree }),
-          ...(data.price !== undefined && { price: data.price }),
           ...(data.status && { status: data.status }),
         },
         include: {
@@ -725,30 +756,30 @@ export class EventService {
         throw new AppError('Cannot purchase tickets for past events', 400);
       }
 
-      let price = event.price || 0;
-      let tier = null;
-
-      // If ticket tier specified, validate and get tier price
-      if (data.ticketTierId) {
-        tier = await prisma.eventTicketTier.findUnique({
-          where: { id: data.ticketTierId },
-        });
-
-        if (!tier || !tier.isActive) {
-          throw new AppError('Ticket tier not found or inactive', 404);
-        }
-
-        if (tier.eventId !== data.eventId) {
-          throw new AppError('Ticket tier does not belong to this event', 400);
-        }
-
-        // Check availability
-        if (tier.totalQuantity && tier.soldQuantity >= tier.totalQuantity) {
-          throw new AppError('This ticket tier is sold out', 400);
-        }
-
-        price = tier.price;
+      // For paid events, ticket tier must be specified
+      if (!data.ticketTierId) {
+        throw new AppError('Please select a ticket tier', 400);
       }
+
+      // Get and validate ticket tier
+      const tier = await prisma.eventTicketTier.findUnique({
+        where: { id: data.ticketTierId },
+      });
+
+      if (!tier || !tier.isActive) {
+        throw new AppError('Ticket tier not found or inactive', 404);
+      }
+
+      if (tier.eventId !== data.eventId) {
+        throw new AppError('Ticket tier does not belong to this event', 400);
+      }
+
+      // Check availability
+      if (tier.totalQuantity && tier.soldQuantity >= tier.totalQuantity) {
+        throw new AppError('This ticket tier is sold out', 400);
+      }
+
+      const price = tier.price;
 
       const ticketNumber = this.generateTicketNumber();
 
@@ -816,11 +847,7 @@ export class EventService {
         });
       }
 
-      // Update event tickets sold
-      await prisma.event.update({
-        where: { id: data.eventId },
-        data: { ticketsSold: { increment: 1 } },
-      });
+      // Note: Ticket counts are now tracked via _count.eventTickets
 
       return ticket as any;
     } catch (error: any) {
@@ -1347,13 +1374,8 @@ export class EventService {
       hostType: event.hostType,
       images: event.images,
       isFree: event.isFree,
-      price: event.price,
       currency: event.currency,
       status: event.status,
-      ticketsSold: event.ticketsSold,
-      totalRevenue: event.totalRevenue,
-      organizerPayout: event.organizerPayout,
-      platformFee: event.platformFee,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
       host: event.user,
@@ -1742,7 +1764,6 @@ export class EventService {
           notes: true,
           images: true,
           isFree: true,
-          price: true,
           currency: true,
           status: true,
           hostType: true,
@@ -1830,7 +1851,6 @@ export class EventService {
           notes: true,
           images: true,
           isFree: true,
-          price: true,
           currency: true,
           status: true,
           hostType: true,
@@ -1947,7 +1967,6 @@ export class EventService {
           notes: true,
           images: true,
           isFree: true,
-          price: true,
           currency: true,
           status: true,
           hostType: true,
@@ -2052,7 +2071,6 @@ export class EventService {
           notes: true,
           images: true,
           isFree: true,
-          price: true,
           currency: true,
           status: true,
           hostType: true,
@@ -2153,7 +2171,6 @@ export class EventService {
           notes: true,
           images: true,
           isFree: true,
-          price: true,
           currency: true,
           status: true,
           hostType: true,
@@ -2269,9 +2286,7 @@ export class EventService {
           mapLink: true,
           images: true,
           isFree: true,
-          price: true,
           maxAttendees: true,
-          ticketsSold: true,
           status: true,
           hostId: true,
           communityId: true,

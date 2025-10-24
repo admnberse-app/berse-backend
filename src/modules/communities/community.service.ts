@@ -265,7 +265,6 @@ export class CommunityService {
           location: true,
           images: true,
           isFree: true,
-          price: true,
           _count: {
             select: {
               eventParticipants: true,
@@ -318,7 +317,6 @@ export class CommunityService {
           location: e.location,
           images: e.images,
           isFree: e.isFree,
-          price: e.price,
           rsvpCount: e._count.eventParticipants,
         })),
         userStatus: {
@@ -1969,7 +1967,11 @@ export class CommunityService {
           location: true,
           images: true,
           isFree: true,
-          price: true,
+          _count: {
+            select: {
+              eventParticipants: true,
+            },
+          },
         },
       });
 
@@ -2000,7 +2002,6 @@ export class CommunityService {
           location: e.location,
           images: e.images,
           isFree: e.isFree,
-          price: e.price || undefined,
         })),
         downloadLinks,
       };

@@ -16,7 +16,6 @@ export interface CreateEventRequest {
   communityId?: string;
   images?: string[];
   isFree: boolean;
-  price?: number;
   currency?: string;
   hostType?: EventHostType;
   status?: EventStatus;
@@ -33,7 +32,6 @@ export interface UpdateEventRequest {
   notes?: string;
   images?: string[];
   isFree?: boolean;
-  price?: number;
   currency?: string;
   status?: EventStatus;
 }
@@ -176,13 +174,8 @@ export interface EventResponse {
   hostType: EventHostType;
   images: string[];
   isFree: boolean;
-  price?: number;
   currency: string;
   status: EventStatus;
-  ticketsSold: number;
-  totalRevenue?: number;
-  organizerPayout?: number;
-  platformFee?: number;
   createdAt: Date;
   updatedAt: Date;
   

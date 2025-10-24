@@ -753,7 +753,6 @@ const swaggerDefinition = {
             description: 'Event images',
           },
           isFree: { type: 'boolean', description: 'Whether event is free' },
-          price: { type: 'number', minimum: 0, description: 'Base ticket price (if not free)' },
           currency: { type: 'string', default: 'MYR', description: 'Currency code' },
           status: {
             type: 'string',
@@ -768,8 +767,6 @@ const swaggerDefinition = {
           hostId: { type: 'string', description: 'Host user ID' },
           communityId: { type: 'string', description: 'Community ID (if community-hosted)' },
           attendeeCount: { type: 'integer', description: 'Number of attendees checked in' },
-          ticketsSold: { type: 'integer', description: 'Number of tickets sold' },
-          totalRevenue: { type: 'number', description: 'Total revenue from ticket sales' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
           host: {

@@ -135,7 +135,6 @@ export interface CommunityResponse {
     location: string;
     images: string[];
     isFree: boolean;
-    price?: number;
     rsvpCount: number;
   }>;
   userStatus?: {

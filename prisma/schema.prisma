@@ -617,12 +617,7 @@ model Event {
   hostType          EventHostType      @default(PERSONAL)
   images            String[]           @default([])
   isFree            Boolean            @default(true)
-  organizerPayout   Float?             @default(0.0)
-  platformFee       Float?             @default(0.0)
-  price             Float?
   status            EventStatus        @default(DRAFT)
-  ticketsSold       Int                @default(0)
-  totalRevenue      Float?             @default(0.0)
   eventParticipants EventParticipant[]
   tier              EventTicketTier[]
   eventTickets      EventTicket[]

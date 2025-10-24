@@ -422,11 +422,23 @@ class AccessControlService {
         subscription: {
           id: activeSubscription?.id || 'none',
           userId: user.id,
-          tier: (tier?.tierCode as SubscriptionTier) || SubscriptionTier.FREE,
-          tierName: tier?.tierName || 'Free',
+          tierCode: tier?.tierCode || 'FREE',
           status: (activeSubscription?.status as SubscriptionStatus) || SubscriptionStatus.ACTIVE,
+          billingCycle: tier?.billingCycle || 'MONTHLY',
           currentPeriodStart: activeSubscription?.currentPeriodStart || new Date(),
           currentPeriodEnd: activeSubscription?.currentPeriodEnd || new Date(),
+          canceledAt: activeSubscription?.canceledAt,
+          createdAt: activeSubscription?.createdAt || new Date(),
+          updatedAt: activeSubscription?.updatedAt || new Date(),
+          tier: {
+            tierCode: tier?.tierCode || 'FREE',
+            name: tier?.tierName || 'Free',
+            price: tier?.price || 0,
+            currency: tier?.currency || 'MYR',
+            billingCycle: tier?.billingCycle || 'MONTHLY',
+          },
+          // Legacy fields for backward compatibility
+          tierName: tier?.tierName || 'Free',
           features: tier?.features as any || {},
         },
       };
@@ -445,7 +457,7 @@ class AccessControlService {
       return { allowed: true };
     }
 
-    const current = subscription.tier;
+    const current = subscription.tierCode as SubscriptionTier;
     const allowed = subscriptionTierMeetsRequirement(current, required);
 
     if (!allowed) {

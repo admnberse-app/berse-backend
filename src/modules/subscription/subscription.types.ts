@@ -12,7 +12,8 @@
  */
 export enum SubscriptionTier {
   FREE = 'FREE',
-  BASIC = 'BASIC'
+  BASIC = 'BASIC',
+  PREMIUM = 'PREMIUM'
 }
 
 /**
@@ -317,14 +318,27 @@ export interface UpgradeOptions {
 export interface UserSubscriptionInfo {
   id: string;
   userId: string;
-  tier: SubscriptionTier;
-  tierName: string;
+  tierCode: string;
   status: SubscriptionStatus;
+  billingCycle?: string;
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
+  canceledAt?: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  tier: {
+    tierCode: string;
+    name: string;
+    price: number;
+    currency: string;
+    billingCycle: string;
+  };
+  
+  // Legacy fields for backward compatibility (deprecated)
+  tierName?: string;
   cancelAt?: Date;
   trialEnd?: Date;
-  features: TierFeatures;
+  features?: any;
 }
 
 /**
