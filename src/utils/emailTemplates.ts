@@ -26,7 +26,7 @@ import {
 const APP_NAME = 'Berse App';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@bersemuka.com';
-const LOGO_URL = process.env.LOGO_URL || `${APP_URL}/assets/logos/berse-email-logo.png`;
+const LOGO_URL = process.env.LOGO_URL || 'https://staging-berse-app.sgp1.cdn.digitaloceanspaces.com/app-assets/berse-horizontal.png';
 const PRIMARY_COLOR = '#00B14F'; // Grab Green - Main brand color
 const PRIMARY_DARK = '#009440';
 const PRIMARY_LIGHT = '#33C16D';
@@ -73,24 +73,16 @@ const baseTemplate = (content: string, preheader?: string): string => `
     .header {
       background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, ${PRIMARY_DARK} 100%);
       color: #ffffff;
-      padding: 40px 30px;
+      padding: 30px 30px;
       text-align: center;
       border-bottom: 4px solid ${PRIMARY_DARK};
     }
     .header img {
-      max-width: 160px;
+      max-width: 200px;
       height: auto;
-      margin-bottom: 15px;
       display: block;
       margin-left: auto;
       margin-right: auto;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     .content {
       padding: 40px 35px;
@@ -228,10 +220,10 @@ const baseTemplate = (content: string, preheader?: string): string => `
         padding: 30px 20px;
       }
       .header {
-        padding: 30px 20px;
+        padding: 25px 20px;
       }
-      .header h1 {
-        font-size: 22px;
+      .header img {
+        max-width: 160px;
       }
       .content h2 {
         font-size: 20px;
@@ -253,8 +245,7 @@ const baseTemplate = (content: string, preheader?: string): string => `
     ${preheader ? `<div class="preheader">${preheader}</div>` : ''}
     <div class="container">
       <div class="header">
-        <img src="${LOGO_URL}" alt="${APP_NAME} Logo" style="max-width: 160px; height: auto;" />
-        <h1>${APP_NAME}</h1>
+        <img src="${LOGO_URL}" alt="${APP_NAME} Logo" width="200" style="max-width: 200px; width: 200px; height: auto; display: block; margin: 0 auto; border: 0;" />
       </div>
       <div class="content">
         ${content}
