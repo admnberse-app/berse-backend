@@ -12,8 +12,7 @@
  */
 export enum SubscriptionTier {
   FREE = 'FREE',
-  BASIC = 'BASIC',
-  PREMIUM = 'PREMIUM'
+  BASIC = 'BASIC'
 }
 
 /**
@@ -26,54 +25,85 @@ export enum TrustLevel {
 }
 
 /**
- * Feature codes for access control
+ * Resource types for feature access control
  */
-export enum FeatureCode {
+export enum Resource {
+  EVENTS = 'events',
+  MARKETPLACE = 'marketplace',
+  COMMUNITIES = 'communities',
+  HOMESURF = 'homesurf',
+  BERSEGUIDE = 'berseguide',
+  SERVICES = 'services',
+  MENTORSHIP = 'mentorship',
+  MESSAGES = 'messages',
+  CONNECTIONS = 'connections',
+  VOUCHES = 'vouches',
+  REWARDS = 'rewards',
+}
+
+/**
+ * Action types for feature access control
+ */
+export enum Action {
+  VIEW = 'view',        // Browse/Read
+  JOIN = 'join',        // Participate/Book/Buy (consumer role)
+  CREATE = 'create',    // Create new & become provider (provider role)
+  MODERATE = 'moderate',// Moderate others' content (communities)
+  ADMIN = 'admin',      // Full admin control (communities)
+  EARN = 'earn',        // Earn points (rewards only)
+  REDEEM = 'redeem',    // Redeem rewards (rewards only)
+}
+
+/**
+ * Feature codes using resource:action pattern
+ * Examples: 'events:view', 'marketplace:create', 'communities:join'
+ */
+export type FeatureCode =
   // Events
-  VIEW_EVENTS = 'VIEW_EVENTS',
-  JOIN_EVENTS = 'JOIN_EVENTS',
-  CREATE_EVENTS = 'CREATE_EVENTS',
-  HOST_EVENTS = 'HOST_EVENTS',
-  CREATE_PAID_EVENTS = 'CREATE_PAID_EVENTS',
-
+  | 'events:view'
+  | 'events:join'       // Attend/RSVP to event
+  | 'events:create'     // Create & host event
+  
   // Marketplace
-  VIEW_MARKETPLACE = 'VIEW_MARKETPLACE',
-  BUY_MARKETPLACE = 'BUY_MARKETPLACE',
-  SELL_MARKETPLACE = 'SELL_MARKETPLACE',
-
-  // Travel & Stays
-  JOIN_TRAVEL = 'JOIN_TRAVEL',
-  HOST_TRAVEL = 'HOST_TRAVEL',
-  HOMESTAY_GUEST = 'HOMESTAY_GUEST',
-  HOMESTAY_HOST = 'HOMESTAY_HOST',
-
-  // Services
-  USE_SERVICE_MATCHING_CLIENT = 'USE_SERVICE_MATCHING_CLIENT',
-  OFFER_PROFESSIONAL_SERVICES = 'OFFER_PROFESSIONAL_SERVICES',
+  | 'marketplace:view'
+  | 'marketplace:join'  // Buy/purchase items
+  | 'marketplace:create' // List items for sale
+  
+  // Communities
+  | 'communities:view'
+  | 'communities:join'  // Join as member
+  | 'communities:create' // Create new community
+  | 'communities:moderate' // Moderate others' content
+  | 'communities:admin'    // Full admin access
+  
+  // HomeSurf (homestay hosting)
+  | 'homesurf:view'     // Browse homestay listings
+  | 'homesurf:join'     // Book/stay as guest
+  | 'homesurf:create'   // Offer your home as host
+  
+  // BerseGuide (local tour guides)
+  | 'berseguide:view'   // Browse guide listings
+  | 'berseguide:join'   // Book a guide as traveler
+  | 'berseguide:create' // Offer guide services
+  
+  // Services (professional services)
+  | 'services:view'
+  | 'services:join'     // Hire services
+  | 'services:create'   // Offer services
   
   // Mentorship
-  SEEK_MENTORSHIP = 'SEEK_MENTORSHIP',
-  PROVIDE_MENTORSHIP = 'PROVIDE_MENTORSHIP',
-
-  // Community
-  JOIN_COMMUNITIES = 'JOIN_COMMUNITIES',
-  CREATE_COMMUNITIES = 'CREATE_COMMUNITIES',
-  MODERATE_COMMUNITIES = 'MODERATE_COMMUNITIES',
-  ADMIN_COMMUNITIES = 'ADMIN_COMMUNITIES',
-
+  | 'mentorship:view'
+  | 'mentorship:join'   // Seek mentor
+  | 'mentorship:create' // Offer mentorship
+  
   // Social
-  SEND_CONNECTIONS = 'SEND_CONNECTIONS',
-  SEND_MESSAGES = 'SEND_MESSAGES',
-  VOUCH_FOR_USERS = 'VOUCH_FOR_USERS',
-
-  // Advanced
-  FUNDRAISING = 'FUNDRAISING',
-  PLATFORM_AMBASSADOR = 'PLATFORM_AMBASSADOR',
-  REVENUE_SHARING = 'REVENUE_SHARING',
-  CUSTOM_BADGES = 'CUSTOM_BADGES',
-  ANALYTICS = 'ANALYTICS',
-  PRIORITY_SUPPORT = 'PRIORITY_SUPPORT'
-}
+  | 'messages:create'
+  | 'connections:create'
+  | 'vouches:create'
+  
+  // Rewards
+  | 'rewards:earn'      // Earn points (FREE + BASIC)
+  | 'rewards:redeem';   // Redeem rewards (BASIC only)
 
 /**
  * Billing cycle options
@@ -407,7 +437,7 @@ export function subscriptionTierMeetsRequirement(
   current: SubscriptionTier,
   required: SubscriptionTier
 ): boolean {
-  const tiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC, SubscriptionTier.PREMIUM];
+  const tiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
   const currentIndex = tiers.indexOf(current);
   const requiredIndex = tiers.indexOf(required);
   return currentIndex >= requiredIndex;
@@ -418,53 +448,55 @@ export function subscriptionTierMeetsRequirement(
 // ============================================================================
 
 /**
- * Feature requirement mappings
+ * Feature requirement mappings using resource:action pattern
+ * Defines subscription tier and trust level requirements for each feature
  */
 export const FEATURE_REQUIREMENTS: Record<FeatureCode, AccessRequirements> = {
-  // Events
-  [FeatureCode.VIEW_EVENTS]: {},
-  [FeatureCode.JOIN_EVENTS]: { minTrustLevel: TrustLevel.STARTER },
-  [FeatureCode.CREATE_EVENTS]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.HOST_EVENTS]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.CREATE_PAID_EVENTS]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.TRUSTED },
+  // Events - FREE can view/join, BASIC can create/host
+  'events:view': {},
+  'events:join': { minTrustLevel: TrustLevel.STARTER },
+  'events:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
 
-  // Marketplace
-  [FeatureCode.VIEW_MARKETPLACE]: {},
-  [FeatureCode.BUY_MARKETPLACE]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.SELL_MARKETPLACE]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
+  // Marketplace - FREE can view/buy, BASIC can sell
+  'marketplace:view': {},
+  'marketplace:join': { minTrustLevel: TrustLevel.TRUSTED },
+  'marketplace:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
 
-  // Travel
-  [FeatureCode.JOIN_TRAVEL]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.HOST_TRAVEL]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
-  [FeatureCode.HOMESTAY_GUEST]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.HOMESTAY_HOST]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
+  // Communities - FREE can join (max 2), BASIC unlimited + can create
+  'communities:view': {},
+  'communities:join': { minTrustLevel: TrustLevel.STARTER },
+  'communities:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
+  'communities:moderate': { minTrustLevel: TrustLevel.TRUSTED },
+  'communities:admin': { minTrustLevel: TrustLevel.LEADER },
 
-  // Services
-  [FeatureCode.USE_SERVICE_MATCHING_CLIENT]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.OFFER_PROFESSIONAL_SERVICES]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.LEADER },
+  // HomeSurf - FREE can book stays, BASIC can host
+  'homesurf:view': {},
+  'homesurf:join': { minTrustLevel: TrustLevel.TRUSTED },
+  'homesurf:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
 
-  // Mentorship
-  [FeatureCode.SEEK_MENTORSHIP]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.PROVIDE_MENTORSHIP]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.LEADER },
+  // BerseGuide - FREE can book guides, BASIC can offer tours
+  'berseguide:view': {},
+  'berseguide:join': { minTrustLevel: TrustLevel.TRUSTED },
+  'berseguide:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
 
-  // Community
-  [FeatureCode.JOIN_COMMUNITIES]: { minTrustLevel: TrustLevel.STARTER },
-  [FeatureCode.CREATE_COMMUNITIES]: { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.MODERATE_COMMUNITIES]: { minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.ADMIN_COMMUNITIES]: { minTrustLevel: TrustLevel.LEADER },
+  // Services - FREE can hire, BASIC can offer
+  'services:view': {},
+  'services:join': { minTrustLevel: TrustLevel.TRUSTED },
+  'services:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
 
-  // Social
-  [FeatureCode.SEND_CONNECTIONS]: { minTrustLevel: TrustLevel.TRUSTED },
-  [FeatureCode.SEND_MESSAGES]: { minTrustLevel: TrustLevel.STARTER },
-  [FeatureCode.VOUCH_FOR_USERS]: { minTrustLevel: TrustLevel.TRUSTED },
+  // Mentorship - FREE can seek, BASIC can provide
+  'mentorship:view': {},
+  'mentorship:join': { minTrustLevel: TrustLevel.TRUSTED },
+  'mentorship:create': { subscriptionTier: SubscriptionTier.BASIC, minTrustLevel: TrustLevel.LEADER },
 
-  // Advanced
-  [FeatureCode.FUNDRAISING]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.LEADER },
-  [FeatureCode.PLATFORM_AMBASSADOR]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.LEADER },
-  [FeatureCode.REVENUE_SHARING]: { subscriptionTier: SubscriptionTier.PREMIUM, minTrustLevel: TrustLevel.LEADER },
-  [FeatureCode.CUSTOM_BADGES]: { subscriptionTier: SubscriptionTier.PREMIUM },
-  [FeatureCode.ANALYTICS]: { subscriptionTier: SubscriptionTier.PREMIUM },
-  [FeatureCode.PRIORITY_SUPPORT]: { subscriptionTier: SubscriptionTier.PREMIUM }
+  // Social - Messages, connections, vouches
+  'connections:create': { minTrustLevel: TrustLevel.TRUSTED },
+  'messages:create': { minTrustLevel: TrustLevel.STARTER },
+  'vouches:create': { minTrustLevel: TrustLevel.TRUSTED },
+
+  // Rewards - FREE can earn, BASIC can redeem
+  'rewards:earn': {},
+  'rewards:redeem': { subscriptionTier: SubscriptionTier.BASIC },
 };
 
 /**
@@ -476,12 +508,8 @@ export const TIER_PRICING = {
     annual: 0
   },
   [SubscriptionTier.BASIC]: {
-    monthly: 30,
-    annual: 300  // 17% discount
-  },
-  [SubscriptionTier.PREMIUM]: {
-    monthly: 50,
-    annual: 500  // 17% discount
+    monthly: 29.99,
+    annual: 299.99  // 16.67% discount (10 months price)
   }
 };
 

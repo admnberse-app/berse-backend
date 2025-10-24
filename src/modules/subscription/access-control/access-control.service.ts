@@ -89,7 +89,7 @@ class AccessControlService {
         allowed: false,
         reason: this.generateBlockedReason(subscriptionCheck, trustCheck),
         blockedBy,
-        upgradeOptions: this.generateUpgradeOptions(
+        upgradeOptions: await this.generateUpgradeOptions(
           user,
           subscriptionCheck,
           trustCheck,
@@ -108,6 +108,175 @@ class AccessControlService {
   /**
    * Get complete access summary for user
    */
+  /**
+   * Get feature availability for frontend (optimized, cached)
+   * Returns all features organized by category with their states
+   */
+  async getFeatureAvailability(userId: string): Promise<any> {
+    try {
+      const user = await this.getUserWithAccessData(userId);
+
+      if (!user) {
+        return null;
+      }
+
+      const trustScore = user.trustScore;
+      const trustLevel = getTrustLevelFromScore(trustScore) as TrustLevel;
+      const currentTrustInfo = TRUST_LEVEL_INFO[trustLevel];
+      
+      // Calculate next trust level progress
+      const nextLevel = trustLevel === TrustLevel.STARTER ? TrustLevel.TRUSTED : 
+                        trustLevel === TrustLevel.TRUSTED ? TrustLevel.LEADER : null;
+      const nextLevelScore = nextLevel ? getTrustLevelMinScore(nextLevel) : 100;
+      const percentToNext = nextLevel ? Math.round(((trustScore - getTrustLevelMinScore(trustLevel)) / 
+                           (nextLevelScore - getTrustLevelMinScore(trustLevel))) * 100) : 100;
+
+      const result = {
+        user: {
+          id: user.id,
+          subscription: {
+            tier: user.subscription.tier,
+            tierName: user.subscription.tierName,
+            status: user.subscription.status,
+            expiresAt: user.subscription.currentPeriodEnd,
+            isTrialing: !!(user.subscription as any).trialEnd && new Date((user.subscription as any).trialEnd) > new Date(),
+          },
+          trust: {
+            score: trustScore,
+            level: trustLevel,
+            levelName: currentTrustInfo.name,
+            vouchCount: user._count?.vouchesReceived || 0,
+            progress: {
+              currentLevel: trustLevel,
+              nextLevel,
+              percentToNext,
+              pointsToNext: nextLevel ? nextLevelScore - trustScore : 0,
+            },
+          },
+        },
+        features: {
+          events: await this.getCategoryFeatures(userId, [
+            'events:view',
+            'events:join',
+            'events:create',
+          ]),
+          marketplace: await this.getCategoryFeatures(userId, [
+            'marketplace:view',
+            'marketplace:join',
+            'marketplace:create',
+          ]),
+          communities: await this.getCategoryFeatures(userId, [
+            'communities:view',
+            'communities:join',
+            'communities:create',
+            'communities:moderate',
+            'communities:admin',
+          ]),
+          homesurf: await this.getCategoryFeatures(userId, [
+            'homesurf:view',
+            'homesurf:join',
+            'homesurf:create',
+          ]),
+          berseguide: await this.getCategoryFeatures(userId, [
+            'berseguide:view',
+            'berseguide:join',
+            'berseguide:create',
+          ]),
+          services: await this.getCategoryFeatures(userId, [
+            'services:view',
+            'services:join',
+            'services:create',
+          ]),
+          mentorship: await this.getCategoryFeatures(userId, [
+            'mentorship:view',
+            'mentorship:join',
+            'mentorship:create',
+          ]),
+          social: await this.getCategoryFeatures(userId, [
+            'connections:create',
+            'messages:create',
+            'vouches:create',
+          ]),
+          rewards: await this.getCategoryFeatures(userId, [
+            'rewards:earn',
+            'rewards:redeem',
+          ]),
+        },
+        cacheKey: `features:${userId}`,
+        cacheTTL: 300, // 5 minutes
+        generatedAt: new Date().toISOString(),
+      };
+
+      return result;
+    } catch (error) {
+      console.error('Get feature availability error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get features for a category
+   */
+  private async getCategoryFeatures(userId: string, features: FeatureCode[]): Promise<Record<string, any>> {
+    const result: Record<string, any> = {};
+
+    for (const feature of features) {
+      const access = await this.canAccessFeature(userId, feature);
+      
+      if (access.allowed) {
+        result[feature] = { enabled: true };
+        
+        // Add usage limits if applicable
+        if (this.hasUsageLimits(feature)) {
+          const usage = await this.checkFeatureUsage(userId, feature);
+          result[feature].limits = {
+            maxPerMonth: usage.limit,
+            used: usage.used,
+            remaining: usage.remaining,
+          };
+        }
+      } else {
+        result[feature] = {
+          enabled: false,
+          reason: access.reason,
+        };
+
+        // Add upgrade requirements
+        if (access.upgradeOptions?.subscriptionNeeded) {
+          result[feature].upgradeRequired = {
+            tier: access.upgradeOptions.subscriptionNeeded.requiredTier,
+            cost: access.upgradeOptions.subscriptionNeeded.upgradeCost,
+            currency: access.upgradeOptions.subscriptionNeeded.currency,
+          };
+        }
+
+        if (access.upgradeOptions?.trustNeeded) {
+          result[feature].trustRequired = {
+            current: access.upgradeOptions.trustNeeded.currentScore,
+            required: access.upgradeOptions.trustNeeded.requiredScore,
+            level: access.upgradeOptions.trustNeeded.requiredLevel,
+          };
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Check if feature has usage limits
+   */
+  private hasUsageLimits(feature: FeatureCode): boolean {
+    return [
+      'events:create',
+      'communities:join',
+      'communities:create',
+      'marketplace:create',
+      'connections:create',
+      'vouches:create',
+    ].includes(feature);
+  }
+
   async getUserAccessSummary(userId: string): Promise<UserAccessSummary | null> {
     try {
       const user = await this.getUserWithAccessData(userId);
@@ -127,7 +296,17 @@ class AccessControlService {
       };
 
       // Check all features
-      const allFeatures = Object.values(FeatureCode);
+      const allFeatures: FeatureCode[] = [
+        'events:view', 'events:join', 'events:create',
+        'marketplace:view', 'marketplace:join', 'marketplace:create',
+        'communities:view', 'communities:join', 'communities:create', 'communities:moderate', 'communities:admin',
+        'homesurf:view', 'homesurf:join', 'homesurf:create',
+        'berseguide:view', 'berseguide:join', 'berseguide:create',
+        'services:view', 'services:join', 'services:create',
+        'mentorship:view', 'mentorship:join', 'mentorship:create',
+        'connections:create', 'messages:create', 'vouches:create',
+        'rewards:earn', 'rewards:redeem',
+      ];
       const accessibleFeatures: FeatureCode[] = [];
       const lockedFeatures: any[] = [];
 
@@ -333,25 +512,33 @@ class AccessControlService {
   /**
    * Generate upgrade options
    */
-  private generateUpgradeOptions(
+  private async generateUpgradeOptions(
     user: any,
     subscriptionCheck: { allowed: boolean },
     trustCheck: { allowed: boolean },
     requirements: any
-  ): UpgradeOptions {
+  ): Promise<UpgradeOptions> {
     const options: UpgradeOptions = {};
 
     // Subscription upgrade needed
     if (!subscriptionCheck.allowed && requirements.subscriptionTier) {
       const currentTier = user.subscription.tier;
       const requiredTier = requirements.subscriptionTier;
-      const upgradeCost = TIER_PRICING[requiredTier].monthly;
+      
+      // Fetch actual price from database
+      const tierData = await prisma.subscriptionTier.findFirst({
+        where: { tierCode: requiredTier, isActive: true },
+        select: { price: true, currency: true }
+      });
+      
+      const upgradeCost = tierData?.price || TIER_PRICING[requiredTier].monthly;
+      const currency = tierData?.currency || 'MYR';
 
       options.subscriptionNeeded = {
         currentTier,
         requiredTier,
         upgradeCost,
-        currency: 'MYR',
+        currency,
       };
     }
 
@@ -421,11 +608,11 @@ class AccessControlService {
 
     // Map feature to limit
     switch (feature) {
-      case FeatureCode.CREATE_EVENTS:
+      case 'events:create':
         return features.eventAccess?.maxEventsPerMonth || 0;
-      case FeatureCode.SELL_MARKETPLACE:
+      case 'marketplace:create':
         return features.marketplaceAccess?.maxListings || 0;
-      case FeatureCode.OFFER_PROFESSIONAL_SERVICES:
+      case 'services:create':
         return features.serviceAccess?.maxActiveServices || 0;
       default:
         return -1; // Unlimited or not applicable

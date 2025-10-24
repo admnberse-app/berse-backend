@@ -47,6 +47,12 @@ const tiers = [
         overridesTrustScore: true,
       },
 
+      // Points & Rewards
+      pointsAccess: {
+        canEarn: true,   // Can earn points
+        canRedeem: false, // Cannot redeem rewards
+      },
+
       // Travel (not available)
       travelAccess: {
         canJoin: false,
@@ -125,8 +131,14 @@ const tiers = [
 
       // Vouching
       vouchingLimits: {
-        maxVouches: -1, // No tier cap - uses trust score brackets
+        maxVouches: -1, // No tier cap - uses trust score brackets (max 25 based on trust)
         overridesTrustScore: false, // Trust score determines actual limit
+      },
+
+      // Points & Rewards
+      pointsAccess: {
+        canEarn: true,   // Can earn points
+        canRedeem: true,  // Can redeem rewards
       },
 
       // Travel (trust-gated)

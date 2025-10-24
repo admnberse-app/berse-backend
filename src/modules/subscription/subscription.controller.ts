@@ -344,6 +344,47 @@ class SubscriptionController {
   }
 
   /**
+   * GET /api/subscriptions/features/availability
+   * Get all feature availability in one optimized call
+   * This endpoint is designed for frontend to fetch once and cache
+   */
+  async getFeatureAvailability(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const availability = await accessControlService.getFeatureAvailability(req.user.id);
+
+      if (!availability) {
+        res.status(404).json({
+          success: false,
+          error: 'User not found',
+        });
+        return;
+      }
+
+      // Set cache headers (5 minutes)
+      res.set('Cache-Control', 'private, max-age=300');
+
+      res.status(200).json({
+        success: true,
+        data: availability,
+      });
+    } catch (error) {
+      console.error('Get feature availability error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch feature availability',
+      });
+    }
+  }
+
+  /**
    * GET /api/subscriptions/access-summary
    * Get complete access summary for user
    */
@@ -486,7 +527,7 @@ class SubscriptionController {
         return;
       }
 
-      const cost = subscriptionService.calculateUpgradeCost(
+      const cost = await subscriptionService.calculateUpgradeCost(
         currentSubscription.tier,
         targetTier,
         billingCycle || BillingCycle.MONTHLY

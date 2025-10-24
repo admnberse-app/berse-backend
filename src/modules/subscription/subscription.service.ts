@@ -173,7 +173,7 @@ class SubscriptionService {
       }
 
       // Check if it's actually an upgrade
-      const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC, SubscriptionTier.PREMIUM];
+      const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
       const currentIndex = currentTiers.indexOf(current.tier);
       const newIndex = currentTiers.indexOf(newTierCode);
 
@@ -300,15 +300,27 @@ class SubscriptionService {
   /**
    * Calculate upgrade cost
    */
-  calculateUpgradeCost(
+  async calculateUpgradeCost(
     currentTier: SubscriptionTier,
     targetTier: SubscriptionTier,
     billingCycle: BillingCycle = BillingCycle.MONTHLY
-  ): number {
+  ): Promise<number> {
+    // Fetch actual prices from database
+    const [currentTierData, targetTierData] = await Promise.all([
+      prisma.subscriptionTier.findFirst({
+        where: { tierCode: currentTier, isActive: true },
+        select: { price: true, billingCycle: true }
+      }),
+      prisma.subscriptionTier.findFirst({
+        where: { tierCode: targetTier, isActive: true },
+        select: { price: true, billingCycle: true }
+      })
+    ]);
+
+    // Fallback to hardcoded values if not found
     const cycleKey = billingCycle === BillingCycle.MONTHLY ? 'monthly' : 'annual';
-    
-    const currentPrice = TIER_PRICING[currentTier][cycleKey];
-    const targetPrice = TIER_PRICING[targetTier][cycleKey];
+    const currentPrice = currentTierData?.price || TIER_PRICING[currentTier][cycleKey];
+    const targetPrice = targetTierData?.price || TIER_PRICING[targetTier][cycleKey];
 
     return targetPrice - currentPrice;
   }

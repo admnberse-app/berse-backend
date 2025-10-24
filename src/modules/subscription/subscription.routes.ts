@@ -64,6 +64,14 @@ router.post('/cancel', authenticate, subscriptionController.cancel);
 router.post('/check-feature', authenticate, subscriptionController.checkFeature);
 
 /**
+ * GET /api/subscriptions/features/availability
+ * Get all feature availability in one optimized call (RECOMMENDED)
+ * Returns subscription status, trust level, and all feature states
+ * Frontend should call this once and cache the result
+ */
+router.get('/features/availability', authenticate, subscriptionController.getFeatureAvailability);
+
+/**
  * GET /api/subscriptions/access-summary
  * Get complete access summary (subscription + trust + features)
  */
