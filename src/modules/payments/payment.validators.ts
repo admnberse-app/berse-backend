@@ -25,7 +25,8 @@ export const createPaymentIntentValidators = [
   body('referenceType')
     .trim()
     .notEmpty().withMessage('Reference type is required')
-    .isIn(['event_ticket', 'event', 'marketplace_order', 'service_booking', 'subscription', 'donation'])
+    .customSanitizer(value => value.toLowerCase())
+    .isIn(['event_ticket', 'event', 'marketplace_order', 'service_booking', 'subscription', 'subscription_tier', 'homesurf', 'berseguide', 'donation'])
     .withMessage('Invalid reference type'),
   
   body('referenceId')

@@ -26,6 +26,7 @@
     "prisma:seed:all": "ts-node prisma/seeds/index.ts",
     "prisma:seed:core": "ts-node prisma/seed.ts",
     "prisma:seed:badges": "ts-node prisma/seeds/core/badges.seed.ts",
+    "prisma:seed:new-badges": "ts-node prisma/seeds/new-badges-standalone.seed.ts",
     "prisma:seed:rewards": "ts-node prisma/seeds/core/rewards.seed.ts",
     "prisma:seed:users": "ts-node prisma/seeds/core/users.seed.ts",
     "prisma:seed:communities": "ts-node prisma/seeds/core/communities.seed.ts",

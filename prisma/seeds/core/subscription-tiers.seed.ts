@@ -179,7 +179,7 @@ const tiers = [
     displayOrder: 2,
     isActive: true,
     isPublic: true,
-    trialDays: 7,
+    trialDays: 0,
   },
 ];
 
