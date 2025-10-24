@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Frontend projects (not needed for backend deployment)
+frontend/
+frontend-api/
+bersemuka-frontend/
+
+# Development files
+.git
+.github
+.vscode
+.idea
+*.log
+*.md
+*.txt
+
+# Test files
+tests/
+test-script/
+*.test.ts
+*.spec.ts
+check-*.ts
+test-*.ts
+test-*.js
+test-*.sh
+verify-*.ts
+verify-*.js
+
+# Documentation
+docs/
+*.md
+CLAUDE.md
+plan.md
+
+# Environment files (Railway uses its own env vars)
+.env*
+!.env.example
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+
+# Uploads and temp files
+uploads/
+backups/
+artifacts/
+public/temp/
+
+# Logo and branding (not needed at runtime)
+Logo/
+Branding/
+
+# Nginx configs (not needed in container)
+nginx/
+
+# Misc
+.DS_Store
+.netlify/
+*.swp
+*.swo
+*~

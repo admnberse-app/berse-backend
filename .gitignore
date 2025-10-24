@@ -113,7 +113,6 @@ temp/
 # Docker (not used - Railway deployment)
 Dockerfile*
 docker-compose*.yml
-.dockerignore
 docker-volumes/
 
 # Misc
