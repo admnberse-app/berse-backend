@@ -89,12 +89,44 @@ export class PaymentService {
 
       logger.info(`[PaymentService] Created transaction record: ${transaction.id}`);
 
-      // 5. Create payment intent through gateway
+      // 5. Prepare better description for payment
+      let description = input.description || `Payment for ${input.referenceType}`;
+      
+      // For event tickets, fetch event details for better description
+      const refType = input.referenceType?.toUpperCase();
+      const txnType = input.transactionType?.toUpperCase();
+      if (refType === 'EVENT_TICKET' || txnType === 'EVENT_TICKET') {
+        try {
+          const ticket = await prisma.eventTicket.findUnique({
+            where: { id: input.referenceId },
+            include: {
+              events: { select: { title: true, date: true, location: true } },
+              tier: { select: { tierName: true } },
+            },
+          });
+          
+          if (ticket?.events) {
+            const eventDate = new Date(ticket.events.date).toLocaleDateString('en-US', { 
+              month: 'short', day: 'numeric', year: 'numeric' 
+            });
+            const tierInfo = ticket.tier?.tierName ? ` - ${ticket.tier.tierName}` : '';
+            description = `${ticket.events.title}${tierInfo} | ${eventDate}`;
+            
+            if (ticket.events.location) {
+              description += ` | ${ticket.events.location}`;
+            }
+          }
+        } catch (err) {
+          logger.warn('[PaymentService] Could not fetch event details for description:', err);
+        }
+      }
+      
+      // 6. Create payment intent through gateway
       const paymentIntent = await gateway.createPaymentIntent({
         amount: input.amount,
         currency,
         customerId: userId,
-        description: input.description || `Payment for ${input.referenceType}`,
+        description,
         metadata: {
           transactionId: transaction.id,
           userId,
@@ -106,12 +138,13 @@ export class PaymentService {
         },
       });
 
-      // 6. Update transaction with gateway details
+      // 7. Update transaction with gateway details and description
       const updatedTransaction = await prisma.paymentTransaction.update({
         where: { id: transaction.id },
         data: {
           gatewayTransactionId: paymentIntent.intentId,
           gatewayMetadata: paymentIntent.metadata as any,
+          description,
         },
       });
 
@@ -119,9 +152,10 @@ export class PaymentService {
         transactionId: transaction.id,
         gatewayTransactionId: paymentIntent.intentId,
         invoiceUrl: paymentIntent.paymentUrl,
+        description,
       });
 
-      // 7. Send notification to user
+      // 8. Send notification to user
       await NotificationService.createNotification({
         userId,
         type: 'PAYMENT',
@@ -138,10 +172,11 @@ export class PaymentService {
         },
       });
 
-      // 8. Return response
+      // 9. Return response
       return {
         transactionId: updatedTransaction.id,
         clientSecret: paymentIntent.paymentUrl, // For Xendit, this is the checkout URL
+        paymentUrl: paymentIntent.paymentUrl, // Payment URL for user to complete checkout
         amount: input.amount,
         currency,
         status: PaymentStatus.PENDING,
@@ -1093,8 +1128,16 @@ export class PaymentService {
    */
   private async handlePaymentWebhook(event: any): Promise<void> {
     try {
-      const invoiceId = event.data.id || event.data.invoice_id;
-      if (!invoiceId) return;
+      const invoiceId = event.data.intentId || event.data.id || event.data.invoice_id;
+      logger.info(`[PaymentService] Processing webhook for invoice: ${invoiceId}`, { 
+        eventType: event.eventType,
+        eventData: event.data 
+      });
+      
+      if (!invoiceId) {
+        logger.warn(`[PaymentService] No invoice ID found in webhook event`);
+        return;
+      }
 
       // Find transaction by gateway ID
       const transaction = await prisma.paymentTransaction.findFirst({
@@ -1105,18 +1148,32 @@ export class PaymentService {
         logger.warn(`[PaymentService] Transaction not found for invoice: ${invoiceId}`);
         return;
       }
+      
+      logger.info(`[PaymentService] Found transaction: ${transaction.id}`, {
+        currentStatus: transaction.status,
+        referenceType: transaction.referenceType,
+        referenceId: transaction.referenceId
+      });
 
       // Update status based on event
       let newStatus: PaymentStatus | undefined;
-      if (event.eventType.includes('paid') || event.eventType.includes('success')) {
+      if (event.eventType.includes('paid') || event.eventType.includes('success') || event.eventType.includes('succeeded')) {
         newStatus = PaymentStatus.SUCCEEDED;
       } else if (event.eventType.includes('failed')) {
         newStatus = PaymentStatus.FAILED;
       } else if (event.eventType.includes('expired')) {
         newStatus = PaymentStatus.CANCELED;
       }
+      
+      logger.info(`[PaymentService] Determined newStatus: ${newStatus}`, { 
+        eventType: event.eventType,
+        includesPaid: event.eventType.includes('paid'),
+        includesSuccess: event.eventType.includes('success')
+      });
 
       if (newStatus) {
+        logger.info(`[PaymentService] Updating transaction ${transaction.id} to status: ${newStatus}`);
+        
         await prisma.paymentTransaction.update({
           where: { id: transaction.id },
           data: {
@@ -1126,7 +1183,8 @@ export class PaymentService {
         });
 
         // Update marketplace order if payment succeeded
-        if (newStatus === PaymentStatus.SUCCEEDED && transaction.referenceType === 'MARKETPLACE_ORDER') {
+        const normalizedRefType = transaction.referenceType?.toUpperCase();
+        if (newStatus === PaymentStatus.SUCCEEDED && normalizedRefType === 'MARKETPLACE_ORDER') {
           const updatedOrder = await prisma.marketplaceOrder.update({
             where: { id: transaction.referenceId },
             data: {
@@ -1232,8 +1290,50 @@ export class PaymentService {
           }
         }
 
+        // Handle subscription payment success
+        if (newStatus === PaymentStatus.SUCCEEDED && normalizedRefType === 'SUBSCRIPTION') {
+          logger.info(`[PaymentService] Processing subscription payment: ${transaction.referenceId}`);
+          try {
+            // Update subscription payment record
+            await prisma.subscriptionPayment.update({
+              where: { id: transaction.referenceId },
+              data: {
+                status: PaymentStatus.SUCCEEDED,
+                paidAt: new Date(),
+              }
+            });
+
+            // Extend subscription period
+            const subPayment = await prisma.subscriptionPayment.findUnique({
+              where: { id: transaction.referenceId },
+              include: { subscriptions: true }
+            });
+
+            if (subPayment) {
+              await prisma.userSubscription.update({
+                where: { id: subPayment.subscriptionId },
+                data: {
+                  status: 'ACTIVE',
+                  currentPeriodEnd: subPayment.billingPeriodEnd,
+                }
+              });
+
+              logger.info(`[PaymentService] Subscription activated/renewed: ${subPayment.subscriptionId}`);
+            }
+          } catch (error) {
+            logger.error('[PaymentService] Failed to process subscription payment:', error);
+          }
+        }
+
         // Update event ticket if payment succeeded
-        if (newStatus === PaymentStatus.SUCCEEDED && transaction.referenceType === 'EVENT_TICKET') {
+        logger.info(`[PaymentService] Checking ticket update condition`, {
+          newStatus,
+          normalizedRefType,
+          shouldUpdate: newStatus === PaymentStatus.SUCCEEDED && normalizedRefType === 'EVENT_TICKET'
+        });
+        
+        if (newStatus === PaymentStatus.SUCCEEDED && normalizedRefType === 'EVENT_TICKET') {
+          logger.info(`[PaymentService] Updating event ticket: ${transaction.referenceId}`);
           try {
             const updatedTicket = await prisma.eventTicket.update({
               where: { id: transaction.referenceId },
@@ -1273,8 +1373,8 @@ export class PaymentService {
 
             // Log activity and send emails after payment success
             if (updatedTicket) {
-              const { storageService } = require('../services/storage.service');
-              const { emailService } = require('../services/email.service');
+              const { storageService } = require('../../services/storage.service');
+              const { emailService } = require('../../services/email.service');
               const QRCode = require('qrcode');
 
               // Fetch event details separately since include doesn't work with events relation
@@ -1554,13 +1654,23 @@ export class PaymentService {
         case 'EVENT_TICKET':
           // Get event organizer from event
           if (transaction.referenceId) {
-            const event = await prisma.event.findUnique({
+            const ticket = await prisma.eventTicket.findUnique({
               where: { id: transaction.referenceId },
-              select: { hostId: true, title: true, date: true },
+              include: { events: { select: { hostId: true, title: true, date: true } } }
             });
-            recipientId = event?.hostId || transaction.userId;
-            recipientType = 'event_organizer';
-            metadata = { eventId: transaction.referenceId, eventTitle: event?.title, eventDate: event?.date };
+            if (ticket?.events) {
+              recipientId = ticket.events.hostId;
+              recipientType = 'event_organizer';
+              metadata = { 
+                eventId: ticket.eventId, 
+                eventTitle: ticket.events.title, 
+                eventDate: ticket.events.date,
+                ticketId: transaction.referenceId 
+              };
+            } else {
+              recipientId = transaction.userId;
+              recipientType = 'event_organizer';
+            }
           } else {
             recipientId = transaction.userId;
             recipientType = 'event_organizer';
@@ -1572,20 +1682,76 @@ export class PaymentService {
           if (transaction.referenceId) {
             const order = await prisma.marketplaceOrder.findUnique({
               where: { id: transaction.referenceId },
-              select: { sellerId: true },
+              select: { sellerId: true, marketplaceListings: { select: { title: true } } },
             });
             recipientId = order?.sellerId || transaction.userId;
             recipientType = 'marketplace_seller';
-            metadata = { orderId: transaction.referenceId };
+            metadata = { 
+              orderId: transaction.referenceId,
+              itemTitle: order?.marketplaceListings?.title 
+            };
           } else {
             recipientId = transaction.userId;
             recipientType = 'marketplace_seller';
           }
           break;
 
+        case 'SUBSCRIPTION':
+          // Subscription payments go directly to platform (no payout distribution)
+          logger.info(`[PaymentService] Subscription payment - no payout distribution needed`);
+          return; // Exit early - platform keeps subscription revenue
+
+        case 'DONATION':
+          // Donations go to specified recipient or platform
+          if (transaction.referenceId) {
+            // referenceId could be userId, communityId, eventId, etc.
+            const refType = transaction.referenceType?.toUpperCase();
+            if (refType === 'USER') {
+              recipientId = transaction.referenceId;
+              recipientType = 'donation_recipient';
+              metadata = { donationType: 'user_support' };
+            } else if (refType === 'COMMUNITY') {
+              const community = await prisma.community.findUnique({
+                where: { id: transaction.referenceId },
+                select: { createdById: true, name: true }
+              });
+              recipientId = community?.createdById || transaction.userId;
+              recipientType = 'community_organizer';
+              metadata = { 
+                communityId: transaction.referenceId,
+                communityName: community?.name,
+                donationType: 'community_support' 
+              };
+            } else if (refType === 'EVENT') {
+              const event = await prisma.event.findUnique({
+                where: { id: transaction.referenceId },
+                select: { hostId: true, title: true }
+              });
+              recipientId = event?.hostId || transaction.userId;
+              recipientType = 'event_organizer';
+              metadata = { 
+                eventId: transaction.referenceId,
+                eventTitle: event?.title,
+                donationType: 'event_support' 
+              };
+            } else {
+              // Generic donation
+              recipientId = transaction.userId;
+              recipientType = 'donation_recipient';
+              metadata = { donationType: 'general' };
+            }
+          } else {
+            // Platform donation
+            logger.info(`[PaymentService] Platform donation - no payout distribution`);
+            return;
+          }
+          break;
+
         default:
+          // Generic payment - recipient is the payer
           recipientId = transaction.userId;
           recipientType = 'user';
+          metadata = { transactionType: transaction.transactionType };
       }
 
       // Calculate payout amounts
@@ -1611,32 +1777,10 @@ export class PaymentService {
         });
       }
 
-      // Create platform revenue payout (released immediately)
+      // Platform revenue tracking - skip payout distribution as PLATFORM recipient doesn't exist in User table
+      // Platform fees are tracked in the transaction record itself
       if (platformRevenue > 0) {
-        await prisma.payoutDistribution.create({
-          data: {
-            paymentTransactionId: transaction.id,
-            recipientId: 'PLATFORM', // Special identifier for platform
-            recipientType: 'platform',
-            amount: platformRevenue,
-            currency: transaction.currency,
-            status: 'RELEASED', // Platform fee is collected immediately
-            releaseDate: new Date(),
-            canReleaseAt: new Date(),
-            releasedAt: new Date(),
-            holdReason: 'platform_fee_revenue',
-            autoReleaseEnabled: true,
-            requiresManualReview: false,
-            metadata: {
-              transactionType: transaction.transactionType,
-              originalTransactionId: transaction.id,
-              ...metadata,
-            },
-            notes: `Platform fee from ${transaction.transactionType}`,
-          },
-        });
-
-        logger.info(`[PaymentService] Created platform revenue payout: ${platformRevenue} ${transaction.currency}`);
+        logger.info(`[PaymentService] Platform revenue recorded: ${platformRevenue} ${transaction.currency} (tracked in transaction platformFee)`);
       }
 
       logger.info(`[PaymentService] Payout distribution completed for transaction ${transactionId}`);

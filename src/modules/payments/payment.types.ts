@@ -108,6 +108,7 @@ export interface PaymentTransactionResponse {
 export interface PaymentIntentResponse {
   transactionId: string;
   clientSecret?: string;
+  paymentUrl?: string;
   amount: number;
   currency: string;
   status: PaymentStatus;

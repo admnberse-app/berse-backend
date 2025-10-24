@@ -785,10 +785,80 @@ router.post(
 
 /**
  * @swagger
+ * /v2/events/me/participations:
+ *   get:
+ *     summary: Get my participations
+ *     description: |
+ *       Unified endpoint to retrieve all event participations (both free RSVPs and paid tickets).
+ *       Returns EventParticipant records with associated ticket information if applicable.
+ *       - Free events: participant with no ticket
+ *       - Paid events: participant with associated ticket details
+ *     tags: [Events - Participants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: eventId
+ *         schema:
+ *           type: string
+ *         description: Filter by event ID
+ *     responses:
+ *       200:
+ *         description: Participations retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       userId:
+ *                         type: string
+ *                       eventId:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       qrCode:
+ *                         type: string
+ *                       events:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           date:
+ *                             type: string
+ *                           isFree:
+ *                             type: boolean
+ *                       tickets:
+ *                         type: array
+ *                         description: Associated tickets for paid events (empty for free events)
+ *                         items:
+ *                           type: object
+ */
+router.get(
+  '/me/participations',
+  authenticateToken,
+  EventController.getMyParticipations
+);
+
+/**
+ * @swagger
  * /v2/events/me/tickets:
  *   get:
- *     summary: Get my tickets
- *     description: Retrieve all tickets purchased by the authenticated user
+ *     summary: Get my tickets (Legacy)
+ *     description: |
+ *       Retrieve all tickets purchased by the authenticated user.
+ *       DEPRECATED: Use /v2/events/me/participations instead for unified access.
+ *     deprecated: true
  *     tags: [Events - Tickets]
  *     security:
  *       - bearerAuth: []
@@ -903,10 +973,11 @@ router.delete(
  * @swagger
  * /v2/events/me/registrations:
  *   get:
- *     summary: Get my event registrations
+ *     summary: Get my event registrations (Legacy)
  *     description: |
- *       Retrieve all event registrations (EventParticipant records) for the authenticated user.
- *       Includes status information (REGISTERED, CHECKED_IN, CANCELED, etc.).
+ *       Retrieve event registrations for free events only.
+ *       DEPRECATED: Use /v2/events/me/participations instead for unified access to both free and paid events.
+ *     deprecated: true
  *     tags: [Events - Participants]
  *     security:
  *       - bearerAuth: []

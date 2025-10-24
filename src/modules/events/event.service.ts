@@ -1092,12 +1092,81 @@ export class EventService {
   }
 
   /**
-   * Get user's participants/RSVPs
+   * Get user's participations (unified: both free RSVPs and paid tickets)
+   * All event participation goes through EventParticipant model
+   * Free events: participant.status = REGISTERED (no ticket)
+   * Paid events: participant.status = CONFIRMED + has associated EventTicket
+   */
+  static async getUserParticipations(userId: string, eventId?: string): Promise<ParticipantResponse[]> {
+    try {
+      const participants = await prisma.eventParticipant.findMany({
+        where: { 
+          userId,
+          ...(eventId && { eventId })
+        },
+        include: {
+          events: {
+            select: {
+              id: true,
+              title: true,
+              date: true,
+              location: true,
+              type: true,
+              images: true,
+              isFree: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              email: true,
+              profile: { select: { profilePicture: true } },
+            },
+          },
+          eventTickets: {
+            select: {
+              id: true,
+              ticketNumber: true,
+              ticketType: true,
+              price: true,
+              currency: true,
+              status: true,
+              paymentStatus: true,
+              purchasedAt: true,
+              tier: {
+                select: {
+                  id: true,
+                  tierName: true,
+                  price: true,
+                }
+              }
+            }
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return participants as any[];
+    } catch (error: any) {
+      logger.error('Error fetching user participations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's participants/RSVPs (legacy - free events only)
+   * @deprecated Use getUserParticipations instead
    */
   static async getUserRsvps(userId: string): Promise<ParticipantResponse[]> {
     try {
       const participants = await prisma.eventParticipant.findMany({
-        where: { userId },
+        where: { 
+          userId,
+          // Only get participants without tickets (free events)
+          eventTickets: { none: {} }
+        },
         include: {
           events: {
             select: {

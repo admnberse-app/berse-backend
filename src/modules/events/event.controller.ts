@@ -214,8 +214,28 @@ export class EventController {
   }
 
   /**
-   * Get user's tickets
+   * Get my participations (tickets + RSVPs)
+   * Unified endpoint for both free (RSVP) and paid (ticket) events
+   * @route GET /v2/events/me/participations
+   */
+  static async getMyParticipations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const eventId = req.query.eventId as string | undefined;
+
+      // Get all participations (includes both free and paid events)
+      const participants = await EventService.getUserParticipations(userId, eventId);
+
+      sendSuccess(res, participants, 'Participations retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user's tickets (legacy endpoint - only paid events)
    * @route GET /v2/events/me/tickets
+   * @deprecated Use /v2/events/me/participations instead
    */
   static async getMyTickets(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -271,8 +291,9 @@ export class EventController {
   }
 
   /**
-   * Get user's event registrations
+   * Get my registrations (legacy endpoint - only free events)
    * @route GET /v2/events/me/registrations
+   * @deprecated Use /v2/events/me/participations instead
    */
   static async getMyRegistrations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {

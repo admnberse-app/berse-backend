@@ -417,18 +417,20 @@ export class XenditGateway extends AbstractPaymentGateway {
         configuredToken: this.config.webhookSecret ? `${this.config.webhookSecret.substring(0, 10)}...` : 'not configured'
       });
       
-      if (!this.config.webhookSecret) {
-        logger.warn('[Xendit] No webhook secret configured, skipping verification');
-        return true; // In dev, you might skip this
+      if (!this.config.webhookSecret || this.config.webhookSecret === 'your_webhook_verification_token_from_xendit_dashboard') {
+        logger.warn('[Xendit] No webhook secret configured or using default value, skipping verification for development');
+        return true; // In dev, skip verification when secret is not properly configured
       }
 
       // Verify the callback token matches the configured token
+      // Xendit tokens can vary in length, so we just check for exact match
       const isValid = callbackToken === this.config.webhookSecret;
 
       if (!isValid) {
         logger.error('[Xendit] Invalid webhook signature', {
-          receivedLength: callbackToken?.length || 0,
-          expectedLength: this.config.webhookSecret.length
+          receivedToken: callbackToken ? `${callbackToken.substring(0, 15)}...` : 'empty',
+          expectedToken: this.config.webhookSecret ? `${this.config.webhookSecret.substring(0, 15)}...` : 'not configured',
+          match: callbackToken === this.config.webhookSecret
         });
         return false;
       }
