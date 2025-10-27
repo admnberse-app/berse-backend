@@ -621,7 +621,7 @@ router.get(
  *   get:
  *     tags: [Card Game]
  *     summary: Get all topics
- *     description: Retrieve all card game topics, optionally filtered by active status
+ *     description: Retrieve all card game topics with statistics for preview
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -629,8 +629,14 @@ router.get(
  *         name: activeOnly
  *         schema:
  *           type: boolean
- *           default: false
+ *           default: true
  *         description: Return only active topics
+ *       - in: query
+ *         name: includeStats
+ *         schema:
+ *           type: boolean
+ *           default: true
+ *         description: Include statistics for each topic (enabled by default for preview)
  *     responses:
  *       200:
  *         description: Topics retrieved successfully
@@ -662,6 +668,19 @@ router.get(
  *                         type: boolean
  *                       displayOrder:
  *                         type: integer
+ *                       stats:
+ *                         type: object
+ *                         description: Statistics for the topic (when includeStats=true)
+ *                         properties:
+ *                           totalSessions:
+ *                             type: integer
+ *                             description: Total number of completed sessions
+ *                           averageRating:
+ *                             type: number
+ *                             description: Average rating from all feedback
+ *                           totalFeedback:
+ *                             type: integer
+ *                             description: Total feedback count
  */
 router.get(
   '/topics',

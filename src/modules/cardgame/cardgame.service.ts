@@ -1096,9 +1096,9 @@ export class CardGameService {
   /**
    * Get all active topics
    */
-  static async getTopics(includeStats = false) {
+  static async getTopics(includeStats = false, activeOnly = true) {
     const topics = await prisma.cardGameTopic.findMany({
-      where: { isActive: true },
+      where: activeOnly ? { isActive: true } : undefined,
       orderBy: [
         { displayOrder: 'asc' },
         { createdAt: 'asc' },

@@ -20,6 +20,7 @@ import apiV2Router from './routes/v2';
 import subscriptionRoutes from './modules/subscription/subscription.routes';
 import adminSubscriptionRoutes from './routes/admin/subscription.admin.routes';
 import paymentWebhookRoutes from './routes/webhooks/payment-webhook.routes';
+import healthRoutes from './routes/health.routes';
 
 const app: Application = express();
 
@@ -240,6 +241,9 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
 // API Routes
 app.use('/api/v2', apiV2Router);
 app.use('/v2', apiV2Router);      // New v2 routes (primary)
+
+// Health and monitoring routes
+app.use('/', healthRoutes);
 
 // Subscription routes (new module)
 app.use('/api/subscriptions', subscriptionRoutes);

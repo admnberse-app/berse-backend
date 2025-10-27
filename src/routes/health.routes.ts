@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../config/database';
 import { config } from '../config';
+import { emailService } from '../services/email.service';
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
@@ -172,6 +173,60 @@ router.get('/health/ready', async (req, res) => {
     res.status(503).json({
       status: 'not_ready',
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test email endpoint
+router.post('/test-email', async (req, res) => {
+  try {
+    const { to } = req.body;
+    
+    if (!to) {
+      res.status(400).json({
+        success: false,
+        error: 'Email address is required. Provide "to" in request body.'
+      });
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid email address format'
+      });
+      return;
+    }
+    
+    console.log(`📧 Sending test email to: ${to}`);
+    
+    const result = await emailService.sendTestEmail(to);
+    
+    if (result) {
+      res.status(200).json({
+        success: true,
+        message: `Test email sent successfully to ${to}`,
+        timestamp: new Date().toISOString(),
+        config: {
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          from: process.env.FROM_EMAIL
+        }
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send email. Check server logs for details.'
+      });
+    }
+  } catch (error: any) {
+    console.error('Test email error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send test email',
+      details: error.stack
     });
   }
 });

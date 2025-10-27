@@ -305,7 +305,8 @@ export class CardGameController {
   static async getTopics(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const activeOnly = req.query.activeOnly === 'true';
-      const topics = await CardGameService.getTopics(activeOnly);
+      const includeStats = req.query.includeStats !== 'false'; // Default to true
+      const topics = await CardGameService.getTopics(includeStats, activeOnly);
 
       sendSuccess(res, topics, 'Topics retrieved successfully');
     } catch (error) {
