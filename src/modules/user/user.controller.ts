@@ -1494,6 +1494,8 @@ export class UserController {
               earnedAt: 'desc',
             },
           },
+          homeSurf: true,
+          berseGuide: true,
         },
       });
 
@@ -2137,6 +2139,19 @@ export class UserController {
       };
 
       // ==================== SECTION 7: BUILD FINAL RESPONSE ====================
+      
+      // ==================== SERVICES SUMMARY ====================
+      const services = {
+        homeSurf: {
+          isEnabled: user.homeSurf?.isEnabled || false,
+          hasProfile: !!user.homeSurf,
+        },
+        berseGuide: {
+          isEnabled: user.berseGuide?.isEnabled || false,
+          hasProfile: !!user.berseGuide,
+        },
+      };
+
       const response = {
         // Relationship status (always included when viewing others)
         relationship: currentUserId ? relationship : undefined,
@@ -2179,6 +2194,9 @@ export class UserController {
         joinedAt: user.createdAt,
         lastActiveAt: user.security?.lastSeenAt || null,
       },
+
+        // Services (HomeSurf & BerseGuide)
+        services,
 
         // Trust & reputation
         trust,
