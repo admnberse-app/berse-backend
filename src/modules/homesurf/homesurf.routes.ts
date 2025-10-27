@@ -668,6 +668,22 @@ router.get(
 );
 
 // ============================================================================
+// METADATA ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/homesurf/metadata:
+ *   get:
+ *     summary: Get HomeSurf metadata (accommodation types, amenities, payment types, etc.)
+ *     tags: [HomeSurf]
+ *     responses:
+ *       200:
+ *         description: Metadata retrieved successfully
+ */
+router.get('/metadata', asyncHandler(homeSurfController.getMetadata.bind(homeSurfController)));
+
+// ============================================================================
 // SEARCH & DISCOVERY ROUTES
 // ============================================================================
 

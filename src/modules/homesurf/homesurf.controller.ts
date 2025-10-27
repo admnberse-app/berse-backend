@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { HomeSurfService } from './homesurf.service';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { MetadataService } from '../../services/metadata.service';
 import type {
   CreateHomeSurfProfileDTO,
   UpdateHomeSurfProfileDTO,
@@ -616,6 +617,36 @@ export class HomeSurfController {
   }
 
   // ============================================================================
+  // METADATA
+  // ============================================================================
+
+  /**
+   * Get HomeSurf metadata
+   * GET /api/v2/homesurf/metadata
+   */
+  async getMetadata(req: Request, res: Response): Promise<void> {
+    try {
+      const metadata = MetadataService.getServiceMetadata();
+
+      res.json({
+        success: true,
+        data: {
+          accommodationTypes: metadata.accommodationTypes,
+          paymentTypes: metadata.paymentTypes,
+          commonAmenities: metadata.commonAmenities,
+          commonLanguages: metadata.commonLanguages,
+          popularCities: metadata.popularCities,
+          trustLevels: MetadataService.getTrustLevels(),
+          activityLevels: MetadataService.getActivityLevels(),
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get metadata', { error });
+      throw error;
+    }
+  }
+
+  // ============================================================================
   // SEARCH & DISCOVERY
   // ============================================================================
 
@@ -644,6 +675,7 @@ export class HomeSurfController {
         limit: req.query.limit ? Number(req.query.limit) : 20,
         sortBy: (req.query.sortBy as any) || 'rating',
         sortOrder: (req.query.sortOrder as any) || 'desc',
+        requestingUserId: req.user?.id, // For mutual connections/communities
       };
 
       const results = await homeSurfService.searchProfiles(query);

@@ -2,6 +2,7 @@ import { PrismaClient, HomeSurfBookingStatus, ReviewerRole, Prisma } from '@pris
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
 import { HomeSurfNotifications } from './homesurf.notifications';
+import { ProfileEnrichmentService } from '../../services/profile-enrichment.service';
 import type {
   CreateHomeSurfProfileDTO,
   UpdateHomeSurfProfileDTO,
@@ -1378,9 +1379,16 @@ export class HomeSurfService {
               select: {
                 id: true,
                 fullName: true,
+                username: true,
+                trustLevel: true,
+                trustScore: true,
+                createdAt: true,
                 profile: {
                   select: {
                     profilePicture: true,
+                    displayName: true,
+                    shortBio: true,
+                    profession: true,
                   },
                 },
               },
@@ -1393,8 +1401,35 @@ export class HomeSurfService {
         prisma.userHomeSurf.count({ where }),
       ]);
 
+      // Enrich user profiles with comprehensive data
+      const enrichedProfiles = await Promise.all(
+        profiles.map(async (profile) => {
+          try {
+            const enrichedUser = await ProfileEnrichmentService.getEnrichedProfile(
+              profile.userId,
+              {
+                requestingUserId: query.requestingUserId,
+                includeBadges: true,
+                includeVouches: true,
+                includeConnectionStats: true,
+              }
+            );
+            
+            const formattedProfile = this.formatProfileResponse(profile, false);
+            return {
+              ...formattedProfile,
+              user: enrichedUser,
+            };
+          } catch (error) {
+            logger.error('Failed to enrich profile', { error, userId: profile.userId });
+            // Fallback to basic profile if enrichment fails
+            return this.formatProfileResponse(profile, false);
+          }
+        })
+      );
+
       return {
-        data: profiles.map((profile) => this.formatProfileResponse(profile, false)),
+        data: enrichedProfiles,
         pagination: {
           page,
           limit,

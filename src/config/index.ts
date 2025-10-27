@@ -11,9 +11,9 @@ const envSchema = z.object({
   DATABASE_MAX_CONNECTIONS: z.string().default('20').transform((val) => parseInt(val, 10)),
   
   // Server
-  PORT: z.string().default('3001').transform((val) => parseInt(val, 10)),
+  PORT: z.string().optional().transform((val) => parseInt(val || '3100', 10)),
   NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
-  API_URL: z.string().url().default('http://localhost:3001'),
+  API_URL: z.string().url().optional(),
   
   // JWT
   JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters'),

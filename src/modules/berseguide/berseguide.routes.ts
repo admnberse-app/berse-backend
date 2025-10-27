@@ -675,6 +675,22 @@ router.get(
 );
 
 // ============================================================================
+// METADATA ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/berseguide/metadata:
+ *   get:
+ *     summary: Get BerseGuide metadata (guide types, payment types, languages, etc.)
+ *     tags: [BerseGuide]
+ *     responses:
+ *       200:
+ *         description: Metadata retrieved successfully
+ */
+router.get('/metadata', asyncHandler(berseGuideController.getMetadata.bind(berseGuideController)));
+
+// ============================================================================
 // SEARCH & DISCOVERY ROUTES
 // ============================================================================
 

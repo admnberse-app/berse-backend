@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { BerseGuideService } from './berseguide.service';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { MetadataService } from '../../services/metadata.service';
 import type {
   CreateBerseGuideProfileDTO,
   UpdateBerseGuideProfileDTO,
@@ -665,6 +666,35 @@ export class BerseGuideController {
   }
 
   // ============================================================================
+  // METADATA
+  // ============================================================================
+
+  /**
+   * Get BerseGuide metadata
+   * GET /api/v2/berseguide/metadata
+   */
+  async getMetadata(req: Request, res: Response): Promise<void> {
+    try {
+      const metadata = MetadataService.getServiceMetadata();
+
+      res.json({
+        success: true,
+        data: {
+          guideTypes: metadata.guideTypes,
+          paymentTypes: metadata.paymentTypes,
+          commonLanguages: metadata.commonLanguages,
+          popularCities: metadata.popularCities,
+          trustLevels: MetadataService.getTrustLevels(),
+          activityLevels: MetadataService.getActivityLevels(),
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get metadata', { error });
+      throw error;
+    }
+  }
+
+  // ============================================================================
   // SEARCH & DISCOVERY
   // ============================================================================
 
@@ -690,6 +720,7 @@ export class BerseGuideController {
         limit: req.query.limit ? Number(req.query.limit) : 20,
         sortBy: (req.query.sortBy as any) || 'rating',
         sortOrder: (req.query.sortOrder as any) || 'desc',
+        requestingUserId: req.user?.id, // For mutual connections/communities
       };
 
       const results = await berseGuideService.searchProfiles(query);

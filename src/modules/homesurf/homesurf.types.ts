@@ -257,6 +257,7 @@ export interface SearchHomeSurfDTO {
   limit?: number;
   sortBy?: 'rating' | 'responseRate' | 'totalGuests' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
+  requestingUserId?: string; // For mutual connections/communities enrichment
 }
 
 export interface SearchHomeSurfResponse {

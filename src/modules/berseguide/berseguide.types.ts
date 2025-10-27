@@ -312,6 +312,7 @@ export interface SearchBerseGuideDTO {
   limit?: number;
   sortBy?: 'rating' | 'hourlyRate' | 'reviewCount' | 'totalSessions' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
+  requestingUserId?: string; // For mutual connections/communities enrichment
 }
 
 export interface SearchBerseGuideResponse {
