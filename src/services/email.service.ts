@@ -1,4 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import logger from '../utils/logger';
 import { 
   EmailOptions, 
@@ -27,11 +28,23 @@ export class EmailService {
   private transporter: Transporter;
   private fromEmail: string;
   private fromName: string;
+  private useSendGrid: boolean;
 
   constructor() {
     this.fromEmail = process.env.FROM_EMAIL || 'noreply@bersemuka.com';
     this.fromName = process.env.FROM_NAME || 'Berse';
     
+    // Initialize SendGrid if API key is available
+    this.useSendGrid = !!process.env.SENDGRID_API_KEY;
+    if (this.useSendGrid) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+      
+      // Note: EU data residency is configured at the API key level in SendGrid dashboard
+      const region = process.env.SENDGRID_DATA_RESIDENCY === 'eu' ? 'EU' : 'Global';
+      logger.info(`✅ SendGrid email service configured (${region} region)`);
+    }
+    
+    // Initialize AWS SES SMTP as fallback
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
@@ -46,22 +59,61 @@ export class EmailService {
     });
 
     // Verify connection configuration
-    this.verifyConnection();
+    if (!this.useSendGrid) {
+      this.verifyConnection();
+    }
   }
 
   private async verifyConnection(): Promise<void> {
     try {
       await this.transporter.verify();
-      logger.info('✅ Email service is ready');
+      logger.info('✅ AWS SES email service is ready (fallback)');
     } catch (error) {
-      logger.error('❌ Email service connection failed', { error });
+      logger.error('❌ AWS SES email service connection failed', { error });
     }
   }
 
   /**
-   * Send a generic email
+   * Send a generic email using SendGrid (primary) or AWS SES (fallback)
    */
   async sendEmail(options: EmailOptions): Promise<boolean> {
+    // Try SendGrid first if available
+    if (this.useSendGrid) {
+      try {
+        const msg = {
+          to: options.to,
+          from: {
+            email: this.fromEmail,
+            name: this.fromName,
+          },
+          subject: options.subject,
+          html: options.html,
+          text: options.text || options.html?.replace(/<[^>]*>/g, ''),
+          cc: options.cc,
+          bcc: options.bcc,
+          // Note: SendGrid handles attachments differently
+        };
+
+        await sgMail.send(msg);
+        
+        logger.info('Email sent successfully via SendGrid', {
+          to: options.to,
+          subject: options.subject,
+          provider: 'SendGrid',
+        });
+
+        return true;
+      } catch (error: any) {
+        logger.error('SendGrid email failed, falling back to AWS SES', {
+          error: error.response?.body || error.message,
+          to: options.to,
+          subject: options.subject,
+        });
+        // Fall through to AWS SES fallback
+      }
+    }
+
+    // Fallback to AWS SES SMTP
     try {
       const mailOptions = {
         from: `"${this.fromName}" <${this.fromEmail}>`,
@@ -76,15 +128,16 @@ export class EmailService {
 
       const info = await this.transporter.sendMail(mailOptions);
       
-      logger.info('Email sent successfully', {
+      logger.info('Email sent successfully via AWS SES', {
         messageId: info.messageId,
         to: options.to,
         subject: options.subject,
+        provider: 'AWS SES',
       });
 
       return true;
     } catch (error) {
-      logger.error('Failed to send email', {
+      logger.error('Failed to send email via both providers', {
         error,
         to: options.to,
         subject: options.subject,
