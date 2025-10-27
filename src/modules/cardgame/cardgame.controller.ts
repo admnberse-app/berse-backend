@@ -456,25 +456,6 @@ export class CardGameController {
   }
 
   /**
-   * Complete a session
-   * @route PATCH /v2/cardgame/sessions/:id/complete
-   */
-  static async completeSession(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const userId = req.user!.id;
-      const data: CompleteSessionRequest = req.body;
-
-      const session = await CardGameService.completeSession(id, userId, data);
-
-      logger.info(`Session completed: ${id} by user ${userId}`);
-      sendSuccess(res, session, 'Session completed successfully');
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
    * Get incomplete sessions for current user
    * @route GET /v2/cardgame/sessions/incomplete
    */
@@ -580,6 +561,172 @@ export class CardGameController {
 
       const result = await CardGameService.getQuestionFeedback(questionId, userId, query);
 
+      sendSuccess(res, result, 'Question feedback retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ============================================================================
+  // NEW ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get main page data (consolidated endpoint)
+   * @route GET /v2/cardgame/main-page
+   */
+  static async getMainPage(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const result = await CardGameService.getMainPage(userId);
+      sendSuccess(res, result, 'Main page data retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get leaderboard with filters
+   * @route GET /v2/cardgame/leaderboard
+   */
+  static async getLeaderboard(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const query = {
+        type: req.query.type as any,
+        timePeriod: req.query.timePeriod as any,
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 20,
+      };
+      const result = await CardGameService.getLeaderboard(query, userId);
+      sendSuccess(res, result, 'Leaderboard retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get popular questions
+   * @route GET /v2/cardgame/popular-questions
+   */
+  static async getPopularQuestions(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const query = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 20,
+        topicId: req.query.topicId as string,
+        sortBy: req.query.sortBy as any,
+        timePeriod: req.query.timePeriod as any,
+      };
+      const result = await CardGameService.getPopularQuestions(query);
+      sendSuccess(res, result, 'Popular questions retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get topic detail with lock/unlock logic
+   * @route GET /v2/cardgame/topics/:topicId/detail
+   */
+  static async getTopicDetail(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { topicId } = req.params;
+      const sessionNumber = req.query.sessionNumber ? parseInt(req.query.sessionNumber as string) : undefined;
+      const result = await CardGameService.getTopicDetail(topicId, userId, sessionNumber);
+      sendSuccess(res, result, 'Topic detail retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Start a new session (enhanced with timing)
+   * @route POST /v2/cardgame/sessions/start
+   */
+  static async startSessionNew(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { topicId, sessionNumber, deviceInfo } = req.body;
+      const result = await CardGameService.startSessionNew(userId, topicId, sessionNumber, deviceInfo);
+      sendSuccess(res, result, 'Session started successfully', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Submit answer with timing data
+   * @route POST /v2/cardgame/sessions/:sessionId/answers
+   */
+  static async submitAnswer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { sessionId } = req.params;
+      const data = req.body;
+      const result = await CardGameService.submitAnswerWithTiming(userId, sessionId, data);
+      sendSuccess(res, result, 'Answer submitted successfully', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Complete session with summary
+   * @route POST /v2/cardgame/sessions/:sessionId/complete
+   */
+  static async completeSession(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { sessionId } = req.params;
+      const data = req.body;
+      const result = await CardGameService.completeSessionWithSummary(userId, sessionId, data);
+      sendSuccess(res, result, 'Session completed successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get detailed user statistics
+   * @route GET /v2/cardgame/stats/me/detailed
+   */
+  static async getDetailedStats(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const query = {
+        timePeriod: req.query.timePeriod as any,
+      };
+      const result = await CardGameService.getDetailedStats(userId, query);
+      sendSuccess(res, result, 'Detailed stats retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get community feedback for a specific question with session lock check
+   * @route GET /v2/cardgame/topics/:topicId/sessions/:sessionNumber/questions/:questionId/feedback
+   */
+  static async getQuestionFeedbackBySession(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { topicId, sessionNumber, questionId } = req.params;
+      const options = {
+        page: req.query.page ? parseInt(req.query.page as string) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
+        sortBy: req.query.sortBy as 'upvotes' | 'recent' | 'rating' | 'replies',
+        minRating: req.query.minRating ? parseInt(req.query.minRating as string) : undefined,
+        hasComments: req.query.hasComments === 'true',
+      };
+      const result = await CardGameService.getQuestionFeedbackWithLock(
+        userId,
+        topicId,
+        parseInt(sessionNumber as string),
+        questionId,
+        options
+      );
       sendSuccess(res, result, 'Question feedback retrieved successfully');
     } catch (error) {
       next(error);

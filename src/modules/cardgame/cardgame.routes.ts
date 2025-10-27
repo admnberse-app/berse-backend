@@ -1319,4 +1319,397 @@ router.get(
   CardGameController.getQuestionFeedback
 );
 
+// ============================================================================
+// NEW ENHANCED ENDPOINTS
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/cardgame/main-page:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get main page data (consolidated endpoint)
+ *     description: Returns user stats, incomplete session, topics with progress, leaderboard summary, and popular questions
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Main page data retrieved successfully
+ */
+router.get(
+  '/main-page',
+  authenticateToken,
+  CardGameController.getMainPage
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/leaderboard:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get leaderboard with filters
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [overall, most-sessions, most-feedback, most-replies, most-upvotes, highest-rating]
+ *           default: overall
+ *       - in: query
+ *         name: timePeriod
+ *         schema:
+ *           type: string
+ *           enum: [all-time, monthly, weekly]
+ *           default: all-time
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Leaderboard retrieved successfully
+ */
+router.get(
+  '/leaderboard',
+  authenticateToken,
+  CardGameController.getLeaderboard
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/popular-questions:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get popular questions with engagement scoring
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: topicId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [engagement, feedback, upvotes, replies, rating]
+ *           default: engagement
+ *       - in: query
+ *         name: timePeriod
+ *         schema:
+ *           type: string
+ *           enum: [all-time, week, month]
+ *           default: all-time
+ *     responses:
+ *       200:
+ *         description: Popular questions retrieved successfully
+ */
+router.get(
+  '/popular-questions',
+  authenticateToken,
+  CardGameController.getPopularQuestions
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/topics/{topicId}/detail:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get topic detail with lock/unlock logic
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sessionNumber
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Topic detail retrieved successfully
+ *       404:
+ *         description: Topic not found
+ */
+router.get(
+  '/topics/:topicId/detail',
+  authenticateToken,
+  topicIdParamValidators,
+  handleValidationErrors,
+  CardGameController.getTopicDetail
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/start-new:
+ *   post:
+ *     tags: [Card Game]
+ *     summary: Start a new session (enhanced with timing)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - topicId
+ *               - sessionNumber
+ *             properties:
+ *               topicId:
+ *                 type: string
+ *               sessionNumber:
+ *                 type: integer
+ *               deviceInfo:
+ *                 type: object
+ *                 properties:
+ *                   platform:
+ *                     type: string
+ *                   os:
+ *                     type: string
+ *                   appVersion:
+ *                     type: string
+ *     responses:
+ *       201:
+ *         description: Session started successfully
+ */
+router.post(
+  '/sessions/start-new',
+  authenticateToken,
+  CardGameController.startSessionNew
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/{sessionId}/answers:
+ *   post:
+ *     tags: [Card Game]
+ *     summary: Submit answer with timing data
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - questionId
+ *               - questionOrder
+ *               - rating
+ *               - timing
+ *             properties:
+ *               questionId:
+ *                 type: string
+ *               questionOrder:
+ *                 type: integer
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *               comment:
+ *                 type: string
+ *               isHelpful:
+ *                 type: boolean
+ *               timing:
+ *                 type: object
+ *                 required:
+ *                   - questionViewedAt
+ *                   - answerStartedAt
+ *                   - answerSubmittedAt
+ *                   - timeSpentSeconds
+ *                 properties:
+ *                   questionViewedAt:
+ *                     type: string
+ *                     format: date-time
+ *                   answerStartedAt:
+ *                     type: string
+ *                     format: date-time
+ *                   answerSubmittedAt:
+ *                     type: string
+ *                     format: date-time
+ *                   timeSpentSeconds:
+ *                     type: integer
+ *     responses:
+ *       201:
+ *         description: Answer submitted successfully
+ */
+router.post(
+  '/sessions/:sessionId/answers',
+  authenticateToken,
+  handleValidationErrors,
+  CardGameController.submitAnswer
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/sessions/{sessionId}/complete-new:
+ *   post:
+ *     tags: [Card Game]
+ *     summary: Complete session with summary
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - totalDuration
+ *             properties:
+ *               totalDuration:
+ *                 type: integer
+ *               deviceInfo:
+ *                 type: object
+ *                 properties:
+ *                   platform:
+ *                     type: string
+ *                   os:
+ *                     type: string
+ *                   appVersion:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Session completed with summary
+ */
+router.post(
+  '/sessions/:sessionId/complete-new',
+  authenticateToken,
+  idParamValidators,
+  handleValidationErrors,
+  CardGameController.completeSession
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/stats/me/detailed:
+ *   get:
+ *     tags: [Card Game]
+ *     summary: Get detailed user statistics
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: timePeriod
+ *         schema:
+ *           type: string
+ *           enum: [all-time, last-7-days, last-30-days, this-month]
+ *           default: all-time
+ *     responses:
+ *       200:
+ *         description: Detailed stats retrieved successfully
+ */
+router.get(
+  '/stats/me/detailed',
+  authenticateToken,
+  CardGameController.getDetailedStats
+);
+
+/**
+ * @swagger
+ * /v2/cardgame/topics/{topicId}/sessions/{sessionNumber}/questions/{questionId}/feedback:
+ *   get:
+ *     summary: Get community feedback for a specific question (unlocked after session completion)
+ *     tags: [Card Game]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: topicId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Topic ID
+ *       - in: path
+ *         name: sessionNumber
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Session number
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Question ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [upvotes, recent, rating, replies]
+ *           default: recent
+ *         description: Sort order
+ *       - in: query
+ *         name: minRating
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *         description: Filter by minimum rating
+ *       - in: query
+ *         name: hasComments
+ *         schema:
+ *           type: boolean
+ *         description: Filter responses with comments only
+ *     responses:
+ *       200:
+ *         description: Question feedback retrieved successfully
+ *       403:
+ *         description: Session not completed - access denied
+ *       404:
+ *         description: Question not found
+ */
+router.get(
+  '/topics/:topicId/sessions/:sessionNumber/questions/:questionId/feedback',
+  authenticateToken,
+  CardGameController.getQuestionFeedbackBySession
+);
+
 export default router;

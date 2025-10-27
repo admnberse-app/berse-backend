@@ -203,28 +203,34 @@ model Badge {
 }
 
 model CardGameFeedback {
-  id              String           @id @default(cuid())
-  userId          String
-  topicId         String
-  sessionNumber   Int
-  questionId      String
-  rating          Int
-  comment         String?
-  topicTitle      String? // NEW: Display name of topic
-  questionText    String? // NEW: Actual question text
-  isHelpful       Boolean          @default(true) // NEW: Was question helpful?
-  upvoteCount     Int              @default(0)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic           CardGameTopic?   @relation(fields: [topicId], references: [id])
-  cardGameReplies CardGameReply[]
-  cardGameUpvotes CardGameUpvote[]
+  id                  String           @id @default(cuid())
+  userId              String
+  topicId             String
+  sessionNumber       Int
+  questionId          String
+  rating              Int
+  comment             String?
+  topicTitle          String? // NEW: Display name of topic
+  questionText        String? // NEW: Actual question text
+  isHelpful           Boolean          @default(true) // NEW: Was question helpful?
+  upvoteCount         Int              @default(0)
+  // NEW TIMING FIELDS
+  timeSpentSeconds    Int?      // time spent on this question
+  questionViewedAt    DateTime?
+  answerStartedAt     DateTime?
+  answerSubmittedAt   DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic               CardGameTopic?   @relation(fields: [topicId], references: [id])
+  cardGameReplies     CardGameReply[]
+  cardGameUpvotes     CardGameUpvote[]
 
   @@index([questionId])
   @@index([topicId])
   @@index([userId])
   @@index([upvoteCount])
+  @@index([userId, topicId, sessionNumber])
   @@map("card_game_feedbacks")
 }
 
@@ -336,6 +342,13 @@ model CardGameSession {
   totalQuestions    Int
   questionsAnswered Int           @default(0)
   averageRating     Float?
+  // NEW FIELDS
+  totalDuration     Int?      // seconds
+  lastActivityAt    DateTime  @default(now())
+  devicePlatform    String?   // "mobile" | "web"
+  deviceOS          String?   // "iOS" | "Android" | "Web"
+  appVersion        String?
+  status            String    @default("in-progress") // "in-progress" | "completed" | "abandoned"
   user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   topic             CardGameTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
@@ -343,6 +356,8 @@ model CardGameSession {
   @@index([userId])
   @@index([topicId])
   @@index([userId, completedAt])
+  @@index([userId, status])
+  @@index([topicId, completedAt])
   @@map("card_game_sessions")
 }
 
@@ -2568,6 +2583,10 @@ model User {
   berseGuideReviewsGiven       BerseGuideReview[]  @relation("guide_reviews_given")
   berseGuideReviewsReceived    BerseGuideReview[]  @relation("guide_reviews_received")
 
+  // Card Game relations
+  cardGameStreak               CardGameStreak?
+  cardGameAchievements         UserCardGameAchievement[]
+
   @@index([createdAt])
   @@index([deletedAt])
   @@index([email])
@@ -3579,4 +3598,51 @@ model ConfigHistory {
   @@index([changedAt])
   @@index([category, key])
   @@map("config_history")
+}
+
+// Card Game Streak Tracking
+model CardGameStreak {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActiveDate  DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, currentStreak])
+  @@map("card_game_streaks")
+}
+
+// Card Game Achievement Definitions
+model CardGameAchievement {
+  id                   String                      @id @default(cuid())
+  code                 String                      @unique // e.g. "first-session", "thoughtful-contributor"
+  title                String
+  description          String
+  icon                 String // Emoji or image URL
+  criteria             Json // { type: "session_count", value: 1 }
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  userAchievements     UserCardGameAchievement[]
+
+  @@index([code])
+  @@map("card_game_achievements")
+}
+
+// User's Unlocked Achievements
+model UserCardGameAchievement {
+  id              String              @id @default(cuid())
+  userId          String
+  achievementId   String
+  unlockedAt      DateTime            @default(now())
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement     CardGameAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlockedAt])
+  @@map("user_card_game_achievements")
 }

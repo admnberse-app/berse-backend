@@ -160,22 +160,6 @@ export interface SessionResponse {
   };
 }
 
-export interface SessionSummaryResponse {
-  session: SessionResponse;
-  feedback: FeedbackResponse[];
-  stats: {
-    totalQuestions: number;
-    questionsAnswered: number;
-    averageRating: number;
-    commentsCount: number;
-  };
-  communityComparison?: {
-    yourRating: number;
-    communityAverage: number;
-    percentile: number;
-  };
-}
-
 // Feedback Response Types (updated)
 
 // Feedback Response Types (updated)
@@ -307,4 +291,505 @@ export interface PaginatedFeedbackResponse {
     topicTitle?: string;
     sessionNumber?: number;
   };
+}
+
+// ============================================================================
+// MAIN PAGE TYPES
+// ============================================================================
+
+export interface MainPageResponse {
+  userStats: UserStatsSummary;
+  incompleteSession: IncompleteSessionInfo | null;
+  topics: TopicWithProgress[];
+  leaderboard: LeaderboardSummary;
+  popularQuestions: PopularQuestionPreview[];
+}
+
+export interface UserStatsSummary {
+  summary: {
+    totalSessions: number;
+    totalFeedback: number;
+    totalReplies: number;
+    upvotesReceived: number;
+    averageRating: number;
+    currentStreak: number;
+    topicsCompleted: number;
+  };
+  timePeriods: {
+    last7Days: StatsSnapshot;
+    last30Days: StatsSnapshot;
+    thisMonth: StatsSnapshot;
+  };
+}
+
+export interface StatsSnapshot {
+  totalSessions: number;
+  totalFeedback: number;
+  totalReplies: number;
+  upvotesReceived: number;
+  averageRating: number;
+}
+
+export interface IncompleteSessionInfo {
+  id: string;
+  topicId: string;
+  topicTitle: string;
+  sessionNumber: number;
+  progress: {
+    questionsAnswered: number;
+    totalQuestions: number;
+    percentage: number;
+  };
+  startedAt: Date;
+}
+
+export interface TopicWithProgress {
+  id: string;
+  title: string;
+  description?: string;
+  gradient?: string;
+  totalSessions: number;
+  totalQuestions: number;
+  isActive: boolean;
+  displayOrder: number;
+  stats: {
+    communitySessions: number;
+    averageRating: number;
+    totalFeedback: number;
+  };
+  userProgress: {
+    sessionsCompleted: number;
+    progressPercentage: number;
+    nextSession: number | null;
+    lastCompletedAt?: Date;
+  };
+  popularSession?: {
+    sessionNumber: number;
+    feedbackCount: number;
+  };
+}
+
+export interface LeaderboardSummary {
+  topUsers: LeaderboardEntry[];
+  currentUser: LeaderboardEntry;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  fullName: string;
+  profilePicture?: string;
+  score: number;
+  breakdown: {
+    sessions?: number;
+    feedback?: number;
+    replies?: number;
+    upvotes?: number;
+    averageRating?: number;
+  };
+}
+
+export interface PopularQuestionPreview {
+  id: string;
+  questionText: string;
+  topicId: string;
+  topicTitle: string;
+  sessionNumber: number;
+  questionOrder: number;
+  stats: {
+    totalFeedback: number;
+    totalUpvotes: number;
+    totalReplies: number;
+    averageRating: number;
+    engagementScore: number;
+  };
+  topComments: FeedbackPreview[];
+}
+
+export interface FeedbackPreview {
+  id: string;
+  comment: string;
+  upvoteCount: number;
+  user: {
+    id: string;
+    fullName: string;
+    profilePicture?: string;
+  };
+}
+
+// ============================================================================
+// LEADERBOARD TYPES
+// ============================================================================
+
+export interface LeaderboardQuery {
+  type?: 'overall' | 'most-sessions' | 'most-feedback' | 'most-replies' | 'most-upvotes' | 'highest-rating';
+  timePeriod?: 'all-time' | 'monthly' | 'weekly';
+  page?: number;
+  limit?: number;
+}
+
+export interface LeaderboardResponse {
+  type: string;
+  timePeriod: string;
+  topUsers: LeaderboardEntry[];
+  currentUser: LeaderboardEntry;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+// ============================================================================
+// POPULAR QUESTIONS TYPES
+// ============================================================================
+
+export interface PopularQuestionsQuery {
+  page?: number;
+  limit?: number;
+  topicId?: string;
+  sortBy?: 'engagement' | 'feedback' | 'upvotes' | 'replies' | 'rating';
+  timePeriod?: 'all-time' | 'week' | 'month';
+}
+
+export interface PopularQuestionsResponse {
+  data: PopularQuestionDetail[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface PopularQuestionDetail extends PopularQuestionPreview {
+  hasMoreComments: boolean;
+}
+
+// ============================================================================
+// TOPIC DETAIL TYPES
+// ============================================================================
+
+export interface TopicDetailResponse {
+  topic: TopicInfo;
+  userProgress: UserTopicProgress;
+  sessions: SessionStatus[];
+  communityStats: CommunityTopicStats;
+  currentSessionDetail: SessionDetailResponse | null;
+}
+
+export interface TopicInfo {
+  id: string;
+  title: string;
+  description?: string;
+  gradient?: string;
+  totalSessions: number;
+  totalQuestions: number;
+  isActive: boolean;
+}
+
+export interface UserTopicProgress {
+  completedSessions: number;
+  totalSessions: number;
+  progressPercentage: number;
+  nextSessionNumber: number | null;
+  lastCompletedAt?: Date;
+}
+
+export interface SessionStatus {
+  sessionNumber: number;
+  status: 'completed' | 'in-progress' | 'locked';
+  completedAt?: Date;
+  startedAt?: Date;
+  questionsCount: number;
+  questionsAnswered?: number;
+  totalQuestions?: number;
+  yourAverageRating?: number;
+}
+
+export interface CommunityTopicStats {
+  totalUsers: number;
+  totalSessions: number;
+  totalFeedback: number;
+  averageRating: number;
+}
+
+export interface SessionDetailResponse {
+  sessionNumber: number;
+  status: string;
+  completedAt: Date;
+  yourStats: SessionUserStats;
+  sessionCommunityStats: SessionCommunityStats;
+  questions: QuestionWithResponses[];
+}
+
+export interface SessionUserStats {
+  questionsAnswered: number;
+  yourAverageRating: number;
+  commentsGiven: number;
+  upvotesReceived: number;
+  repliesReceived: number;
+}
+
+export interface SessionCommunityStats {
+  totalResponses: number;
+  communityAverage: number;
+  yourPercentile: number;
+}
+
+export interface QuestionWithResponses {
+  id: string;
+  questionOrder: number;
+  questionText: string;
+  isLocked: boolean;
+  yourResponse?: {
+    feedbackId: string;
+    rating: number;
+    comment?: string;
+    upvotesReceived: number;
+    repliesReceived: number;
+    createdAt: Date;
+    canEdit: boolean;
+    canDelete: boolean;
+  };
+  stats: {
+    totalFeedback: number;
+    averageRating: number;
+    totalUpvotes: number;
+    totalReplies: number;
+    ratingDistribution: {
+      1: number;
+      2: number;
+      3: number;
+      4: number;
+      5: number;
+    };
+  };
+  topCommunityResponses: CommunityResponse[];
+  hasMoreResponses: boolean;
+  totalResponses: number;
+}
+
+export interface CommunityResponse {
+  feedbackId: string;
+  userId: string;
+  user: {
+    fullName: string;
+    profilePicture?: string;
+  };
+  rating: number;
+  comment?: string;
+  upvoteCount: number;
+  hasUpvoted: boolean;
+  replyCount: number;
+  createdAt: Date;
+}
+
+// ============================================================================
+// SESSION GAMEPLAY TYPES
+// ============================================================================
+
+export interface StartSessionResponse {
+  session: SessionInfo;
+  questions: QuestionInfo[];
+  progress: ProgressInfo;
+}
+
+export interface SessionInfo {
+  id: string;
+  userId: string;
+  topicId: string;
+  topicTitle: string;
+  sessionNumber: number;
+  status: string;
+  startedAt: Date;
+  completedAt?: Date;
+  totalQuestions: number;
+  questionsAnswered: number;
+  totalDuration?: number;
+  totalDurationFormatted?: string;
+}
+
+export interface QuestionInfo {
+  id: string;
+  questionOrder: number;
+  questionText: string;
+  isActive: boolean;
+  isAnswered?: boolean;
+  yourAnswer?: {
+    rating: number;
+    comment?: string;
+    submittedAt: Date;
+  };
+}
+
+export interface ProgressInfo {
+  canResume: boolean;
+  lastAnsweredQuestion: number | null;
+  percentage: number;
+  nextQuestionOrder?: number;
+  canContinue?: boolean;
+}
+
+export interface SubmitAnswerRequest {
+  questionId: string;
+  questionOrder: number;
+  rating: number;
+  comment?: string;
+  isHelpful?: boolean;
+  timing: TimingData;
+}
+
+export interface TimingData {
+  questionViewedAt: string;
+  answerStartedAt: string;
+  answerSubmittedAt: string;
+  timeSpentSeconds: number;
+}
+
+export interface SubmitAnswerResponse {
+  feedback: FeedbackResponse;
+  sessionProgress: SessionProgressInfo;
+}
+
+export interface SessionProgressInfo {
+  sessionId: string;
+  questionsAnswered: number;
+  totalQuestions: number;
+  percentage: number;
+  nextQuestionOrder: number | null;
+  canComplete: boolean;
+}
+
+export interface CompleteSessionRequest {
+  totalDuration: number;
+  deviceInfo?: {
+    platform: 'mobile' | 'web';
+    os: string;
+    appVersion: string;
+  };
+}
+
+export interface SessionSummaryResponse {
+  summary: {
+    session: SessionInfo;
+    yourStats: UserSessionStats;
+    questionBreakdown: QuestionBreakdownItem[];
+    communityComparison: CommunityComparison;
+    achievements: Achievement[];
+    streaks: StreakInfo;
+    nextSteps: NextStepsInfo;
+    insights: PersonalizedInsight[];
+  };
+}
+
+export interface UserSessionStats {
+  questionsAnswered: number;
+  averageRating: number;
+  commentsGiven: number;
+  averageTimePerQuestion: number;
+  totalWords: number;
+  longestResponse: number;
+  helpfulQuestionsCount: number;
+}
+
+export interface QuestionBreakdownItem {
+  questionOrder: number;
+  questionText: string;
+  yourRating: number;
+  timeSpent: number;
+  timeSpentFormatted: string;
+  commentLength: number;
+  hasComment: boolean;
+}
+
+export interface CommunityComparison {
+  totalCompletions: number;
+  yourRating: number;
+  communityAverage: number;
+  percentile: number;
+  ratingDifference: number;
+  comparison: 'above' | 'same' | 'slightly_above' | 'slightly_below' | 'below';
+  engagementComparison: {
+    yourComments: number;
+    communityAverage: number;
+    message: string;
+  };
+}
+
+export interface Achievement {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  icon: string;
+  isNew: boolean;
+  unlockedAt?: Date;
+}
+
+export interface StreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  streakMessage: string;
+  lastActiveDate?: Date;
+}
+
+export interface NextStepsInfo {
+  hasNextSession: boolean;
+  nextSessionNumber?: number;
+  nextSessionTitle?: string;
+  canStartNextSession: boolean;
+  unlocked: {
+    communityInsights: boolean;
+    message: string;
+  };
+}
+
+export interface PersonalizedInsight {
+  type: 'reflection_depth' | 'rating_pattern' | 'time_investment' | 'engagement_level';
+  message: string;
+}
+
+// ============================================================================
+// DETAILED STATS TYPES
+// ============================================================================
+
+export interface DetailedStatsQuery {
+  timePeriod?: 'all-time' | 'last-7-days' | 'last-30-days' | 'this-month';
+}
+
+export interface DetailedStatsResponse {
+  userId: string;
+  timePeriod: string;
+  summary: UserStatsSummary['summary'];
+  sessionCompletionRate: {
+    completed: number;
+    started: number;
+    rate: number;
+  };
+  ratingDistribution: {
+    rating: number;
+    count: number;
+  }[];
+  topTopics: {
+    topicId: string;
+    topicTitle: string;
+    sessionsCompleted: number;
+    averageRating: number;
+    lastActivity: Date;
+  }[];
+  engagementTimeline: {
+    date: string;
+    sessions: number;
+    feedback: number;
+    replies: number;
+  }[];
+  achievements: Achievement[];
+  streaks: StreakInfo;
+  communityRankPercentile: number;
 }
