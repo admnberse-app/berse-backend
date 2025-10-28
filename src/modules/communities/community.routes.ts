@@ -16,6 +16,7 @@ import {
   memberActionValidators,
   communityQueryValidators,
   communityMemberQueryValidators,
+  communityEventsQueryValidators,
   inviteToCommunityValidators,
   respondToInviteValidators,
 } from './community.validators';
@@ -591,6 +592,55 @@ router.delete(
   communityIdValidator,
   handleValidationErrors,
   asyncHandler(communityController.leaveCommunity.bind(communityController))
+);
+
+/**
+ * @swagger
+ * /v2/communities/{communityId}/events:
+ *   get:
+ *     summary: Get community events
+ *     tags: [Communities]
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: upcoming
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Events retrieved successfully
+ */
+router.get(
+  '/:communityId/events',
+  communityEventsQueryValidators,
+  handleValidationErrors,
+  asyncHandler(communityController.getCommunityEvents.bind(communityController))
 );
 
 /**

@@ -30,6 +30,7 @@ The Communities API provides comprehensive endpoints for managing communities, m
    - [Join Community](#join-community)
    - [Leave Community](#leave-community)
    - [Get Community Members](#get-community-members)
+   - [Get Community Events](#get-community-events)
    - [Approve Member](#approve-member)
    - [Reject Member](#reject-member)
    - [Update Member Role](#update-member-role)
@@ -62,7 +63,24 @@ Create a new community. The creator is automatically assigned as ADMIN.
   "description": "A vibrant community for technology lovers in Malaysia. Join us for meetups, workshops, and networking events.",
   "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
   "interests": ["technology", "startups", "innovation"],
-  "category": "Technology"  // @deprecated - Use interests array instead
+  "category": "Technology",  // @deprecated - Use interests array instead
+  
+  "requiresApproval": true,
+  "city": "Kuala Lumpur",
+  "country": "Malaysia",
+  "latitude": 3.139,
+  "longitude": 101.6869,
+  "socialLinks": {
+    "instagram": "https://instagram.com/techmsia",
+    "facebook": "https://facebook.com/TechMalaysia",
+    "twitter": "https://twitter.com/techmsia",
+    "linkedin": "https://linkedin.com/company/tech-malaysia",
+    "youtube": null,
+    "tiktok": null
+  },
+  "websiteUrl": "https://techmalaysia.com",
+  "contactEmail": "hello@techmalaysia.com",
+  "guidelines": "# Community Guidelines\n\n1. Be respectful\n2. No spam\n3. Stay on topic"
 }
 ```
 
@@ -72,6 +90,15 @@ Create a new community. The creator is automatically assigned as ADMIN.
 - `imageUrl` (optional): Valid URL
 - `interests` (optional): Array of valid interest values from profile metadata
 - `category` (optional, deprecated): Max 50 characters - use `interests` array instead
+- `requiresApproval` (optional): Boolean, default true - whether members need approval to join
+- `city` (optional): Max 100 characters
+- `country` (optional): Max 100 characters
+- `latitude` (optional): Float between -90 and 90
+- `longitude` (optional): Float between -180 and 180
+- `socialLinks` (optional): Object with platform URLs (instagram, facebook, twitter, linkedin, youtube, tiktok)
+- `websiteUrl` (optional): Valid URL
+- `contactEmail` (optional): Valid email address
+- `guidelines` (optional): Max 10000 characters, markdown supported
 
 **Response:** `201 Created`
 ```json
@@ -242,7 +269,8 @@ Get detailed information about a specific community.
     "id": "cm123456789abcdef",
     "name": "Tech Enthusiasts Malaysia",
     "description": "A vibrant community for technology lovers in Malaysia. Join us for meetups, workshops, and networking events.",
-    "imageUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
+    "logoUrl": "https://cdn.berse.com/communities/tech-malaysia.jpg",
+    "coverImageUrl": "https://cdn.berse.com/communities/tech-cover.jpg",
     "interests": ["technology", "startups", "innovation"],
     "category": "Technology",  // @deprecated
     "isVerified": true,
@@ -251,18 +279,93 @@ Get detailed information about a specific community.
     "updatedAt": "2025-10-17T10:00:00.000Z",
     "memberCount": 250,
     "eventCount": 12,
+    
+    "requiresApproval": true,
+    "location": {
+      "city": "Kuala Lumpur",
+      "country": "Malaysia",
+      "latitude": 3.139,
+      "longitude": 101.6869
+    },
+    "socialLinks": {
+      "instagram": "https://instagram.com/techmsia",
+      "facebook": "https://facebook.com/TechMalaysia",
+      "twitter": "https://twitter.com/techmsia",
+      "linkedin": "https://linkedin.com/company/tech-malaysia",
+      "youtube": null,
+      "tiktok": null
+    },
+    "websiteUrl": "https://techmalaysia.com",
+    "contactEmail": "hello@techmalaysia.com",
+    "guidelines": "# Community Guidelines\n\n1. Be respectful\n2. No spam",
+    
     "creator": {
       "id": "user123",
-      "displayName": "John Doe",
-      "profilePicture": "https://cdn.berse.com/users/john.jpg"
+      "fullName": "John Doe",
+      "username": "johndoe",
+      "profilePicture": "https://cdn.berse.com/users/john.jpg",
+      "trustLevel": "verified"
     },
-    "userRole": "MEMBER",
-    "userMembership": {
-      "role": "MEMBER",
-      "isApproved": true,
+    
+    "membersPreview": [
+      {
+        "id": "user123",
+        "fullName": "John Doe",
+        "username": "johndoe",
+        "profilePicture": "https://cdn.berse.com/users/john.jpg",
+        "trustLevel": "verified",
+        "role": "ADMIN",
+        "joinedAt": "2025-10-17T10:00:00.000Z"
+      }
+    ],
+    
+    "upcomingEventsPreview": [
+      {
+        "id": "evt123",
+        "title": "Tech Meetup October",
+        "type": "NETWORKING",
+        "date": "2025-11-05T18:00:00.000Z",
+        "location": "KL Sentral",
+        "images": ["https://cdn.berse.com/events/meetup.jpg"],
+        "isFree": true,
+        "rsvpCount": 45
+      }
+    ],
+    
+    "userStatus": {
+      "isMember": true,
+      "isAdmin": false,
+      "isModerator": false,
+      "isPending": false,
       "joinedAt": "2025-10-01T12:00:00.000Z"
+    },
+    
+    "stats": {
+      "totalEvents": 12,
+      "upcomingEvents": 5,
+      "pastEvents": 7,
+      "adminCount": 2,
+      "moderatorCount": 3,
+      "totalVouchesGiven": 15,
+      "lastEventDate": "2025-11-05T18:00:00.000Z",
+      "lastMemberJoinDate": "2025-10-27T14:30:00.000Z",
+      "memberGrowthLast30Days": 25,
+      "averageEventAttendance": 38
     }
   }
+}
+```
+
+**Additional Field for Admins/Moderators:**
+
+If the authenticated user is an ADMIN or MODERATOR of the community, the response includes an `adminData` object:
+
+```json
+"adminData": {
+  "pendingMemberCount": 8,
+  "totalReportsCount": 2,
+  "unresolvedReportsCount": 1,
+  "pendingVouchRequestCount": 3
 }
 ```
 
@@ -780,6 +883,124 @@ GET /v2/communities/cm123/members?page=1&limit=20&role=ADMIN&isApproved=true
 
 **Error Responses:**
 - `404 Not Found` - Community not found
+
+---
+
+### Get Community Events
+
+Get all events for a specific community with filtering and pagination.
+
+**Endpoint:** `GET /v2/communities/:communityId/events`
+
+**Authentication:** Optional
+
+**Path Parameters:**
+- `communityId` (required): Community ID
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1, min: 1)
+- `limit` (optional): Items per page (default: 20, min: 1, max: 100)
+- `type` (optional): Event type filter
+  - Values: `SOCIAL`, `SPORTS`, `TRIP`, `ILM`, `CAFE_MEETUP`, `VOLUNTEER`, `MONTHLY_EVENT`, `LOCAL_TRIP`
+- `upcoming` (optional): Filter for upcoming events only (default: false)
+  - `true`: Only events with date >= now
+  - `false`: All events
+- `status` (optional): Event status filter (default: PUBLISHED for public access)
+  - Values: `DRAFT`, `PUBLISHED`, `CANCELLED`
+- `search` (optional): Search in event title or description (min: 1, max: 100 characters)
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "events": [
+      {
+        "id": "evt_123abc",
+        "title": "Morning Yoga in the Park",
+        "description": "Start your day with energizing yoga in beautiful KLCC Park. All levels welcome!",
+        "type": "SPORTS",
+        "date": "2025-11-15T06:30:00.000Z",
+        "location": "KLCC Park, Kuala Lumpur",
+        "city": "Kuala Lumpur",
+        "country": "Malaysia",
+        "latitude": 3.1569,
+        "longitude": 101.7123,
+        "mapLink": "https://maps.google.com/?q=KLCC+Park",
+        "maxAttendees": 25,
+        "images": [
+          "https://cdn.berse.com/events/yoga-park.jpg"
+        ],
+        "isFree": true,
+        "status": "PUBLISHED",
+        "currency": "MYR",
+        "hostType": "COMMUNITY",
+        "attendeeCount": 12,
+        "host": {
+          "id": "usr_456def",
+          "fullName": "Sarah Ahmad",
+          "username": "sarahyoga",
+          "profilePicture": "https://cdn.berse.com/users/sarah.jpg"
+        },
+        "createdAt": "2025-10-20T10:00:00.000Z",
+        "updatedAt": "2025-10-22T15:30:00.000Z"
+      }
+    ],
+    "totalCount": 42,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 3
+  }
+}
+```
+
+**Response Fields:**
+- `events`: Array of event objects
+  - `id`: Event unique identifier
+  - `title`: Event title
+  - `description`: Event description (can be null)
+  - `type`: Event type enum
+  - `date`: ISO 8601 datetime of the event
+  - `location`: Location address
+  - `city`: City name (can be null)
+  - `country`: Country name (can be null)
+  - `latitude`: Location latitude (can be null)
+  - `longitude`: Location longitude (can be null)
+  - `mapLink`: Google Maps link (can be null)
+  - `maxAttendees`: Maximum attendees (can be null for unlimited)
+  - `images`: Array of image URLs
+  - `isFree`: Whether the event is free
+  - `status`: Event status (DRAFT, PUBLISHED, CANCELLED)
+  - `currency`: Currency code for paid events
+  - `hostType`: PERSONAL or COMMUNITY
+  - `attendeeCount`: Number of participants
+  - `host`: Event host information
+    - `id`: Host user ID
+    - `fullName`: Host full name
+    - `username`: Host username
+    - `profilePicture`: Host profile picture URL (can be null)
+  - `createdAt`: ISO 8601 creation timestamp
+  - `updatedAt`: ISO 8601 last update timestamp
+- `totalCount`: Total number of events matching filters
+- `page`: Current page number
+- `limit`: Items per page
+- `totalPages`: Total number of pages
+
+**Example Usage:**
+```bash
+# Get all upcoming sports events
+curl -X GET "https://api.berse-app.com/v2/communities/cmh4gz0zw0009cp5026p08ged/events?type=SPORTS&upcoming=true&limit=10"
+
+# Search for yoga events
+curl -X GET "https://api.berse-app.com/v2/communities/cmh4gz0zw0009cp5026p08ged/events?search=yoga"
+
+# Get page 2 of all events
+curl -X GET "https://api.berse-app.com/v2/communities/cmh4gz0zw0009cp5026p08ged/events?page=2&limit=20"
+```
+
+**Error Responses:**
+- `404 Not Found` - Community not found
+- `400 Bad Request` - Invalid query parameters
 
 ---
 

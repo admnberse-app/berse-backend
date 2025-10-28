@@ -136,6 +136,15 @@ export interface MyCommunityQuery {
   search?: string;
 }
 
+export interface CommunityEventsQuery {
+  page?: number;
+  limit?: number;
+  type?: string; // EventType filter
+  upcoming?: boolean; // Only upcoming events (date >= now)
+  status?: string; // DRAFT, PUBLISHED, CANCELLED
+  search?: string; // Search in title/description
+}
+
 // ============================================================================
 // COMMUNITY RESPONSE TYPES
 // ============================================================================

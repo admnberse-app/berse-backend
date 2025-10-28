@@ -1200,6 +1200,127 @@ export class CommunityService {
   }
 
   /**
+   * Get community events
+   */
+  async getCommunityEvents(communityId: string, query: any = {}) {
+    try {
+      // Check if community exists
+      const community = await prisma.community.findUnique({
+        where: { id: communityId },
+      });
+
+      if (!community) {
+        throw new AppError('Community not found', 404);
+      }
+
+      // Parse pagination
+      const page = query.page || 1;
+      const limit = query.limit || 20;
+      const skip = (page - 1) * limit;
+
+      // Build where clause
+      const where: any = {
+        communityId,
+      };
+
+      // Filter by event type
+      if (query.type) {
+        where.type = query.type;
+      }
+
+      // Filter by status (default to PUBLISHED for public access)
+      if (query.status) {
+        where.status = query.status;
+      } else {
+        where.status = 'PUBLISHED';
+      }
+
+      // Filter upcoming events
+      if (query.upcoming === 'true' || query.upcoming === true) {
+        where.date = { gte: new Date() };
+      }
+
+      // Search in title or description
+      if (query.search) {
+        where.OR = [
+          { title: { contains: query.search, mode: 'insensitive' } },
+          { description: { contains: query.search, mode: 'insensitive' } },
+        ];
+      }
+
+      // Fetch events and count
+      const [events, totalCount] = await Promise.all([
+        prisma.event.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { date: 'asc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+            _count: {
+              select: {
+                eventParticipants: true,
+              },
+            },
+          },
+        }),
+        prisma.event.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        events: events.map(event => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          type: event.type,
+          date: event.date.toISOString(),
+          location: event.location,
+          city: event.city,
+          country: event.country,
+          latitude: event.latitude,
+          longitude: event.longitude,
+          mapLink: event.mapLink,
+          maxAttendees: event.maxAttendees,
+          images: event.images,
+          isFree: event.isFree,
+          status: event.status,
+          currency: event.currency,
+          hostType: event.hostType,
+          attendeeCount: event._count.eventParticipants,
+          host: {
+            id: event.user.id,
+            fullName: event.user.fullName,
+            username: event.user.username,
+            profilePicture: event.user.profile?.profilePicture,
+          },
+          createdAt: event.createdAt.toISOString(),
+          updatedAt: event.updatedAt.toISOString(),
+        })),
+        totalCount,
+        page,
+        limit,
+        totalPages,
+      };
+    } catch (error) {
+      logger.error('Failed to get community events', { error, communityId, query });
+      throw error;
+    }
+  }
+
+  /**
    * Get community statistics
    */
   async getCommunityStats(communityId: string): Promise<CommunityStatsResponse> {

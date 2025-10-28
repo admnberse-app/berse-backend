@@ -164,6 +164,23 @@ export class CommunityController {
   }
 
   /**
+   * @route GET /v2/communities/:communityId/events
+   * @desc Get community events
+   * @access Public
+   */
+  async getCommunityEvents(req: Request, res: Response): Promise<void> {
+    const { communityId } = req.params;
+    const query = {
+      ...req.query,
+      page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+    };
+
+    const result = await communityService.getCommunityEvents(communityId, query);
+    sendSuccess(res, result);
+  }
+
+  /**
    * @route POST /v2/communities/:communityId/members/:userId/approve
    * @desc Approve member join request
    * @access Private (Admin/Moderator)
