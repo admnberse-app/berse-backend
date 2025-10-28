@@ -32,6 +32,30 @@ export class NotificationController {
    *           type: boolean
    *           default: false
    *         description: Filter to show only unread notifications
+   *       - in: query
+   *         name: type
+   *         schema:
+   *           type: string
+   *           enum: [SYSTEM, EVENT, POINTS, VOUCH, MATCH, MESSAGE, SERVICE, MARKETPLACE, PAYMENT, SOCIAL, CONNECTION, ACHIEVEMENT, REMINDER, COMMUNITY, TRAVEL]
+   *         description: Filter by notification type
+   *       - in: query
+   *         name: days
+   *         schema:
+   *           type: integer
+   *           default: 30
+   *         description: Number of days to look back (default 30, use 0 for all time)
+   *       - in: query
+   *         name: startDate
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *         description: Custom start date for filtering (ISO 8601 format)
+   *       - in: query
+   *         name: endDate
+   *         schema:
+   *           type: string
+   *           format: date-time
+   *         description: Custom end date for filtering (ISO 8601 format)
    *     responses:
    *       200:
    *         description: Notifications retrieved successfully
@@ -94,6 +118,24 @@ export class NotificationController {
    *                     pages:
    *                       type: integer
    *                       example: 3
+   *                     types:
+   *                       type: array
+   *                       description: Available notification types with counts (for filter UI)
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           type:
+   *                             type: string
+   *                             enum: [SYSTEM, EVENT, POINTS, VOUCH, MATCH, MESSAGE, SERVICE, MARKETPLACE, PAYMENT, SOCIAL, CONNECTION, ACHIEVEMENT, REMINDER, COMMUNITY, TRAVEL]
+   *                           count:
+   *                             type: integer
+   *                       example:
+   *                         - type: EVENT
+   *                           count: 15
+   *                         - type: COMMUNITY
+   *                           count: 8
+   *                         - type: CONNECTION
+   *                           count: 5
    *       401:
    *         description: Unauthorized - Invalid or missing token
    *       500:
@@ -105,11 +147,27 @@ export class NotificationController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const unreadOnly = req.query.unreadOnly === 'true';
+      const type = req.query.type as any;
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+      
+      // Parse custom date range if provided
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      if (req.query.startDate) {
+        startDate = new Date(req.query.startDate as string);
+      }
+      if (req.query.endDate) {
+        endDate = new Date(req.query.endDate as string);
+      }
 
       const result = await NotificationService.getUserNotifications(userId, {
         page,
         limit,
         unreadOnly,
+        type,
+        days,
+        startDate,
+        endDate,
       });
 
       res.status(200).json({

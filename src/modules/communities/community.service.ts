@@ -1295,6 +1295,7 @@ export class CommunityService {
       // Build where clause
       const where: any = {
         communityId,
+        date: { gte: new Date() }, // Always show only upcoming events
       };
 
       // Filter by event type
@@ -1307,11 +1308,6 @@ export class CommunityService {
         where.status = query.status;
       } else {
         where.status = 'PUBLISHED';
-      }
-
-      // Filter upcoming events
-      if (query.upcoming === 'true' || query.upcoming === true) {
-        where.date = { gte: new Date() };
       }
 
       // Search in title or description
@@ -1342,9 +1338,30 @@ export class CommunityService {
                 },
               },
             },
+            tier: {
+              where: { isActive: true },
+              select: {
+                id: true,
+                tierName: true,
+                description: true,
+                price: true,
+                currency: true,
+                totalQuantity: true,
+                soldQuantity: true,
+                minPurchase: true,
+                maxPurchase: true,
+                availableFrom: true,
+                availableUntil: true,
+                displayOrder: true,
+                isActive: true,
+              },
+              orderBy: { displayOrder: 'asc' as const },
+            },
             _count: {
               select: {
                 eventParticipants: true,
+                eventTickets: true,
+                tier: true,
               },
             },
           },
@@ -1355,34 +1372,73 @@ export class CommunityService {
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
-        events: events.map(event => ({
-          id: event.id,
-          title: event.title,
-          description: event.description,
-          type: event.type,
-          date: event.date.toISOString(),
-          location: event.location,
-          city: event.city,
-          country: event.country,
-          latitude: event.latitude,
-          longitude: event.longitude,
-          mapLink: event.mapLink,
-          maxAttendees: event.maxAttendees,
-          images: event.images,
-          isFree: event.isFree,
-          status: event.status,
-          currency: event.currency,
-          hostType: event.hostType,
-          attendeeCount: event._count.eventParticipants,
-          host: {
-            id: event.user.id,
-            fullName: event.user.fullName,
-            username: event.user.username,
-            profilePicture: event.user.profile?.profilePicture,
-          },
-          createdAt: event.createdAt.toISOString(),
-          updatedAt: event.updatedAt.toISOString(),
-        })),
+        events: events.map(event => {
+          // Transform ticket tiers
+          const ticketTiers = event.tier?.map(tier => {
+            const availableQuantity = tier.totalQuantity 
+              ? Math.max(0, tier.totalQuantity - tier.soldQuantity)
+              : undefined;
+            
+            const now = new Date();
+            const isAvailable = tier.isActive &&
+              (!tier.availableFrom || new Date(tier.availableFrom) <= now) &&
+              (!tier.availableUntil || new Date(tier.availableUntil) >= now) &&
+              (availableQuantity === undefined || availableQuantity > 0);
+
+            return {
+              ...tier,
+              availableQuantity,
+              isAvailable,
+            };
+          }) || [];
+
+          // Calculate price range
+          let priceRange = undefined;
+          if (!event.isFree && ticketTiers.length > 0) {
+            const prices = ticketTiers.map(t => t.price);
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            const currency = ticketTiers[0].currency;
+            const label = min === max 
+              ? `${currency} ${min.toFixed(2)}`
+              : `Starting from ${currency} ${min.toFixed(2)}`;
+            
+            priceRange = { min, max, currency, label };
+          }
+
+          return {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            type: event.type,
+            date: event.date.toISOString(),
+            location: event.location,
+            city: event.city,
+            country: event.country,
+            latitude: event.latitude,
+            longitude: event.longitude,
+            mapLink: event.mapLink,
+            maxAttendees: event.maxAttendees,
+            images: event.images,
+            isFree: event.isFree,
+            status: event.status,
+            currency: event.currency,
+            hostType: event.hostType,
+            attendeeCount: event._count.eventParticipants,
+            ticketCount: event._count.eventTickets,
+            tierCount: event._count.tier,
+            priceRange,
+            ticketTiers,
+            host: {
+              id: event.user.id,
+              fullName: event.user.fullName,
+              username: event.user.username,
+              profilePicture: event.user.profile?.profilePicture,
+            },
+            createdAt: event.createdAt.toISOString(),
+            updatedAt: event.updatedAt.toISOString(),
+          };
+        }),
         totalCount,
         page,
         limit,

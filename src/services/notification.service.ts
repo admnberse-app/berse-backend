@@ -91,18 +91,50 @@ export class NotificationService {
    */
   static async getUserNotifications(
     userId: string, 
-    options: { page?: number; limit?: number; unreadOnly?: boolean } = {}
+    options: { 
+      page?: number; 
+      limit?: number; 
+      unreadOnly?: boolean; 
+      type?: NotificationType;
+      days?: number;
+      startDate?: Date;
+      endDate?: Date;
+    } = {}
   ) {
     const page = options.page || 1;
     const limit = options.limit || 20;
     const offset = (page - 1) * limit;
+    const days = options.days || 30; // Default to last 30 days
 
     const whereClause: any = { userId };
+    
+    // Filter by read status
     if (options.unreadOnly) {
       whereClause.readAt = null;
     }
+    
+    // Filter by type
+    if (options.type) {
+      whereClause.type = options.type;
+    }
+    
+    // Date range filtering
+    if (options.startDate && options.endDate) {
+      // Custom date range
+      whereClause.createdAt = {
+        gte: options.startDate,
+        lte: options.endDate,
+      };
+    } else if (days > 0) {
+      // Filter by days (default 30 days, 0 or negative means all time)
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      whereClause.createdAt = {
+        gte: startDate,
+      };
+    }
 
-    const [notifications, total, unreadCount] = await Promise.all([
+    const [notifications, total, unreadCount, availableTypes] = await Promise.all([
       prisma.notification.findMany({
         where: whereClause,
         orderBy: { createdAt: 'desc' },
@@ -115,7 +147,25 @@ export class NotificationService {
       prisma.notification.count({
         where: { userId, readAt: null },
       }),
+      prisma.notification.groupBy({
+        by: ['type'],
+        where: { userId },
+        _count: {
+          type: true,
+        },
+        orderBy: {
+          _count: {
+            type: 'desc',
+          },
+        },
+      }),
     ]);
+
+    // Format available types with counts
+    const types = availableTypes.map(item => ({
+      type: item.type,
+      count: item._count.type,
+    }));
 
     return {
       notifications,
@@ -124,6 +174,7 @@ export class NotificationService {
       hasMore: offset + limit < total,
       page,
       pages: Math.ceil(total / limit),
+      types,
     };
   }
 

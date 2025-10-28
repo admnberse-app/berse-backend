@@ -1,4 +1,4 @@
-import { EventType, EventStatus, EventHostType, EventTicketStatus, EventParticipantStatus } from '@prisma/client';
+import { EventType, EventStatus, EventHostType, EventTicketStatus, EventParticipantStatus, PaymentStatus } from '@prisma/client';
 
 // ============================================================================
 // EVENT REQUEST TYPES
@@ -262,6 +262,7 @@ export interface TicketResponse {
   price: number;
   currency: string;
   status: EventTicketStatus;
+  paymentStatus: PaymentStatus;
   ticketNumber: string;
   purchasedAt: Date;
   canceledAt?: Date;
@@ -269,6 +270,12 @@ export interface TicketResponse {
   attendeeName?: string;
   attendeeEmail?: string;
   attendeePhone?: string;
+  
+  // Fee calculations (available on purchase)
+  platformFee?: number;
+  gatewayFee?: number;
+  totalFees?: number;
+  netAmount?: number;
   
   // Relations (optional)
   event?: EventResponse;

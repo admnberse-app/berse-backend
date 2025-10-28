@@ -1371,6 +1371,15 @@ export class PaymentService {
               });
             }
 
+            // Increment tier soldQuantity now that payment is confirmed
+            if (updatedTicket.ticketTierId) {
+              await prisma.eventTicketTier.update({
+                where: { id: updatedTicket.ticketTierId },
+                data: { soldQuantity: { increment: 1 } },
+              });
+              logger.info(`[PaymentService] Incremented soldQuantity for tier: ${updatedTicket.ticketTierId}`);
+            }
+
             // Log activity and send emails after payment success
             if (updatedTicket) {
               const { storageService } = require('../../services/storage.service');

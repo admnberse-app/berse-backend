@@ -213,7 +213,7 @@ export class EventService {
           },
           tier: {
             where: { isActive: true },
-            orderBy: { displayOrder: 'asc' },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -239,8 +239,14 @@ export class EventService {
           where: { eventId, userId },
         });
         
+        // Get user's ticket (including PENDING tickets)
         userTicket = await prisma.eventTicket.findFirst({
-          where: { eventId, userId, status: { not: EventTicketStatus.CANCELED } },
+          where: { 
+            eventId, 
+            userId, 
+            status: { not: EventTicketStatus.CANCELED },
+            // Include all payment statuses (PENDING, PAID, FAILED, etc.)
+          },
         });
       }
 
@@ -343,6 +349,7 @@ export class EventService {
 
       // Build where clause
       const where: Prisma.EventWhereInput = {
+        date: { gte: new Date() }, // Only show upcoming events
         ...(query.filters?.type && { type: query.filters.type }),
         ...(query.filters?.status && { status: query.filters.status }),
         ...(query.filters?.hostType && { hostType: query.filters.hostType }),
@@ -403,6 +410,25 @@ export class EventService {
             logoUrl: true,
             coverImageUrl: true,
           },
+        },
+        tier: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            tierName: true,
+            description: true,
+            price: true,
+            currency: true,
+            totalQuantity: true,
+            soldQuantity: true,
+            minPurchase: true,
+            maxPurchase: true,
+            availableFrom: true,
+            availableUntil: true,
+            displayOrder: true,
+            isActive: true,
+          },
+          orderBy: { displayOrder: 'asc' as const },
         },
         _count: {
           select: {
@@ -669,7 +695,7 @@ export class EventService {
     try {
       const tiers = await prisma.eventTicketTier.findMany({
         where: { eventId, isActive: true },
-        orderBy: { displayOrder: 'asc' },
+        orderBy: { displayOrder: 'asc' as const },
       });
 
       return tiers.map(tier => this.transformTicketTierResponse(tier));
@@ -802,6 +828,34 @@ export class EventService {
         });
       }
 
+      // Calculate fees for this ticket
+      let feeCalculation = {
+        platformFee: 0,
+        gatewayFee: 0,
+        totalFees: 0,
+        netAmount: price,
+      };
+      
+      try {
+        const { PaymentService } = await import('../payments/payment.service');
+        const paymentService = new PaymentService();
+        
+        // Find Xendit provider (default payment gateway)
+        const xenditProvider = await prisma.paymentProvider.findFirst({
+          where: { providerCode: 'xendit', isActive: true },
+        });
+        
+        if (xenditProvider) {
+          feeCalculation = await paymentService.calculateFees({
+            amount: price,
+            transactionType: 'EVENT_TICKET',
+            providerId: xenditProvider.id,
+          });
+        }
+      } catch (error) {
+        logger.warn('Failed to calculate fees, using default values:', error);
+      }
+
       // Create ticket (PENDING until payment is confirmed)
       const ticket = await prisma.eventTicket.create({
         data: {
@@ -839,17 +893,28 @@ export class EventService {
         },
       });
 
-      // Update tier sold quantity if applicable
-      if (data.ticketTierId) {
-        await prisma.eventTicketTier.update({
-          where: { id: data.ticketTierId },
-          data: { soldQuantity: { increment: 1 } },
-        });
+      // Note: soldQuantity will be incremented when payment is confirmed (in webhook)
+      // This ensures only PAID tickets count as sold, not PENDING ones
+
+      // Return ticket with fee calculations
+      // Handle nullable tier fields for Flutter compatibility
+      const response = {
+        ...ticket,
+        platformFee: feeCalculation.platformFee,
+        gatewayFee: feeCalculation.gatewayFee,
+        totalFees: feeCalculation.totalFees,
+        netAmount: feeCalculation.netAmount,
+      };
+
+      // Ensure tier object has no null numeric values
+      if (response.tier) {
+        response.tier = {
+          ...response.tier,
+          totalQuantity: response.tier.totalQuantity ?? 0,
+        };
       }
 
-      // Note: Ticket counts are now tracked via _count.eventTickets
-
-      return ticket as any;
+      return response as any;
     } catch (error: any) {
       logger.error('Error purchasing ticket:', error);
       throw error;
@@ -1617,6 +1682,25 @@ export class EventService {
               coverImageUrl: true,
             },
           },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' as const },
+          },
           _count: {
             select: {
               eventParticipants: true,
@@ -1706,6 +1790,25 @@ export class EventService {
               logoUrl: true,
               coverImageUrl: true,
             },
+          },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -1830,6 +1933,25 @@ export class EventService {
               coverImageUrl: true,
             },
           },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' as const },
+          },
           _count: {
             select: {
               eventParticipants: true,
@@ -1860,9 +1982,12 @@ export class EventService {
   static async getEventsByHost(hostId: string, limit: number = 20): Promise<EventResponse[]> {
     try {
       const events = await prisma.event.findMany({
-        where: { hostId },
+        where: { 
+          hostId,
+          date: { gte: new Date() } // Only show upcoming events
+        },
         take: limit,
-        orderBy: { date: 'desc' },
+        orderBy: { date: 'asc' },
         include: {
           user: {
             select: {
@@ -1879,6 +2004,25 @@ export class EventService {
               logoUrl: true,
               coverImageUrl: true,
             },
+          },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -1951,6 +2095,25 @@ export class EventService {
               logoUrl: true,
               coverImageUrl: true,
             },
+          },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -2038,6 +2201,25 @@ export class EventService {
               logoUrl: true,
               coverImageUrl: true,
             },
+          },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -2172,7 +2354,7 @@ export class EventService {
               displayOrder: true,
               isActive: true,
             },
-            orderBy: { displayOrder: 'asc' },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -2295,7 +2477,7 @@ export class EventService {
               displayOrder: true,
               isActive: true,
             },
-            orderBy: { displayOrder: 'asc' },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
@@ -2329,6 +2511,7 @@ export class EventService {
   /**
    * Get events for the next 7 days, grouped by date
    * Returns events grouped by date with day names
+   * Note: Excludes today's events (use /calendar/today endpoint for today)
    */
   static async getWeekSchedule(
     type?: EventType,
@@ -2343,14 +2526,15 @@ export class EventService {
   }> {
     try {
       const today = new Date();
-      const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-      const endOfWeek = new Date(startOfToday);
+      const startOfTomorrow = new Date(today.setHours(0, 0, 0, 0));
+      startOfTomorrow.setDate(startOfTomorrow.getDate() + 1); // Start from tomorrow
+      const endOfWeek = new Date(startOfTomorrow);
       endOfWeek.setDate(endOfWeek.getDate() + 7);
 
       const where: Prisma.EventWhereInput = {
         status: EventStatus.PUBLISHED,
         date: {
-          gte: startOfToday,
+          gte: startOfTomorrow,
           lt: endOfWeek,
         },
       };
@@ -2415,7 +2599,7 @@ export class EventService {
               displayOrder: true,
               isActive: true,
             },
-            orderBy: { displayOrder: 'asc' },
+            orderBy: { displayOrder: 'asc' as const },
           },
           _count: {
             select: {
