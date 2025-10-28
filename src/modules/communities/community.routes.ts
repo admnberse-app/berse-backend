@@ -418,6 +418,10 @@ router.get(
  *       - Members preview (first 5 members)
  *       - Upcoming events preview (first 3 events)
  *       - User membership status (if authenticated)
+ *       - Admin data (ONLY for users with ADMIN or MODERATOR role):
+ *         - Pending member requests count
+ *         - Pending vouch offers count
+ *         - Reported content count
  *     tags: [Communities]
  *     parameters:
  *       - in: path
@@ -428,7 +432,25 @@ router.get(
  *         description: Community ID
  *     responses:
  *       200:
- *         description: Community details retrieved with members preview, events preview, and user status
+ *         description: Community details retrieved with members preview, events preview, user status, and optional admin data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 adminData:
+ *                   type: object
+ *                   description: Only present if user is ADMIN or MODERATOR
+ *                   properties:
+ *                     pendingMemberRequests:
+ *                       type: number
+ *                       description: Count of pending member approval requests
+ *                     pendingVouchOffers:
+ *                       type: number
+ *                       description: Count of pending vouch offers
+ *                     reportedContent:
+ *                       type: number
+ *                       description: Count of reported content items
  *       404:
  *         description: Community not found
  */

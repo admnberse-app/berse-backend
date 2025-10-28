@@ -374,6 +374,11 @@ model Community {
   latitude         Float? // For proximity search
   longitude        Float? // For proximity search
   isVerified       Boolean               @default(false)
+  requiresApproval Boolean               @default(true) // Whether new members need approval to join
+  guidelines       String? // Community rules and guidelines (markdown supported)
+  socialLinks      Json? // Social media links: {instagram, facebook, linkedin, twitter, youtube, tiktok}
+  websiteUrl       String? // Community website URL
+  contactEmail     String? // Community contact email
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   createdById      String

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { CommunityService } from './community.service';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
+import { CommunityRole } from '@prisma/client';
 import type {
   CreateCommunityInput,
   UpdateCommunityInput,
@@ -152,6 +153,7 @@ export class CommunityController {
     const { communityId } = req.params;
     const query: CommunityMemberQuery = {
       ...req.query,
+      role: req.query.role ? (req.query.role as string).toUpperCase() as CommunityRole : undefined,
       page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
       isApproved: req.query.isApproved === 'true' ? true : req.query.isApproved === 'false' ? false : undefined,

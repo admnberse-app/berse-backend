@@ -56,6 +56,77 @@ export const createCommunityValidators = [
     }
 
   ),
+
+  body('city')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('City cannot exceed 100 characters'),
+
+  body('country')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Country cannot exceed 100 characters'),
+
+  body('latitude')
+    .optional()
+    .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+
+  body('longitude')
+    .optional()
+    .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
+
+  body('requiresApproval')
+    .optional()
+    .isBoolean().withMessage('requiresApproval must be a boolean'),
+
+  body('guidelines')
+    .optional()
+    .trim()
+    .isLength({ max: 10000 }).withMessage('Guidelines cannot exceed 10000 characters'),
+
+  body('socialLinks')
+    .optional()
+    .isObject().withMessage('socialLinks must be an object'),
+
+  body('socialLinks.instagram')
+    .optional()
+    .trim()
+    .isURL().withMessage('Instagram must be a valid URL'),
+
+  body('socialLinks.facebook')
+    .optional()
+    .trim()
+    .isURL().withMessage('Facebook must be a valid URL'),
+
+  body('socialLinks.linkedin')
+    .optional()
+    .trim()
+    .isURL().withMessage('LinkedIn must be a valid URL'),
+
+  body('socialLinks.twitter')
+    .optional()
+    .trim()
+    .isURL().withMessage('Twitter must be a valid URL'),
+
+  body('socialLinks.youtube')
+    .optional()
+    .trim()
+    .isURL().withMessage('YouTube must be a valid URL'),
+
+  body('socialLinks.tiktok')
+    .optional()
+    .trim()
+    .isURL().withMessage('TikTok must be a valid URL'),
+
+  body('websiteUrl')
+    .optional()
+    .trim()
+    .isURL().withMessage('Website URL must be valid'),
+
+  body('contactEmail')
+    .optional()
+    .trim()
+    .isEmail().withMessage('Contact email must be valid'),
 ];
 
 export const updateCommunityValidators = [
@@ -89,10 +160,6 @@ export const updateCommunityValidators = [
     .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters (DEPRECATED - use interests instead)'),
 
   body('interests')
-    .trim()
-    .isLength({ max: 50 }).withMessage('Category cannot exceed 50 characters (DEPRECATED - use interests instead)'),
-
-  body('interests')
     .optional()
     .isArray().withMessage('Interests must be an array')
     .custom(async (value) => {
@@ -117,6 +184,77 @@ export const updateCommunityValidators = [
 
       return true;
     }),
+
+  body('city')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('City cannot exceed 100 characters'),
+
+  body('country')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Country cannot exceed 100 characters'),
+
+  body('latitude')
+    .optional()
+    .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+
+  body('longitude')
+    .optional()
+    .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
+
+  body('requiresApproval')
+    .optional()
+    .isBoolean().withMessage('requiresApproval must be a boolean'),
+
+  body('guidelines')
+    .optional()
+    .trim()
+    .isLength({ max: 10000 }).withMessage('Guidelines cannot exceed 10000 characters'),
+
+  body('socialLinks')
+    .optional()
+    .isObject().withMessage('socialLinks must be an object'),
+
+  body('socialLinks.instagram')
+    .optional()
+    .trim()
+    .isURL().withMessage('Instagram must be a valid URL'),
+
+  body('socialLinks.facebook')
+    .optional()
+    .trim()
+    .isURL().withMessage('Facebook must be a valid URL'),
+
+  body('socialLinks.linkedin')
+    .optional()
+    .trim()
+    .isURL().withMessage('LinkedIn must be a valid URL'),
+
+  body('socialLinks.twitter')
+    .optional()
+    .trim()
+    .isURL().withMessage('Twitter must be a valid URL'),
+
+  body('socialLinks.youtube')
+    .optional()
+    .trim()
+    .isURL().withMessage('YouTube must be a valid URL'),
+
+  body('socialLinks.tiktok')
+    .optional()
+    .trim()
+    .isURL().withMessage('TikTok must be a valid URL'),
+
+  body('websiteUrl')
+    .optional()
+    .trim()
+    .isURL().withMessage('Website URL must be valid'),
+
+  body('contactEmail')
+    .optional()
+    .trim()
+    .isEmail().withMessage('Contact email must be valid'),
 
   body('isVerified')
     .optional()
@@ -274,8 +412,9 @@ export const communityMemberQueryValidators = [
   
   query('role')
     .optional()
+    .customSanitizer((value) => value?.toUpperCase())
     .isIn(Object.values(CommunityRole))
-    .withMessage('Invalid role'),
+    .withMessage('Invalid role. Must be one of: MEMBER, MODERATOR, ADMIN, OWNER'),
   
   query('isApproved')
     .optional()

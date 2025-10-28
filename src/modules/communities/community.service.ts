@@ -130,7 +130,10 @@ export class CommunityService {
       // Update community
       const updatedCommunity = await prisma.community.update({
         where: { id: communityId },
-        data: updateData,
+        data: {
+          ...updateData,
+          socialLinks: updateData.socialLinks ? (updateData.socialLinks as any) : undefined,
+        },
         include: {
           user: {
             include: {
@@ -296,10 +299,110 @@ export class CommunityService {
         }
       }
 
+      // Fetch detailed stats
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const [
+        allEvents,
+        upcomingEventsCount,
+        pastEventsCount,
+        roleStats,
+        totalVouches,
+        lastEvent,
+        lastMember,
+        recentMembersCount,
+        eventAttendanceStats,
+      ] = await Promise.all([
+        // Total events count
+        prisma.event.count({
+          where: { communityId },
+        }),
+        // Upcoming events
+        prisma.event.count({
+          where: {
+            communityId,
+            date: { gte: now },
+            status: 'PUBLISHED',
+          },
+        }),
+        // Past events
+        prisma.event.count({
+          where: {
+            communityId,
+            date: { lt: now },
+          },
+        }),
+        // Admin/moderator counts
+        prisma.communityMember.groupBy({
+          by: ['role'],
+          where: { communityId, isApproved: true },
+          _count: true,
+        }),
+        // Total vouches given in community
+        prisma.vouch.count({
+          where: {
+            communityId,
+            isCommunityVouch: true,
+            status: 'ACTIVE',
+          },
+        }),
+        // Last event
+        prisma.event.findFirst({
+          where: { communityId },
+          orderBy: { date: 'desc' },
+          select: { date: true },
+        }),
+        // Last member joined
+        prisma.communityMember.findFirst({
+          where: { communityId, isApproved: true },
+          orderBy: { joinedAt: 'desc' },
+          select: { joinedAt: true },
+        }),
+        // Members joined in last 30 days
+        prisma.communityMember.count({
+          where: {
+            communityId,
+            isApproved: true,
+            joinedAt: { gte: thirtyDaysAgo },
+          },
+        }),
+        // Get all events with participant counts for average
+        prisma.event.findMany({
+          where: { communityId },
+          select: {
+            _count: {
+              select: {
+                eventParticipants: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const adminCount = roleStats.find(r => r.role === 'ADMIN')?._count || 0;
+      const moderatorCount = roleStats.find(r => r.role === 'MODERATOR')?._count || 0;
+
+      // Calculate average event attendance from event participant counts
+      const avgAttendance = eventAttendanceStats.length > 0
+        ? eventAttendanceStats.reduce((sum, e) => sum + e._count.eventParticipants, 0) / eventAttendanceStats.length
+        : 0;
+
       const formattedCommunity = this.formatCommunityResponse(community, userId);
 
-      return {
+      const response: CommunityResponse = {
         ...formattedCommunity,
+        requiresApproval: community.requiresApproval,
+        guidelines: community.guidelines || undefined,
+        socialLinks: community.socialLinks as any || undefined,
+        websiteUrl: community.websiteUrl || undefined,
+        contactEmail: community.contactEmail || undefined,
+        location: {
+          city: community.city || undefined,
+          country: community.country || undefined,
+          latitude: community.latitude || undefined,
+          longitude: community.longitude || undefined,
+        },
         membersPreview: membersPreview.map(m => ({
           id: m.user.id,
           fullName: m.user.fullName,
@@ -325,8 +428,41 @@ export class CommunityService {
           isModerator,
           isPending: userMembership?.isApproved === false,
           role: userMembership?.role,
+          joinedAt: userMembership?.joinedAt?.toISOString(),
+        },
+        stats: {
+          totalEvents: allEvents,
+          upcomingEvents: upcomingEventsCount,
+          pastEvents: pastEventsCount,
+          adminCount,
+          moderatorCount,
+          totalVouchesGiven: totalVouches,
+          lastEventDate: lastEvent?.date?.toISOString(),
+          lastMemberJoinDate: lastMember?.joinedAt?.toISOString(),
+          memberGrowthLast30Days: recentMembersCount,
+          averageEventAttendance: Math.round(avgAttendance),
         },
       };
+
+      // Only fetch and include admin data for admins/moderators
+      if (isAdmin || isModerator) {
+        const [pendingMembers, pendingVouches] = await Promise.all([
+          prisma.communityMember.count({
+            where: { communityId, isApproved: false },
+          }),
+          prisma.communityVouchOffer.count({
+            where: { communityId, status: 'PENDING' },
+          }),
+        ]);
+
+        response.adminData = {
+          pendingMemberRequests: pendingMembers,
+          pendingVouchOffers: pendingVouches,
+          reportedContent: 0, // TODO: Implement when content reporting is added
+        };
+      }
+
+      return response;
     } catch (error) {
       logger.error('Failed to get community', { error, communityId });
       throw error;
@@ -1423,6 +1559,17 @@ export class CommunityService {
       category: community.category,
       interests: community.interests || [],
       isVerified: community.isVerified,
+      requiresApproval: community.requiresApproval ?? true,
+      guidelines: community.guidelines || undefined,
+      socialLinks: community.socialLinks || undefined,
+      websiteUrl: community.websiteUrl || undefined,
+      contactEmail: community.contactEmail || undefined,
+      location: {
+        city: community.city || undefined,
+        country: community.country || undefined,
+        latitude: community.latitude || undefined,
+        longitude: community.longitude || undefined,
+      },
       createdAt: community.createdAt.toISOString(),
       updatedAt: community.updatedAt.toISOString(),
       creator: userBasic,
@@ -1441,7 +1588,7 @@ export class CommunityService {
       id: member.user.id,
       fullName: member.user.fullName,
       username: member.user.username || undefined,
-      profilePicture: member.user.userProfiles?.profilePicture || undefined,
+      profilePicture: member.user.profile?.profilePicture || undefined,
       trustLevel: member.user.trustLevel || 'starter',
     };
 

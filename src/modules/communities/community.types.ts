@@ -1,6 +1,26 @@
 import { CommunityRole } from '@prisma/client';
 
 // ============================================================================
+// SHARED TYPES
+// ============================================================================
+
+export interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+  twitter?: string;
+  youtube?: string;
+  tiktok?: string;
+}
+
+export interface LocationData {
+  city?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+// ============================================================================
 // COMMUNITY MANAGEMENT TYPES
 // ============================================================================
 
@@ -11,6 +31,15 @@ export interface CreateCommunityInput {
   coverImageUrl?: string;
   category?: string; // @deprecated - Use interests instead
   interests?: string[]; // Array of interest values from profile metadata
+  city?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  requiresApproval?: boolean;
+  guidelines?: string;
+  socialLinks?: SocialLinks;
+  websiteUrl?: string;
+  contactEmail?: string;
 }
 
 export interface UpdateCommunityInput {
@@ -21,6 +50,15 @@ export interface UpdateCommunityInput {
   coverImageUrl?: string;
   category?: string; // @deprecated - Use interests instead
   interests?: string[]; // Array of interest values from profile metadata
+  city?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+  requiresApproval?: boolean;
+  guidelines?: string;
+  socialLinks?: SocialLinks;
+  websiteUrl?: string;
+  contactEmail?: string;
   isVerified?: boolean;
 }
 
@@ -111,6 +149,12 @@ export interface CommunityResponse {
   category?: string; // @deprecated - Use interests instead
   interests: string[]; // Array of interest values matching profile metadata
   isVerified: boolean;
+  requiresApproval: boolean; // Whether new members need approval
+  guidelines?: string; // Community rules (markdown supported)
+  socialLinks?: SocialLinks; // Social media links
+  websiteUrl?: string;
+  contactEmail?: string;
+  location?: LocationData; // City, country, coordinates
   createdAt: string;
   updatedAt: string;
   creator: UserBasicInfo;
@@ -143,6 +187,13 @@ export interface CommunityResponse {
     isModerator: boolean;
     isPending: boolean;
     role?: CommunityRole;
+    joinedAt?: string; // User's join date in this community
+  };
+  stats?: CommunityDetailedStats;
+  adminData?: {
+    pendingMemberRequests: number;
+    pendingVouchOffers: number;
+    reportedContent: number;
   };
 }
 
@@ -171,6 +222,19 @@ export interface CommunityStatsResponse {
   totalEvents: number;
   activeEvents: number;
   totalVouches: number;
+}
+
+export interface CommunityDetailedStats {
+  totalEvents: number; // Past + future events
+  upcomingEvents: number; // Future events only
+  pastEvents: number; // Past events
+  adminCount: number;
+  moderatorCount: number;
+  totalVouchesGiven: number; // Vouches given within this community
+  lastEventDate?: string; // Most recent event date
+  lastMemberJoinDate?: string; // Most recent member join
+  memberGrowthLast30Days: number; // Members joined in last 30 days
+  averageEventAttendance?: number; // Average RSVPs per event
 }
 
 export interface PaginatedCommunitiesResponse {
