@@ -626,6 +626,8 @@ class AccessControlService {
         return features.marketplaceAccess?.maxListings || 0;
       case 'services:create':
         return features.serviceAccess?.maxActiveServices || 0;
+      case 'communities:join':
+        return features.communityAccess?.maxCommunities || 0;
       default:
         return -1; // Unlimited or not applicable
     }

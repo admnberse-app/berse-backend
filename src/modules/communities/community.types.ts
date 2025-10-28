@@ -197,6 +197,12 @@ export interface CommunityResponse {
     isPending: boolean;
     role?: CommunityRole;
     joinedAt?: string; // User's join date in this community
+    canJoin: boolean; // Whether user can join (based on subscription limits)
+    joinLimit?: {
+      current: number; // Current communities joined/pending
+      max: number; // Max allowed (-1 = unlimited)
+      remaining: number; // Remaining slots (-1 = unlimited)
+    };
   };
   stats?: CommunityDetailedStats;
   adminData?: {

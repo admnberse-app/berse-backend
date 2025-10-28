@@ -281,6 +281,9 @@ export class CommunityService {
       let isAdmin = false;
       let isModerator = false;
       let isMember = false;
+      let isPending = false;
+      let canJoin = true; // Default to true for anonymous users
+      let joinLimit = undefined;
 
       if (userId) {
         userMembership = await prisma.communityMember.findUnique({
@@ -292,10 +295,46 @@ export class CommunityService {
           },
         });
 
-        if (userMembership && userMembership.isApproved) {
-          isMember = true;
-          isAdmin = userMembership.role === 'ADMIN';
-          isModerator = userMembership.role === 'MODERATOR';
+        if (userMembership) {
+          if (userMembership.isApproved) {
+            isMember = true;
+            isAdmin = userMembership.role === 'ADMIN';
+            isModerator = userMembership.role === 'MODERATOR';
+            canJoin = false; // Already a member
+          } else {
+            isPending = true;
+            canJoin = false; // Already has pending request
+          }
+        } else {
+          // Check if user can join (not a member, not pending)
+          // Get current community count (approved + pending)
+          const currentCommunityCount = await prisma.communityMember.count({
+            where: { userId },
+          });
+
+          // Get user's subscription info
+          const userWithSubscription = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+              subscriptions: {
+                where: { status: 'ACTIVE' },
+                include: { tiers: true },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+            },
+          });
+
+          const activeSubscription = userWithSubscription?.subscriptions[0];
+          const features = activeSubscription?.tiers?.features as any;
+          const maxCommunities = features?.communityAccess?.maxCommunities || 3;
+
+          canJoin = maxCommunities === -1 || currentCommunityCount < maxCommunities;
+          joinLimit = {
+            current: currentCommunityCount,
+            max: maxCommunities,
+            remaining: maxCommunities === -1 ? -1 : Math.max(0, maxCommunities - currentCommunityCount),
+          };
         }
       }
 
@@ -426,9 +465,11 @@ export class CommunityService {
           isMember,
           isAdmin,
           isModerator,
-          isPending: userMembership?.isApproved === false,
+          isPending,
           role: userMembership?.role,
           joinedAt: userMembership?.joinedAt?.toISOString(),
+          canJoin,
+          joinLimit,
         },
         stats: {
           totalEvents: allEvents,
@@ -720,6 +761,39 @@ export class CommunityService {
 
       if (existingMember) {
         throw new AppError('Already a member or request pending', 409);
+      }
+
+      // Check community join limit based on subscription tier
+      // Count both approved AND pending memberships
+      const currentCommunityCount = await prisma.communityMember.count({
+        where: {
+          userId,
+          // Include both approved and pending (isApproved: true OR false)
+        },
+      });
+
+      // Get user's subscription info to check maxCommunities limit
+      const userWithSubscription = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptions: {
+            where: { status: 'ACTIVE' },
+            include: { tiers: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      const activeSubscription = userWithSubscription?.subscriptions[0];
+      const features = activeSubscription?.tiers?.features as any;
+      const maxCommunities = features?.communityAccess?.maxCommunities || 3; // Default to FREE tier limit
+
+      if (maxCommunities !== -1 && currentCommunityCount >= maxCommunities) {
+        throw new AppError(
+          `You have reached your community limit (${maxCommunities}). Upgrade your subscription to join more communities.`,
+          403
+        );
       }
 
       // Create membership record (pending approval)

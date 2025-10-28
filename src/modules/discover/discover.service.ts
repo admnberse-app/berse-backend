@@ -490,57 +490,102 @@ export class DiscoverService {
       ? params.excludeSections.split(',').map(s => s.trim())
       : [];
 
+    // Track seen IDs to avoid duplicates across sections
+    const seenEventIds = new Set<string>();
+    const seenCommunityIds = new Set<string>();
+    const seenMarketplaceIds = new Set<string>();
+    const seenHomeSurfIds = new Set<string>();
+    const seenBerseGuideIds = new Set<string>();
+
     // Build sections
     const sections: DiscoverSection[] = [];
+
+    // Section item limit (max 3-5 items per section)
+    const SECTION_ITEM_LIMIT = 5;
 
     // Fetch content for all sections in parallel
     const sectionPromises: Promise<DiscoverSection | null>[] = [];
 
     if (this.shouldIncludeSection('trending', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildTrendingSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildTrendingSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('nearby', requestedSections, excludedSections) && (params.latitude && params.longitude || userContext?.latitude && userContext?.longitude)) {
-      sectionPromises.push(this.buildNearbySection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildNearbySection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('communities', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildCommunitiesSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildCommunitiesSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('upcoming', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildUpcomingSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildUpcomingSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('new', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildNewSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildNewSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('marketplace', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildMarketplaceSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildMarketplaceSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     // Add more general sections that aren't strictly location-filtered
     if (this.shouldIncludeSection('featured', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildFeaturedCommunitiesSection(userId, params, userContext));
+      sectionPromises.push(this.buildFeaturedCommunitiesSection(userId, params, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('homesurf', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildHomeSurfSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildHomeSurfSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('berseguide', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildBerseGuideSection(userId, params, locationInfo, userContext));
+      sectionPromises.push(this.buildBerseGuideSection(userId, params, locationInfo, userContext, SECTION_ITEM_LIMIT));
     }
 
     if (this.shouldIncludeSection('popular_events', requestedSections, excludedSections)) {
-      sectionPromises.push(this.buildPopularEventsSection(userId, params, userContext));
+      sectionPromises.push(this.buildPopularEventsSection(userId, params, userContext, SECTION_ITEM_LIMIT));
     }
 
     const resolvedSections = await Promise.all(sectionPromises);
 
-    // Filter out null sections
-    sections.push(...resolvedSections.filter(s => s !== null) as DiscoverSection[]);
+    // Filter out null sections and remove duplicates
+    const uniqueSections = resolvedSections.filter(s => s !== null) as DiscoverSection[];
+    
+    // Deduplicate items across sections
+    uniqueSections.forEach(section => {
+      section.items = section.items.filter(item => {
+        const itemId = item.id;
+        
+        // Check based on content type
+        if (item.type === 'event') {
+          if (seenEventIds.has(itemId)) return false;
+          seenEventIds.add(itemId);
+          return true;
+        } else if (item.type === 'community') {
+          if (seenCommunityIds.has(itemId)) return false;
+          seenCommunityIds.add(itemId);
+          return true;
+        } else if (item.type === 'marketplace_item') {
+          if (seenMarketplaceIds.has(itemId)) return false;
+          seenMarketplaceIds.add(itemId);
+          return true;
+        } else if (item.type === 'homesurf') {
+          if (seenHomeSurfIds.has(itemId)) return false;
+          seenHomeSurfIds.add(itemId);
+          return true;
+        } else if (item.type === 'berseguide') {
+          if (seenBerseGuideIds.has(itemId)) return false;
+          seenBerseGuideIds.add(itemId);
+          return true;
+        }
+        
+        return true;
+      });
+    });
+
+    // Remove sections that became empty after deduplication
+    sections.push(...uniqueSections.filter(s => s.items.length > 0));
 
     // Count total items across all sections
     const totalItems = sections.reduce((sum, section) => sum + section.items.length, 0);
@@ -640,13 +685,14 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const events = await this.fetchEvents(
       userId, 
       { ...params, sortBy: DiscoverSortBy.POPULAR }, 
       locationInfo, 
-      params.limit || 10,
+      sectionLimit,
       params.latitude || userContext?.latitude,
       params.longitude || userContext?.longitude
     );
@@ -659,7 +705,7 @@ export class DiscoverService {
       subtitle: 'Popular events right now in your area',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: events,
+      items: events.slice(0, sectionLimit),
       hasMore: false,
       viewAllEndpoint: '/v2/discover/trending?contentType=events',
       metadata: {
@@ -676,7 +722,8 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const lat = params.latitude || userContext?.latitude;
     const lon = params.longitude || userContext?.longitude;
@@ -685,7 +732,7 @@ export class DiscoverService {
       userId, 
       { ...params, sortBy: DiscoverSortBy.DISTANCE }, 
       locationInfo,
-      params.limit || 10,
+      sectionLimit,
       lat,
       lon
     );
@@ -698,8 +745,8 @@ export class DiscoverService {
       subtitle: `Events and activities within ${params.radius || 5}km`,
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.COMPACT,
-      items: items.slice(0, params.limit || 10),
-      hasMore: items.length > (params.limit || 10),
+      items: items.slice(0, sectionLimit),
+      hasMore: items.length > sectionLimit,
       viewAllEndpoint: '/v2/discover/nearby'
     };
   }
@@ -711,7 +758,8 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     // Try location-specific first
     let communities = await this.fetchCommunities(userId, params, locationInfo);
@@ -733,9 +781,9 @@ export class DiscoverService {
       subtitle: 'Join communities with active members',
       layout: DiscoverLayoutType.VERTICAL,
       itemLayout: DiscoverItemLayout.LIST,
-      items: communities.slice(0, params.limit || 10),
-      hasMore: communities.length > (params.limit || 10),
-      viewAllEndpoint: `/v2/communities?popular=true${locationInfo.city ? '&city=' + locationInfo.city : ''}`
+      items: communities.slice(0, sectionLimit),
+      hasMore: communities.length > sectionLimit,
+      viewAllEndpoint: '/communities'
     };
   }
 
@@ -746,7 +794,8 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const events = await this.fetchUpcomingEvents(
       userId, 
@@ -764,8 +813,8 @@ export class DiscoverService {
       subtitle: 'Events happening soon',
       layout: DiscoverLayoutType.VERTICAL,
       itemLayout: DiscoverItemLayout.LIST,
-      items: events.slice(0, params.limit || 10),
-      hasMore: events.length > (params.limit || 10),
+      items: events.slice(0, sectionLimit),
+      hasMore: events.length > sectionLimit,
       viewAllEndpoint: '/v2/events?upcoming=true'
     };
   }
@@ -777,13 +826,14 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const events = await this.fetchEvents(
       userId, 
       { ...params, sortBy: DiscoverSortBy.DATE }, 
       locationInfo, 
-      params.limit || 10,
+      sectionLimit,
       params.latitude || userContext?.latitude,
       params.longitude || userContext?.longitude
     );
@@ -796,7 +846,7 @@ export class DiscoverService {
       subtitle: 'Recently added events',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: events,
+      items: events.slice(0, sectionLimit),
       hasMore: false,
       viewAllEndpoint: '/v2/discover/new?contentType=events'
     };
@@ -808,12 +858,13 @@ export class DiscoverService {
   private async buildFeaturedCommunitiesSection(
     userId: string | undefined,
     params: DiscoverQueryParams,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     // Fetch verified and popular communities globally
     const communities = await this.fetchCommunities(
       userId, 
-      { ...params, verifiedOnly: true, limit: 10 }, 
+      { ...params, verifiedOnly: true, limit: sectionLimit }, 
       {} // No location filter
     );
 
@@ -825,9 +876,9 @@ export class DiscoverService {
       subtitle: 'Verified communities you might like',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: communities,
+      items: communities.slice(0, sectionLimit),
       hasMore: false,
-      viewAllEndpoint: '/v2/communities?verified=true',
+      viewAllEndpoint: '/communities',
       metadata: {
         icon: 'star',
         color: '#FFD700'
@@ -841,13 +892,14 @@ export class DiscoverService {
   private async buildPopularEventsSection(
     userId: string | undefined,
     params: DiscoverQueryParams,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const events = await this.fetchEvents(
       userId,
-      { ...params, sortBy: DiscoverSortBy.POPULAR, limit: 10 },
+      { ...params, sortBy: DiscoverSortBy.POPULAR, limit: sectionLimit },
       {}, // No strict location filter
-      undefined,
+      sectionLimit,
       params.latitude || userContext?.latitude,
       params.longitude || userContext?.longitude
     );
@@ -860,7 +912,7 @@ export class DiscoverService {
       subtitle: 'Events people are excited about',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: events,
+      items: events.slice(0, sectionLimit),
       hasMore: false,
       viewAllEndpoint: '/v2/events?popular=true',
       metadata: {
@@ -877,7 +929,8 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const where: any = {
       isEnabled: true
@@ -893,7 +946,7 @@ export class DiscoverService {
 
     const listings = await prisma.userHomeSurf.findMany({
       where,
-      take: 10,
+      take: sectionLimit,
       orderBy: {
         lastActiveAt: 'desc'
       },
@@ -924,7 +977,7 @@ export class DiscoverService {
       subtitle: 'Stay with locals and make new friends',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items,
+      items: items.slice(0, sectionLimit),
       hasMore: false,
       viewAllEndpoint: `/v2/homesurf${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
       metadata: {
@@ -941,7 +994,8 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const where: any = {
       isEnabled: true
@@ -957,7 +1011,7 @@ export class DiscoverService {
 
     const listings = await prisma.userBerseGuide.findMany({
       where,
-      take: 10,
+      take: sectionLimit,
       orderBy: {
         lastActiveAt: 'desc'
       },
@@ -988,7 +1042,7 @@ export class DiscoverService {
       subtitle: 'Discover hidden gems with local guides',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items,
+      items: items.slice(0, sectionLimit),
       hasMore: false,
       viewAllEndpoint: `/v2/berseguide${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
       metadata: {
@@ -1005,13 +1059,14 @@ export class DiscoverService {
     userId: string | undefined,
     params: DiscoverQueryParams,
     locationInfo: LocationInfo,
-    userContext?: UserContext
+    userContext?: UserContext,
+    sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
     const items = await this.fetchMarketplaceItems(
       userId, 
       params, 
       locationInfo,
-      params.limit || 10,
+      sectionLimit,
       params.latitude || userContext?.latitude,
       params.longitude || userContext?.longitude
     );
@@ -1024,8 +1079,8 @@ export class DiscoverService {
       subtitle: 'Latest listings',
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
-      items: items.slice(0, params.limit || 10),
-      hasMore: items.length > (params.limit || 10),
+      items: items.slice(0, sectionLimit),
+      hasMore: items.length > sectionLimit,
       viewAllEndpoint: `/v2/marketplace/listings${locationInfo.city ? '?city=' + locationInfo.city : ''}`
     };
   }

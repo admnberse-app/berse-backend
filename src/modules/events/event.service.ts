@@ -2300,6 +2300,7 @@ export class EventService {
 
       const events = await prisma.event.findMany({
         where,
+        take: 5,
         orderBy: { date: 'asc' },
         select: {
           id: true,
