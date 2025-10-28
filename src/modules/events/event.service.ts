@@ -1501,6 +1501,27 @@ export class EventService {
   // ============================================================================
 
   private static transformEventResponse(event: any): EventResponse {
+    // Calculate price range from ticket tiers
+    let priceRange = undefined;
+    if (!event.isFree && event.tier && event.tier.length > 0) {
+      const activeTiers = event.tier.filter((t: any) => t.isActive);
+      if (activeTiers.length > 0) {
+        const prices = activeTiers.map((t: any) => t.price);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const currency = activeTiers[0].currency;
+        
+        priceRange = {
+          min: minPrice,
+          max: maxPrice,
+          currency,
+          label: minPrice === maxPrice 
+            ? `${currency} ${minPrice.toFixed(2)}`
+            : `Starting from ${currency} ${minPrice.toFixed(2)}`,
+        };
+      }
+    }
+
     return {
       id: event.id,
       title: event.title,
@@ -1517,11 +1538,13 @@ export class EventService {
       images: event.images,
       isFree: event.isFree,
       currency: event.currency,
+      priceRange,
       status: event.status,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
       host: event.user,
       community: event.communities,
+      ticketTiers: event.tier?.map((tier: any) => this.transformTicketTierResponse(tier)),
       _count: event._count,
     };
   }
@@ -2132,6 +2155,25 @@ export class EventService {
               coverImageUrl: true,
             },
           },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' },
+          },
           _count: {
             select: {
               eventParticipants: true,
@@ -2236,6 +2278,25 @@ export class EventService {
               coverImageUrl: true,
             },
           },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' },
+          },
           _count: {
             select: {
               eventParticipants: true,
@@ -2336,6 +2397,25 @@ export class EventService {
               logoUrl: true,
               coverImageUrl: true,
             },
+          },
+          tier: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              tierName: true,
+              description: true,
+              price: true,
+              currency: true,
+              totalQuantity: true,
+              soldQuantity: true,
+              minPurchase: true,
+              maxPurchase: true,
+              availableFrom: true,
+              availableUntil: true,
+              displayOrder: true,
+              isActive: true,
+            },
+            orderBy: { displayOrder: 'asc' },
           },
           _count: {
             select: {

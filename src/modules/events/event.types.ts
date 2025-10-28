@@ -175,6 +175,12 @@ export interface EventResponse {
   images: string[];
   isFree: boolean;
   currency: string;
+  priceRange?: {
+    min: number;
+    max: number;
+    currency: string;
+    label: string; // e.g., "Starting from RM 50" or "RM 50 - RM 200"
+  };
   status: EventStatus;
   createdAt: Date;
   updatedAt: Date;
