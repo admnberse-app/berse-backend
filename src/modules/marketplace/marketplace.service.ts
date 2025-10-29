@@ -29,6 +29,7 @@ import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { PaymentService } from '../payments/payment.service';
 import { NotificationService } from '../../services/notification.service';
 import { emailService } from '../../services/email.service';
+import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
 const paymentService = new PaymentService();
@@ -756,6 +757,149 @@ export class MarketplaceService {
     }
 
     return this.formatOrderResponse(order);
+  }
+
+  /**
+   * Get my Marketplace items (listings + orders)
+   */
+  async getMyMarketplace(
+    userId: string,
+    filters?: {
+      filter?: 'active' | 'past' | 'all';
+      status?: any;
+      type?: 'purchases' | 'sales' | 'listings' | 'all';
+    }
+  ): Promise<{
+    listings: any[];
+    purchases: any[];
+    sales: any[];
+  }> {
+    try {
+      const { filter = 'all', status, type = 'all' } = filters || {};
+
+      let listings: any[] = [];
+      let purchases: any[] = [];
+      let sales: any[] = [];
+
+      // Fetch listings if requested
+      if (type === 'listings' || type === 'all') {
+        const listingWhere: any = { userId: userId };
+        
+        if (status) {
+          listingWhere.status = status;
+        } else if (filter === 'active') {
+          listingWhere.status = 'ACTIVE';
+        } else if (filter === 'past') {
+          listingWhere.status = { in: ['SOLD', 'DELETED'] };
+        }
+
+        listings = await prisma.marketplaceListing.findMany({
+          where: listingWhere,
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      // Fetch purchases if requested
+      if (type === 'purchases' || type === 'all') {
+        const purchaseWhere: any = { buyerId: userId };
+        
+        if (status) {
+          purchaseWhere.status = status;
+        } else if (filter === 'active') {
+          purchaseWhere.status = { in: ['PENDING', 'CONFIRMED', 'SHIPPED'] };
+        } else if (filter === 'past') {
+          purchaseWhere.status = { in: ['DELIVERED', 'CANCELED', 'REFUNDED'] };
+        }
+
+        purchases = await prisma.marketplaceOrder.findMany({
+          where: purchaseWhere,
+          include: {
+            marketplaceListings: {
+              select: {
+                id: true,
+                title: true,
+                images: true,
+              },
+            },
+            users_marketplace_orders_sellerIdTousers: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      // Fetch sales if requested
+      if (type === 'sales' || type === 'all') {
+        const salesWhere: any = { sellerId: userId };
+        
+        if (status) {
+          salesWhere.status = status;
+        } else if (filter === 'active') {
+          salesWhere.status = { in: ['PENDING', 'CONFIRMED', 'SHIPPED'] };
+        } else if (filter === 'past') {
+          salesWhere.status = { in: ['DELIVERED', 'CANCELED', 'REFUNDED'] };
+        }
+
+        sales = await prisma.marketplaceOrder.findMany({
+          where: salesWhere,
+          include: {
+            marketplaceListings: {
+              select: {
+                id: true,
+                title: true,
+                images: true,
+              },
+            },
+            users_marketplace_orders_buyerIdTousers: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      return {
+        listings: listings.map(this.formatListingResponse),
+        purchases: purchases.map(this.formatOrderResponse),
+        sales: sales.map(this.formatOrderResponse),
+      };
+    } catch (error) {
+      logger.error('Failed to get my Marketplace', { error, userId, filters });
+      throw error;
+    }
   }
 
   async getUserOrders(

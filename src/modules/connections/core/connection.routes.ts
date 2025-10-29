@@ -799,4 +799,126 @@ router.get(
   ConnectionController.getBlockedUsers
 );
 
+// ============================================================================
+// ACTIVITY DISCOVERY ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/connections/activities/recent:
+ *   get:
+ *     summary: Get recent activities from your network or public feed
+ *     description: |
+ *       Discover what people are doing on the platform. Shows recent activities like:
+ *       - Joined events
+ *       - Created communities
+ *       - Started trips
+ *       - BerseGuide sessions
+ *       - HomeSurf stays
+ *       - Marketplace listings
+ *       
+ *       **Scopes:**
+ *       - `public` (default): Shows all public activities from any user
+ *       - `connections`: Only shows activities from your accepted connections
+ *       - `community`: Shows activities from users in your communities
+ *       - `nearby`: Shows activities from users in your current city
+ *       
+ *       Only shows public activities and excludes your own activities.
+ *     tags: [Connections]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [public, connections, community, nearby]
+ *           default: public
+ *         description: |
+ *           Filter scope for activities:
+ *           - `public`: All users (discovery feed)
+ *           - `connections`: Only connected users
+ *           - `community`: Users in your communities
+ *           - `nearby`: Users in your city
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of activities to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *       - in: query
+ *         name: activityTypes
+ *         schema:
+ *           type: string
+ *         description: Comma-separated activity types to filter (e.g., "joined_event,created_community")
+ *         example: "joined_event,started_trip"
+ *     responses:
+ *       200:
+ *         description: Recent activities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     activities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           activityType:
+ *                             type: string
+ *                             example: "joined_event"
+ *                           entityType:
+ *                             type: string
+ *                             example: "event"
+ *                           entityId:
+ *                             type: string
+ *                           entityDetails:
+ *                             type: object
+ *                             description: Details of the entity (event, community, etc.)
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               fullName:
+ *                                 type: string
+ *                               username:
+ *                                 type: string
+ *                               profilePicture:
+ *                                 type: string
+ *                     totalCount:
+ *                       type: integer
+ *                       description: Total number of activities available
+ *                     hasMore:
+ *                       type: boolean
+ *                       description: Whether there are more activities to load
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get(
+  '/activities/recent',
+  authenticateToken,
+  ConnectionController.getRecentActivities
+);
+
 export default router;

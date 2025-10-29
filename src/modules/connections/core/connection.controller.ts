@@ -435,4 +435,39 @@ export class ConnectionController {
       next(error);
     }
   }
+
+  // ============================================================================
+  // ACTIVITY DISCOVERY ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Get recent activities from connections or public feed
+   * @route GET /v2/connections/activities/recent
+   */
+  static async getRecentActivities(
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const scope = (req.query.scope as 'connections' | 'public' | 'community' | 'nearby') || 'public';
+      const activityTypes = req.query.activityTypes
+        ? (req.query.activityTypes as string).split(',')
+        : undefined;
+
+      const result = await ConnectionService.getRecentActivities(userId, {
+        limit,
+        offset,
+        activityTypes,
+        scope,
+      });
+
+      sendSuccess(res, result, 'Recent activities retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }

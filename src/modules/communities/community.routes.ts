@@ -246,13 +246,82 @@ router.get(
  * @swagger
  * /v2/communities/my:
  *   get:
- *     summary: Get communities user is member of
+ *     summary: Get my communities (owned and member)
+ *     description: Get communities user owns or is a member of, with optional role-based filtering
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [owner, member, all]
+ *           default: all
+ *         description: Filter by user role - owner (created by user), member (joined as member), or all
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [active, all]
+ *           default: all
+ *         description: Filter by activity status
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search communities by name or description
+ *       - in: query
+ *         name: interests
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: Filter by interests
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
  *     responses:
  *       200:
  *         description: My communities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   oneOf:
+ *                     - type: object
+ *                       properties:
+ *                         owned:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                         member:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                     - type: object
+ *                       properties:
+ *                         communities:
+ *                           type: array
+ *                         totalCount:
+ *                           type: integer
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
  */
 router.get(
   '/my',

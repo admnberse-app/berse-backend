@@ -32,19 +32,23 @@ const setupCluster = () => {
 
 const startServer = async () => {
   try {
-    // Test database connection with retry logic
-    let retries = 5;
+    // Test database connection with reduced retries for development
+    const maxRetries = config.isDevelopment ? 2 : 5;
+    let retries = maxRetries;
+    
     while (retries > 0) {
       try {
         await prisma.$connect();
         logger.info('✅ Database connected successfully');
         
-        // Fix any missing membership IDs on startup
-        try {
-          await MembershipService.fixMissingMembershipIds();
-          logger.info('✅ Checked and fixed missing membership IDs');
-        } catch (error) {
-          logger.error('Failed to fix missing membership IDs:', error);
+        // Skip membership check in development for faster startup
+        if (!config.isDevelopment) {
+          try {
+            await MembershipService.fixMissingMembershipIds();
+            logger.info('✅ Checked and fixed missing membership IDs');
+          } catch (error) {
+            logger.error('Failed to fix missing membership IDs:', error);
+          }
         }
         
         break;
@@ -54,10 +58,11 @@ const startServer = async () => {
           logger.error('❌ CRITICAL: Cannot start server without database connection');
           logger.error('Database error:', dbError);
           logger.error('Please check DATABASE_URL and ensure database is accessible');
-          process.exit(1); // Exit with error - don't run without database
+          process.exit(1);
         } else {
-          logger.info(`Database connection failed. Retrying... (${retries} attempts left)`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          const waitTime = config.isDevelopment ? 2000 : 5000;
+          logger.info(`Database connection failed. Retrying in ${waitTime}ms... (${retries} attempts left)`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
     }

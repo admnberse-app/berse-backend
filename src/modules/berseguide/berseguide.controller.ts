@@ -741,6 +741,31 @@ export class BerseGuideController {
   // ============================================================================
 
   /**
+   * Get my BerseGuide bookings
+   * GET /api/v2/berseguide/my?filter=upcoming&status=APPROVED&role=guide
+   */
+  async getMyBerseGuide(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { filter, status, role } = req.query;
+
+      const data = await berseGuideService.getMyBerseGuide(userId, {
+        filter: filter as any,
+        status: status as any,
+        role: role as any,
+      });
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      logger.error('Failed to get my BerseGuide', { error, userId: req.user?.id });
+      throw error;
+    }
+  }
+
+  /**
    * Get BerseGuide dashboard
    * GET /api/v2/berseguide/dashboard
    */

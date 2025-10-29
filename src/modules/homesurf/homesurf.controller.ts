@@ -696,6 +696,31 @@ export class HomeSurfController {
   // ============================================================================
 
   /**
+   * Get my HomeSurf bookings and stays
+   * GET /api/v2/homesurf/my?filter=upcoming&status=APPROVED&role=host
+   */
+  async getMyHomeSurf(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { filter, status, role } = req.query;
+
+      const data = await homeSurfService.getMyHomeSurf(userId, {
+        filter: filter as any,
+        status: status as any,
+        role: role as any,
+      });
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      logger.error('Failed to get my HomeSurf', { error, userId: req.user?.id });
+      throw error;
+    }
+  }
+
+  /**
    * Get HomeSurf dashboard
    * GET /api/v2/homesurf/dashboard
    */

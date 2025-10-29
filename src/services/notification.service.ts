@@ -1881,5 +1881,129 @@ export class NotificationService {
     const preferences = await this.getNotificationPreferences(userId);
     return preferences[notificationType] !== false; // Default to true if not set
   }
+
+  // ============================================================================
+  // SUBSCRIPTION NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * Notify user when subscription is activated
+   */
+  static async notifySubscriptionActivated(
+    userId: string,
+    tierName: string,
+    expiresAt: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: '🎉 Subscription Activated',
+      message: `Your ${tierName} subscription is now active! Enjoy your benefits until ${expiresAt.toLocaleDateString()}.`,
+      actionUrl: '/subscription',
+      priority: 'high',
+      relatedEntityType: 'subscription',
+      metadata: {
+        event: 'subscription_activated',
+        tierName,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user when subscription is canceled
+   */
+  static async notifySubscriptionCanceled(
+    userId: string,
+    tierName: string,
+    endsAt: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: 'Subscription Canceled',
+      message: `Your ${tierName} subscription has been canceled. You'll have access until ${endsAt.toLocaleDateString()}.`,
+      actionUrl: '/subscription',
+      priority: 'normal',
+      relatedEntityType: 'subscription',
+      metadata: {
+        event: 'subscription_canceled',
+        tierName,
+        endsAt: endsAt.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user when subscription is expiring soon (7 days before)
+   */
+  static async notifySubscriptionExpiringSoon(
+    userId: string,
+    tierName: string,
+    expiresAt: Date,
+    daysLeft: number
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'REMINDER',
+      title: '⏰ Subscription Expiring Soon',
+      message: `Your ${tierName} subscription expires in ${daysLeft} days. Renew now to keep your benefits!`,
+      actionUrl: '/subscription',
+      priority: 'high',
+      relatedEntityType: 'subscription',
+      metadata: {
+        event: 'subscription_expiring_soon',
+        tierName,
+        expiresAt: expiresAt.toISOString(),
+        daysLeft,
+      },
+    });
+  }
+
+  /**
+   * Notify user when subscription has expired
+   */
+  static async notifySubscriptionExpired(
+    userId: string,
+    tierName: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: 'Subscription Expired',
+      message: `Your ${tierName} subscription has expired. Renew to continue enjoying premium benefits.`,
+      actionUrl: '/subscription',
+      priority: 'high',
+      relatedEntityType: 'subscription',
+      metadata: {
+        event: 'subscription_expired',
+        tierName,
+      },
+    });
+  }
+
+  /**
+   * Notify user when subscription is renewed
+   */
+  static async notifySubscriptionRenewed(
+    userId: string,
+    tierName: string,
+    expiresAt: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: '✅ Subscription Renewed',
+      message: `Your ${tierName} subscription has been renewed! Valid until ${expiresAt.toLocaleDateString()}.`,
+      actionUrl: '/subscription',
+      priority: 'normal',
+      relatedEntityType: 'subscription',
+      metadata: {
+        event: 'subscription_renewed',
+        tierName,
+        expiresAt: expiresAt.toISOString(),
+      },
+    });
+  }
 }
 

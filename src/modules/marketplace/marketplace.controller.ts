@@ -414,6 +414,30 @@ export class MarketplaceController {
   }
 
   /**
+   * Get my Marketplace items
+   * GET /api/v2/marketplace/my?filter=active&type=all&status=ACTIVE
+   */
+  async getMyMarketplace(req: Request, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const { filter, status, type } = req.query;
+
+      const data = await marketplaceService.getMyMarketplace(userId, {
+        filter: filter as any,
+        status: status as any,
+        type: type as any,
+      });
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * @swagger
    * /api/v2/marketplace/orders/purchases:
    *   get:

@@ -1231,6 +1231,297 @@ export class ConnectionService {
     }
   }
 
+  // ============================================================================
+  // ACTIVITY DISCOVERY
+  // ============================================================================
+
+  /**
+   * Get recent activities from user's connections or public feed
+   * Shows what people are doing (events, trips, communities, etc.)
+   */
+  static async getRecentActivities(
+    userId: string,
+    options: {
+      limit?: number;
+      activityTypes?: string[];
+      offset?: number;
+      scope?: 'connections' | 'public' | 'community' | 'nearby';
+    } = {}
+  ): Promise<{
+    activities: any[];
+    totalCount: number;
+    hasMore: boolean;
+  }> {
+    try {
+      const { limit = 20, activityTypes, offset = 0, scope = 'public' } = options;
+
+      let targetUserIds: string[] | undefined;
+
+      // Determine which users' activities to show based on scope
+      if (scope === 'connections') {
+        // Only show activities from accepted connections
+        const connections = await prisma.userConnection.findMany({
+          where: {
+            OR: [
+              { initiatorId: userId, status: ConnectionStatus.ACCEPTED },
+              { receiverId: userId, status: ConnectionStatus.ACCEPTED },
+            ],
+          },
+          select: {
+            initiatorId: true,
+            receiverId: true,
+          },
+        });
+
+        targetUserIds = connections.map((conn) =>
+          conn.initiatorId === userId ? conn.receiverId : conn.initiatorId
+        );
+
+        if (targetUserIds.length === 0) {
+          return {
+            activities: [],
+            totalCount: 0,
+            hasMore: false,
+          };
+        }
+      } else if (scope === 'community') {
+        // Show activities from users in the same communities
+        const userCommunities = await prisma.communityMember.findMany({
+          where: { userId },
+          select: { communityId: true },
+        });
+
+        const communityIds = userCommunities.map((cm) => cm.communityId);
+
+        if (communityIds.length > 0) {
+          const communityMembers = await prisma.communityMember.findMany({
+            where: {
+              communityId: { in: communityIds },
+              userId: { not: userId }, // Exclude self
+            },
+            select: { userId: true },
+          });
+
+          targetUserIds = [...new Set(communityMembers.map((cm) => cm.userId))];
+        } else {
+          targetUserIds = [];
+        }
+
+        if (targetUserIds.length === 0) {
+          return {
+            activities: [],
+            totalCount: 0,
+            hasMore: false,
+          };
+        }
+      } else if (scope === 'nearby') {
+        // Show activities from users in the same city
+        const currentUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            location: {
+              select: {
+                currentCity: true,
+              },
+            },
+          },
+        });
+
+        if (currentUser?.location?.currentCity) {
+          const nearbyUsers = await prisma.userLocation.findMany({
+            where: {
+              currentCity: currentUser.location.currentCity,
+              userId: { not: userId }, // Exclude self
+            },
+            select: { userId: true },
+            take: 500, // Limit to prevent massive queries
+          });
+
+          targetUserIds = nearbyUsers.map((u) => u.userId);
+        } else {
+          targetUserIds = [];
+        }
+
+        if (targetUserIds.length === 0) {
+          return {
+            activities: [],
+            totalCount: 0,
+            hasMore: false,
+          };
+        }
+      }
+      // For 'public' scope, targetUserIds remains undefined (show all users)
+
+      // Build activity filter
+      const activityWhere: any = {
+        visibility: 'public',
+        userId: { not: userId }, // Exclude own activities
+      };
+
+      // Apply user filter based on scope
+      if (targetUserIds !== undefined) {
+        activityWhere.userId = { in: targetUserIds, not: userId };
+      }
+
+      if (activityTypes && activityTypes.length > 0) {
+        activityWhere.activityType = { in: activityTypes };
+      }
+
+      // Get total count
+      const totalCount = await prisma.userActivity.count({
+        where: activityWhere,
+      });
+
+      // Fetch activities
+      const activities = await prisma.userActivity.findMany({
+        where: activityWhere,
+        include: {
+          users: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      });
+
+      // Enrich activities with entity details
+      const enrichedActivities = await Promise.all(
+        activities.map(async (activity) => {
+          let entityDetails = null;
+
+          try {
+            // Fetch entity details based on type
+            switch (activity.entityType) {
+              case 'event':
+                entityDetails = await prisma.event.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    title: true,
+                    date: true,
+                    location: true,
+                    type: true,
+                    images: true,
+                  },
+                });
+                break;
+
+              case 'community':
+                entityDetails = await prisma.community.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    logoUrl: true,
+                    coverImageUrl: true,
+                    interests: true,
+                  },
+                });
+                break;
+
+              case 'trip':
+                entityDetails = await prisma.travelTrip.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    title: true,
+                    cities: true,
+                    countries: true,
+                    startDate: true,
+                    endDate: true,
+                    coverImage: true,
+                  },
+                });
+                break;
+
+              case 'berseguide_session':
+                entityDetails = await prisma.berseGuideBooking.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    preferredDate: true,
+                    agreedDate: true,
+                    numberOfPeople: true,
+                    status: true,
+                  },
+                });
+                break;
+
+              case 'homesurf_stay':
+                entityDetails = await prisma.homeSurfBooking.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    checkInDate: true,
+                    checkOutDate: true,
+                    status: true,
+                  },
+                });
+                break;
+
+              case 'marketplace_listing':
+                entityDetails = await prisma.marketplaceListing.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    title: true,
+                    images: true,
+                    category: true,
+                    pricingOptions: {
+                      select: {
+                        price: true,
+                        currency: true,
+                        pricingType: true,
+                      },
+                      take: 1,
+                    },
+                  },
+                });
+                break;
+            }
+          } catch (error) {
+            logger.error(`Error fetching entity details for ${activity.entityType}:`, error);
+          }
+
+          return {
+            id: activity.id,
+            activityType: activity.activityType,
+            entityType: activity.entityType,
+            entityId: activity.entityId,
+            entityDetails,
+            createdAt: activity.createdAt.toISOString(),
+            user: {
+              id: activity.users.id,
+              fullName: activity.users.fullName,
+              username: activity.users.username,
+              profilePicture: activity.users.profile?.profilePicture,
+            },
+          };
+        })
+      );
+
+      return {
+        activities: enrichedActivities,
+        totalCount,
+        hasMore: offset + limit < totalCount,
+      };
+    } catch (error) {
+      logger.error('Error fetching recent activities:', error);
+      throw new AppError('Failed to fetch recent activities', 500);
+    }
+  }
+
   /**
    * Format connection response
    */

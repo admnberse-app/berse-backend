@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { EventController } from './event.controller';
 import { handleValidationErrors } from '../../middleware/validation';
-import { authenticateToken } from '../../middleware/auth';
+import { authenticateToken, optionalAuth } from '../../middleware/auth';
 import { uploadImage } from '../../middleware/upload';
 import { requireTrustLevel } from '../../middleware/trust-level.middleware';
 import { 
@@ -378,8 +378,101 @@ router.post(
  *       404:
  *         description: Event not found
  */
+
+/**
+ * @swagger
+ * /v2/events/my:
+ *   get:
+ *     summary: Get my events
+ *     description: |
+ *       Unified endpoint to retrieve all events the user is participating in (both free RSVPs and paid tickets).
+ *       Returns EventParticipant records with associated ticket information if applicable.
+ *       - Free events: participant with no ticket
+ *       - Paid events: participant with associated ticket details
+ *     tags: [Events - Participants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: eventId
+ *         schema:
+ *           type: string
+ *         description: Filter by specific event ID
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [upcoming, past, all]
+ *           default: all
+ *         description: Filter events by time (upcoming = future events, past = completed events, all = everything)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [REGISTERED, CONFIRMED, CHECKED_IN, CANCELED]
+ *         description: Filter by participation status
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
+ *         description: Filter by event type
+ *     responses:
+ *       200:
+ *         description: Events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       userId:
+ *                         type: string
+ *                       eventId:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                         enum: [REGISTERED, CONFIRMED, CHECKED_IN, CANCELED, NO_SHOW]
+ *                       qrCode:
+ *                         type: string
+ *                       events:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           date:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                           isFree:
+ *                             type: boolean
+ *                       tickets:
+ *                         type: array
+ *                         description: Associated tickets for paid events (empty for free events)
+ *                         items:
+ *                           type: object
+ */
+router.get(
+  '/my',
+  authenticateToken,
+  EventController.getMyEvents
+);
+
 router.get(
   '/:id',
+  optionalAuth,
   eventIdValidator,
   handleValidationErrors,
   EventController.getEventById
@@ -785,11 +878,165 @@ router.post(
 
 /**
  * @swagger
- * /v2/events/me/participations:
+ * /v2/events/{id}/participation:
  *   get:
- *     summary: Get my participations
+ *     summary: Get my participation details for a specific event
  *     description: |
- *       Unified endpoint to retrieve all event participations (both free RSVPs and paid tickets).
+ *       Retrieve detailed participation information for a specific event including:
+ *       - Event details
+ *       - Ticket information with fee breakdown (platformFee, gatewayFee, totalFees)
+ *       - Payment status and details
+ *       - Ability to retry failed/pending payments
+ *       - QR code for check-in
+ *       
+ *       **Payment Retry Flow for Mobile Apps:**
+ *       
+ *       When `canRetryPayment: true`, check the payment object:
+ *       
+ *       1. **If payment.xenditInvoiceUrl exists:**
+ *          - Open the Xendit invoice URL in a webview/browser
+ *          - User completes payment on Xendit's hosted page
+ *          - After payment, poll GET /v2/payments/:transactionId for status updates
+ *          - Or wait for webhook to update status automatically
+ *       
+ *       2. **If payment object is null or no xenditInvoiceUrl:**
+ *          - Call POST /v2/payments/intent with:
+ *            ```json
+ *            {
+ *              "amount": ticket.price,
+ *              "transactionType": "EVENT_TICKET",
+ *              "referenceType": "event_ticket",
+ *              "referenceId": ticket.id,
+ *              "currency": "MYR"
+ *            }
+ *            ```
+ *          - Response will include xenditInvoiceUrl to open in webview
+ *       
+ *       The payment object now includes estimated fees even for PENDING payments
+ *       so users can see the total cost breakdown before completing payment.
+ *     tags: [Events - Participation]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Participation details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     eventId:
+ *                       type: string
+ *                     userId:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [REGISTERED, CONFIRMED, CHECKED_IN, CANCELED]
+ *                     qrCode:
+ *                       type: string
+ *                     registeredAt:
+ *                       type: string
+ *                       format: date-time
+ *                     checkedInAt:
+ *                       type: string
+ *                       format: date-time
+ *                     event:
+ *                       type: object
+ *                     tickets:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           ticketNumber:
+ *                             type: string
+ *                           paymentStatus:
+ *                             type: string
+ *                             enum: [PENDING, PAID, FAILED, REFUNDED]
+ *                           canRetryPayment:
+ *                             type: boolean
+ *                           payment:
+ *                             type: object
+ *                             nullable: true
+ *                             description: |
+ *                               Payment details with fee breakdown. 
+ *                               - If status is PAID: Contains actual payment transaction data
+ *                               - If status is PENDING: Contains estimated fees (platformFee, gatewayFee, totalFees)
+ *                               - If null and canRetryPayment is true: Need to create payment intent
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                                 nullable: true
+ *                               amount:
+ *                                 type: number
+ *                               currency:
+ *                                 type: string
+ *                               status:
+ *                                 type: string
+ *                                 enum: [PENDING, PAID, FAILED, REFUNDED]
+ *                               platformFee:
+ *                                 type: number
+ *                                 description: Platform fee (5% of ticket price)
+ *                               gatewayFee:
+ *                                 type: number
+ *                                 description: Payment gateway fee (varies by method)
+ *                               totalFees:
+ *                                 type: number
+ *                                 description: Total fees (platformFee + gatewayFee)
+ *                               netAmount:
+ *                                 type: number
+ *                                 description: Amount received by event organizer (price - totalFees)
+ *                               xenditInvoiceUrl:
+ *                                 type: string
+ *                                 nullable: true
+ *                                 description: URL to complete/retry payment (open in webview)
+ *                               xenditInvoiceId:
+ *                                 type: string
+ *                                 nullable: true
+ *                               transactionId:
+ *                                 type: string
+ *                                 nullable: true
+ *                     hasUnpaidTickets:
+ *                       type: boolean
+ *                     totalUnpaidAmount:
+ *                       type: number
+ *                     canRetryPayment:
+ *                       type: boolean
+ *       404:
+ *         description: Not registered for this event
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/:id/participation',
+  authenticateToken,
+  eventIdValidator,
+  handleValidationErrors,
+  EventController.getMyEventParticipation
+);
+
+/**
+ * @swagger
+ * /v2/events/my:
+ *   get:
+ *     summary: Get my events
+ *     description: |
+ *       Unified endpoint to retrieve all events the user is participating in (both free RSVPs and paid tickets).
  *       Returns EventParticipant records with associated ticket information if applicable.
  *       - Free events: participant with no ticket
  *       - Paid events: participant with associated ticket details
@@ -801,10 +1048,29 @@ router.post(
  *         name: eventId
  *         schema:
  *           type: string
- *         description: Filter by event ID
+ *         description: Filter by specific event ID
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [upcoming, past, all]
+ *           default: all
+ *         description: Filter events by time (upcoming = future events, past = completed events, all = everything)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [REGISTERED, CONFIRMED, CHECKED_IN, CANCELED]
+ *         description: Filter by participation status
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
+ *         description: Filter by event type
  *     responses:
  *       200:
- *         description: Participations retrieved successfully
+ *         description: Events retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -825,6 +1091,7 @@ router.post(
  *                         type: string
  *                       status:
  *                         type: string
+ *                         enum: [REGISTERED, CONFIRMED, CHECKED_IN, CANCELED, NO_SHOW]
  *                       qrCode:
  *                         type: string
  *                       events:
@@ -836,6 +1103,10 @@ router.post(
  *                             type: string
  *                           date:
  *                             type: string
+ *                           location:
+ *                             type: string
+ *                           type:
+ *                             type: string
  *                           isFree:
  *                             type: boolean
  *                       tickets:
@@ -844,11 +1115,6 @@ router.post(
  *                         items:
  *                           type: object
  */
-router.get(
-  '/me/participations',
-  authenticateToken,
-  EventController.getMyParticipations
-);
 
 /**
  * @swagger

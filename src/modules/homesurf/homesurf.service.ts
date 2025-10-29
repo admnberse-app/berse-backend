@@ -1450,6 +1450,115 @@ export class HomeSurfService {
   /**
    * Get dashboard data
    */
+  /**
+   * Get my HomeSurf profile and bookings
+   */
+  async getMyHomeSurf(userId: string, filters?: {
+    filter?: 'upcoming' | 'past' | 'all';
+    status?: HomeSurfBookingStatus;
+    role?: 'host' | 'guest' | 'all';
+  }): Promise<{
+    profile: HomeSurfProfileResponse | null;
+    asHost: HomeSurfBookingResponse[];
+    asGuest: HomeSurfBookingResponse[];
+  }> {
+    try {
+      const { filter = 'all', status, role = 'all' } = filters || {};
+
+      // Get user's HomeSurf profile
+      const profile = await this.getProfile(userId, userId);
+
+      // Build time-based filter
+      const timeFilter: any = {};
+      if (filter === 'upcoming') {
+        timeFilter.OR = [
+          { checkInDate: { gte: new Date() } },
+          { status: { in: ['PENDING', 'DISCUSSING', 'APPROVED', 'CHECKED_IN'] } },
+        ];
+      } else if (filter === 'past') {
+        timeFilter.OR = [
+          { checkOutDate: { lt: new Date() } },
+          { status: { in: ['COMPLETED', 'CANCELLED_BY_HOST', 'CANCELLED_BY_GUEST', 'REJECTED'] } },
+        ];
+      }
+
+      // Build status filter
+      const statusFilter = status ? { status } : {};
+
+      const includeOptions = {
+        host: {
+          select: {
+            id: true,
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+        guest: {
+          select: {
+            id: true,
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+        homeSurf: {
+          select: {
+            title: true,
+            accommodationType: true,
+            city: true,
+            photos: true,
+          },
+        },
+      };
+
+      const orderBy = { requestedAt: 'desc' as const };
+
+      // Fetch bookings based on role
+      let asHost: any[] = [];
+      let asGuest: any[] = [];
+
+      if (role === 'host' || role === 'all') {
+        asHost = await prisma.homeSurfBooking.findMany({
+          where: {
+            hostId: userId,
+            ...timeFilter,
+            ...statusFilter,
+          },
+          include: includeOptions,
+          orderBy,
+        });
+      }
+
+      if (role === 'guest' || role === 'all') {
+        asGuest = await prisma.homeSurfBooking.findMany({
+          where: {
+            guestId: userId,
+            ...timeFilter,
+            ...statusFilter,
+          },
+          include: includeOptions,
+          orderBy,
+        });
+      }
+
+      return {
+        profile,
+        asHost: asHost.map((booking) => this.formatBookingResponse(booking)),
+        asGuest: asGuest.map((booking) => this.formatBookingResponse(booking)),
+      };
+    } catch (error) {
+      logger.error('Failed to get my HomeSurf', { error, userId, filters });
+      throw error;
+    }
+  }
+
   async getDashboard(userId: string): Promise<HomeSurfDashboardResponse> {
     try {
       const [profile, user, pendingRequests, upcomingStays] = await Promise.all([

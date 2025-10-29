@@ -1588,6 +1588,12 @@ model PaymentTransaction {
   metadata               Json?
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
+  // Payment retry and tracking fields
+  paymentMethod          String?               // 'xendit', 'stripe', 'ewallet', 'bank_transfer', etc.
+  transactionId          String?               // External transaction ID from payment gateway
+  xenditInvoiceId        String?               // Xendit specific invoice ID
+  xenditInvoiceUrl       String?               // Xendit invoice URL for retry payment
+  paidAt                 DateTime?             // When payment was completed
   eventTickets           EventTicket[]
   marketplace_orders     MarketplaceOrder[]
   provider               PaymentProvider       @relation(fields: [providerId], references: [id])
@@ -1604,6 +1610,8 @@ model PaymentTransaction {
   @@index([transactionType])
   @@index([transactionType, status])
   @@index([userId, status])
+  @@index([xenditInvoiceId])
+  @@index([status, paidAt])
   @@map("payment_transactions")
 }
 

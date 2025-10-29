@@ -114,7 +114,7 @@ export class CommunityService {
       }
 
       // Check permissions (admin or moderator)
-      await this.checkPermission(userId, communityId, ['ADMIN', 'MODERATOR']);
+      await this.checkPermission(userId, communityId, ['OWNER', 'ADMIN', 'MODERATOR']);
 
       // If updating name, check uniqueness
       if (updateData.name && updateData.name !== community.name) {
@@ -185,7 +185,7 @@ export class CommunityService {
       }
 
       // Check admin permissions
-      await this.checkPermission(userId, communityId, ['ADMIN']);
+      await this.checkPermission(userId, communityId, ['OWNER', 'ADMIN']);
 
       // Delete community (cascading deletes handled by schema)
       await prisma.community.delete({
@@ -638,9 +638,15 @@ export class CommunityService {
   }
 
   /**
-   * Get communities user is member of
+   * Get communities user is member of or owns
    */
-  async getMyCommunities(userId: string, query: CommunityQuery): Promise<PaginatedCommunitiesResponse> {
+  async getMyCommunities(userId: string, query: CommunityQuery & {
+    filter?: 'active' | 'all';
+    role?: 'owner' | 'member' | 'all';
+  }): Promise<{
+    owned: any[];
+    member: any[];
+  } | PaginatedCommunitiesResponse> {
     try {
       const {
         page = 1,
@@ -648,18 +654,139 @@ export class CommunityService {
         category,
         interests,
         search,
+        filter = 'all',
+        role = 'all',
       } = query;
 
       const skip = (page - 1) * limit;
 
+      // If role-based filtering is requested, return categorized response
+      if (role) {
+        let owned: any[] = [];
+        let member: any[] = [];
+
+        if (role === 'owner' || role === 'all') {
+          const ownedWhere: Prisma.CommunityWhereInput = {
+            createdById: userId,
+          };
+
+          if (interests && interests.length > 0) {
+            ownedWhere.interests = { hasSome: interests };
+          } else if (category) {
+            ownedWhere.category = category;
+          }
+
+          if (search) {
+            ownedWhere.OR = [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ];
+          }
+
+          owned = await prisma.community.findMany({
+            where: ownedWhere,
+            orderBy: { createdAt: 'desc' },
+            include: {
+              user: {
+                include: {
+                  profile: {
+                    select: {
+                      profilePicture: true,
+                    },
+                  },
+                },
+              },
+              communityMembers: {
+                where: { userId },
+                select: {
+                  role: true,
+                  isApproved: true,
+                },
+              },
+              _count: {
+                select: {
+                  communityMembers: true,
+                  events: true,
+                },
+              },
+            },
+          });
+        }
+
+        if (role === 'member' || role === 'all') {
+          const memberWhere: Prisma.CommunityWhereInput = {
+            communityMembers: {
+              some: {
+                userId,
+                isApproved: true,
+              },
+            },
+            createdById: { not: userId }, // Exclude owned communities
+          };
+
+          if (interests && interests.length > 0) {
+            memberWhere.interests = { hasSome: interests };
+          } else if (category) {
+            memberWhere.category = category;
+          }
+
+          if (search) {
+            memberWhere.OR = [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ];
+          }
+
+          member = await prisma.community.findMany({
+            where: memberWhere,
+            orderBy: { createdAt: 'desc' },
+            include: {
+              user: {
+                include: {
+                  profile: {
+                    select: {
+                      profilePicture: true,
+                    },
+                  },
+                },
+              },
+              communityMembers: {
+                where: { userId },
+                select: {
+                  role: true,
+                  isApproved: true,
+                },
+              },
+              _count: {
+                select: {
+                  communityMembers: true,
+                  events: true,
+                },
+              },
+            },
+          });
+        }
+
+        return {
+          owned: owned.map(c => this.formatCommunityResponse(c, userId)),
+          member: member.map(c => this.formatCommunityResponse(c, userId)),
+        };
+      }
+
+      // Legacy behavior: return paginated response for all communities
       // Build where clause
       const where: Prisma.CommunityWhereInput = {
-        communityMembers: {
-          some: {
-            userId,
-            isApproved: true,
+        OR: [
+          { createdById: userId },
+          {
+            communityMembers: {
+              some: {
+                userId,
+                isApproved: true,
+              },
+            },
           },
-        },
+        ],
       };
 
       // Filter by interests (preferred over category)
@@ -673,9 +800,13 @@ export class CommunityService {
       }
 
       if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
+        where.AND = [
+          {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          },
         ];
       }
 
@@ -887,7 +1018,7 @@ export class CommunityService {
   async approveMember(adminUserId: string, communityId: string, userId: string): Promise<CommunityMemberResponse> {
     try {
       // Check admin/moderator permissions
-      await this.checkPermission(adminUserId, communityId, ['ADMIN', 'MODERATOR']);
+      await this.checkPermission(adminUserId, communityId, ['OWNER', 'ADMIN', 'MODERATOR']);
 
       // Get member
       const member = await prisma.communityMember.findUnique({
@@ -950,8 +1081,8 @@ export class CommunityService {
       if (community) {
         NotificationService.notifyCommunityJoinApproved(
           userId,
-          communityId,
-          community.name
+          community.name,
+          communityId
         ).catch(err => logger.error('Failed to send join approval notification:', err));
       }
 
@@ -970,7 +1101,7 @@ export class CommunityService {
   async rejectMember(adminUserId: string, communityId: string, userId: string, reason?: string): Promise<void> {
     try {
       // Check admin/moderator permissions
-      await this.checkPermission(adminUserId, communityId, ['ADMIN', 'MODERATOR']);
+      await this.checkPermission(adminUserId, communityId, ['OWNER', 'ADMIN', 'MODERATOR']);
 
       // Get member
       const member = await prisma.communityMember.findUnique({
@@ -1010,8 +1141,8 @@ export class CommunityService {
       if (community) {
         NotificationService.notifyCommunityJoinRejected(
           userId,
-          communityId,
           community.name,
+          communityId,
           reason
         ).catch(err => logger.error('Failed to send join rejection notification:', err));
       }
@@ -1031,7 +1162,7 @@ export class CommunityService {
       const { communityId, userId, role } = input;
 
       // Check admin permissions (only admins can change roles)
-      await this.checkPermission(adminUserId, communityId, ['ADMIN']);
+      await this.checkPermission(adminUserId, communityId, ['OWNER', 'ADMIN']);
 
       // Get member
       const member = await prisma.communityMember.findUnique({
@@ -1129,7 +1260,7 @@ export class CommunityService {
       const { communityId, userId, reason } = input;
 
       // Check admin/moderator permissions
-      await this.checkPermission(adminUserId, communityId, ['ADMIN', 'MODERATOR']);
+      await this.checkPermission(adminUserId, communityId, ['OWNER', 'ADMIN', 'MODERATOR']);
 
       // Get member
       const member = await prisma.communityMember.findUnique({
@@ -1173,8 +1304,8 @@ export class CommunityService {
       if (community) {
         NotificationService.notifyCommunityRemoved(
           userId,
-          communityId,
           community.name,
+          communityId,
           reason
         ).catch(err => logger.error('Failed to send community removal notification:', err));
       }

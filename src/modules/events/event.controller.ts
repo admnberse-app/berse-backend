@@ -214,9 +214,51 @@ export class EventController {
   }
 
   /**
+   * Get my participation details for a specific event
+   * Shows payment status, tickets, and retry payment option
+   * @route GET /v2/events/:id/participation
+   */
+  static async getMyEventParticipation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { id: eventId } = req.params;
+
+      const participation = await EventService.getUserEventParticipation(userId, eventId);
+
+      sendSuccess(res, participation, 'Participation details retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get user's events (unified: both free and paid)
+   * @route GET /v2/events/my
+   */
+  static async getMyEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { eventId, filter, status, type } = req.query;
+
+      // Get all events user is participating in (includes both free and paid events)
+      const participants = await EventService.getUserParticipations(userId, {
+        eventId: eventId as string | undefined,
+        filter: filter as 'upcoming' | 'past' | 'all' | undefined,
+        status: status as string | undefined,
+        type: type as string | undefined,
+      });
+
+      sendSuccess(res, participants, 'Events retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get my participations (tickets + RSVPs)
    * Unified endpoint for both free (RSVP) and paid (ticket) events
    * @route GET /v2/events/me/participations
+   * @deprecated Use GET /v2/events/my instead
    */
   static async getMyParticipations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -224,7 +266,7 @@ export class EventController {
       const eventId = req.query.eventId as string | undefined;
 
       // Get all participations (includes both free and paid events)
-      const participants = await EventService.getUserParticipations(userId, eventId);
+      const participants = await EventService.getUserParticipations(userId, { eventId });
 
       sendSuccess(res, participants, 'Participations retrieved successfully');
     } catch (error) {

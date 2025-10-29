@@ -737,6 +737,65 @@ router.get(
 
 /**
  * @swagger
+ * /v2/homesurf/my:
+ *   get:
+ *     summary: Get my HomeSurf bookings and stays
+ *     tags: [HomeSurf]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [upcoming, past, all]
+ *           default: all
+ *         description: Time-based filter (upcoming/past/all)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, DISCUSSING, APPROVED, REJECTED, CHECKED_IN, CHECKED_OUT, COMPLETED, CANCELLED_BY_HOST, CANCELLED_BY_GUEST]
+ *         description: Booking status filter
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [host, guest, all]
+ *           default: all
+ *         description: Filter by user role in bookings
+ *     responses:
+ *       200:
+ *         description: User's HomeSurf bookings categorized by role
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     asHost:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     asGuest:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/my',
+  authenticateToken,
+  asyncHandler(homeSurfController.getMyHomeSurf.bind(homeSurfController))
+);
+
+/**
+ * @swagger
  * /v2/homesurf/dashboard:
  *   get:
  *     summary: Get HomeSurf dashboard

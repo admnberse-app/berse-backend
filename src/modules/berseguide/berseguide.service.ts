@@ -1478,6 +1478,109 @@ export class BerseGuideService {
   // ============================================================================
 
   /**
+   * Get my BerseGuide profile and bookings
+   */
+  async getMyBerseGuide(userId: string, filters?: {
+    filter?: 'upcoming' | 'past' | 'all';
+    status?: BerseGuideBookingStatus;
+    role?: 'guide' | 'tourist' | 'all';
+  }): Promise<{
+    profile: BerseGuideProfileResponse | null;
+    asGuide: BerseGuideBookingResponse[];
+    asTourist: BerseGuideBookingResponse[];
+  }> {
+    try {
+      const { filter = 'all', status, role = 'all' } = filters || {};
+
+      // Get user's BerseGuide profile
+      const profile = await this.getProfile(userId, userId);
+
+      // Build time-based filter
+      const timeFilter: any = {};
+      if (filter === 'upcoming') {
+        timeFilter.OR = [
+          { agreedDate: { gte: new Date() } },
+          { preferredDate: { gte: new Date() } },
+          { status: { in: ['PENDING', 'DISCUSSING', 'APPROVED', 'IN_PROGRESS'] } },
+        ];
+      } else if (filter === 'past') {
+        timeFilter.OR = [
+          { agreedDate: { lt: new Date() } },
+          { status: { in: ['COMPLETED', 'CANCELLED_BY_GUIDE', 'CANCELLED_BY_TRAVELER', 'REJECTED'] } },
+        ];
+      }
+
+      // Build status filter
+      const statusFilter = status ? { status } : {};
+
+      const includeOptions = {
+        guide: {
+          select: {
+            id: true,
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+        traveler: {
+          select: {
+            id: true,
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+        session: true,
+      };
+
+      const orderBy = { requestedAt: 'desc' as const };
+
+      // Fetch bookings based on role
+      let asGuide: any[] = [];
+      let asTourist: any[] = [];
+
+      if (role === 'guide' || role === 'all') {
+        asGuide = await prisma.berseGuideBooking.findMany({
+          where: {
+            guideId: userId,
+            ...timeFilter,
+            ...statusFilter,
+          },
+          include: includeOptions,
+          orderBy,
+        });
+      }
+
+      if (role === 'tourist' || role === 'all') {
+        asTourist = await prisma.berseGuideBooking.findMany({
+          where: {
+            travelerId: userId,
+            ...timeFilter,
+            ...statusFilter,
+          },
+          include: includeOptions,
+          orderBy,
+        });
+      }
+
+      return {
+        profile,
+        asGuide: asGuide.map(this.formatBookingResponse),
+        asTourist: asTourist.map(this.formatBookingResponse),
+      };
+    } catch (error) {
+      logger.error('Failed to get my BerseGuide', { error, userId, filters });
+      throw error;
+    }
+  }
+
+  /**
    * Get dashboard data
    */
   async getDashboard(userId: string): Promise<BerseGuideDashboardResponse> {

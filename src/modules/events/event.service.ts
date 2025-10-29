@@ -218,8 +218,6 @@ export class EventService {
           _count: {
             select: {
               eventParticipants: true,
-              
-              eventTickets: true,
               tier: true,
             },
           },
@@ -298,6 +296,15 @@ export class EventService {
         where: { eventId, checkedInAt: { not: null } },
       });
 
+      // Count unique users with tickets (not canceled)
+      const uniqueTicketHolders = await prisma.eventTicket.groupBy({
+        by: ['userId'],
+        where: {
+          eventId,
+          status: { not: EventTicketStatus.CANCELED },
+        },
+      });
+
       return {
         ...transformed,
         ticketTiers: event.tier ? event.tier.map(tier => this.transformTicketTierResponse(tier)) : [],
@@ -323,7 +330,7 @@ export class EventService {
         stats: {
           totalParticipants: event._count.eventParticipants,
           totalCheckedIn: checkedInCount,
-          totalTicketsSold: event._count.eventTickets,
+          totalTicketsSold: uniqueTicketHolders.length,
           totalTicketTiers: event._count.tier,
           attendanceRate: event._count.eventParticipants > 0 
             ? Math.round((checkedInCount / event._count.eventParticipants) * 100) 
@@ -433,8 +440,15 @@ export class EventService {
         _count: {
           select: {
             eventParticipants: true,
-            eventTickets: true,
             tier: true,
+          },
+        },
+        eventTickets: {
+          where: {
+            status: { not: EventTicketStatus.CANCELED },
+          },
+          select: {
+            userId: true,
           },
         },
       };
@@ -450,7 +464,16 @@ export class EventService {
         prisma.event.count({ where }),
       ]);
 
-      let transformedEvents = events.map(event => this.transformEventResponse(event));
+      // Transform events and add unique ticket count
+      let transformedEvents = events.map(event => {
+        const transformed = this.transformEventResponse(event);
+        // Count unique ticket holders (users)
+        if (transformed._count && event.eventTickets) {
+          const uniqueUsers = new Set(event.eventTickets.map((t: any) => t.userId));
+          transformed._count.eventTickets = uniqueUsers.size;
+        }
+        return transformed;
+      });
       let isFallback = false;
 
       // If no events found and filters were applied, return fallback events
@@ -823,7 +846,7 @@ export class EventService {
             eventId: data.eventId,
             userId,
             qrCode: qrToken,
-            status: 'REGISTERED', // Will be updated to CONFIRMED after payment
+            status: 'REGISTERED', // Will be updated to CONFIRMED after successful payment
           },
         });
       }
@@ -1006,7 +1029,7 @@ export class EventService {
           eventId,
           userId,
           qrCode: qrToken,
-          status: 'REGISTERED',
+          status: 'CONFIRMED', // Free events are confirmed immediately
         },
         include: {
           events: {
@@ -1052,8 +1075,8 @@ export class EventService {
       // Send registration confirmation to user
       NotificationService.notifyEventRegistrationConfirmed(
         userId,
-        eventId,
         participant.events.title,
+        eventId,
         participant.events.date
       ).catch(err => logger.error('Failed to send event registration notification:', err));
 
@@ -1157,18 +1180,242 @@ export class EventService {
   }
 
   /**
+   * Get user's participation details for a specific event
+   * Includes payment details and retry payment capability
+   */
+  static async getUserEventParticipation(userId: string, eventId: string): Promise<any> {
+    try {
+      // Get participation record
+      const participant: any = await prisma.eventParticipant.findFirst({
+        where: { userId, eventId },
+        include: {
+          events: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              date: true,
+              location: true,
+              mapLink: true,
+              type: true,
+              images: true,
+              isFree: true,
+              status: true,
+              hostId: true,
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  username: true,
+                  profile: { select: { profilePicture: true } }
+                }
+              }
+            },
+          },
+          eventTickets: {
+            where: { status: { not: EventTicketStatus.CANCELED } },
+            include: {
+              tier: {
+                select: {
+                  id: true,
+                  tierName: true,
+                  description: true,
+                  price: true,
+                  currency: true,
+                }
+              },
+              paymentTransactions: {
+                select: {
+                  id: true,
+                  amount: true,
+                  currency: true,
+                  status: true,
+                  paymentMethod: true,
+                  transactionId: true,
+                  xenditInvoiceId: true,
+                  xenditInvoiceUrl: true,
+                  gatewayTransactionId: true,
+                  failureReason: true,
+                  createdAt: true,
+                  paidAt: true,
+                  processedAt: true,
+                }
+              }
+            }
+          },
+        },
+      });
+
+      if (!participant) {
+        throw new AppError('You are not registered for this event', 404);
+      }
+
+      // Check if payment is pending and can be retried
+      const pendingTickets = participant.eventTickets.filter(
+        (t: any) => t.paymentStatus === 'PENDING' || t.paymentStatus === 'FAILED'
+      );
+
+      // Get quantity from EventTicket model (assuming quantity field exists or default to 1)
+      const getTicketQuantity = (ticket: any) => ticket.quantity || 1;
+
+      // Calculate fees for tickets without payment transactions (PENDING)
+      const calculateFeesForTicket = async (ticket: any) => {
+        if (ticket.paymentTransactions) {
+          // Payment exists, return actual values
+          return {
+            id: ticket.paymentTransactions.id,
+            amount: ticket.paymentTransactions.amount,
+            currency: ticket.paymentTransactions.currency,
+            status: ticket.paymentTransactions.status,
+            paymentMethod: ticket.paymentTransactions.paymentMethod,
+            transactionId: ticket.paymentTransactions.transactionId || ticket.paymentTransactions.gatewayTransactionId,
+            xenditInvoiceUrl: ticket.paymentTransactions.xenditInvoiceUrl,
+            xenditInvoiceId: ticket.paymentTransactions.xenditInvoiceId,
+            failureReason: ticket.paymentTransactions.failureReason,
+            createdAt: ticket.paymentTransactions.createdAt,
+            paidAt: ticket.paymentTransactions.paidAt || ticket.paymentTransactions.processedAt,
+            platformFee: ticket.paymentTransactions.platformFee,
+            gatewayFee: ticket.paymentTransactions.gatewayFee,
+            totalFees: ticket.paymentTransactions.totalFees,
+            netAmount: ticket.paymentTransactions.netAmount,
+          };
+        }
+
+        // No payment yet - calculate estimated fees
+        if (ticket.price > 0) {
+          try {
+            const { PaymentService } = await import('../payments/payment.service');
+            const paymentService = new PaymentService();
+            
+            const xenditProvider = await prisma.paymentProvider.findFirst({
+              where: { providerCode: 'xendit', isActive: true },
+            });
+            
+            if (xenditProvider) {
+              const feeCalculation = await paymentService.calculateFees({
+                amount: ticket.price,
+                transactionType: 'EVENT_TICKET',
+                providerId: xenditProvider.id,
+              });
+              
+              return {
+                id: null,
+                amount: ticket.price,
+                currency: ticket.currency,
+                status: 'PENDING',
+                paymentMethod: null,
+                transactionId: null,
+                xenditInvoiceUrl: null,
+                xenditInvoiceId: null,
+                failureReason: null,
+                createdAt: null,
+                paidAt: null,
+                platformFee: feeCalculation.platformFee,
+                gatewayFee: feeCalculation.gatewayFee,
+                totalFees: feeCalculation.totalFees,
+                netAmount: feeCalculation.netAmount,
+              };
+            }
+          } catch (error) {
+            logger.warn('Failed to calculate fees for pending ticket:', error);
+          }
+        }
+
+        // Free ticket or calculation failed
+        return null;
+      };
+
+      // Map tickets with fee calculations
+      const ticketsWithFees = await Promise.all(
+        participant.eventTickets.map(async (ticket: any) => ({
+          id: ticket.id,
+          ticketNumber: ticket.ticketNumber,
+          ticketType: ticket.ticketType,
+          quantity: getTicketQuantity(ticket),
+          price: ticket.price,
+          currency: ticket.currency,
+          status: ticket.status,
+          paymentStatus: ticket.paymentStatus,
+          purchasedAt: ticket.purchasedAt,
+          tier: ticket.tier,
+          payment: await calculateFeesForTicket(ticket),
+          canRetryPayment: ticket.paymentStatus === 'PENDING' || ticket.paymentStatus === 'FAILED',
+        }))
+      );
+
+      return {
+        id: participant.id,
+        eventId: participant.eventId,
+        userId: participant.userId,
+        status: participant.status,
+        qrCode: participant.qrCode,
+        registeredAt: participant.createdAt,
+        checkedInAt: participant.checkedInAt,
+        canceledAt: participant.canceledAt,
+        event: participant.events,
+        tickets: ticketsWithFees,
+        hasUnpaidTickets: pendingTickets.length > 0,
+        totalUnpaidAmount: pendingTickets.reduce((sum: number, t: any) => sum + (t.price * getTicketQuantity(t)), 0),
+        canRetryPayment: pendingTickets.length > 0,
+      };
+    } catch (error: any) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error fetching user event participation:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get user's participations (unified: both free RSVPs and paid tickets)
    * All event participation goes through EventParticipant model
-   * Free events: participant.status = REGISTERED (no ticket)
+   * Free events: participant.status = CONFIRMED (no ticket)
    * Paid events: participant.status = CONFIRMED + has associated EventTicket
    */
-  static async getUserParticipations(userId: string, eventId?: string): Promise<ParticipantResponse[]> {
+  static async getUserParticipations(
+    userId: string, 
+    filters?: {
+      eventId?: string;
+      filter?: 'upcoming' | 'past' | 'all';
+      status?: string;
+      type?: string;
+    }
+  ): Promise<ParticipantResponse[]> {
     try {
+      const now = new Date();
+      const whereClause: any = { userId };
+
+      // Filter by specific event
+      if (filters?.eventId) {
+        whereClause.eventId = filters.eventId;
+      }
+
+      // Filter by participation status
+      if (filters?.status) {
+        whereClause.status = filters.status;
+      }
+
+      // Filter by event type
+      if (filters?.type) {
+        whereClause.events = {
+          type: filters.type
+        };
+      }
+
+      // Filter by time (upcoming/past)
+      if (filters?.filter === 'upcoming') {
+        whereClause.events = {
+          ...whereClause.events,
+          date: { gte: now }
+        };
+      } else if (filters?.filter === 'past') {
+        whereClause.events = {
+          ...whereClause.events,
+          date: { lt: now }
+        };
+      }
+
       const participants = await prisma.eventParticipant.findMany({
-        where: { 
-          userId,
-          ...(eventId && { eventId })
-        },
+        where: whereClause,
         include: {
           events: {
             select: {
@@ -1704,9 +1951,15 @@ export class EventService {
           _count: {
             select: {
               eventParticipants: true,
-              
-              eventTickets: true,
               tier: true,
+            },
+          },
+          eventTickets: {
+            where: {
+              status: { not: EventTicketStatus.CANCELED },
+            },
+            select: {
+              userId: true,
             },
           },
         },
@@ -1715,7 +1968,9 @@ export class EventService {
       // Calculate trending score
       const scoredEvents = events.map(event => {
         const rsvpCount = event._count?.eventParticipants || 0;
-        const ticketCount = event._count?.eventTickets || 0;
+        // Count unique ticket holders
+        const uniqueUsers = new Set(event.eventTickets?.map((t: any) => t.userId) || []);
+        const ticketCount = uniqueUsers.size;
         const totalEngagement = rsvpCount + ticketCount;
 
         // Recency bonus (events created in last 7 days get boost)

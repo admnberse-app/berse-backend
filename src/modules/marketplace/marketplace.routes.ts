@@ -93,6 +93,75 @@ router.post(
   marketplaceController.uploadListingImages.bind(marketplaceController)
 );
 
+// ============= MY MARKETPLACE ROUTE =============
+
+/**
+ * @swagger
+ * /v2/marketplace/my:
+ *   get:
+ *     summary: Get my Marketplace items (listings, purchases, sales)
+ *     description: Consolidated endpoint to fetch user's marketplace activity including listings they're selling, purchases they made, and sales they completed
+ *     tags: [Marketplace]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [active, past, all]
+ *           default: all
+ *         description: Time-based filter - active (ongoing), past (completed/canceled), or all
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Specific status filter (overrides filter param)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [listings, purchases, sales, all]
+ *           default: all
+ *         description: Filter by item type
+ *     responses:
+ *       200:
+ *         description: User's marketplace items categorized by type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     listings:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                       description: Items user is selling
+ *                     purchases:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                       description: Items user has purchased
+ *                     sales:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                       description: Items user has sold
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/my',
+  authenticateToken,
+  marketplaceController.getMyMarketplace.bind(marketplaceController)
+);
+
 // ============= LISTING ROUTES =============
 
 router.post(

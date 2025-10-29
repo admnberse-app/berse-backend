@@ -747,6 +747,65 @@ router.get(
 
 /**
  * @swagger
+ * /v2/berseguide/my:
+ *   get:
+ *     summary: Get my BerseGuide bookings and items
+ *     tags: [BerseGuide]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: filter
+ *         schema:
+ *           type: string
+ *           enum: [upcoming, past, all]
+ *           default: all
+ *         description: Time-based filter (upcoming/past/all)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, DISCUSSING, APPROVED, REJECTED, IN_PROGRESS, COMPLETED, CANCELLED_BY_GUIDE, CANCELLED_BY_TRAVELER]
+ *         description: Booking status filter
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [guide, tourist, all]
+ *           default: all
+ *         description: Filter by user role in bookings
+ *     responses:
+ *       200:
+ *         description: User's BerseGuide bookings categorized by role
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     asGuide:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     asTourist:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/my',
+  authenticateToken,
+  asyncHandler(berseGuideController.getMyBerseGuide.bind(berseGuideController))
+);
+
+/**
+ * @swagger
  * /v2/berseguide/dashboard:
  *   get:
  *     summary: Get BerseGuide dashboard

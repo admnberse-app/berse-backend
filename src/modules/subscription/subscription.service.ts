@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '../../config/database';
+import { NotificationService } from '../../services/notification.service';
 import {
   SubscriptionTier,
   BillingCycle,
@@ -148,6 +149,13 @@ class SubscriptionService {
         include: { tiers: true },
       });
 
+      // Send notification
+      NotificationService.notifySubscriptionActivated(
+        userId,
+        tier.tierName,
+        periodEnd
+      ).catch(err => console.error('Failed to send subscription activation notification:', err));
+
       return {
         id: subscription.id,
         userId: subscription.userId,
@@ -247,11 +255,14 @@ class SubscriptionService {
     try {
       const subscription = await prisma.userSubscription.findUnique({
         where: { id: subscriptionId },
+        include: { tiers: true },
       });
 
       if (!subscription) {
         throw new Error('Subscription not found');
       }
+
+      const endsAt = immediately ? new Date() : subscription.currentPeriodEnd;
 
       if (immediately) {
         // Cancel immediately
@@ -271,6 +282,13 @@ class SubscriptionService {
           },
         });
       }
+
+      // Send notification
+      NotificationService.notifySubscriptionCanceled(
+        subscription.userId,
+        subscription.tiers.tierName,
+        endsAt
+      ).catch(err => console.error('Failed to send subscription cancellation notification:', err));
 
       return true;
     } catch (error) {

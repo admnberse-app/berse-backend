@@ -102,11 +102,13 @@ export class CommunityController {
    */
   async getMyCommunities(req: Request, res: Response): Promise<void> {
     const userId = req.user!.id;
-    const query: CommunityQuery = {
+    const query: CommunityQuery & { filter?: 'active' | 'all'; role?: 'owner' | 'member' | 'all' } = {
       ...req.query,
       page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
       isVerified: req.query.isVerified === 'true' ? true : req.query.isVerified === 'false' ? false : undefined,
+      filter: req.query.filter as 'active' | 'all',
+      role: req.query.role as 'owner' | 'member' | 'all',
     };
 
     const result = await communityService.getMyCommunities(userId, query);
