@@ -1347,7 +1347,15 @@ router.get(
  * /v2/cardgame/leaderboard:
  *   get:
  *     tags: [Card Game]
- *     summary: Get leaderboard with filters
+ *     summary: Get paginated leaderboard with top 3 podium and current user position
+ *     description: |
+ *       Returns leaderboard in three sections:
+ *       - top3: Top 3 ranked users (always shown, fixed podium positions)
+ *       - others: Paginated users starting from rank 4 onwards
+ *       - currentUser: Current user's position and rank
+ *       
+ *       Pagination applies only to the "others" section (ranks 4+).
+ *       Use page/limit to navigate through users beyond the top 3.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1357,25 +1365,55 @@ router.get(
  *           type: string
  *           enum: [overall, most-sessions, most-feedback, most-replies, most-upvotes, highest-rating]
  *           default: overall
+ *         description: Type of leaderboard ranking
  *       - in: query
  *         name: timePeriod
  *         schema:
  *           type: string
  *           enum: [all-time, monthly, weekly]
  *           default: all-time
+ *         description: Time period filter
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
+ *         description: Page number for "others" section (ranks 4+)
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 20
+ *           default: 10
+ *         description: Number of users per page in "others" section
  *     responses:
  *       200:
  *         description: Leaderboard retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     top3:
+ *                       type: array
+ *                       description: Top 3 users (always fixed)
+ *                       items:
+ *                         type: object
+ *                     others:
+ *                       type: array
+ *                       description: Paginated users (ranks 4+)
+ *                       items:
+ *                         type: object
+ *                     currentUser:
+ *                       type: object
+ *                       description: Current user's rank and position
+ *                     pagination:
+ *                       type: object
+ *                       description: Pagination info for "others" section
  */
 router.get(
   '/leaderboard',

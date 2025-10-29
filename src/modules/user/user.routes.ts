@@ -197,6 +197,50 @@ router.put(
 
 /**
  * @swagger
+ * /v2/users/me/completion:
+ *   get:
+ *     summary: Get profile completion status
+ *     description: Get profile completion percentage, missing fields, and recommendations
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile completion retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Profile completion calculated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: user_123
+ *                     percentage:
+ *                       type: integer
+ *                       description: Profile completion percentage (0-100)
+ *                       example: 65
+ *                     missingFields:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: List of incomplete profile fields
+ *                       example: [profilePicture, bio, communityMembers]
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/me/completion', authenticateToken, UserController.getProfileCompletion);
+
+/**
+ * @swagger
  * /v2/users/upload-avatar:
  *   post:
  *     summary: Upload profile picture

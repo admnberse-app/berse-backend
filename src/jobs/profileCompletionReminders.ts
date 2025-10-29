@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { sendPushNotification } from '../routes/push.routes';
 import cron from 'node-cron';
 
 const prisma = new PrismaClient();
@@ -18,9 +17,8 @@ export async function calculateProfileCompletion(userId: string): Promise<Profil
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      communityMembers: true,
-      attendedEvents: true,
-      badges: true
+      profile: true,
+      location: true,
     }
   });
 
@@ -29,28 +27,33 @@ export async function calculateProfileCompletion(userId: string): Promise<Profil
   }
 
   const fields = {
-    // Basic info (40%)
+    // Basic User Info (35 points)
     fullName: { value: user.fullName, weight: 5 },
     email: { value: user.email, weight: 5 },
-    phone: { value: user.phone, weight: 3 },
-    profilePicture: { value: user.profilePicture, weight: 8 },
-    bio: { value: user.bio, weight: 5 },
-    city: { value: user.city, weight: 4 },
-    nationality: { value: user.nationality, weight: 2 },
-    dateOfBirth: { value: user.dateOfBirth, weight: 3 },
-    gender: { value: user.gender, weight: 2 },
+    phone: { value: user.phone, weight: 5 },
     
-    // Social (30%)
-    interests: { value: user.interests?.length > 0, weight: 8 },
-    instagramHandle: { value: user.instagramHandle, weight: 4 },
-    linkedinHandle: { value: user.linkedinHandle, weight: 4 },
-    communityMembers: { value: user.communityMembers?.length > 0, weight: 8 },
+    // Profile Fields from UserProfile table (40 points)
+    displayName: { value: user.profile?.displayName, weight: 3 },
+    profilePicture: { value: user.profile?.profilePicture, weight: 10 },
+    bio: { value: user.profile?.bio, weight: 8 },
+    shortBio: { value: user.profile?.shortBio, weight: 3 },
+    dateOfBirth: { value: user.profile?.dateOfBirth, weight: 5 },
+    gender: { value: user.profile?.gender, weight: 3 },
+    profession: { value: user.profile?.profession, weight: 4 },
+    occupation: { value: user.profile?.occupation, weight: 4 },
     
-    // Engagement (30%)
-    attendedEvents: { value: user.attendedEvents?.length > 0, weight: 10 },
-    badges: { value: user.badges?.length > 0, weight: 5 },
-    isHostCertified: { value: user.isHostCertified, weight: 5 },
-    totalPoints: { value: user.totalPoints > 0, weight: 10 }
+    // Location Info from UserLocation table (10 points)
+    currentCity: { value: user.location?.currentCity, weight: 4 },
+    countryOfResidence: { value: user.location?.countryOfResidence, weight: 3 },
+    nationality: { value: user.location?.nationality, weight: 3 },
+    
+    // Social & Interests from UserProfile (15 points)
+    interests: { value: user.profile?.interests && user.profile.interests.length > 0, weight: 5 },
+    languages: { value: user.profile?.languages && user.profile.languages.length > 0, weight: 3 },
+    personalityType: { value: user.profile?.personalityType, weight: 2 },
+    instagramHandle: { value: user.profile?.instagramHandle, weight: 2 },
+    linkedinHandle: { value: user.profile?.linkedinHandle, weight: 2 },
+    website: { value: user.profile?.website, weight: 1 }
   };
 
   let totalWeight = 0;
@@ -77,9 +80,23 @@ export async function calculateProfileCompletion(userId: string): Promise<Profil
   };
 }
 
+/* ============================================================================
+   PUSH NOTIFICATION FEATURES - TEMPORARILY DISABLED
+   
+   The following functions require push notification service integration.
+   They are commented out until the push notification service is implemented.
+   
+   Disabled functions:
+   - shouldSendReminder()
+   - generateReminderMessage()
+   - sendProfileCompletionReminders()
+   - sendMilestoneNotification()
+   - initializeProfileReminderJob()
+   ============================================================================
+
 /**
  * Check if user should receive a reminder
- */
+ *
 async function shouldSendReminder(userId: string, percentage: number): Promise<boolean> {
   // Don't send if profile is more than 80% complete
   if (percentage >= 80) {
@@ -107,7 +124,7 @@ async function shouldSendReminder(userId: string, percentage: number): Promise<b
 
 /**
  * Generate reminder message based on completion
- */
+ *
 function generateReminderMessage(percentage: number, missingFields: string[]): {
   title: string;
   body: string;
@@ -161,7 +178,7 @@ const profileReminderCache = new Map<string, Date>();
 
 /**
  * Send profile completion reminders to users
- */
+ *
 export async function sendProfileCompletionReminders() {
   try {
     console.log('🔔 Starting profile completion reminder job...');
@@ -232,7 +249,7 @@ export async function sendProfileCompletionReminders() {
 
 /**
  * Send milestone notifications when users reach certain completion levels
- */
+ *
 export async function sendMilestoneNotification(userId: string, percentage: number) {
   const milestones = [25, 50, 75, 100];
   
@@ -275,7 +292,7 @@ export async function sendMilestoneNotification(userId: string, percentage: numb
 
 /**
  * Initialize cron job for profile completion reminders
- */
+ *
 export function initializeProfileReminderJob() {
   // Run every day at 10 AM
   cron.schedule('0 10 * * *', async () => {
@@ -292,10 +309,9 @@ export function initializeProfileReminderJob() {
   console.log('✅ Profile completion reminder job initialized');
 }
 
-// Export for testing
+============================================================================ */
+
+// Export for testing (only calculateProfileCompletion is active)
 export default {
   calculateProfileCompletion,
-  sendProfileCompletionReminders,
-  sendMilestoneNotification,
-  initializeProfileReminderJob
 };

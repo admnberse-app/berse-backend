@@ -432,12 +432,13 @@ export interface LeaderboardQuery {
 export interface LeaderboardResponse {
   type: string;
   timePeriod: string;
-  topUsers: LeaderboardEntry[];
-  currentUser: LeaderboardEntry;
+  top3: LeaderboardEntry[]; // Top 3 users (ranks 1-3) - always fixed
+  others: LeaderboardEntry[]; // Paginated results starting from rank 4
+  currentUser: LeaderboardEntry; // Current user's position
   pagination: {
     page: number;
     limit: number;
-    total: number;
+    total: number; // Total users excluding top 3
     totalPages: number;
     hasNext: boolean;
     hasPrev: boolean;

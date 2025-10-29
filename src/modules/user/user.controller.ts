@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { RecommendationsService } from '../../services/recommendations.service';
 import { ConnectionStatus } from '@prisma/client';
+import { calculateProfileCompletion } from '../../jobs/profileCompletionReminders';
 
 export class UserController {
   /**
@@ -1459,6 +1460,22 @@ export class UserController {
 
       const finalResponse = UserController.transformUserResponse(response);
       sendSuccess(res, finalResponse);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get profile completion status
+   * @route GET /v2/users/me/completion
+   */
+  static async getProfileCompletion(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      
+      const completion = await calculateProfileCompletion(userId);
+      
+      sendSuccess(res, completion, 'Profile completion calculated successfully');
     } catch (error) {
       next(error);
     }

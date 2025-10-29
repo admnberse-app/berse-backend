@@ -126,4 +126,4 @@ docker-volumes/
 # Local Netlify folder
 .netlify
 gemini/
-bmad-core/
+bmad-core/sendgrid.env

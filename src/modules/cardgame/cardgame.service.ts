@@ -2208,32 +2208,40 @@ export class CardGameService {
    */
   static async getLeaderboard(query: LeaderboardQuery, currentUserId: string): Promise<LeaderboardResponse> {
     const page = query.page || 1;
-    const limit = query.limit || 20;
+    const limit = query.limit || 10; // Default 10 for "others" section
     const type = query.type || 'overall';
     const timePeriod = query.timePeriod || 'all-time';
 
-    const allUsers = await this.calculateLeaderboard(type, page, limit, timePeriod);
+    const allUsers = await this.calculateLeaderboard(type, page, 10000, timePeriod);
     
-    // Find current user's position
-    const currentUserRank = allUsers.findIndex(u => u.userId === currentUserId);
-    const currentUser = currentUserRank >= 0 
-      ? allUsers[currentUserRank]
-      : await this.getCurrentUserRank(currentUserId, type, timePeriod);
-
+    // Always get top 3
+    const top3 = allUsers.slice(0, 3);
+    
+    // Paginate the rest (starting from rank 4)
+    const remainingUsers = allUsers.slice(3);
     const skip = (page - 1) * limit;
-    const topUsers = allUsers.slice(skip, skip + limit);
+    const others = remainingUsers.slice(skip, skip + limit);
+    
+    // Find current user's position in the full leaderboard
+    let currentUser = allUsers.find(u => u.userId === currentUserId);
+    
+    // If user not found in the leaderboard, fetch their rank separately
+    if (!currentUser) {
+      currentUser = await this.getCurrentUserRank(currentUserId, type, timePeriod);
+    }
 
     return {
       type,
       timePeriod,
-      topUsers,
+      top3,
+      others,
       currentUser,
       pagination: {
         page,
         limit,
-        total: allUsers.length,
-        totalPages: Math.ceil(allUsers.length / limit),
-        hasNext: page < Math.ceil(allUsers.length / limit),
+        total: remainingUsers.length, // Total users excluding top 3
+        totalPages: Math.ceil(remainingUsers.length / limit),
+        hasNext: skip + limit < remainingUsers.length,
         hasPrev: page > 1,
       },
     };
@@ -2415,12 +2423,24 @@ export class CardGameService {
       return allUsers[userIndex];
     }
 
-    // User not in leaderboard
+    // User not in leaderboard - fetch user details
+    const userDetail = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        profile: {
+          select: { profilePicture: true },
+        },
+      },
+    });
+
     const breakdown = await this.getUserBreakdown(userId, timePeriod);
     return {
       rank: allUsers.length + 1,
       userId,
-      fullName: '',
+      fullName: userDetail?.fullName || '',
+      profilePicture: userDetail?.profile?.profilePicture || null,
       score: 0,
       breakdown,
     };
