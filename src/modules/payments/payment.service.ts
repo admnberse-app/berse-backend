@@ -66,26 +66,56 @@ export class PaymentService {
       // 3. Get payment gateway
       const gateway = await PaymentGatewayFactory.getGatewayByProviderId(providerId);
 
-      // 4. Create transaction record
-      const transaction = await prisma.paymentTransaction.create({
-        data: {
-          user: { connect: { id: userId } },
-          transactionType: input.transactionType,
-          referenceType: input.referenceType,
+      // 4. Check for existing PENDING transaction (retry scenario)
+      let transaction = await prisma.paymentTransaction.findFirst({
+        where: {
+          userId,
           referenceId: input.referenceId,
-          amount: input.amount,
-          currency,
-          totalFees: feeCalculation.totalFees,
-          platformFee: feeCalculation.platformFee,
-          gatewayFee: feeCalculation.gatewayFee,
-          netAmount: feeCalculation.netAmount,
-          provider: { connect: { id: providerId } },
-          gatewayTransactionId: '', // Will be updated after gateway call
+          referenceType: input.referenceType,
           status: PaymentStatus.PENDING,
-          description: input.description,
-          metadata: input.metadata as any,
         },
+        orderBy: { createdAt: 'desc' },
       });
+
+      if (transaction) {
+        // Retry: Update existing PENDING transaction
+        logger.info(`[PaymentService] Reusing existing PENDING transaction: ${transaction.id}`);
+        transaction = await prisma.paymentTransaction.update({
+          where: { id: transaction.id },
+          data: {
+            amount: input.amount,
+            currency,
+            totalFees: feeCalculation.totalFees,
+            platformFee: feeCalculation.platformFee,
+            gatewayFee: feeCalculation.gatewayFee,
+            netAmount: feeCalculation.netAmount,
+            providerId,
+            description: input.description,
+            metadata: input.metadata as any,
+          },
+        });
+      } else {
+        // First attempt: Create new transaction record
+        transaction = await prisma.paymentTransaction.create({
+          data: {
+            user: { connect: { id: userId } },
+            transactionType: input.transactionType,
+            referenceType: input.referenceType,
+            referenceId: input.referenceId,
+            amount: input.amount,
+            currency,
+            totalFees: feeCalculation.totalFees,
+            platformFee: feeCalculation.platformFee,
+            gatewayFee: feeCalculation.gatewayFee,
+            netAmount: feeCalculation.netAmount,
+            provider: { connect: { id: providerId } },
+            gatewayTransactionId: '', // Will be updated after gateway call
+            status: PaymentStatus.PENDING,
+            description: input.description,
+            metadata: input.metadata as any,
+          },
+        });
+      }
 
       logger.info(`[PaymentService] Created transaction record: ${transaction.id}`);
 
@@ -93,9 +123,9 @@ export class PaymentService {
       let description = input.description || `Payment for ${input.referenceType}`;
       
       // For event tickets, fetch event details for better description
-      const refType = input.referenceType?.toUpperCase();
-      const txnType = input.transactionType?.toUpperCase();
-      if (refType === 'EVENT_TICKET' || txnType === 'EVENT_TICKET') {
+      const refTypeDesc = input.referenceType?.toUpperCase();
+      const txnTypeDesc = input.transactionType?.toUpperCase();
+      if (refTypeDesc === 'EVENT_TICKET' || txnTypeDesc === 'EVENT_TICKET') {
         try {
           const ticket = await prisma.eventTicket.findUnique({
             where: { id: input.referenceId },
@@ -147,6 +177,22 @@ export class PaymentService {
           description,
         },
       });
+
+      // 7b. Link transaction to EventTicket if applicable
+      const refType = input.referenceType?.toUpperCase();
+      const txnType = input.transactionType?.toUpperCase();
+      if ((refType === 'EVENT_TICKET' || txnType === 'EVENT_TICKET') && input.referenceId) {
+        try {
+          await prisma.eventTicket.update({
+            where: { id: input.referenceId },
+            data: { paymentTransactionId: transaction.id },
+          });
+          logger.info(`[PaymentService] Linked transaction ${transaction.id} to ticket ${input.referenceId}`);
+        } catch (err) {
+          logger.error('[PaymentService] Failed to link transaction to ticket:', err);
+          // Don't fail the payment intent if linking fails
+        }
+      }
 
       logger.info(`[PaymentService] Payment intent created successfully`, {
         transactionId: transaction.id,
@@ -268,6 +314,38 @@ export class PaymentService {
           logger.error('[PaymentService] Failed to distribute payout:', error);
           // Don't fail the confirmation if payout distribution fails
         });
+
+        // 5b. Update EventTicket status if applicable
+        if (transaction.transactionType === 'EVENT_TICKET' && transaction.referenceId) {
+          try {
+            const { EventTicketStatus } = await import('@prisma/client');
+            await prisma.eventTicket.update({
+              where: { id: transaction.referenceId },
+              data: {
+                status: EventTicketStatus.CONFIRMED,
+                paymentStatus: PaymentStatus.SUCCEEDED,
+                paymentTransactionId: transaction.id,
+              },
+            });
+            logger.info(`[PaymentService] Updated ticket ${transaction.referenceId} to CONFIRMED`);
+
+            // Increment sold quantity for the tier
+            const ticket = await prisma.eventTicket.findUnique({
+              where: { id: transaction.referenceId },
+              select: { ticketTierId: true },
+            });
+            if (ticket?.ticketTierId) {
+              await prisma.eventTicketTier.update({
+                where: { id: ticket.ticketTierId },
+                data: { soldQuantity: { increment: 1 } },
+              });
+              logger.info(`[PaymentService] Incremented sold quantity for tier ${ticket.ticketTierId}`);
+            }
+          } catch (err) {
+            logger.error('[PaymentService] Failed to update ticket status:', err);
+            // Don't fail the payment confirmation if ticket update fails
+          }
+        }
 
         // Send success notification
         await NotificationService.createNotification({

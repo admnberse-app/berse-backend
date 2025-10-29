@@ -245,6 +245,7 @@ export interface TopicAnalyticsResponse {
   completionRate: number;
   topQuestions: {
     questionId: string;
+    questionText: string;
     averageRating: number;
     feedbackCount: number;
   }[];

@@ -679,9 +679,10 @@ export class CardGameController {
   static async completeSession(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;
-      const { sessionId } = req.params;
+      const { id, sessionId } = req.params;
+      const sessionIdToUse = sessionId || id; // Support both :id and :sessionId params
       const data = req.body;
-      const result = await CardGameService.completeSessionWithSummary(userId, sessionId, data);
+      const result = await CardGameService.completeSessionWithSummary(userId, sessionIdToUse, data);
       sendSuccess(res, result, 'Session completed successfully');
     } catch (error) {
       next(error);

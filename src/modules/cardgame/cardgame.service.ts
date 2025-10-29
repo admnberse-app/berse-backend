@@ -924,6 +924,14 @@ export class CardGameService {
     // TODO: Calculate completion rate based on expected questions
     const completionRate = 0; // Placeholder
 
+    // Fetch question texts for top questions
+    const questionIds = topQuestions.map(q => q.questionId);
+    const questions = await prisma.cardGameQuestion.findMany({
+      where: { id: { in: questionIds } },
+      select: { id: true, questionText: true },
+    });
+    const questionTextMap = new Map(questions.map(q => [q.id, q.questionText]));
+
     return {
       topicId,
       totalSessions: uniqueSessions,
@@ -933,6 +941,7 @@ export class CardGameService {
       completionRate,
       topQuestions: topQuestions.map((q) => ({
         questionId: q.questionId,
+        questionText: questionTextMap.get(q.questionId) || '',
         averageRating: q._avg.rating || 0,
         feedbackCount: q._count.questionId,
       })),

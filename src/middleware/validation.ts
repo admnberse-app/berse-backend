@@ -104,7 +104,7 @@ export const sqlInjectionProtection = (
 ): void => {
   const suspiciousPatterns = [
     /(\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b).*(\b(from|where|table)\b)/gi,
-    /(--|\/\*|\*\/|xp_|sp_|0x[0-9a-f]+)/gi,
+    /(--|\/\*|\*\/|xp_|sp_|\b0x[0-9a-f]{4,})/gi, // Added word boundary before 0x and minimum 4 hex chars
     /(\bor\b.*=.*\bor\b|\band\b.*=.*\band\b)/gi,
     /(';|";|`|\\x[0-9a-f]{2}|\\u[0-9a-f]{4})/gi,
   ];
