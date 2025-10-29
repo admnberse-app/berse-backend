@@ -1062,17 +1062,11 @@ const eventTicketReceiptTemplate = (data: EventTicketReceiptData): TemplateRende
       ${data.ticketTier ? `<p style="margin: 8px 0; font-size: 14px; opacity: 0.9;">Ticket: ${data.ticketTier}</p>` : ''}
     </div>
 
-    <div style="text-align: center; margin: 30px 0;">
-      <img src="${data.qrCodeUrl}" alt="QR Code" style="width: 200px; height: 200px; border: 4px solid ${PRIMARY_COLOR}; border-radius: 8px; padding: 10px; background: white;">
-      <p style="font-family: monospace; font-size: 18px; font-weight: 600; margin-top: 15px; letter-spacing: 2px;">${data.checkInCode}</p>
-      <p style="font-size: 14px; color: #666; margin-top: 5px;">Show this QR code at check-in</p>
-    </div>
-
     <h3 style="margin-top: 30px; margin-bottom: 15px;">Ticket Details</h3>
     <table style="width: 100%; background: #f8f9fa; border-radius: 8px; padding: 15px;">
       <tr>
-        <td><strong>Ticket ID:</strong></td>
-        <td style="text-align: right; font-family: monospace; font-size: 12px;">${data.ticketId}</td>
+        <td><strong>Ticket Number:</strong></td>
+        <td style="text-align: right; font-family: monospace; font-size: 14px; font-weight: 600;">${data.checkInCode}</td>
       </tr>
       <tr>
         <td><strong>Quantity:</strong></td>
@@ -1099,7 +1093,7 @@ const eventTicketReceiptTemplate = (data: EventTicketReceiptData): TemplateRende
 
     <hr class="divider" />
     <p style="font-size: 14px; color: #666;"><strong>Hosted by:</strong> ${data.hostName}</p>
-    <p style="font-size: 14px; color: #666;">Please arrive 15 minutes early for check-in. Bring this email or have your QR code ready on your phone.</p>
+    <p style="font-size: 14px; color: #666;">Please arrive 15 minutes early for check-in. Bring this email or show your ticket number.</p>
   `, `Your Ticket for ${data.eventTitle}`);
 
   const text = `
@@ -1111,9 +1105,8 @@ Event: ${data.eventTitle}
 Date: ${new Date(data.eventDate).toLocaleDateString()} at ${data.eventTime}
 Location: ${data.eventLocation}
 
-Check-in Code: ${data.checkInCode}
+Ticket Number: ${data.checkInCode}
 
-Ticket ID: ${data.ticketId}
 Total: ${data.currency} ${data.totalAmount.toFixed(2)}
 
 View event: ${APP_URL}/events/${data.eventId}
@@ -1139,12 +1132,6 @@ const eventReminderWithTicketTemplate = (data: EventReminderWithTicketData): Tem
       <p style="margin: 15px 0 0 0; font-size: 18px;">📅 ${new Date(data.eventDate).toLocaleDateString()}</p>
       <p style="margin: 8px 0 0 0; font-size: 18px;">⏰ ${data.eventTime}</p>
       <p style="margin: 8px 0 0 0; font-size: 16px;">📍 ${data.eventLocation}</p>
-    </div>
-
-    <div style="text-align: center; margin: 30px 0;">
-      <p style="font-weight: 600; margin-bottom: 15px;">Your QR Code for Check-in:</p>
-      <img src="${data.qrCodeUrl}" alt="QR Code" style="width: 180px; height: 180px; border: 4px solid ${PRIMARY_COLOR}; border-radius: 8px; padding: 10px; background: white;">
-      <p style="font-size: 13px; color: #666; margin-top: 10px;">Save this to your phone for easy access</p>
     </div>
 
     <div style="margin-top: 30px;">

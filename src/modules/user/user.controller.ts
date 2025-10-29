@@ -247,7 +247,17 @@ export class UserController {
       if (data.fullName !== undefined) userUpdate.fullName = data.fullName;
       if (data.username !== undefined) userUpdate.username = data.username;
       if (data.email !== undefined) userUpdate.email = data.email;
-      if (data.phone !== undefined) userUpdate.phone = data.phone;
+      
+      // Handle phone and dialCode
+      if (data.phone !== undefined || data.dialCode !== undefined) {
+        // If both provided, store separately
+        if (data.phone !== undefined) {
+          userUpdate.phone = data.phone;
+        }
+        if (data.dialCode !== undefined) {
+          userUpdate.dialCode = data.dialCode;
+        }
+      }
 
       // Profile fields
       if (data.displayName !== undefined) profileUpdate.displayName = data.displayName;
@@ -256,9 +266,12 @@ export class UserController {
       if (data.fullBio !== undefined) profileUpdate.bio = data.fullBio;  // Alias
       if (data.shortBio !== undefined) profileUpdate.shortBio = data.shortBio;
       if (data.dateOfBirth !== undefined) {
-        profileUpdate.dateOfBirth = new Date(data.dateOfBirth);
-        // Auto-calculate age from date of birth
+        // Parse date and strip time component (store as YYYY-MM-DD at midnight UTC)
         const birthDate = new Date(data.dateOfBirth);
+        birthDate.setUTCHours(0, 0, 0, 0);
+        profileUpdate.dateOfBirth = birthDate;
+        
+        // Auto-calculate age from date of birth
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();

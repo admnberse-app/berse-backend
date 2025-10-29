@@ -4,6 +4,7 @@ export interface UpdateProfileRequest {
   username?: string;
   email?: string;
   phone?: string;
+  dialCode?: string;
   
   // Profile Info
   displayName?: string;

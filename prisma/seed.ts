@@ -164,6 +164,7 @@ async function main() {
     { path: 'prisma/seeds/core/users-enhanced.seed.ts', name: 'Enhanced Test Users' },
     { path: 'prisma/seeds/core/communities.seed.ts', name: 'Sample Communities' },
     { path: 'prisma/seeds/core/events.seed.ts', name: 'Sample Events' },
+    { path: 'prisma/seeds/core/marketplace.seed.ts', name: 'Marketplace Products & Services' },
     { path: 'prisma/seeds/core/sample-data.seed.ts', name: 'Sample Data (connections, vouches, etc.)' },
     
     // Config seeds

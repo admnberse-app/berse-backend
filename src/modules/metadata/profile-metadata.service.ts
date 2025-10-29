@@ -260,11 +260,10 @@ class ProfileMetadataService {
       category: 'Gender',
       description: 'Gender options',
       items: [
-        { value: 'Male', label: 'Male', emoji: '♂️' },
-        { value: 'Female', label: 'Female', emoji: '♀️' },
-        { value: 'Non-binary', label: 'Non-binary', emoji: '⚧️' },
-        { value: 'Prefer not to say', label: 'Prefer not to say', emoji: '🤐' },
-        { value: 'Other', label: 'Other', emoji: '✨' },
+        { value: 'male', label: 'Male', emoji: '♂️' },
+        { value: 'female', label: 'Female', emoji: '♀️' },
+        { value: 'other', label: 'Other', emoji: '✨' },
+        { value: 'prefer_not_to_say', label: 'Prefer not to say', emoji: '🤐' },
       ],
     };
   }

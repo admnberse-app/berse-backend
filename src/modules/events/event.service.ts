@@ -830,8 +830,6 @@ export class EventService {
 
       const price = tier.price;
 
-      const ticketNumber = this.generateTicketNumber();
-
       // First, create or get participant record
       let participant = await prisma.eventParticipant.findFirst({
         where: { eventId: data.eventId, userId },
@@ -847,6 +845,35 @@ export class EventService {
             userId,
             qrCode: qrToken,
             status: 'REGISTERED', // Will be updated to CONFIRMED after successful payment
+          },
+        });
+      }
+
+      // Check for existing PENDING or FAILED ticket for retry scenario
+      let existingTicket = await prisma.eventTicket.findFirst({
+        where: {
+          eventId: data.eventId,
+          userId,
+          ticketTierId: data.ticketTierId,
+          paymentStatus: {
+            in: [PaymentStatus.PENDING, PaymentStatus.FAILED],
+          },
+        },
+        orderBy: { purchasedAt: 'desc' },
+      });
+
+      // If existing ticket found, update it instead of creating new one (retry scenario)
+      if (existingTicket) {
+        logger.info(`[EventService] Reusing existing ticket ${existingTicket.id} for retry payment`);
+        
+        // Update attendee info if provided
+        existingTicket = await prisma.eventTicket.update({
+          where: { id: existingTicket.id },
+          data: {
+            attendeeName: data.attendeeName || existingTicket.attendeeName,
+            attendeeEmail: data.attendeeEmail || existingTicket.attendeeEmail,
+            attendeePhone: data.attendeePhone || existingTicket.attendeePhone,
+            paymentStatus: PaymentStatus.PENDING, // Reset to PENDING for retry
           },
         });
       }
@@ -879,42 +906,71 @@ export class EventService {
         logger.warn('Failed to calculate fees, using default values:', error);
       }
 
-      // Create ticket (PENDING until payment is confirmed)
-      const ticket = await prisma.eventTicket.create({
-        data: {
-          eventId: data.eventId,
-          userId: userId,
-          participantId: participant.id,
-          ticketTierId: data.ticketTierId,
-          ticketType: tier ? tier.tierName : 'GENERAL',
-          price: price,
-          currency: event.currency,
-          status: EventTicketStatus.PENDING,
-          paymentStatus: PaymentStatus.PENDING,
-          ticketNumber: ticketNumber,
-          attendeeName: data.attendeeName,
-          attendeeEmail: data.attendeeEmail,
-          attendeePhone: data.attendeePhone,
-        },
-        include: {
-          events: {
-            select: {
-              id: true,
-              title: true,
-              date: true,
-              location: true,
+      // Create or use existing ticket (PENDING until payment is confirmed)
+      let ticket;
+      if (existingTicket) {
+        // Retry scenario: Fetch the existing ticket with all includes
+        ticket = await prisma.eventTicket.findUnique({
+          where: { id: existingTicket.id },
+          include: {
+            events: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                location: true,
+              },
+            },
+            tier: true,
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
             },
           },
-          tier: true,
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
+        });
+      } else {
+        // First purchase attempt: Create new ticket
+        const ticketNumber = this.generateTicketNumber();
+        
+        ticket = await prisma.eventTicket.create({
+          data: {
+            eventId: data.eventId,
+            userId: userId,
+            participantId: participant.id,
+            ticketTierId: data.ticketTierId,
+            ticketType: tier ? tier.tierName : 'GENERAL',
+            price: price,
+            currency: event.currency,
+            status: EventTicketStatus.PENDING,
+            paymentStatus: PaymentStatus.PENDING,
+            ticketNumber: ticketNumber,
+            attendeeName: data.attendeeName,
+            attendeeEmail: data.attendeeEmail,
+            attendeePhone: data.attendeePhone,
+          },
+          include: {
+            events: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                location: true,
+              },
+            },
+            tier: true,
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
             },
           },
-        },
-      });
+        });
+      }
 
       // Note: soldQuantity will be incremented when payment is confirmed (in webhook)
       // This ensures only PAID tickets count as sold, not PENDING ones

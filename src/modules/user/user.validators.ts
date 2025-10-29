@@ -21,8 +21,15 @@ export const updateProfileValidators = [
     .withMessage('Valid email is required'),
   body('phone')
     .optional()
-    .isMobilePhone('any')
-    .withMessage('Valid phone number is required'),
+    .trim()
+    .isLength({ min: 6, max: 15 })
+    .matches(/^[0-9]+$/)
+    .withMessage('Phone must be 6-15 digits without country code'),
+  body('dialCode')
+    .optional()
+    .trim()
+    .matches(/^\+[0-9]{1,4}$/)
+    .withMessage('Dial code must start with + and be 1-4 digits (e.g., +60, +1)'),
   
   // Profile Info
   body('displayName')

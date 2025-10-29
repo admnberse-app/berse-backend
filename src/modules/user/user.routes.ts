@@ -120,7 +120,12 @@ router.get('/me', authenticateToken, UserController.getMyProfile);
  *                 example: johndoe
  *               phone:
  *                 type: string
- *                 example: +1234567890
+ *                 example: "123456789"
+ *                 description: Phone number without country code (digits only)
+ *               dialCode:
+ *                 type: string
+ *                 example: "+60"
+ *                 description: Country dial code (e.g., +60 for Malaysia, +65 for Singapore, +1 for US)
  *               bio:
  *                 type: string
  *                 example: Software developer and travel enthusiast
