@@ -201,6 +201,9 @@ export class MarketplaceService {
             trustScore: true
           }
         },
+        pricingOptions: {
+          orderBy: { displayOrder: 'asc' }
+        },
         priceHistory: {
           orderBy: { changedAt: 'desc' },
           take: 10
@@ -344,6 +347,9 @@ export class MarketplaceService {
               username: true,
               trustScore: true
             }
+          },
+          pricingOptions: {
+            orderBy: { displayOrder: 'asc' }
           }
         },
         orderBy: { [sortBy]: sortOrder },
@@ -460,6 +466,9 @@ export class MarketplaceService {
                 fullName: true,
                 username: true
               }
+            },
+            pricingOptions: {
+              orderBy: { displayOrder: 'asc' }
             }
           }
         }
@@ -490,6 +499,9 @@ export class MarketplaceService {
                 fullName: true,
                 username: true
               }
+            },
+            pricingOptions: {
+              orderBy: { displayOrder: 'asc' }
             }
           }
         }
@@ -538,6 +550,9 @@ export class MarketplaceService {
                 fullName: true,
                 username: true
               }
+            },
+            pricingOptions: {
+              orderBy: { displayOrder: 'asc' }
             }
           }
         }
@@ -808,6 +823,9 @@ export class MarketplaceService {
                 },
               },
             },
+            pricingOptions: {
+              orderBy: { displayOrder: 'asc' }
+            }
           },
           orderBy: { createdAt: 'desc' },
         });
@@ -1628,6 +1646,9 @@ export class MarketplaceService {
               trustScore: true
             }
           },
+          pricingOptions: {
+            orderBy: { displayOrder: 'asc' }
+          },
           _count: {
             select: {
               marketplaceCartItems: true
@@ -1703,6 +1724,9 @@ export class MarketplaceService {
               trustScore: true
             }
           },
+          pricingOptions: {
+            orderBy: { displayOrder: 'asc' }
+          },
           _count: {
             select: {
               marketplaceCartItems: true
@@ -1777,6 +1801,9 @@ export class MarketplaceService {
               username: true,
               trustScore: true
             }
+          },
+          pricingOptions: {
+            orderBy: { displayOrder: 'asc' }
           }
         },
         orderBy: { createdAt: 'desc' },

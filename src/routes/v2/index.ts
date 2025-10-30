@@ -23,6 +23,7 @@ import constantsRoutes from '../../modules/app-constants/constants.routes';
 import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
 import { homeSurfRoutes } from '../../modules/homesurf';
 import { berseGuideRoutes } from '../../modules/berseguide';
+import servicesRoutes from '../../modules/services/services.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -207,6 +208,12 @@ router.use('/homesurf', homeSurfRoutes);
  * Base path: /v2/berseguide
  */
 router.use('/berseguide', berseGuideRoutes);
+
+/**
+ * Services routes (Unified HomeSurf + BerseGuide search)
+ * Base path: /v2/services
+ */
+router.use('/services', servicesRoutes);
 
 // ============================================================================
 // API HEALTH & DOCUMENTATION
