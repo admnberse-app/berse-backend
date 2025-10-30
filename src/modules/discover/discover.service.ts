@@ -907,7 +907,7 @@ export class DiscoverService {
     if (events.length === 0) return null;
 
     return {
-      type: 'popular_events' as any,
+      type: DiscoverSectionType.UPCOMING,
       title: 'Popular Events',
       subtitle: 'Events people are excited about',
       layout: DiscoverLayoutType.HORIZONTAL,
@@ -932,7 +932,8 @@ export class DiscoverService {
     userContext?: UserContext,
     sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
-    const where: any = {
+    // Try location-specific first
+    let where: any = {
       isEnabled: true
     };
 
@@ -944,7 +945,7 @@ export class DiscoverService {
       };
     }
 
-    const listings = await prisma.userHomeSurf.findMany({
+    let listings = await prisma.userHomeSurf.findMany({
       where,
       take: sectionLimit,
       orderBy: {
@@ -963,6 +964,28 @@ export class DiscoverService {
       }
     });
 
+    // If no results with location filter, try without location for broader results
+    if (listings.length === 0 && locationInfo.city) {
+      listings = await prisma.userHomeSurf.findMany({
+        where: { isEnabled: true },
+        take: sectionLimit,
+        orderBy: {
+          lastActiveAt: 'desc'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustScore: true
+            }
+          },
+          paymentOptions: true
+        }
+      });
+    }
+
     if (listings.length === 0) return null;
 
     const items = listings.map(l => this.transformHomeSurf(
@@ -971,10 +994,23 @@ export class DiscoverService {
       params.longitude || userContext?.longitude
     ));
 
+    const hasLocalContent = locationInfo.city && listings.some(l => l.city?.toLowerCase().includes(locationInfo.city!.toLowerCase()));
+    const title = hasLocalContent
+      ? `HomeSurf in ${locationInfo.city}`
+      : locationInfo.city 
+        ? `HomeSurf Worldwide` 
+        : 'HomeSurf Hosts';
+    
+    const subtitle = hasLocalContent
+      ? 'Stay with locals and make new friends'
+      : locationInfo.city
+        ? `No hosts in ${locationInfo.city} yet. Check out hosts in other cities`
+        : 'Stay with locals and make new friends';
+
     return {
       type: 'homesurf' as any,
-      title: locationInfo.city ? `HomeSurf in ${locationInfo.city}` : 'HomeSurf Hosts',
-      subtitle: 'Stay with locals and make new friends',
+      title,
+      subtitle,
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
       items: items.slice(0, sectionLimit),
@@ -982,7 +1018,8 @@ export class DiscoverService {
       viewAllEndpoint: `/v2/homesurf${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
       metadata: {
         icon: 'home',
-        color: '#FF6B6B'
+        color: '#FF6B6B',
+        isGlobal: !hasLocalContent && !!locationInfo.city
       }
     };
   }
@@ -997,7 +1034,8 @@ export class DiscoverService {
     userContext?: UserContext,
     sectionLimit: number = 5
   ): Promise<DiscoverSection | null> {
-    const where: any = {
+    // Try location-specific first
+    let where: any = {
       isEnabled: true
     };
 
@@ -1009,7 +1047,7 @@ export class DiscoverService {
       };
     }
 
-    const listings = await prisma.userBerseGuide.findMany({
+    let listings = await prisma.userBerseGuide.findMany({
       where,
       take: sectionLimit,
       orderBy: {
@@ -1028,7 +1066,42 @@ export class DiscoverService {
       }
     });
 
+    // If no results with location filter, try without location for broader results
+    if (listings.length === 0 && locationInfo.city) {
+      listings = await prisma.userBerseGuide.findMany({
+        where: { isEnabled: true },
+        take: sectionLimit,
+        orderBy: {
+          lastActiveAt: 'desc'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustScore: true
+            }
+          },
+          paymentOptions: true
+        }
+      });
+    }
+
     if (listings.length === 0) return null;
+
+    const hasLocalContent = locationInfo.city && listings.some(l => l.city?.toLowerCase().includes(locationInfo.city!.toLowerCase()));
+    const title = hasLocalContent
+      ? `Local Guides in ${locationInfo.city}`
+      : locationInfo.city
+        ? `Guides Worldwide`
+        : 'BerseGuide';
+    
+    const subtitle = hasLocalContent
+      ? 'Discover hidden gems with local guides'
+      : locationInfo.city
+        ? `No guides in ${locationInfo.city} yet. Explore guides in other cities`
+        : 'Discover hidden gems with local guides';
 
     const items = listings.map(l => this.transformBerseGuide(
       l,
@@ -1038,8 +1111,8 @@ export class DiscoverService {
 
     return {
       type: 'berseguide' as any,
-      title: locationInfo.city ? `Local Guides in ${locationInfo.city}` : 'BerseGuide',
-      subtitle: 'Discover hidden gems with local guides',
+      title,
+      subtitle,
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
       items: items.slice(0, sectionLimit),
@@ -1047,7 +1120,8 @@ export class DiscoverService {
       viewAllEndpoint: `/v2/berseguide${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
       metadata: {
         icon: 'map',
-        color: '#4CAF50'
+        color: '#4CAF50',
+        isGlobal: !hasLocalContent && !!locationInfo.city
       }
     };
   }
@@ -1073,15 +1147,34 @@ export class DiscoverService {
 
     if (items.length === 0) return null;
 
+    // Check if any items match the user's location
+    const hasLocalContent = locationInfo.city && items.some(i => i.location?.city?.toLowerCase().includes(locationInfo.city!.toLowerCase()));
+    const title = hasLocalContent
+      ? `Marketplace in ${locationInfo.city}`
+      : locationInfo.city
+        ? `Marketplace Worldwide`
+        : 'Marketplace';
+    
+    const subtitle = hasLocalContent
+      ? 'Latest listings near you'
+      : locationInfo.city
+        ? `No listings in ${locationInfo.city} yet. Check out items from other cities`
+        : 'Latest listings';
+
     return {
       type: DiscoverSectionType.MARKETPLACE,
-      title: 'Marketplace',
-      subtitle: 'Latest listings',
+      title,
+      subtitle,
       layout: DiscoverLayoutType.HORIZONTAL,
       itemLayout: DiscoverItemLayout.CARD,
       items: items.slice(0, sectionLimit),
       hasMore: items.length > sectionLimit,
-      viewAllEndpoint: `/v2/marketplace/listings${locationInfo.city ? '?city=' + locationInfo.city : ''}`
+      viewAllEndpoint: `/v2/marketplace/listings${locationInfo.city ? '?city=' + locationInfo.city : ''}`,
+      metadata: {
+        icon: 'shopping_bag',
+        color: '#FF9800',
+        isGlobal: !hasLocalContent && !!locationInfo.city
+      }
     };
   }
 
@@ -1275,7 +1368,8 @@ export class DiscoverService {
     userLat?: number,
     userLon?: number
   ): Promise<MarketplaceItem[]> {
-    const where: any = {
+    // Try location-specific first
+    let where: any = {
       status: 'ACTIVE'
     };
 
@@ -1300,7 +1394,7 @@ export class DiscoverService {
       }
     }
 
-    const items = await prisma.marketplaceListing.findMany({
+    let items = await prisma.marketplaceListing.findMany({
       where,
       take: limit || (params.limit || 10),
       orderBy: {
@@ -1317,6 +1411,45 @@ export class DiscoverService {
         }
       }
     });
+
+    // If no results with location filter, try without location for broader results
+    if (items.length === 0 && locationInfo.city) {
+      const globalWhere: any = {
+        status: 'ACTIVE'
+      };
+
+      if (params.category) {
+        globalWhere.category = params.category;
+      }
+
+      if (params.priceMin !== undefined || params.priceMax !== undefined) {
+        globalWhere.price = {};
+        if (params.priceMin !== undefined) {
+          globalWhere.price.gte = params.priceMin;
+        }
+        if (params.priceMax !== undefined) {
+          globalWhere.price.lte = params.priceMax;
+        }
+      }
+
+      items = await prisma.marketplaceListing.findMany({
+        where: globalWhere,
+        take: limit || (params.limit || 10),
+        orderBy: {
+          createdAt: 'desc'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              trustScore: true
+            }
+          }
+        }
+      });
+    }
 
     return items.map(i => this.transformMarketplaceItem(i, userLat, userLon));
   }
@@ -1844,7 +1977,7 @@ export class DiscoverService {
     );
     if (trendingEvents.length > 0) {
       sections.push({
-        type: 'global_trending' as any,
+        type: DiscoverSectionType.TRENDING,
         title: 'Trending Events Worldwide',
         subtitle: 'Popular events from around the globe',
         layout: DiscoverLayoutType.HORIZONTAL,
@@ -1859,7 +1992,7 @@ export class DiscoverService {
     const communities = await this.fetchCommunities(userId, { ...params, limit: 10 }, globalLocationInfo);
     if (communities.length > 0) {
       sections.push({
-        type: 'global_communities' as any,
+        type: DiscoverSectionType.COMMUNITIES,
         title: 'Global Communities',
         subtitle: 'Connect with people worldwide',
         layout: DiscoverLayoutType.VERTICAL,

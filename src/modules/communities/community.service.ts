@@ -203,6 +203,7 @@ export class CommunityService {
    * Get community by ID
    */
   async getCommunity(communityId: string, userId?: string): Promise<CommunityResponse> {
+    console.log('🚀 GET COMMUNITY CALLED:', { communityId, userId });
     try {
       const community = await prisma.community.findUnique({
         where: { id: communityId },
@@ -295,15 +296,25 @@ export class CommunityService {
           },
         });
 
+        logger.info('🔍 User membership check', {
+          userId,
+          communityId,
+          hasUserMembership: !!userMembership,
+          isApproved: userMembership?.isApproved,
+          role: userMembership?.role,
+        });
+
         if (userMembership) {
           if (userMembership.isApproved) {
             isMember = true;
             isAdmin = userMembership.role === 'ADMIN';
             isModerator = userMembership.role === 'MODERATOR';
             canJoin = false; // Already a member
+            logger.info('✅ User is approved member');
           } else {
             isPending = true;
             canJoin = false; // Already has pending request
+            logger.info('⏳ User has PENDING request', { isPending, userId, communityId });
           }
         } else {
           // Check if user can join (not a member, not pending)
@@ -427,10 +438,11 @@ export class CommunityService {
         ? eventAttendanceStats.reduce((sum, e) => sum + e._count.eventParticipants, 0) / eventAttendanceStats.length
         : 0;
 
-      const formattedCommunity = this.formatCommunityResponse(community, userId);
-
+      // Get basic community info without conflicting user status fields
+      const basicInfo = this.formatCommunityResponse(community);
+      
       const response: CommunityResponse = {
-        ...formattedCommunity,
+        ...basicInfo,
         requiresApproval: community.requiresApproval,
         guidelines: community.guidelines || undefined,
         socialLinks: community.socialLinks as any || undefined,
@@ -461,11 +473,14 @@ export class CommunityService {
           isFree: e.isFree,
           rsvpCount: e._count.eventParticipants,
         })),
+        // Set root-level user fields for backward compatibility
+        role: userMembership?.role,
+        isApproved: userMembership?.isApproved,
         userStatus: {
           isMember,
           isAdmin,
           isModerator,
-          isPending,
+          isPending: isPending, // ← Explicit assignment to ensure value is passed
           role: userMembership?.role,
           joinedAt: userMembership?.joinedAt?.toISOString(),
           canJoin,
@@ -484,6 +499,16 @@ export class CommunityService {
           averageEventAttendance: Math.round(avgAttendance),
         },
       };
+
+      logger.info('📤 Final userStatus being returned', {
+        isMember,
+        isAdmin,
+        isModerator,
+        isPending,
+        canJoin,
+        userId,
+        communityId,
+      });
 
       // Only fetch and include admin data for admins/moderators
       if (isAdmin || isModerator) {
@@ -1909,7 +1934,7 @@ export class CommunityService {
    * Format community response
    */
   private formatCommunityResponse(community: any, userId?: string): CommunityResponse {
-    // Get user's role if they are a member
+    // Get user's role if they are a member (only for other methods, not getCommunity)
     let role: CommunityRole | undefined;
     let isApproved: boolean | undefined;
 

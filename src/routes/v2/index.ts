@@ -17,6 +17,7 @@ import marketplaceRoutes from '../../modules/marketplace/marketplace.routes';
 import { paymentRoutes } from '../../modules/payments';
 import { PaymentController } from '../../modules/payments/payment.controller';
 import discoverRoutes from '../../modules/discover/discover.routes';
+import matchingRoutes from '../../modules/matching/matching.routes';
 import adminRevenueRoutes from '../../modules/admin/revenue.routes';
 import constantsRoutes from '../../modules/app-constants/constants.routes';
 import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
@@ -166,6 +167,12 @@ router.use('/payments', paymentRoutes);
 router.use('/discover', discoverRoutes);
 
 /**
+ * Matching routes (Discovery/swipe system)
+ * Base path: /v2/matching
+ */
+router.use('/matching', matchingRoutes);
+
+/**
  * Dashboard routes (User's personalized dashboard)
  * Base path: /v2/dashboard
  */
@@ -260,6 +267,7 @@ router.get('/health', (req, res) => {
       marketplace: '/v2/marketplace',
       payments: '/v2/payments',
       discover: '/v2/discover',
+      matching: '/v2/matching',
       dashboard: '/v2/dashboard',
       appConstants: '/v2/app-constants',
       homesurf: '/v2/homesurf',
@@ -513,6 +521,12 @@ router.get('/docs', (req, res) => {
         'GET /v2/discover': 'Get discover feed with sections or search results (personalized when authenticated)',
         'GET /v2/discover/trending': 'Get trending content',
         'GET /v2/discover/nearby': 'Get nearby content (requires location)',
+      },
+      matching: {
+        'GET /v2/matching/discover': 'Get discovery users with weighted matching algorithm (auth required)',
+        'POST /v2/matching/swipe': 'Record swipe action - SKIP or INTERESTED (auth required)',
+        'POST /v2/matching/connection-sent': 'Mark connection request as sent after interested swipe (auth required)',
+        'GET /v2/matching/stats': 'Get swipe statistics and pending interests (auth required)',
       },
       dashboard: {
         'GET /v2/dashboard/summary': 'Get comprehensive dashboard overview (auth required)',

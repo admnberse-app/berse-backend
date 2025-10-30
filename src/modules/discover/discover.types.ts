@@ -107,6 +107,7 @@ export interface LocationInfo {
 export interface SectionMetadata {
   icon?: string;
   color?: string;
+  isGlobal?: boolean; // Indicates content is from outside user's location
 }
 
 /**

@@ -1266,6 +1266,64 @@ model Match {
   @@map("matches")
 }
 
+// User Swipe tracking for discovery
+model UserSwipe {
+  id            String      @id @default(cuid())
+  swiperId      String      // User who swiped
+  swipedUserId  String      // User who was swiped on
+  action        SwipeAction // SKIP or INTERESTED
+  createdAt     DateTime    @default(now())
+  
+  // Skip tracking - after 3 SKIPs, don't show this user again
+  skipCount     Int         @default(0) // Incremented each time user skips
+  
+  // Connection tracking
+  connectionSent Boolean    @default(false) // True if user sent connection request after INTERESTED
+  connectionId   String?    // Reference to UserConnection if request was sent
+  
+  // Context for matching algorithm
+  shownInContext String?    // discover, nearby, community_members, etc.
+  distanceKm    Float?      // Distance between users at time of swipe
+  
+  // Relations
+  swiper        User        @relation("user_swipes_swiperId", fields: [swiperId], references: [id], onDelete: Cascade)
+  swipedUser    User        @relation("user_swipes_swipedUserId", fields: [swipedUserId], references: [id], onDelete: Cascade)
+  
+  @@index([swiperId, swipedUserId]) // Allow multiple swipes (for skip counting)
+  @@index([swiperId, action])
+  @@index([swipedUserId])
+  @@index([skipCount])
+  @@index([createdAt])
+  @@map("user_swipes")
+}
+
+// Discovery session tracking to manage shown users
+model DiscoverySession {
+  id             String   @id @default(cuid())
+  userId         String   
+  startedAt      DateTime @default(now())
+  endedAt        DateTime?
+  
+  // Session parameters
+  filters        Json?    // Applied filters (distance, age, interests, etc.)
+  latitude       Float?
+  longitude      Float?
+  
+  // Session stats
+  totalShown     Int      @default(0)
+  totalInterested Int     @default(0)
+  totalSkips     Int      @default(0)
+  totalConnections Int   @default(0)
+  
+  // Track shown users to avoid duplicates in same session
+  shownUserIds   String[] @default([])
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, startedAt])
+  @@map("discovery_sessions")
+}
+
 model Message {
   id                               String   @id @default(cuid())
   content                          String
@@ -2529,6 +2587,9 @@ model User {
   marketplaceReviewsGiven     MarketplaceReview[]      @relation("marketplace_reviews_reviewerIdTousers")
   matchesReceived             Match[]                  @relation("matches_receiverIdTousers")
   matchesSent                 Match[]                  @relation("matches_senderIdTousers")
+  swipesMade                  UserSwipe[]              @relation("user_swipes_swiperId")
+  swipesReceived              UserSwipe[]              @relation("user_swipes_swipedUserId")
+  discoverySessions           DiscoverySession[]
   messagesReceived            Message[]                @relation("messages_receiverIdTousers")
   messagesSent                Message[]                @relation("messages_senderIdTousers")
   notificationPreferences     NotificationPreference?
@@ -2949,6 +3010,11 @@ enum MatchType {
   STUDY
   PROFESSIONAL
   HOBBY
+}
+
+enum SwipeAction {
+  SKIP
+  INTERESTED
 }
 
 enum NotificationType {

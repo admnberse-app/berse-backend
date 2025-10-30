@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CommunityController } from './community.controller';
-import { authenticateToken } from '../../middleware/auth';
+import { authenticateToken, optionalAuth } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireTrustLevel } from '../../middleware/trust-level.middleware';
@@ -526,6 +526,7 @@ router.get(
  */
 router.get(
   '/:communityId',
+  optionalAuth,
   communityIdValidator,
   handleValidationErrors,
   asyncHandler(communityController.getCommunity.bind(communityController))
