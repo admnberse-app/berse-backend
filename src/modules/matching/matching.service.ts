@@ -88,6 +88,14 @@ export class MatchingService {
     const where: any = {
       id: { notIn: excludeUserIds },
       status: 'ACTIVE',
+      // Only show users with verified emails (filters out test accounts)
+      security: {
+        emailVerifiedAt: { not: null },
+      },
+      // Only show users with public profiles in discovery
+      privacy: {
+        profileVisibility: 'public',
+      },
     };
 
     // Apply filters
@@ -130,7 +138,6 @@ export class MatchingService {
         profile: true,
         location: true,
         userBadges: true,
-        serviceProfile: true,
         communityMembers: {
           where: { isApproved: true },
           select: { communityId: true },
@@ -218,9 +225,10 @@ export class MatchingService {
         travelBio: user.profile?.travelBio || undefined,
         website: user.profile?.website || undefined,
 
-        isHostAvailable: user.serviceProfile?.isHostAvailable || false,
-        isGuideAvailable: user.serviceProfile?.isGuideAvailable || false,
-        isHostCertified: user.serviceProfile?.isHostCertified || false,
+        // Note: ServiceProfile was removed - these are now handled by UserHomeSurf and UserBerseGuide
+        isHostAvailable: false,
+        isGuideAvailable: false,
+        isHostCertified: false,
 
         trustScore: user.trustScore || 0,
         isVerified: user.status === 'ACTIVE',

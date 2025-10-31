@@ -1,4 +1,5 @@
 import sgMail from '@sendgrid/mail';
+import { prisma } from '../config/database';
 import logger from '../utils/logger';
 import { 
   EmailOptions, 
@@ -45,11 +46,52 @@ export class EmailService {
 
   /**
    * Send a generic email using SendGrid
+   * Automatically checks user's email notification preferences before sending
    */
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
+      // Check email preferences for the recipient
+      const recipients = Array.isArray(options.to) ? options.to : [options.to];
+      
+      // Filter recipients based on their email preferences
+      const enabledRecipients: string[] = [];
+      
+      for (const email of recipients) {
+        // Get user by email
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: { 
+            id: true,
+            notificationPreferences: {
+              select: { emailEnabled: true },
+            },
+          },
+        });
+
+        // If user not found or emailEnabled is not explicitly false, send email
+        // (default to true if preference not set)
+        if (!user || user.notificationPreferences?.emailEnabled !== false) {
+          enabledRecipients.push(email);
+        } else {
+          logger.info('Email skipped - email notifications disabled', {
+            email,
+            subject: options.subject,
+          });
+        }
+      }
+
+      // If no recipients have email enabled, skip sending
+      if (enabledRecipients.length === 0) {
+        logger.info('Email not sent - all recipients have email notifications disabled', {
+          originalRecipients: recipients.length,
+          subject: options.subject,
+        });
+        return false;
+      }
+
+      // Update recipients to only enabled ones
       const msg = {
-        to: options.to,
+        to: enabledRecipients.length === 1 ? enabledRecipients[0] : enabledRecipients,
         from: {
           email: this.fromEmail,
           name: this.fromName,
@@ -64,7 +106,8 @@ export class EmailService {
       await sgMail.send(msg);
       
       logger.info('Email sent successfully via SendGrid', {
-        to: options.to,
+        to: enabledRecipients,
+        skipped: recipients.length - enabledRecipients.length,
         subject: options.subject,
       });
 

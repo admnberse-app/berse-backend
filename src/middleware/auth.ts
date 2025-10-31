@@ -20,8 +20,8 @@ export const authenticateToken = async (
       throw new AuthenticationError('Access token required');
     }
 
-    // Verify access token
-    const payload = JwtManager.verifyAccessToken(token);
+    // Verify access token (now async to check password version)
+    const payload = await JwtManager.verifyAccessToken(token);
     
     // Get user from database
     const user = await prisma.user.findUnique({
@@ -33,13 +33,6 @@ export const authenticateToken = async (
         role: true,
         status: true,
         totalPoints: true,
-        serviceProfile: {
-          select: {
-            isHostCertified: true,
-            isHostAvailable: true,
-            isGuideAvailable: true,
-          },
-        },
       },
     });
 
@@ -86,8 +79,8 @@ export const optionalAuth = async (
       return next();
     }
 
-    // Verify access token
-    const payload = JwtManager.verifyAccessToken(token);
+    // Verify access token (now async to check password version)
+    const payload = await JwtManager.verifyAccessToken(token);
     
     // Get user from database
     const user = await prisma.user.findUnique({
@@ -99,13 +92,6 @@ export const optionalAuth = async (
         role: true,
         status: true,
         totalPoints: true,
-        serviceProfile: {
-          select: {
-            isHostCertified: true,
-            isHostAvailable: true,
-            isGuideAvailable: true,
-          },
-        },
       },
     });
 

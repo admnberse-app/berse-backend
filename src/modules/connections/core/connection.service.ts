@@ -556,7 +556,12 @@ export class ConnectionService {
             users_user_connections_initiatorIdTousers: {
               OR: [
                 { fullName: { contains: query.search, mode: 'insensitive' } },
-                { username: { contains: query.search, mode: 'insensitive' } },
+                {
+                  AND: [
+                    { username: { contains: query.search, mode: 'insensitive' } },
+                    { privacy: { searchableByUsername: true } },
+                  ],
+                },
               ],
             },
           },
@@ -564,7 +569,12 @@ export class ConnectionService {
             users_user_connections_receiverIdTousers: {
               OR: [
                 { fullName: { contains: query.search, mode: 'insensitive' } },
-                { username: { contains: query.search, mode: 'insensitive' } },
+                {
+                  AND: [
+                    { username: { contains: query.search, mode: 'insensitive' } },
+                    { privacy: { searchableByUsername: true } },
+                  ],
+                },
               ],
             },
           },
@@ -847,6 +857,14 @@ export class ConnectionService {
         where: {
           id: { notIn: excludeIds },
           status: 'ACTIVE',
+          // Only suggest users with verified emails (filters out test accounts)
+          security: {
+            emailVerifiedAt: { not: null },
+          },
+          // Only suggest users with public profiles
+          privacy: {
+            profileVisibility: 'public',
+          },
         },
         take: limit,
         skip,

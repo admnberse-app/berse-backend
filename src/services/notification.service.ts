@@ -22,9 +22,38 @@ interface CreateNotificationData {
 export class NotificationService {
   /**
    * Create a single notification
+   * Automatically checks user's notification preferences before creating
    */
   static async createNotification(data: CreateNotificationData) {
     try {
+      // Check if user has this notification type enabled
+      const isEnabled = await this.isNotificationTypeEnabled(data.userId, data.type);
+      
+      if (!isEnabled) {
+        logger.info('Notification skipped - disabled by user preferences', {
+          userId: data.userId,
+          type: data.type,
+          title: data.title,
+        });
+        return null;
+      }
+
+      // Check if user has push notifications enabled (master toggle)
+      const prefs = await prisma.notificationPreference.findUnique({
+        where: { userId: data.userId },
+        select: { pushEnabled: true },
+      });
+
+      // If pushEnabled is explicitly false, skip in-app notification
+      // (default to true if preference not set)
+      if (prefs && prefs.pushEnabled === false) {
+        logger.info('Notification skipped - push notifications disabled', {
+          userId: data.userId,
+          type: data.type,
+        });
+        return null;
+      }
+
       return await prisma.notification.create({
         data: {
           userId: data.userId,
@@ -53,13 +82,47 @@ export class NotificationService {
 
   /**
    * Create bulk notifications for multiple users
+   * Automatically filters out users who have disabled this notification type
    */
   static async createBulkNotifications(
     userIds: string[],
     notificationData: Omit<CreateNotificationData, 'userId'>
   ) {
     try {
-      const notifications = userIds.map(userId => ({
+      // Filter users based on their notification preferences
+      const enabledUserIds: string[] = [];
+      
+      for (const userId of userIds) {
+        const isEnabled = await this.isNotificationTypeEnabled(userId, notificationData.type);
+        
+        // Also check master push toggle
+        const prefs = await prisma.notificationPreference.findUnique({
+          where: { userId },
+          select: { pushEnabled: true },
+        });
+
+        // Include user if notification type is enabled AND push is not explicitly disabled
+        if (isEnabled && (prefs?.pushEnabled !== false)) {
+          enabledUserIds.push(userId);
+        }
+      }
+
+      if (enabledUserIds.length === 0) {
+        logger.info('Bulk notification skipped - all users have disabled this notification type', {
+          type: notificationData.type,
+          originalCount: userIds.length,
+        });
+        return { count: 0 };
+      }
+
+      logger.info('Bulk notification filtered by user preferences', {
+        type: notificationData.type,
+        originalCount: userIds.length,
+        enabledCount: enabledUserIds.length,
+        skippedCount: userIds.length - enabledUserIds.length,
+      });
+
+      const notifications = enabledUserIds.map(userId => ({
         userId,
         type: notificationData.type,
         title: notificationData.title,

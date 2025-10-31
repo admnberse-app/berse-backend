@@ -161,6 +161,9 @@ class SettingsService {
         profileVisibility: 'public',
         searchableByPhone: true,
         searchableByEmail: true,
+        showLocation: true,
+        locationPrecision: 'city',
+        searchableByUsername: true,
         allowDirectMessages: true,
         consentToDataProcessing: true,
         consentToMarketing: false
@@ -245,13 +248,13 @@ class SettingsService {
     return {
       privacy: {
         profileVisibility: privacy.profileVisibility || 'public',
-        showLocation: true, // TODO: Add to UserPrivacy table if needed
-        locationPrecision: 'city',
+        showLocation: privacy.showLocation ?? true,
+        locationPrecision: privacy.locationPrecision || 'city',
         showLastSeen: true,
         showOnlineStatus: true,
-        discoverableByUsername: privacy.searchableByEmail || true,
-        discoverableByEmail: privacy.searchableByEmail || true,
-        discoverableByPhone: privacy.searchableByPhone || false,
+        discoverableByUsername: privacy.searchableByUsername ?? true,
+        discoverableByEmail: privacy.searchableByEmail ?? true,
+        discoverableByPhone: privacy.searchableByPhone ?? false,
         showTrustScore: true,
         showConnections: true,
         showCommunities: true,

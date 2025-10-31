@@ -27,10 +27,86 @@ const APP_NAME = 'Berse App';
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@bersemuka.com';
 const LOGO_URL = process.env.LOGO_URL || 'https://staging-berse-app.sgp1.cdn.digitaloceanspaces.com/app-assets/berse-horizontal.png';
+const COMPANY_NAME = process.env.COMPANY_NAME || 'Bersemuka App Venture Sdn Bhd';
+const COMPANY_ADDRESS = process.env.COMPANY_ADDRESS || 'Jln Palimbayan Indah 1, Kpg Palimbayan Indah, Sungai Penchala, 60000 Kuala Lumpur, Malaysia';
 const PRIMARY_COLOR = '#00B14F'; // Grab Green - Main brand color
 const PRIMARY_DARK = '#009440';
 const PRIMARY_LIGHT = '#33C16D';
 const BORDER_RADIUS = '12px';
+
+/**
+ * Reusable Email Components
+ * These components ensure consistency across all email templates
+ */
+
+// Standard greeting
+const greeting = (userName: string) => 
+  `<p>Hi <strong>${userName || 'there'}</strong>,</p>`;
+
+// Standard closing signature
+const signature = () => 
+  `<p style="margin-top: 24px; font-size: 14px;"><strong>Best regards,</strong><br>The ${APP_NAME} Team</p>`;
+
+// Info box component (green background)
+const infoBox = (title: string, content: string) => `
+  <div style="background: linear-gradient(to right, #f0fdf4 0%, #e6f9ef 100%); border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid ${PRIMARY_LIGHT};">
+    <h3 style="margin: 0 0 12px 0; color: ${PRIMARY_DARK}; font-size: 16px;">${title}</h3>
+    ${content}
+  </div>
+`;
+
+// Warning box component (yellow/orange background)
+const warningBox = (title: string, content: string) => `
+  <div class="alert-box">
+    <p style="margin: 0;"><strong>${title}</strong></p>
+    ${content}
+  </div>
+`;
+
+// Success box component (green background)
+const successBox = (title: string, content: string) => `
+  <div style="background: linear-gradient(to right, #f0fdf4 0%, #e6f9ef 100%); border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid ${PRIMARY_LIGHT};">
+    <h3 style="margin: 0 0 12px 0; color: ${PRIMARY_DARK}; font-size: 16px;">✓ ${title}</h3>
+    ${content}
+  </div>
+`;
+
+// Danger box component (red background)
+const dangerBox = (title: string, content: string) => `
+  <div style="background: linear-gradient(to right, #fef2f2 0%, #fef9f9 100%); border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid #ef4444;">
+    <h3 style="margin: 0 0 12px 0; color: #dc2626; font-size: 16px;">⚠️ ${title}</h3>
+    ${content}
+  </div>
+`;
+
+// Info box component (blue background)
+const noticeBox = (title: string, content: string) => `
+  <div style="background: #e0f7fa; border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid #0891b2;">
+    <h3 style="margin: 0 0 12px 0; color: #0e7490; font-size: 16px;">${title}</h3>
+    ${content}
+  </div>
+`;
+
+// Call-to-action button component
+const ctaButton = (text: string, url: string, color?: string) => `
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${url}" class="button" style="${color ? `background: ${color};` : ''}">${text}</a>
+  </div>
+`;
+
+// Divider component
+const divider = () => `<hr class="divider" />`;
+
+// Detail item (key-value pair)
+const detailItem = (label: string, value: string) => 
+  `<p style="margin: 8px 0;"><strong>${label}:</strong> ${value}</p>`;
+
+// Security alert footer component
+const securityAlert = (supportUrl?: string) => `
+  <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
+    If you didn't request this action, please <a href="${supportUrl || `${APP_URL}/support`}" style="color: ${PRIMARY_COLOR};">contact support</a> immediately.
+  </p>
+`;
 
 /**
  * Base HTML template wrapper with improved design
@@ -255,10 +331,15 @@ const baseTemplate = (content: string, preheader?: string): string => `
         <p style="margin: 12px 0;">
           <a href="${APP_URL}">Visit Website</a> • 
           <a href="${APP_URL}/privacy">Privacy Policy</a> • 
+          <a href="${APP_URL}/terms">Terms of Service</a> • 
           <a href="mailto:${SUPPORT_EMAIL}">Support</a>
         </p>
-        <p style="margin-top: 16px; font-size: 12px; color: #999999;">
+        <p style="margin: 16px 0 8px 0; font-size: 12px; color: #999999;">
           You're receiving this email because you have an account with ${APP_NAME}.
+        </p>
+        <p style="margin: 8px 0; font-size: 12px; color: #999999;">
+          ${COMPANY_NAME}<br/>
+          ${COMPANY_ADDRESS}
         </p>
       </div>
     </div>
@@ -1288,6 +1369,287 @@ Transaction ID: ${data.transactionId}
 };
 
 /**
+ * Account Deactivated Email Template
+ */
+const accountDeactivatedTemplate = (data: any): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2>Account Deactivated</h2>
+    ${greeting(data.userName)}
+    <p>Your ${APP_NAME} account has been successfully deactivated as requested.</p>
+    
+    ${warningBox('What This Means:', `
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li style="margin: 8px 0;">Your profile is now hidden from other users</li>
+        <li style="margin: 8px 0;">You won't receive any notifications</li>
+        <li style="margin: 8px 0;">Your data is safely stored and will not be deleted</li>
+        <li style="margin: 8px 0;">You can reactivate anytime by logging in</li>
+      </ul>
+      ${data.reason ? detailItem('Reason', data.reason) : ''}
+    `)}
+    
+    ${noticeBox('Changed Your Mind?', `
+      <p style="margin: 0;">You can reactivate your account at any time by simply logging in again. All your data will be restored.</p>
+    `)}
+    
+    ${ctaButton('Reactivate Account', data.reactivateUrl || `${APP_URL}/login`)}
+    
+    ${securityAlert(data.supportUrl)}
+    
+    ${divider()}
+    
+    <p style="margin-top: 24px; font-size: 14px;"><strong>We're sorry to see you go,</strong><br>The ${APP_NAME} Team</p>
+  `, 'Account Deactivated');
+
+  const text = `
+Account Deactivated
+
+Hi ${data.userName || 'there'},
+
+Your ${APP_NAME} account has been successfully deactivated.
+
+What This Means:
+• Your profile is now hidden from other users
+• You won't receive any notifications  
+• Your data is safely stored and will not be deleted
+• You can reactivate anytime by logging in
+
+${data.reason ? `Reason: ${data.reason}` : ''}
+
+Changed Your Mind? You can reactivate your account at any time by simply logging in again.
+
+Reactivate: ${data.reactivateUrl || `${APP_URL}/login`}
+
+If you didn't request this, please contact support immediately.
+
+We're sorry to see you go,
+The ${APP_NAME} Team
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Account Reactivated Email Template
+ */
+const accountReactivatedTemplate = (data: any): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2>Welcome Back! 🎉</h2>
+    ${greeting(data.userName)}
+    <p>Great news! Your ${APP_NAME} account has been successfully reactivated.</p>
+    
+    ${successBox('Your Account is Now Active:', `
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li style="margin: 8px 0;">Your profile is visible again</li>
+        <li style="margin: 8px 0;">You can receive notifications</li>
+        <li style="margin: 8px 0;">All your data and connections are restored</li>
+        <li style="margin: 8px 0;">You have full access to all features</li>
+      </ul>
+      ${detailItem('Reactivated on', new Date(data.reactivationDate).toLocaleString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }))}
+    `)}
+    
+    ${ctaButton(`Explore ${APP_NAME}`, APP_URL)}
+    
+    <p style="font-size: 14px; color: #64748b; margin-top: 24px;">If you didn't reactivate your account, please review your <a href="${data.securityUrl || `${APP_URL}/settings/security`}" style="color: ${PRIMARY_COLOR};">security settings</a> and contact support.</p>
+    
+    ${divider()}
+    
+    <p style="margin-top: 24px; font-size: 14px;"><strong>Happy to have you back,</strong><br>The ${APP_NAME} Team</p>
+  `, 'Welcome Back to Berse!');
+
+  const text = `
+Welcome Back! 🎉
+
+Hi ${data.userName || 'there'},
+
+Great news! Your ${APP_NAME} account has been successfully reactivated.
+
+Your Account is Now Active:
+• Your profile is visible again
+• You can receive notifications
+• All your data and connections are restored
+• You have full access to all features
+
+Reactivated on: ${new Date(data.reactivationDate).toLocaleString()}
+
+Explore ${APP_NAME}: ${APP_URL}
+
+If you didn't reactivate your account, please review your security settings.
+
+Happy to have you back,
+The ${APP_NAME} Team
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Account Deletion Scheduled Email Template
+ */
+const accountDeletionScheduledTemplate = (data: any): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2>Account Deletion Scheduled ⚠️</h2>
+    ${greeting(data.userName)}
+    <p>We've received your request to permanently delete your ${APP_NAME} account.</p>
+    
+    ${dangerBox('⏰ Important Information:', `
+      <p style="margin: 8px 0; font-size: 18px; font-weight: 600; color: #dc2626;">Your account will be permanently deleted on:</p>
+      <p style="margin: 8px 0; font-size: 22px; font-weight: 700; color: #dc2626;">${new Date(data.deletionDate).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric'
+      })}</p>
+      ${detailItem('Grace Period', `${data.gracePeriodDays || 30} days`)}
+      ${data.reason ? detailItem('Reason', data.reason) : ''}
+    `)}
+    
+    ${warningBox('This Will Be Permanent:', `
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li style="margin: 4px 0;">All your posts, comments, and content will be deleted</li>
+        <li style="margin: 4px 0;">Your connections and event history will be removed</li>
+        <li style="margin: 4px 0;">Your trust score and badges will be lost</li>
+        <li style="margin: 4px 0;">All personal data will be permanently erased</li>
+        <li style="margin: 4px 0;">This action <strong>cannot be undone</strong> after the deletion date</li>
+      </ul>
+    `)}
+    
+    ${noticeBox('✋ Changed Your Mind?', `
+      <p style="margin: 8px 0;">You can cancel this deletion request at any time during the ${data.gracePeriodDays || 30}-day grace period. Your account will remain fully functional until the deletion date.</p>
+    `)}
+    
+    ${ctaButton('Cancel Deletion Request', data.cancelUrl || `${APP_URL}/settings/cancel-deletion`, '#0891b2')}
+    
+    ${securityAlert(data.supportUrl)}
+    
+    ${divider()}
+    
+    <p style="margin-top: 24px; font-size: 14px;"><strong>We're sad to see you go,</strong><br>The ${APP_NAME} Team</p>
+  `, 'Account Deletion Scheduled');
+
+  const text = `
+Account Deletion Scheduled ⚠️
+
+Hi ${data.userName || 'there'},
+
+We've received your request to permanently delete your ${APP_NAME} account.
+
+⏰ Your account will be permanently deleted on:
+${new Date(data.deletionDate).toLocaleDateString('en-US', { 
+  weekday: 'long', 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric'
+})}
+
+Grace Period: ${data.gracePeriodDays || 30} days
+${data.reason ? `Reason: ${data.reason}` : ''}
+
+This Will Be Permanent:
+• All your posts, comments, and content will be deleted
+• Your connections and event history will be removed
+• Your trust score and badges will be lost
+• All personal data will be permanently erased
+• This action CANNOT be undone after the deletion date
+
+✋ Changed Your Mind?
+You can cancel this deletion request at any time during the grace period.
+
+Cancel Deletion: ${data.cancelUrl || `${APP_URL}/settings/cancel-deletion`}
+
+If you didn't request this, please contact support immediately.
+
+We're sad to see you go,
+The ${APP_NAME} Team
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Account Deletion Cancelled Email Template
+ */
+const accountDeletionCancelledTemplate = (data: any): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2>Deletion Cancelled - Account Safe! ✅</h2>
+    ${greeting(data.userName)}
+    <p>Great news! Your account deletion request has been successfully cancelled.</p>
+    
+    ${successBox('Your Account is Safe:', `
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li style="margin: 8px 0;">Your account will remain active</li>
+        <li style="margin: 8px 0;">All your data is preserved</li>
+        <li style="margin: 8px 0;">No changes have been made to your account</li>
+        <li style="margin: 8px 0;">You can continue using ${APP_NAME} normally</li>
+      </ul>
+      ${detailItem('Cancelled on', new Date(data.cancellationDate).toLocaleString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }))}
+    `)}
+    
+    ${ctaButton('Continue Exploring', APP_URL)}
+    
+    ${securityAlert()}
+    
+    ${divider()}
+    
+    <p style="margin-top: 24px; font-size: 14px;"><strong>Glad you're staying,</strong><br>The ${APP_NAME} Team</p>
+  `, 'Account Deletion Cancelled');
+
+  const text = `
+Deletion Cancelled - Account Safe! ✅
+
+Hi ${data.userName || 'there'},
+
+Great news! Your account deletion request has been successfully cancelled.
+
+Your Account is Safe:
+• Your account will remain active
+• All your data is preserved
+• No changes have been made to your account
+• You can continue using ${APP_NAME} normally
+
+Cancelled on: ${new Date(data.cancellationDate).toLocaleString()}
+
+Continue Exploring: ${APP_URL}
+
+If you didn't cancel this deletion, please contact support immediately.
+
+Glad you're staying,
+The ${APP_NAME} Team
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
  * Main template renderer
  */
 export const renderEmailTemplate = (
@@ -1315,6 +1677,15 @@ export const renderEmailTemplate = (
       return campaignTemplate(data);
     case EmailTemplate.NOTIFICATION:
       return notificationTemplate(data);
+    // Account Management templates
+    case EmailTemplate.ACCOUNT_DEACTIVATED:
+      return accountDeactivatedTemplate(data);
+    case EmailTemplate.ACCOUNT_REACTIVATED:
+      return accountReactivatedTemplate(data);
+    case EmailTemplate.ACCOUNT_DELETION_SCHEDULED:
+      return accountDeletionScheduledTemplate(data);
+    case EmailTemplate.ACCOUNT_DELETION_CANCELLED:
+      return accountDeletionCancelledTemplate(data);
     // Marketplace templates
     case EmailTemplate.MARKETPLACE_ORDER_RECEIPT:
       return marketplaceOrderReceiptTemplate(data);

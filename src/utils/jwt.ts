@@ -9,6 +9,7 @@ interface JwtPayload {
   userId: string;
   email: string;
   role?: string;
+  passwordVersion?: number; // Track password version to invalidate old tokens
   tokenType: 'access' | 'refresh';
 }
 
@@ -29,8 +30,8 @@ export class JwtManager {
       config.jwt.secret,
       { 
         expiresIn: this.ACCESS_TOKEN_EXPIRY,
-        issuer: 'bersemuka-api',
-        audience: 'bersemuka-client',
+        issuer: 'berse-api',
+        audience: 'berse-client',
       }
     );
   }
@@ -42,8 +43,8 @@ export class JwtManager {
       config.jwt.refreshSecret || config.jwt.secret,
       { 
         expiresIn: this.REFRESH_TOKEN_EXPIRY,
-        issuer: 'bersemuka-api',
-        audience: 'bersemuka-client',
+        issuer: 'berse-api',
+        audience: 'berse-client',
       }
     );
   }
@@ -53,11 +54,23 @@ export class JwtManager {
     id: string;
     email: string;
     role?: string;
+    passwordVersion?: number;
   }): Promise<TokenPair> {
+    // Get current password version if not provided
+    let passwordVersion = user.passwordVersion;
+    if (!passwordVersion) {
+      const security = await prisma.userSecurity.findUnique({
+        where: { userId: user.id },
+        select: { passwordVersion: true },
+      });
+      passwordVersion = security?.passwordVersion || 1;
+    }
+
     const payload = {
       userId: user.id,
       email: user.email,
       role: user.role || 'USER',
+      passwordVersion, // Include password version in token
     };
 
     const accessToken = this.generateAccessToken(payload);
@@ -114,19 +127,34 @@ export class JwtManager {
   }
 
   // Verify access token
-  static verifyAccessToken(token: string): JwtPayload {
+  static async verifyAccessToken(token: string): Promise<JwtPayload> {
     try {
       const payload = jwt.verify(token, config.jwt.secret, {
-        issuer: 'bersemuka-api',
-        audience: 'bersemuka-client',
+        issuer: 'berse-api',
+        audience: 'berse-client',
       }) as JwtPayload;
 
       if (payload.tokenType !== 'access') {
         throw new Error('Invalid token type');
       }
 
+      // Verify password version to invalidate tokens after password change
+      if (payload.passwordVersion !== undefined) {
+        const security = await prisma.userSecurity.findUnique({
+          where: { userId: payload.userId },
+          select: { passwordVersion: true },
+        });
+
+        if (security && security.passwordVersion !== payload.passwordVersion) {
+          throw new Error('Token invalidated - password changed');
+        }
+      }
+
       return payload;
     } catch (error) {
+      if (error.message === 'Token invalidated - password changed') {
+        throw error;
+      }
       throw new Error('Invalid access token');
     }
   }
@@ -139,8 +167,8 @@ export class JwtManager {
         token,
         config.jwt.refreshSecret || config.jwt.secret,
         {
-          issuer: 'bersemuka-api',
-          audience: 'bersemuka-client',
+          issuer: 'berse-api',
+          audience: 'berse-client',
         }
       ) as JwtPayload;
 
@@ -167,6 +195,20 @@ export class JwtManager {
         // Token reuse detected - revoke entire token family
         await this.revokeTokenFamily(payload.userId, hashedToken);
         throw new Error('Refresh token not found or expired');
+      }
+
+      // Verify password version to invalidate tokens after password change
+      if (payload.passwordVersion !== undefined) {
+        const security = await prisma.userSecurity.findUnique({
+          where: { userId: payload.userId },
+          select: { passwordVersion: true },
+        });
+
+        if (security && security.passwordVersion !== payload.passwordVersion) {
+          // Revoke this token and its family
+          await this.revokeTokenFamily(payload.userId, hashedToken);
+          throw new Error('Token invalidated - password changed');
+        }
       }
 
       return payload;

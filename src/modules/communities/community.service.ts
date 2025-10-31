@@ -1379,7 +1379,12 @@ export class CommunityService {
         where.user = {
           OR: [
             { fullName: { contains: search, mode: 'insensitive' } },
-            { username: { contains: search, mode: 'insensitive' } },
+            {
+              AND: [
+                { username: { contains: search, mode: 'insensitive' } },
+                { privacy: { searchableByUsername: true } },
+              ],
+            },
           ],
         };
       }

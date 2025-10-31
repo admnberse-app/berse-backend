@@ -2389,6 +2389,9 @@ model UserPrivacy {
   profileVisibility       String    @default("public")
   searchableByPhone       Boolean   @default(true)
   searchableByEmail       Boolean   @default(true)
+  showLocation            Boolean   @default(true)
+  locationPrecision       String    @default("city")
+  searchableByUsername    Boolean   @default(true)
   allowDirectMessages     Boolean   @default(true)
   consentToDataProcessing Boolean   @default(true)
   consentToMarketing      Boolean   @default(false)
@@ -2441,6 +2444,7 @@ model UserSecurity {
   lastLoginAt          DateTime?
   lastLoginLocation    String?
   lastPasswordChangeAt DateTime?
+  passwordVersion      Int       @default(1) // Incremented on password change to invalidate old tokens
   mfaEnabled           Boolean   @default(false)
   mfaSecret            String?
   mfaRecoveryEmail     String?

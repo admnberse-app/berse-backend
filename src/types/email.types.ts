@@ -31,6 +31,11 @@ export enum EmailTemplate {
   REWARD_AVAILABLE = 'reward_available',
   CAMPAIGN = 'campaign',
   NOTIFICATION = 'notification',
+  // Account Management
+  ACCOUNT_DEACTIVATED = 'account_deactivated',
+  ACCOUNT_REACTIVATED = 'account_reactivated',
+  ACCOUNT_DELETION_SCHEDULED = 'account_deletion_scheduled',
+  ACCOUNT_DELETION_CANCELLED = 'account_deletion_cancelled',
   // Marketplace
   MARKETPLACE_ORDER_RECEIPT = 'marketplace_order_receipt',
   MARKETPLACE_NEW_ORDER = 'marketplace_new_order',
@@ -137,6 +142,34 @@ export interface NotificationEmailData extends BaseEmailData {
   message: string;
   actionUrl?: string;
   actionText?: string;
+}
+
+export interface AccountDeactivatedEmailData extends BaseEmailData {
+  userName: string;
+  deactivationDate: Date;
+  reason?: string;
+  reactivateUrl: string;
+  supportUrl?: string;
+}
+
+export interface AccountReactivatedEmailData extends BaseEmailData {
+  userName: string;
+  reactivationDate: Date;
+  securityUrl?: string;
+}
+
+export interface AccountDeletionScheduledEmailData extends BaseEmailData {
+  userName: string;
+  deletionDate: Date;
+  gracePeriodDays: number;
+  cancelUrl: string;
+  reason?: string;
+  supportUrl?: string;
+}
+
+export interface AccountDeletionCancelledEmailData extends BaseEmailData {
+  userName: string;
+  cancellationDate: Date;
 }
 
 export interface TemplateRenderResult {

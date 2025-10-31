@@ -115,13 +115,13 @@ export class AuthController {
 
       if (existingUser) {
         if (existingUser.email === email) {
-          throw new AppError('Email already registered', 400);
+          throw new AppError('This email is already registered. Please log in or use a different email.', 400);
         }
         if (existingUser.phone === phone) {
-          throw new AppError('Phone number already registered', 400);
+          throw new AppError('This phone number is already registered. Please log in or use a different number.', 400);
         }
         if (existingUser.username === username) {
-          throw new AppError('Username already taken', 400);
+          throw new AppError('This username is already taken. Please choose a different username.', 400);
         }
         throw new AppError('User already exists', 400);
       }
@@ -138,7 +138,7 @@ export class AuthController {
         });
 
         if (!referredBy) {
-          throw new AppError('Invalid referral code', 400);
+          throw new AppError('This referral code is invalid or has expired. Please check and try again.', 400);
         }
       }
 
@@ -506,6 +506,61 @@ export class AuthController {
           email 
         });
         throw new AppError('Invalid credentials', 401);
+      }
+
+      // Auto-reactivate deactivated accounts on successful login
+      if (user.status === 'DEACTIVATED') {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            status: 'ACTIVE',
+            updatedAt: new Date(),
+          },
+        });
+        
+        // Log reactivation
+        await ActivityLoggerService.logSecurityEvent({
+          userId: user.id,
+          eventType: 'ACCOUNT_REACTIVATED',
+          severity: SecuritySeverity.MEDIUM,
+          description: 'Account automatically reactivated via login',
+          ...requestMeta,
+        });
+
+        // Send reactivation email
+        try {
+          await emailQueue.add(
+            user.email!,
+            EmailTemplate.ACCOUNT_REACTIVATED,
+            {
+              userName: user.fullName,
+              reactivationDate: new Date(),
+              securityUrl: `${process.env.APP_URL}/settings/security`,
+            }
+          );
+        } catch (emailError) {
+          logger.error('Failed to send reactivation email', { 
+            userId: user.id, 
+            error: emailError 
+          });
+        }
+
+        // Send in-app notification
+        try {
+          const { NotificationService } = await import('../../services/notification.service');
+          await NotificationService.createNotification({
+            userId: user.id,
+            type: 'SYSTEM' as any,
+            title: 'Welcome Back!',
+            message: 'Your account has been reactivated. Welcome back to Berse!',
+            priority: 'normal',
+          });
+        } catch (notifError) {
+          logger.error('Failed to send reactivation notification', { userId: user.id, error: notifError });
+        }
+        
+        logger.info('Account auto-reactivated on login', { userId: user.id, email });
+        user.status = 'ACTIVE'; // Update in-memory object
       }
 
       // Check if email verification is enabled and required
@@ -941,11 +996,13 @@ export class AuthController {
       try {
         await emailQueue.add(
           user.email!,
-          EmailTemplate.PASSWORD_CHANGED, // Reuse template or create new one
+          EmailTemplate.ACCOUNT_DEACTIVATED,
           {
             userName: user.fullName,
-            changeDate: new Date(),
-            ipAddress: ActivityLoggerService.getRequestMetadata(req).ipAddress,
+            deactivationDate: new Date(),
+            reason: reason || undefined,
+            reactivateUrl: `${process.env.APP_URL}/login`,
+            supportUrl: `${process.env.APP_URL}/support`,
           }
         );
       } catch (emailError) {
@@ -953,6 +1010,20 @@ export class AuthController {
           userId, 
           error: emailError 
         });
+      }
+
+      // Send in-app notification
+      try {
+        const { NotificationService } = await import('../../services/notification.service');
+        await NotificationService.createNotification({
+          userId,
+          type: 'SYSTEM' as any,
+          title: 'Account Deactivated',
+          message: 'Your account has been deactivated. You can reactivate it anytime by logging in.',
+          priority: 'high',
+        });
+      } catch (notifError) {
+        logger.error('Failed to send deactivation notification', { userId, error: notifError });
       }
 
       logger.info('Account deactivated', { userId, reason });
@@ -997,7 +1068,7 @@ export class AuthController {
       // Verify password for security
       const isValidPassword = await comparePassword(password, user.password);
       if (!isValidPassword) {
-        throw new AppError('Invalid password', 401);
+        throw new AppError('Incorrect password. Please enter your correct password to confirm account deletion.', 401);
       }
 
       // Check if deletion already requested
@@ -1038,11 +1109,14 @@ export class AuthController {
       try {
         await emailQueue.add(
           user.email!,
-          EmailTemplate.PASSWORD_CHANGED, // Create a dedicated template
+          EmailTemplate.ACCOUNT_DELETION_SCHEDULED,
           {
             userName: user.fullName,
             deletionDate: deletionDate,
-            cancelUrl: `${process.env.APP_URL}/cancel-deletion?userId=${userId}`,
+            gracePeriodDays: 30,
+            cancelUrl: `${process.env.APP_URL}/cancel-deletion`,
+            reason: reason || undefined,
+            supportUrl: `${process.env.APP_URL}/support`,
           }
         );
       } catch (emailError) {
@@ -1050,6 +1124,22 @@ export class AuthController {
           userId, 
           error: emailError 
         });
+      }
+
+      // Send in-app notification
+      try {
+        const { NotificationService } = await import('../../services/notification.service');
+        await NotificationService.createNotification({
+          userId,
+          type: 'SYSTEM' as any,
+          title: 'Account Deletion Scheduled',
+          message: `Your account will be permanently deleted on ${deletionDate.toLocaleDateString()}. You have 30 days to cancel this request.`,
+          actionUrl: '/settings/cancel-deletion',
+          priority: 'urgent',
+          expiresAt: deletionDate,
+        });
+      } catch (notifError) {
+        logger.error('Failed to send deletion notification', { userId, error: notifError });
       }
 
       logger.info('Account deletion requested', { userId, scheduledFor: deletionDate, reason });
@@ -1113,6 +1203,37 @@ export class AuthController {
         ...ActivityLoggerService.getRequestMetadata(req),
       });
 
+      // Send confirmation email
+      try {
+        await emailQueue.add(
+          user.email!,
+          EmailTemplate.ACCOUNT_DELETION_CANCELLED,
+          {
+            userName: user.fullName,
+            cancellationDate: new Date(),
+          }
+        );
+      } catch (emailError) {
+        logger.error('Failed to send deletion cancellation email', { 
+          userId, 
+          error: emailError 
+        });
+      }
+
+      // Send in-app notification
+      try {
+        const { NotificationService } = await import('../../services/notification.service');
+        await NotificationService.createNotification({
+          userId,
+          type: 'SYSTEM' as any,
+          title: 'Account Deletion Cancelled',
+          message: 'Your account deletion has been cancelled. Your account will remain active.',
+          priority: 'normal',
+        });
+      } catch (notifError) {
+        logger.error('Failed to send cancellation notification', { userId, error: notifError });
+      }
+
       logger.info('Account deletion cancelled', { userId });
 
       sendSuccess(res, null, 'Account deletion request cancelled successfully.');
@@ -1152,7 +1273,7 @@ export class AuthController {
       // Verify password
       const isValidPassword = await comparePassword(password, user.password);
       if (!isValidPassword) {
-        throw new AppError('Invalid credentials', 401);
+        throw new AppError('Incorrect password. Please check your password and try again.', 401);
       }
 
       // Reactivate account
@@ -1209,7 +1330,7 @@ export class AuthController {
       // Verify current password
       const isValidPassword = await comparePassword(currentPassword, user.password);
       if (!isValidPassword) {
-        throw new AppError('Current password is incorrect', 400);
+        throw new AppError('The current password you entered is incorrect. Please try again.', 400);
       }
 
       // Hash new password
@@ -1223,15 +1344,18 @@ export class AuthController {
         },
       });
       
-      // Update security record
+      // Update security record and increment password version
+      // This will immediately invalidate all existing access tokens
       await prisma.userSecurity.upsert({
         where: { userId },
         update: {
           lastPasswordChangeAt: new Date(),
+          passwordVersion: { increment: 1 }, // Invalidates all existing tokens
         },
         create: {
           userId,
           lastPasswordChangeAt: new Date(),
+          passwordVersion: 1,
           updatedAt: new Date(),
         } as any,
       });
@@ -1413,7 +1537,7 @@ export class AuthController {
       });
 
       const user = resetTokenRecord?.user;      if (!user) {
-        throw new AppError('Invalid or expired reset token', 400);
+        throw new AppError('This password reset link is invalid or has expired. Please request a new one.', 400);
       }
 
       // Hash new password
@@ -1437,10 +1561,12 @@ export class AuthController {
           where: { userId: user.id },
           update: {
             lastPasswordChangeAt: new Date(),
+            passwordVersion: { increment: 1 }, // Invalidates all existing tokens
           },
           create: {
             userId: user.id,
             lastPasswordChangeAt: new Date(),
+            passwordVersion: 1,
             updatedAt: new Date(),
           } as any,
         }),
@@ -1602,7 +1728,7 @@ export class AuthController {
       });
 
       if (!verificationToken) {
-        throw new AppError('Invalid or expired verification token', 400);
+        throw new AppError('This verification link is invalid or has expired. Please request a new verification email.', 400);
       }
 
       const user = verificationToken.user;
@@ -1774,7 +1900,7 @@ export class AuthController {
 
       // Check if already verified
       if (user.security?.emailVerifiedAt) {
-        throw new AppError('Email already verified', 400);
+        throw new AppError('Your email is already verified. You can log in now!', 400);
       }
 
       // Delete any existing unused tokens

@@ -11,6 +11,7 @@ import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { RecommendationsService } from '../../services/recommendations.service';
 import { ConnectionStatus } from '@prisma/client';
 import { calculateProfileCompletion } from '../../jobs/profileCompletionReminders';
+import { filterLocationByPrivacy } from '../../utils/privacyHelper';
 
 export class UserController {
   /**
@@ -449,6 +450,14 @@ export class UserController {
           where: {
             id: { not: currentUserId },
             status: 'ACTIVE',
+            // Only show users with verified emails (filters out test accounts)
+            security: {
+              emailVerifiedAt: { not: null },
+            },
+            // Only show users with public profiles
+            privacy: {
+              profileVisibility: 'public',
+            },
           },
           select: {
             id: true,
@@ -491,6 +500,14 @@ export class UserController {
           where: {
             id: { not: currentUserId },
             status: 'ACTIVE',
+            // Only show users with verified emails (filters out test accounts)
+            security: {
+              emailVerifiedAt: { not: null },
+            },
+            // Only show users with public profiles
+            privacy: {
+              profileVisibility: 'public',
+            },
           },
         }),
       ]);
@@ -534,6 +551,14 @@ export class UserController {
   /**
    * Search users with advanced filters
    * @route GET /v2/users/search
+   * 
+   * Privacy Features:
+   * - Respects profileVisibility (public, friends, private)
+   * - Username search only works if searchableByUsername = true
+   * - Email search only works if searchableByEmail = true
+   * - Phone search only works if searchableByPhone = true
+   * - Friends-only profiles only visible to connected users
+   * - Private profiles never appear in search
    */
   static async searchUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -560,9 +585,36 @@ export class UserController {
         limit = 20,
       }: any = req.query;
 
+      // Get connected user IDs first for friends-only visibility check
+      let connectedUserIds: string[] = [];
+      if (currentUserId) {
+        const connections = await prisma.userConnection.findMany({
+          where: {
+            OR: [
+              { initiatorId: currentUserId },
+              { receiverId: currentUserId },
+            ],
+            status: 'ACCEPTED',
+          },
+          select: {
+            initiatorId: true,
+            receiverId: true,
+          },
+        });
+
+        connectedUserIds = connections.map(c =>
+          c.initiatorId === currentUserId ? c.receiverId : c.initiatorId
+        );
+      }
+
       const where: any = {
         status: 'ACTIVE',
         deletedAt: null,
+        // By default, only show users with verified emails (filters out test accounts)
+        // Can be overridden with isVerified=false parameter
+        security: {
+          emailVerifiedAt: { not: null },
+        },
       };
 
       // Exclude current user
@@ -570,13 +622,68 @@ export class UserController {
         where.id = { not: currentUserId };
       }
 
-      // Text search
+      // Build privacy visibility conditions
+      const privacyConditions: any[] = [];
+      
+      if (currentUserId && connectedUserIds.length > 0) {
+        // Show public profiles OR friends-only profiles if connected
+        privacyConditions.push({ privacy: { profileVisibility: 'public' } });
+        privacyConditions.push({
+          AND: [
+            { privacy: { profileVisibility: 'friends' } },
+            { id: { in: connectedUserIds } },
+          ],
+        });
+      } else {
+        // Only show public profiles if not logged in or no connections
+        privacyConditions.push({ privacy: { profileVisibility: 'public' } });
+      }
+
+      // Text search - respects privacy settings for username/email/phone searches
       if (query) {
-        where.OR = [
+        const searchConditions: any[] = [
           { fullName: { contains: query, mode: 'insensitive' } },
-          { username: { contains: query, mode: 'insensitive' } },
           { profile: { bio: { contains: query, mode: 'insensitive' } } },
         ];
+
+        // Add username search only if user allows it
+        searchConditions.push({
+          AND: [
+            { username: { contains: query, mode: 'insensitive' } },
+            { privacy: { searchableByUsername: true } },
+          ],
+        });
+
+        // Add email search if query looks like email AND user allows email search
+        if (query.includes('@')) {
+          searchConditions.push({
+            AND: [
+              { email: { equals: query, mode: 'insensitive' } },
+              { privacy: { searchableByEmail: true } },
+            ],
+          });
+        }
+
+        // Add phone search if query looks like phone AND user allows phone search
+        // Phone patterns: starts with + or contains only digits
+        if (/^[\d+\s()-]+$/.test(query)) {
+          const cleanPhone = query.replace(/[\s()-]/g, ''); // Remove formatting
+          searchConditions.push({
+            AND: [
+              { phone: { contains: cleanPhone } },
+              { privacy: { searchableByPhone: true } },
+            ],
+          });
+        }
+
+        // Combine privacy and search conditions
+        where.AND = [
+          { OR: privacyConditions },
+          { OR: searchConditions },
+        ];
+      } else {
+        // No search query - just apply privacy filter
+        where.OR = privacyConditions;
       }
 
       // Location filters
@@ -617,37 +724,22 @@ export class UserController {
         where.trustLevel = trustLevel;
       }
 
-      // Email verification filter
-      if (isVerified === 'true' || isVerified === true) {
+      // Email verification filter - default is verified only, allow explicit override
+      if (isVerified === 'false' || isVerified === false) {
+        // Remove the default verification filter if explicitly requesting unverified
+        delete where.security;
+      } else if (isVerified === 'true' || isVerified === true) {
+        // Explicitly verified (already set by default)
         where.security = {
           emailVerifiedAt: { not: null },
         };
       }
+      // Otherwise keep default (verified only)
 
-      // Exclude connected users if requested
+      // Exclude connected users if requested (already fetched above)
       if (excludeConnected === 'true' || excludeConnected === true) {
-        if (currentUserId) {
-          const connections = await prisma.userConnection.findMany({
-            where: {
-              OR: [
-                { initiatorId: currentUserId },
-                { receiverId: currentUserId },
-              ],
-              status: 'ACCEPTED',
-            },
-            select: {
-              initiatorId: true,
-              receiverId: true,
-            },
-          });
-
-          const connectedUserIds = connections.map(c =>
-            c.initiatorId === currentUserId ? c.receiverId : c.initiatorId
-          );
-
-          if (connectedUserIds.length > 0) {
-            where.id = { ...where.id, notIn: connectedUserIds };
-          }
+        if (currentUserId && connectedUserIds.length > 0) {
+          where.id = { ...where.id, notIn: connectedUserIds };
         }
       }
 
@@ -707,6 +799,12 @@ export class UserController {
                 countryOfResidence: true,
                 latitude: true,
                 longitude: true,
+              },
+            },
+            privacy: {
+              select: {
+                showLocation: true,
+                locationPrecision: true,
               },
             },
             security: {
@@ -798,35 +896,38 @@ export class UserController {
         });
       }
 
-      // Transform response
-      const transformedUsers = usersWithMutuals.map((user: any) => ({
-        id: user.id,
-        fullName: user.fullName,
-        username: user.username,
-        role: user.role,
-        trustScore: user.trustScore,
-        trustLevel: user.trustLevel,
-        profilePicture: user.profile?.profilePicture,
-        bio: user.profile?.bio || user.profile?.shortBio,
-        interests: user.profile?.interests || [],
-        gender: user.profile?.gender,
-        profession: user.profile?.profession,
-        location: {
-          city: user.location?.currentCity,
-          country: user.location?.countryOfResidence,
-        },
-        isVerified: !!user.security?.emailVerifiedAt,
-        lastSeen: user.security?.lastSeenAt,
-        stats: {
-          hostedEvents: user.stats?.eventsHosted || 0,
-          attendedEvents: user.stats?.eventsAttended || 0,
-        },
-        ...(user.distance !== undefined && { distance: user.distance }),
-        ...(currentUserId && includeMutualConnections === 'true' && {
-          mutualConnectionsCount: user.mutualConnectionsCount || 0,
-          mutualConnections: user.mutualConnections || [],
-        }),
-      }));
+      // Transform response with privacy filtering
+      const transformedUsers = usersWithMutuals.map((user: any) => {
+        const filteredLocation = filterLocationByPrivacy(user.location, user.privacy, false);
+        return {
+          id: user.id,
+          fullName: user.fullName,
+          username: user.username,
+          role: user.role,
+          trustScore: user.trustScore,
+          trustLevel: user.trustLevel,
+          profilePicture: user.profile?.profilePicture,
+          bio: user.profile?.bio || user.profile?.shortBio,
+          interests: user.profile?.interests || [],
+          gender: user.profile?.gender,
+          profession: user.profile?.profession,
+          location: filteredLocation ? {
+            city: filteredLocation.currentCity,
+            country: filteredLocation.countryOfResidence,
+          } : null,
+          isVerified: !!user.security?.emailVerifiedAt,
+          lastSeen: user.security?.lastSeenAt,
+          stats: {
+            hostedEvents: user.stats?.eventsHosted || 0,
+            attendedEvents: user.stats?.eventsAttended || 0,
+          },
+          ...(user.distance !== undefined && { distance: user.distance }),
+          ...(currentUserId && includeMutualConnections === 'true' && {
+            mutualConnectionsCount: user.mutualConnectionsCount || 0,
+            mutualConnections: user.mutualConnections || [],
+          }),
+        };
+      });
 
       sendSuccess(res, {
         users: transformedUsers,
@@ -2176,7 +2277,8 @@ export class UserController {
         showEmail: isConnected,
         showPhone: isConnected,
         showBirthDate: false, // Never show birth date when viewing others
-        showLocation: true, // Always show location
+        showLocation: user.privacy?.showLocation ?? true,
+        locationPrecision: user.privacy?.locationPrecision || 'city',
       };
 
       // ==================== SECTION 6: TRUST & REPUTATION ====================
@@ -2235,14 +2337,18 @@ export class UserController {
         profilePicture: user.profile?.profilePicture || null,
         bio: user.profile?.bio || null,
         shortBio: user.profile?.shortBio || null,
-        location: privacy.showLocation ? {
-          city: user.location?.currentCity || null,
-          country: user.location?.countryOfResidence || null,
-          coordinates: user.location?.latitude && user.location?.longitude ? {
-            lat: user.location.latitude,
-            lng: user.location.longitude,
-          } : null,
-        } : null,
+        location: (() => {
+          const filteredLocation = filterLocationByPrivacy(user.location, user.privacy, false);
+          if (!filteredLocation) return null;
+          return {
+            city: filteredLocation.currentCity || null,
+            country: filteredLocation.countryOfResidence || null,
+            coordinates: filteredLocation.latitude && filteredLocation.longitude ? {
+              lat: filteredLocation.latitude,
+              lng: filteredLocation.longitude,
+            } : null,
+          };
+        })(),
         birthDate: privacy.showBirthDate ? user.profile?.dateOfBirth : null,
         age: user.profile?.age || null,
         gender: user.profile?.gender || null,
