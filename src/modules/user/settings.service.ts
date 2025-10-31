@@ -165,6 +165,7 @@ class SettingsService {
         locationPrecision: 'city',
         searchableByUsername: true,
         allowDirectMessages: true,
+        allowMessagesViaPhone: true,
         consentToDataProcessing: true,
         consentToMarketing: false
       }
@@ -255,6 +256,7 @@ class SettingsService {
         discoverableByUsername: privacy.searchableByUsername ?? true,
         discoverableByEmail: privacy.searchableByEmail ?? true,
         discoverableByPhone: privacy.searchableByPhone ?? false,
+        allowMessagesViaPhone: privacy.allowMessagesViaPhone ?? true,
         showTrustScore: true,
         showConnections: true,
         showCommunities: true,

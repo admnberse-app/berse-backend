@@ -242,6 +242,7 @@ export class ConnectionController {
         search: req.query.search as string,
         sortBy: req.query.sortBy as any,
         sortOrder: req.query.sortOrder as any,
+        direction: req.query.direction as any,
       };
 
       const result = await ConnectionService.getConnections(userId, query);

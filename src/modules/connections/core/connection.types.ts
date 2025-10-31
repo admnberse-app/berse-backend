@@ -54,6 +54,7 @@ export interface ConnectionQuery {
   search?: string;
   sortBy?: 'createdAt' | 'connectedAt' | 'trustStrength' | 'interactionCount';
   sortOrder?: 'asc' | 'desc';
+  direction?: 'sent' | 'received' | 'all';
 }
 
 export interface MutualConnectionsQuery {
@@ -77,21 +78,18 @@ export interface ConnectionResponse {
   initiatorId: string;
   receiverId: string;
   status: ConnectionStatus;
-  message?: string;
-  relationshipType?: string;
-  relationshipCategory?: string;
-  howWeMet?: string;
-  trustStrength: number;
-  interactionCount: number;
-  lastInteraction?: string;
-  tags: string[];
+  message: string | null;
+  relationshipType: string | null;
+  relationshipCategory: string | null;
+  howWeMet: string | null;
   mutualFriendsCount: number;
   mutualCommunitiesCount: number;
   createdAt: string;
-  respondedAt?: string;
-  connectedAt?: string;
-  removedAt?: string;
-  canReconnectAt?: string;
+  respondedAt: string | null;
+  connectedAt: string | null;
+  removedAt: string | null;
+  removedBy: string | null;
+  canReconnectAt: string | null;
   otherUser: UserBasicInfo;
   isInitiator: boolean;
 }
@@ -101,6 +99,7 @@ export interface UserBasicInfo {
   fullName: string;
   username?: string;
   profilePicture?: string;
+  bio?: string;
   trustScore: number;
   trustLevel: string;
   location?: {
@@ -120,8 +119,6 @@ export interface ConnectionStatsResponse {
   travelConnections: number;
   communityConnections: number;
   averageRating?: number;
-  connectionQuality: number;
-  trustChainDepth: number;
 }
 
 export interface MutualConnectionsResponse {

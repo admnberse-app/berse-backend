@@ -2393,6 +2393,7 @@ model UserPrivacy {
   locationPrecision       String    @default("city")
   searchableByUsername    Boolean   @default(true)
   allowDirectMessages     Boolean   @default(true)
+  allowMessagesViaPhone   Boolean   @default(true)
   consentToDataProcessing Boolean   @default(true)
   consentToMarketing      Boolean   @default(false)
   consentDate             DateTime?

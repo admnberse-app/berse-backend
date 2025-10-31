@@ -385,6 +385,7 @@ router.put(
 // ============================================================================
 // CONNECTION RETRIEVAL ROUTES
 // ============================================================================
+// Note: GET own connections moved to /v2/users/me/connections
 
 /**
  * @swagger

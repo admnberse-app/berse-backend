@@ -2938,8 +2938,133 @@ export class UserController {
         prisma.userConnection.count({ where: whereClause }),
       ]);
 
+      // Normalize the connection response to have friendly key names
+      const normalizedConnections = connections.map((conn: any) => {
+        const { 
+          users_user_connections_initiatorIdTousers, 
+          users_user_connections_receiverIdTousers,
+          badges,
+          interactionCount,
+          lastInteraction,
+          tags,
+          trustStrength,
+          ...rest 
+        } = conn;
+        
+        return {
+          ...rest,
+          initiator: users_user_connections_initiatorIdTousers,
+          receiver: users_user_connections_receiverIdTousers,
+        };
+      });
+
       sendSuccess(res, {
-        connections,
+        connections: normalizedConnections,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit)),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get another user's connections (ACCEPTED only)
+   * @route GET /v2/users/:userId/connections
+   */
+  static async getUserConnections(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const currentUserId = req.user?.id!;
+      const { userId } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+
+      // Check if user exists
+      const userExists = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, status: true }
+      });
+
+      if (!userExists || userExists.status !== 'ACTIVE') {
+        throw new AppError('User not found', 404);
+      }
+
+      const skip = (Number(page) - 1) * Number(limit);
+      
+      // Only return ACCEPTED connections for privacy
+      const whereClause: any = {
+        OR: [
+          { initiatorId: userId },
+          { receiverId: userId },
+        ],
+        status: 'ACCEPTED', // Only show accepted connections
+      };
+
+      const [connections, total] = await Promise.all([
+        prisma.userConnection.findMany({
+          where: whereClause,
+          include: {
+            users_user_connections_initiatorIdTousers: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                    bio: true,
+                  },
+                },
+              },
+            },
+            users_user_connections_receiverIdTousers: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                    bio: true,
+                  },
+                },
+              },
+            },
+          },
+          skip,
+          take: Number(limit),
+          orderBy: {
+            connectedAt: 'desc',
+          },
+        }),
+        prisma.userConnection.count({ where: whereClause }),
+      ]);
+
+      // Normalize the connection response
+      const normalizedConnections = connections.map((conn: any) => {
+        const { 
+          users_user_connections_initiatorIdTousers, 
+          users_user_connections_receiverIdTousers,
+          badges,
+          interactionCount,
+          lastInteraction,
+          tags,
+          trustStrength,
+          ...rest 
+        } = conn;
+        
+        return {
+          ...rest,
+          initiator: users_user_connections_initiatorIdTousers,
+          receiver: users_user_connections_receiverIdTousers,
+        };
+      });
+
+      sendSuccess(res, {
+        connections: normalizedConnections,
         pagination: {
           page: Number(page),
           limit: Number(limit),

@@ -34,6 +34,9 @@ export interface PrivacySettings {
   discoverableByEmail: boolean;
   discoverableByPhone: boolean;
   
+  // Messaging Settings
+  allowMessagesViaPhone: boolean;
+  
   // Content Visibility
   showTrustScore: boolean;
   showConnections: boolean;

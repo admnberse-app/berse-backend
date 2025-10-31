@@ -184,8 +184,11 @@ export class ConnectionService {
         },
       });
 
-      // Update connection stats
-      await this.updateConnectionStats(userId);
+      // Update connection stats for both users
+      await Promise.all([
+        this.updateConnectionStats(userId),
+        this.updateConnectionStats(data.receiverId),
+      ]);
 
       // Send notification to receiver
       const senderUser = await prisma.user.findUnique({
@@ -538,9 +541,17 @@ export class ConnectionService {
       const sortBy = query.sortBy || 'createdAt';
       const sortOrder = query.sortOrder || 'desc';
 
-      const where: Prisma.UserConnectionWhereInput = {
-        OR: [{ initiatorId: userId }, { receiverId: userId }],
-      };
+      const where: Prisma.UserConnectionWhereInput = {};
+
+      // Apply direction filter
+      if (query.direction === 'sent') {
+        where.initiatorId = userId;
+      } else if (query.direction === 'received') {
+        where.receiverId = userId;
+      } else {
+        // Default: both directions
+        where.OR = [{ initiatorId: userId }, { receiverId: userId }];
+      }
 
       if (query.status) {
         where.status = query.status;
@@ -595,7 +606,7 @@ export class ConnectionService {
                 username: true,
                 trustScore: true,
                 trustLevel: true,
-                profile: { select: { profilePicture: true } },
+                profile: { select: { profilePicture: true, bio: true } },
                 location: { select: { currentCity: true, countryOfResidence: true } },
               },
             },
@@ -606,7 +617,7 @@ export class ConnectionService {
                 username: true,
                 trustScore: true,
                 trustLevel: true,
-                profile: { select: { profilePicture: true } },
+                profile: { select: { profilePicture: true, bio: true } },
                 location: { select: { currentCity: true, countryOfResidence: true } },
               },
             },
@@ -648,7 +659,7 @@ export class ConnectionService {
               username: true,
               trustScore: true,
               trustLevel: true,
-              profile: { select: { profilePicture: true } },
+              profile: { select: { profilePicture: true, bio: true } },
               location: { select: { currentCity: true, countryOfResidence: true } },
             },
           },
@@ -659,7 +670,7 @@ export class ConnectionService {
               username: true,
               trustScore: true,
               trustLevel: true,
-              profile: { select: { profilePicture: true } },
+              profile: { select: { profilePicture: true, bio: true } },
               location: { select: { currentCity: true, countryOfResidence: true } },
             },
           },
@@ -708,8 +719,6 @@ export class ConnectionService {
         travelConnections: stats.travelConnections,
         communityConnections: stats.communityConnections,
         averageRating: stats.averageRating || undefined,
-        connectionQuality: stats.connectionQuality,
-        trustChainDepth: stats.trustChainDepth,
       };
     } catch (error) {
       logger.error('Error getting connection stats:', error);
@@ -1152,8 +1161,6 @@ export class ConnectionService {
           pendingRequests,
           sentRequests,
           ...categoryCounts,
-          connectionQuality: 0.0,
-          trustChainDepth: 1,
         },
         update: {
           totalConnections,
@@ -1554,26 +1561,24 @@ export class ConnectionService {
       initiatorId: connection.initiatorId,
       receiverId: connection.receiverId,
       status: connection.status,
-      message: connection.message || undefined,
-      relationshipType: connection.relationshipType || undefined,
-      relationshipCategory: connection.relationshipCategory || undefined,
-      howWeMet: connection.howWeMet || undefined,
-      trustStrength: connection.trustStrength,
-      interactionCount: connection.interactionCount,
-      lastInteraction: connection.lastInteraction?.toISOString() || undefined,
-      tags: connection.tags || [],
+      message: connection.message || null,
+      relationshipType: connection.relationshipType || null,
+      relationshipCategory: connection.relationshipCategory || null,
+      howWeMet: connection.howWeMet || null,
       mutualFriendsCount: connection.mutualFriendsCount,
       mutualCommunitiesCount: connection.mutualCommunitiesCount,
       createdAt: connection.createdAt.toISOString(),
-      respondedAt: connection.respondedAt?.toISOString() || undefined,
-      connectedAt: connection.connectedAt?.toISOString() || undefined,
-      removedAt: connection.removedAt?.toISOString() || undefined,
-      canReconnectAt: connection.canReconnectAt?.toISOString() || undefined,
+      respondedAt: connection.respondedAt?.toISOString() || null,
+      connectedAt: connection.connectedAt?.toISOString() || null,
+      removedAt: connection.removedAt?.toISOString() || null,
+      removedBy: connection.removedBy || null,
+      canReconnectAt: connection.canReconnectAt?.toISOString() || null,
       otherUser: {
         id: otherUser.id,
         fullName: otherUser.fullName,
         username: otherUser.username || undefined,
         profilePicture: otherUser.profile?.profilePicture || undefined,
+        bio: otherUser.profile?.bio || undefined,
         trustScore: otherUser.trustScore,
         trustLevel: otherUser.trustLevel,
         location: otherUser.location

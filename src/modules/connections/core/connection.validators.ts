@@ -153,6 +153,11 @@ export const connectionQueryValidators = [
     .optional()
     .isIn(['asc', 'desc'])
     .withMessage('Sort order must be asc or desc'),
+  
+  query('direction')
+    .optional()
+    .isIn(['sent', 'received', 'all'])
+    .withMessage('Direction must be sent, received, or all'),
 ];
 
 export const mutualConnectionsValidators = [

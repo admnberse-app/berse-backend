@@ -4,6 +4,12 @@ import { QRCodeController } from './qr-code.controller';
 import { TrustScoreController } from './trust-score.controller';
 import SettingsController from './settings.controller';
 import { authenticateToken } from '../../middleware/auth';
+import { ConnectionController } from '../connections/core/connection.controller';
+import { connectionQueryValidators } from '../connections/core/connection.validators';
+import { VouchController } from '../connections/vouching/vouch.controller';
+import { vouchQueryValidators } from '../connections/vouching/vouch.validators';
+import { GamificationController } from '../gamification/gamification.controller';
+import subscriptionController from '../subscription/subscription.controller';
 import { handleValidationErrors } from '../../middleware/validation';
 import { updateProfileValidators, searchUsersValidators } from './user.validators';
 import { generateQRCodeValidators, scanQRCodeValidators } from './qr-code.validators';
@@ -243,6 +249,190 @@ router.put(
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/me/completion', authenticateToken, UserController.getProfileCompletion);
+
+/**
+ * @swagger
+ * /v2/users/me/connections:
+ *   get:
+ *     summary: Get own connections
+ *     description: Get list of authenticated user's connections with optional status filter (all statuses visible)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, ACCEPTED, REJECTED, CANCELED, REMOVED]
+ *         description: Filter by connection status
+ *       - in: query
+ *         name: direction
+ *         schema:
+ *           type: string
+ *           enum: [sent, received, all]
+ *         description: Filter by direction (sent=you initiated, received=they initiated)
+ *       - in: query
+ *         name: relationshipCategory
+ *         schema:
+ *           type: string
+ *           enum: [professional, friend, family, mentor, travel, community, other]
+ *         description: Filter by relationship category
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name or username
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, connectedAt, trustStrength, interactionCount]
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Connections retrieved successfully
+ */
+router.get(
+  '/me/connections',
+  authenticateToken,
+  connectionQueryValidators,
+  handleValidationErrors,
+  ConnectionController.getConnections
+);
+
+/**
+ * @swagger
+ * /v2/users/me/vouches/received:
+ *   get:
+ *     summary: Get vouches received
+ *     description: Get vouches you've received with filtering options
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Vouches retrieved successfully
+ */
+router.get(
+  '/me/vouches/received',
+  authenticateToken,
+  vouchQueryValidators,
+  handleValidationErrors,
+  VouchController.getVouchesReceived
+);
+
+/**
+ * @swagger
+ * /v2/users/me/vouches/given:
+ *   get:
+ *     summary: Get vouches given
+ *     description: Get vouches you've given with availability counts
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Vouches retrieved successfully
+ */
+router.get(
+  '/me/vouches/given',
+  authenticateToken,
+  vouchQueryValidators,
+  handleValidationErrors,
+  VouchController.getVouchesGiven
+);
+
+/**
+ * @swagger
+ * /v2/users/me/badges:
+ *   get:
+ *     summary: Get own badges
+ *     description: Get badges you've earned
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Badges retrieved successfully
+ */
+router.get('/me/badges', authenticateToken, GamificationController.getMyBadges);
+
+/**
+ * @swagger
+ * /v2/users/me/points:
+ *   get:
+ *     summary: Get own points
+ *     description: Get your current points balance and history
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Points retrieved successfully
+ */
+router.get('/me/points', authenticateToken, GamificationController.getMyPoints);
+
+/**
+ * @swagger
+ * /v2/users/me/subscription:
+ *   get:
+ *     summary: Get own subscription
+ *     description: Get your current subscription details and status
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription retrieved successfully
+ */
+router.get('/me/subscription', authenticateToken, subscriptionController.getMySubscription);
 
 /**
  * @swagger
@@ -742,20 +932,20 @@ router.get('/nearby', authenticateToken, UserController.findNearbyUsers);
 
 /**
  * @swagger
- * /v2/users/connections:
+ * /v2/users/{userId}/connections:
  *   get:
- *     summary: Get user connections
- *     description: Get list of user's connections with optional status filter
+ *     summary: Get another user's connections
+ *     description: Get list of another user's ACCEPTED connections only (for privacy)
  *     tags: [Connections]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: status
+ *       - in: path
+ *         name: userId
+ *         required: true
  *         schema:
  *           type: string
- *           enum: [PENDING, ACCEPTED, REJECTED, CANCELED, REMOVED]
- *         description: Filter by connection status
+ *         description: User ID whose connections to view
  *       - in: query
  *         name: page
  *         schema:
@@ -768,7 +958,7 @@ router.get('/nearby', authenticateToken, UserController.findNearbyUsers);
  *           default: 20
  *     responses:
  *       200:
- *         description: Connections retrieved successfully
+ *         description: Connections retrieved successfully (ACCEPTED only)
  *         content:
  *           application/json:
  *             schema:
@@ -788,8 +978,10 @@ router.get('/nearby', authenticateToken, UserController.findNearbyUsers);
  *                       type: object
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: User not found
  */
-router.get('/connections', authenticateToken, UserController.getConnections);
+router.get('/:userId/connections', authenticateToken, UserController.getUserConnections);
 
 /**
  * @swagger
@@ -2440,6 +2632,28 @@ router.get('/:userId/trust-dashboard', authenticateToken, TrustScoreController.g
  *         description: Badges retrieved successfully
  */
 router.get('/:userId/badges', authenticateToken, TrustScoreController.getBadges);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/points:
+ *   get:
+ *     summary: Get user's points
+ *     description: Get another user's current points balance (public gamification data)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Points retrieved successfully
+ */
+router.get('/:userId/points', authenticateToken, GamificationController.getUserPoints);
 
 /**
  * @swagger
