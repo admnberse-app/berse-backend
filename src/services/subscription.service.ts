@@ -173,7 +173,7 @@ class SubscriptionService {
       }
 
       // Check if it's actually an upgrade
-      const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC, SubscriptionTier.PREMIUM];
+      const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
       const currentIndex = currentTiers.indexOf(current.tier);
       const newIndex = currentTiers.indexOf(newTierCode);
 

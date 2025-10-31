@@ -3,7 +3,6 @@ import { body, param, query } from 'express-validator';
 // Common validators
 export const emailValidator = body('email')
   .isEmail()
-  .normalizeEmail()
   .withMessage('Valid email is required');
 
 export const passwordValidator = body('password')
@@ -35,9 +34,9 @@ export const registerValidators = [
   passwordValidator,
   body('fullName')
     .trim()
-    .isLength({ min: 2, max: 100 })
+    .isLength({ min: 5, max: 100 })
     .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage('Full name must be 2-100 characters, letters only'),
+    .withMessage('Full name must be 5-100 characters, letters only'),
   body('username')
     .trim()
     .isLength({ min: 2, max: 30 })
@@ -74,7 +73,7 @@ export const updateProfileValidators = [
   body('fullName')
     .optional()
     .trim()
-    .isLength({ min: 2, max: 100 })
+    .isLength({ min: 5, max: 100 })
     .matches(/^[a-zA-Z\s'-]+$/),
   body('bio')
     .optional()

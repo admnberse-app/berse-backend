@@ -174,7 +174,7 @@ export const businessRuleValidators = {
 // Multi-step form validation
 export const multiStepValidators = {
   step1: [
-    body('email').isEmail().normalizeEmail(),
+    body('email').isEmail(),
     body('password').isLength({ min: 8 }),
   ],
   step2: [

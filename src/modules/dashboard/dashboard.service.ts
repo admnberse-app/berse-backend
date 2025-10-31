@@ -6,6 +6,7 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
 import { DashboardSummary, MyCommunity, MyEvent, MyListing, Activity, Alert } from './dashboard.types';
+import { ActivityLoggerService } from '../../services/activityLogger.service';
 
 export class DashboardService {
   /**
@@ -59,15 +60,18 @@ export class DashboardService {
       listingsData,
       connectionsCount,
       servicesData,
-      recentActivity,
+      userActivities,
     ] = await Promise.all([
       this.getCommunitiesSummary(userId),
       this.getEventsSummary(userId),
       this.getListingsSummary(userId),
       this.getConnectionsCount(userId),
       this.getServicesSummary(userId),
-      this.getRecentActivity(userId, 10),
+      ActivityLoggerService.getUserActivityHistory(userId, 20, 0), // Fetch more to filter out system activities
     ]);
+
+    // Transform user activities into dashboard activity format
+    const recentActivity = await this.transformActivities(userActivities);
 
     // Generate alerts
     const alerts = await this.generateAlerts(userId);
@@ -232,7 +236,7 @@ export class DashboardService {
         _count: {
           select: {
             eventParticipants: {
-              where: { status: 'REGISTERED' }
+              where: { status: { in: ['REGISTERED', 'CONFIRMED'] } }
             }
           }
         }
@@ -272,7 +276,7 @@ export class DashboardService {
         _count: {
           select: {
             eventParticipants: {
-              where: { status: 'REGISTERED' }
+              where: { status: { in: ['REGISTERED', 'CONFIRMED'] } }
             }
           }
         }
@@ -329,7 +333,7 @@ export class DashboardService {
           attendeeCount: event._count.eventParticipants,
           maxAttendees: event.maxAttendees || undefined,
           userRole: 'attendee',
-          rsvpStatus: participant?.status === 'REGISTERED' ? 'going' : 'not_going',
+          rsvpStatus: participant?.status === 'REGISTERED' || participant?.status === 'CONFIRMED' ? 'going' : 'not_going',
           community: event.communities ? {
             id: event.communities.id,
             name: event.communities.name,
@@ -467,7 +471,7 @@ export class DashboardService {
         where: {
           eventId: { in: hostedEventIds },
           userId: { not: userId },
-          status: 'REGISTERED',
+          status: { in: ['REGISTERED', 'CONFIRMED'] },
         },
         select: {
           id: true,
@@ -555,7 +559,7 @@ export class DashboardService {
       prisma.eventParticipant.count({
         where: {
           userId,
-          status: 'REGISTERED',
+          status: { in: ['REGISTERED', 'CONFIRMED'] },
         },
       }),
       prisma.event.count({
@@ -566,7 +570,7 @@ export class DashboardService {
               eventParticipants: {
                 some: {
                   userId,
-                  status: 'REGISTERED',
+                  status: { in: ['REGISTERED', 'CONFIRMED'] },
                 },
               },
             },
@@ -787,7 +791,7 @@ export class DashboardService {
             eventParticipants: {
               some: {
                 userId,
-                status: 'REGISTERED',
+                status: { in: ['REGISTERED', 'CONFIRMED'] },
               },
             },
           },
@@ -811,7 +815,7 @@ export class DashboardService {
               eventParticipants: {
                 some: {
                   userId,
-                  status: 'REGISTERED',
+                  status: { in: ['REGISTERED', 'CONFIRMED'] },
                 },
               },
             },
@@ -837,5 +841,55 @@ export class DashboardService {
     }
 
     return alerts;
+  }
+
+  /**
+   * Transform UserActivity records into Dashboard Activity format
+   */
+  private async transformActivities(userActivities: any[]): Promise<Activity[]> {
+    const activities: Activity[] = [];
+
+    for (const activity of userActivities) {
+      // Map activity types to dashboard format - only include meaningful user actions
+      const activityTypeMap: Record<string, { type: Activity['type'], icon: string, messageTemplate: string }> = {
+        // Events
+        'EVENT_RSVP': { type: 'event_rsvp', icon: '✅', messageTemplate: 'Registered for event' },
+        'EVENT_CHECKIN': { type: 'event_checkin', icon: '📍', messageTemplate: 'Checked in to event' },
+        'EVENT_TICKET_PURCHASE': { type: 'event_rsvp', icon: '🎫', messageTemplate: 'Purchased ticket for event' },
+        
+        // Marketplace
+        'LISTING_CREATE': { type: 'listing_comment', icon: '📝', messageTemplate: 'Created marketplace listing' },
+        'ORDER_PAYMENT_SUCCESS': { type: 'listing_sold', icon: '💰', messageTemplate: 'Completed purchase' },
+        'ORDER_SHIP': { type: 'listing_sold', icon: '📦', messageTemplate: 'Order shipped' },
+        'ORDER_DELIVER': { type: 'listing_sold', icon: '✅', messageTemplate: 'Order delivered' },
+        
+        // Connections & Community
+        'CONNECTION_REQUEST_ACCEPT': { type: 'connection_request', icon: '🤝', messageTemplate: 'Connection accepted' },
+        'CONNECTION_REQUEST_SEND': { type: 'connection_request', icon: '👋', messageTemplate: 'Connection request sent' },
+        
+        // Rewards
+        'POINTS_EARN': { type: 'badge_earned', icon: '⭐', messageTemplate: 'Earned points' },
+        'REWARD_REDEEM': { type: 'badge_earned', icon: '🎁', messageTemplate: 'Redeemed reward' },
+        
+        // Note: Excluding AUTH_LOGIN and other security/system events as they're not meaningful for dashboard
+      };
+
+      const mapping = activityTypeMap[activity.activityType];
+      if (mapping) {
+        activities.push({
+          id: activity.id,
+          type: mapping.type,
+          icon: mapping.icon,
+          message: mapping.messageTemplate,
+          timestamp: activity.createdAt,
+          targetId: activity.entityId || undefined,
+          targetType: activity.entityType as any,
+          read: false,
+        });
+      }
+    }
+
+    // Return only the last 5 meaningful activities
+    return activities.slice(0, 5);
   }
 }

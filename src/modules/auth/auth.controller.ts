@@ -89,13 +89,18 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { 
-        email, phone, password, fullName, username: providedUsername, 
+        email, phone, dialCode, password, fullName, username: providedUsername, 
         nationality, countryOfResidence, city, gender, 
         dateOfBirth, referralCode, deviceInfo, locationInfo
       }: RegisterRequest = req.body;
 
       // Auto-generate username if not provided
       const username = providedUsername || await generateUsername(fullName);
+
+      // Validate dialCode is provided if phone is provided
+      if (phone && !dialCode) {
+        throw new AppError('Dial code is required when providing a phone number', 400);
+      }
 
       // Check if user already exists
       const existingUser = await prisma.user.findFirst({
@@ -155,6 +160,7 @@ export class AuthController {
           id: userId,
           email,
           phone,
+          dialCode,
           password: hashedPassword,
           fullName,
           username,
@@ -186,6 +192,14 @@ export class AuthController {
               utmMedium: (req.query.utm_medium as string) || null,
               utmCampaign: (req.query.utm_campaign as string) || null,
               tags: [],
+              updatedAt: new Date(),
+            } as any,
+          },
+          security: {
+            create: {
+              emailVerifiedAt: null,
+              phoneVerifiedAt: null,
+              mfaEnabled: false,
               updatedAt: new Date(),
             } as any,
           },
@@ -364,57 +378,57 @@ export class AuthController {
         );
       }
 
-      // Send verification email if email verification is enabled
+      // Always send verification email to new users
       const emailVerificationEnabled = process.env.ENABLE_EMAIL_VERIFICATION === 'true';
-      if (emailVerificationEnabled) {
-        try {
-          // Generate verification token
-          const verificationToken = crypto.randomBytes(32).toString('hex');
-          const verificationTokenHash = crypto
-            .createHash('sha256')
-            .update(verificationToken)
-            .digest('hex');
+      try {
+        // Generate verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationTokenHash = crypto
+          .createHash('sha256')
+          .update(verificationToken)
+          .digest('hex');
 
-          // Store verification token (expires in 24 hours)
-          await prisma.emailVerificationToken.create({
-            data: {
-              id: crypto.randomUUID(),
-              userId: user.id,
-              email: user.email,
-              token: verificationTokenHash,
-              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-          });
-
-          // Send verification email
-          const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
-          
-          await emailQueue.add(
-            user.email,
-            EmailTemplate.VERIFICATION,
-            {
-              userName: user.fullName,
-              verificationUrl,
-              expiresIn: '24 hours',
-            }
-          );
-
-          // Create in-app notification to verify email
-          await NotificationService.notifyEmailVerificationRequired(user.id, user.fullName);
-
-          logger.info('Verification email sent to new user', { 
-            userId: user.id, 
-            email: user.email 
-          });
-        } catch (error) {
-          logger.error('Failed to send verification email after registration', { 
+        // Store verification token (expires in 24 hours)
+        await prisma.emailVerificationToken.create({
+          data: {
+            id: crypto.randomUUID(),
             userId: user.id,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-          // Don't fail registration if email sending fails
-        }
-      } else {
-        // If email verification is disabled, send welcome notification immediately
+            email: user.email,
+            token: verificationTokenHash,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          },
+        });
+
+        // Send verification email
+        const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+        
+        await emailQueue.add(
+          user.email,
+          EmailTemplate.VERIFICATION,
+          {
+            userName: user.fullName,
+            verificationUrl,
+            expiresIn: '24 hours',
+          }
+        );
+
+        // Create in-app notification to verify email
+        await NotificationService.notifyEmailVerificationRequired(user.id, user.fullName);
+
+        logger.info('Verification email sent to new user', { 
+          userId: user.id, 
+          email: user.email 
+        });
+      } catch (error) {
+        logger.error('Failed to send verification email after registration', { 
+          userId: user.id,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        // Don't fail registration if email sending fails
+      }
+      
+      // If email verification is not enforced, also send welcome notification
+      if (!emailVerificationEnabled) {
         await NotificationService.notifyRegistrationSuccess(user.id, user.fullName);
       }
 
@@ -511,6 +525,67 @@ export class AuthController {
           userId: user.id, 
           email 
         });
+
+        // Send verification email if not already sent recently
+        try {
+          // Check if there's an existing valid token
+          const existingToken = await prisma.emailVerificationToken.findFirst({
+            where: {
+              userId: user.id,
+              expiresAt: { gt: new Date() },
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          // Only send if no token exists or token is older than 5 minutes
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          if (!existingToken || existingToken.createdAt < fiveMinutesAgo) {
+            // Generate new verification token
+            const verificationToken = crypto.randomBytes(32).toString('hex');
+            const verificationTokenHash = crypto
+              .createHash('sha256')
+              .update(verificationToken)
+              .digest('hex');
+
+            // Delete existing token and create new one
+            await prisma.emailVerificationToken.deleteMany({
+              where: { userId: user.id },
+            });
+
+            await prisma.emailVerificationToken.create({
+              data: {
+                id: crypto.randomUUID(),
+                userId: user.id,
+                email: user.email,
+                token: verificationTokenHash,
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              },
+            });
+
+            // Send verification email
+            const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+            await emailQueue.add(
+              user.email,
+              EmailTemplate.VERIFICATION,
+              {
+                userName: user.fullName,
+                verificationUrl,
+                expiresIn: '24 hours',
+              }
+            );
+
+            logger.info('Verification email sent to user attempting login', { 
+              userId: user.id, 
+              email 
+            });
+          }
+        } catch (emailError) {
+          logger.error('Failed to send verification email during login', { 
+            userId: user.id, 
+            error: emailError 
+          });
+        }
+        
         throw new AppError('Please verify your email address before logging in. Check your inbox for the verification email.', 403);
       }
 
@@ -795,6 +870,317 @@ export class AuthController {
 
       sendSuccess(res, { user }, 'User profile retrieved successfully');
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Deactivate account (reversible)
+   * @route POST /v2/auth/deactivate-account
+   */
+  static async deactivateAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { reason } = req.body;
+
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          status: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      if (user.status === 'DEACTIVATED') {
+        throw new AppError('Account is already deactivated', 400);
+      }
+
+      // Update user status to DEACTIVATED
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          status: 'DEACTIVATED',
+          updatedAt: new Date(),
+        },
+      });
+
+      // Revoke all refresh tokens
+      await JwtManager.revokeAllUserTokens(userId);
+
+      // Terminate all sessions
+      await ActivityLoggerService.terminateAllUserSessions(userId);
+
+      // Log deactivation activity
+      await ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.AUTH_LOGOUT_ALL,
+        entityType: 'user',
+        entityId: userId,
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId,
+        eventType: 'ACCOUNT_DEACTIVATED',
+        severity: SecuritySeverity.MEDIUM,
+        description: `User deactivated their account${reason ? `: ${reason}` : ''}`,
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
+
+      // Send confirmation email
+      try {
+        await emailQueue.add(
+          user.email!,
+          EmailTemplate.PASSWORD_CHANGED, // Reuse template or create new one
+          {
+            userName: user.fullName,
+            changeDate: new Date(),
+            ipAddress: ActivityLoggerService.getRequestMetadata(req).ipAddress,
+          }
+        );
+      } catch (emailError) {
+        logger.error('Failed to send account deactivation email', { 
+          userId, 
+          error: emailError 
+        });
+      }
+
+      logger.info('Account deactivated', { userId, reason });
+
+      // Clear refresh token cookie
+      res.clearCookie('refreshToken');
+
+      sendSuccess(res, null, 'Account deactivated successfully. You can reactivate anytime by logging in.');
+    } catch (error) {
+      logger.error('Account deactivation failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: (req as any).user?.id 
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Request account deletion (with grace period)
+   * @route POST /v2/auth/request-account-deletion
+   */
+  static async requestAccountDeletion(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { reason, password } = req.body;
+
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          privacy: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Verify password for security
+      const isValidPassword = await comparePassword(password, user.password);
+      if (!isValidPassword) {
+        throw new AppError('Invalid password', 401);
+      }
+
+      // Check if deletion already requested
+      if (user.privacy?.deletionRequestedAt) {
+        throw new AppError('Account deletion already requested', 400);
+      }
+
+      // Set deletion for 30 days from now (grace period)
+      const deletionDate = new Date();
+      deletionDate.setDate(deletionDate.getDate() + 30);
+
+      // Update privacy settings
+      await prisma.userPrivacy.upsert({
+        where: { userId },
+        create: {
+          userId,
+          deletionRequestedAt: new Date(),
+          deletionScheduledFor: deletionDate,
+          updatedAt: new Date(),
+        },
+        update: {
+          deletionRequestedAt: new Date(),
+          deletionScheduledFor: deletionDate,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId,
+        eventType: 'ACCOUNT_DELETION_REQUESTED',
+        severity: SecuritySeverity.HIGH,
+        description: `User requested account deletion${reason ? `: ${reason}` : ''}`,
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
+
+      // Send confirmation email with cancellation link
+      try {
+        await emailQueue.add(
+          user.email!,
+          EmailTemplate.PASSWORD_CHANGED, // Create a dedicated template
+          {
+            userName: user.fullName,
+            deletionDate: deletionDate,
+            cancelUrl: `${process.env.APP_URL}/cancel-deletion?userId=${userId}`,
+          }
+        );
+      } catch (emailError) {
+        logger.error('Failed to send deletion confirmation email', { 
+          userId, 
+          error: emailError 
+        });
+      }
+
+      logger.info('Account deletion requested', { userId, scheduledFor: deletionDate, reason });
+
+      sendSuccess(res, { 
+        deletionScheduledFor: deletionDate,
+        gracePeriodDays: 30 
+      }, 'Account deletion scheduled. You have 30 days to cancel this request.');
+    } catch (error) {
+      logger.error('Account deletion request failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: (req as any).user?.id 
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Cancel account deletion request
+   * @route POST /v2/auth/cancel-account-deletion
+   */
+  static async cancelAccountDeletion(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          privacy: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      if (!user.privacy?.deletionRequestedAt) {
+        throw new AppError('No pending deletion request found', 400);
+      }
+
+      // Cancel deletion request
+      await prisma.userPrivacy.update({
+        where: { userId },
+        data: {
+          deletionRequestedAt: null,
+          deletionScheduledFor: null,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId,
+        eventType: 'ACCOUNT_DELETION_CANCELLED',
+        severity: SecuritySeverity.MEDIUM,
+        description: 'User cancelled account deletion request',
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
+
+      logger.info('Account deletion cancelled', { userId });
+
+      sendSuccess(res, null, 'Account deletion request cancelled successfully.');
+    } catch (error) {
+      logger.error('Account deletion cancellation failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: (req as any).user?.id 
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Reactivate deactivated account
+   * @route POST /v2/auth/reactivate-account
+   */
+  static async reactivateAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        throw new AppError('Email and password are required', 400);
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        throw new AppError('Account not found', 404);
+      }
+
+      if (user.status !== 'DEACTIVATED') {
+        throw new AppError('Account is not deactivated', 400);
+      }
+
+      // Verify password
+      const isValidPassword = await comparePassword(password, user.password);
+      if (!isValidPassword) {
+        throw new AppError('Invalid credentials', 401);
+      }
+
+      // Reactivate account
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: 'ACTIVE',
+          updatedAt: new Date(),
+        },
+      });
+
+      // Log reactivation
+      await ActivityLoggerService.logSecurityEvent({
+        userId: user.id,
+        eventType: 'ACCOUNT_REACTIVATED',
+        severity: SecuritySeverity.MEDIUM,
+        description: 'User reactivated their account',
+        ...ActivityLoggerService.getRequestMetadata(req),
+      });
+
+      logger.info('Account reactivated', { userId: user.id, email });
+
+      sendSuccess(res, null, 'Account reactivated successfully. You can now log in.');
+    } catch (error) {
+      logger.error('Account reactivation failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        email: req.body.email 
+      });
       next(error);
     }
   }
@@ -1101,17 +1487,35 @@ export class AuthController {
    */
   static async sendVerificationEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email } = req.body;
+      // Support both authenticated and unauthenticated requests
+      // Priority: email in body > authenticated user
+      const authenticatedUserId = (req as any).user?.id;
+      const { email: bodyEmail } = req.body;
 
-      const user = await prisma.user.findUnique({
-        where: { email },
-        include: {
-          security: true,
-        },
-      });
+      let user;
+      
+      // First try email from body if provided
+      if (bodyEmail) {
+        user = await prisma.user.findUnique({
+          where: { email: bodyEmail },
+          include: {
+            security: true,
+          },
+        });
+      } else if (authenticatedUserId) {
+        // Fallback to authenticated user if no email in body
+        user = await prisma.user.findUnique({
+          where: { id: authenticatedUserId },
+          include: {
+            security: true,
+          },
+        });
+      } else {
+        throw new AppError('Please provide your email address', 400);
+      }
 
       if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError('No account found with this email address. Please check your email and try again.', 404);
       }
 
       // Check if already verified
@@ -1337,17 +1741,35 @@ export class AuthController {
    */
   static async resendVerificationEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email } = req.body;
+      // Support both authenticated and unauthenticated requests
+      // Priority: email in body > authenticated user
+      const authenticatedUserId = (req as any).user?.id;
+      const { email: bodyEmail } = req.body;
 
-      const user = await prisma.user.findUnique({
-        where: { email },
-        include: {
-          security: true,
-        },
-      });
+      let user;
+      
+      // First try email from body if provided
+      if (bodyEmail) {
+        user = await prisma.user.findUnique({
+          where: { email: bodyEmail },
+          include: {
+            security: true,
+          },
+        });
+      } else if (authenticatedUserId) {
+        // Fallback to authenticated user if no email in body
+        user = await prisma.user.findUnique({
+          where: { id: authenticatedUserId },
+          include: {
+            security: true,
+          },
+        });
+      } else {
+        throw new AppError('Please provide your email address', 400);
+      }
 
       if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError('No account found with this email address. Please check your email and try again.', 404);
       }
 
       // Check if already verified

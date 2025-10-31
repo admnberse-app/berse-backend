@@ -6,10 +6,13 @@ import {
   loginValidators, 
   changePasswordValidators,
   forgotPasswordValidators,
-  resetPasswordValidators 
+  resetPasswordValidators,
+  deactivateAccountValidators,
+  requestAccountDeletionValidators,
+  reactivateAccountValidators
 } from './auth.validators';
 import { authLimiter, loginLimiter, registerLimiter } from '../../middleware/rateLimiter';
-import { authenticateToken } from '../../middleware/auth';
+import { authenticateToken, optionalAuth } from '../../middleware/auth';
 
 const router = Router();
 
@@ -404,32 +407,35 @@ router.get(
  * /v2/auth/send-verification:
  *   post:
  *     summary: Send email verification
- *     description: Send verification email to user
+ *     description: Send verification email to user. Can be called with or without authentication. If authenticated, uses the logged-in user's email. If not authenticated, requires email in request body.
  *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - email
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Required only if not authenticated
  *                 example: john.doe@example.com
  *     responses:
  *       200:
  *         description: Verification email sent
  *       400:
- *         description: Email already verified
+ *         description: Email already verified or email is required
  *       404:
  *         description: User not found
  */
 router.post(
   '/send-verification',
   authLimiter,
+  optionalAuth,
   handleValidationErrors,
   AuthController.sendVerificationEmail
 );
@@ -471,32 +477,35 @@ router.post(
  * /v2/auth/resend-verification:
  *   post:
  *     summary: Resend verification email
- *     description: Resend verification email to user
+ *     description: Resend verification email to user. Can be called with or without authentication. If authenticated, uses the logged-in user's email. If not authenticated, requires email in request body.
  *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *       - {}
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - email
  *             properties:
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Required only if not authenticated
  *                 example: john.doe@example.com
  *     responses:
  *       200:
  *         description: Verification email resent
  *       400:
- *         description: Email already verified
+ *         description: Email already verified or email is required
  *       404:
  *         description: User not found
  */
 router.post(
   '/resend-verification',
   authLimiter,
+  optionalAuth,
   handleValidationErrors,
   AuthController.resendVerificationEmail
 );
@@ -750,6 +759,202 @@ router.post(
   changePasswordValidators,
   handleValidationErrors,
   AuthController.changePassword
+);
+
+/**
+ * @swagger
+ * /v2/auth/deactivate-account:
+ *   post:
+ *     summary: Deactivate account
+ *     description: Deactivate user account (reversible). This will log out the user from all devices and prevent login until reactivated.
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for deactivation
+ *                 example: Taking a break from the platform
+ *     responses:
+ *       200:
+ *         description: Account deactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Account deactivated successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post(
+  '/deactivate-account',
+  authenticateToken,
+  deactivateAccountValidators,
+  handleValidationErrors,
+  AuthController.deactivateAccount
+);
+
+/**
+ * @swagger
+ * /v2/auth/request-account-deletion:
+ *   post:
+ *     summary: Request account deletion
+ *     description: Request account deletion with a 30-day grace period. Account can be recovered during this period by cancelling the deletion request.
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: User password for verification
+ *                 example: MyPassword123!
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for deletion
+ *                 example: No longer using the platform
+ *     responses:
+ *       200:
+ *         description: Account deletion requested successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Account deletion requested. Your account will be deleted in 30 days.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletionScheduledFor:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2024-02-15T12:00:00Z
+ *                     gracePeriodDays:
+ *                       type: number
+ *                       example: 30
+ *       400:
+ *         description: Invalid password
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post(
+  '/request-account-deletion',
+  authenticateToken,
+  requestAccountDeletionValidators,
+  handleValidationErrors,
+  AuthController.requestAccountDeletion
+);
+
+/**
+ * @swagger
+ * /v2/auth/cancel-account-deletion:
+ *   post:
+ *     summary: Cancel account deletion request
+ *     description: Cancel a pending account deletion request during the grace period
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deletion cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Account deletion cancelled successfully
+ *       400:
+ *         description: No pending deletion request found
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.post(
+  '/cancel-account-deletion',
+  authenticateToken,
+  handleValidationErrors,
+  AuthController.cancelAccountDeletion
+);
+
+/**
+ * @swagger
+ * /v2/auth/reactivate-account:
+ *   post:
+ *     summary: Reactivate deactivated account
+ *     description: Reactivate a previously deactivated account by providing email and password
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john.doe@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: MyPassword123!
+ *     responses:
+ *       200:
+ *         description: Account reactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Account reactivated successfully
+ *       400:
+ *         description: Account is not deactivated or invalid credentials
+ *       404:
+ *         description: User not found
+ */
+router.post(
+  '/reactivate-account',
+  authLimiter,
+  reactivateAccountValidators,
+  handleValidationErrors,
+  AuthController.reactivateAccount
 );
 
 export default router;

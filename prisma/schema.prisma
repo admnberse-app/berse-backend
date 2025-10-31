@@ -203,28 +203,28 @@ model Badge {
 }
 
 model CardGameFeedback {
-  id                  String           @id @default(cuid())
-  userId              String
-  topicId             String
-  sessionNumber       Int
-  questionId          String
-  rating              Int
-  comment             String?
-  topicTitle          String? // NEW: Display name of topic
-  questionText        String? // NEW: Actual question text
-  isHelpful           Boolean          @default(true) // NEW: Was question helpful?
-  upvoteCount         Int              @default(0)
+  id                String           @id @default(cuid())
+  userId            String
+  topicId           String
+  sessionNumber     Int
+  questionId        String
+  rating            Int
+  comment           String?
+  topicTitle        String? // NEW: Display name of topic
+  questionText      String? // NEW: Actual question text
+  isHelpful         Boolean          @default(true) // NEW: Was question helpful?
+  upvoteCount       Int              @default(0)
   // NEW TIMING FIELDS
-  timeSpentSeconds    Int?      // time spent on this question
-  questionViewedAt    DateTime?
-  answerStartedAt     DateTime?
-  answerSubmittedAt   DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic               CardGameTopic?   @relation(fields: [topicId], references: [id])
-  cardGameReplies     CardGameReply[]
-  cardGameUpvotes     CardGameUpvote[]
+  timeSpentSeconds  Int? // time spent on this question
+  questionViewedAt  DateTime?
+  answerStartedAt   DateTime?
+  answerSubmittedAt DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic             CardGameTopic?   @relation(fields: [topicId], references: [id])
+  cardGameReplies   CardGameReply[]
+  cardGameUpvotes   CardGameUpvote[]
 
   @@index([questionId])
   @@index([topicId])
@@ -343,12 +343,12 @@ model CardGameSession {
   questionsAnswered Int           @default(0)
   averageRating     Float?
   // NEW FIELDS
-  totalDuration     Int?      // seconds
-  lastActivityAt    DateTime  @default(now())
-  devicePlatform    String?   // "mobile" | "web"
-  deviceOS          String?   // "iOS" | "Android" | "Web"
+  totalDuration     Int? // seconds
+  lastActivityAt    DateTime      @default(now())
+  devicePlatform    String? // "mobile" | "web"
+  deviceOS          String? // "iOS" | "Android" | "Web"
   appVersion        String?
-  status            String    @default("in-progress") // "in-progress" | "completed" | "abandoned"
+  status            String        @default("in-progress") // "in-progress" | "completed" | "abandoned"
   user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   topic             CardGameTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
@@ -1268,27 +1268,27 @@ model Match {
 
 // User Swipe tracking for discovery
 model UserSwipe {
-  id            String      @id @default(cuid())
-  swiperId      String      // User who swiped
-  swipedUserId  String      // User who was swiped on
-  action        SwipeAction // SKIP or INTERESTED
-  createdAt     DateTime    @default(now())
-  
+  id           String      @id @default(cuid())
+  swiperId     String // User who swiped
+  swipedUserId String // User who was swiped on
+  action       SwipeAction // SKIP or INTERESTED
+  createdAt    DateTime    @default(now())
+
   // Skip tracking - after 3 SKIPs, don't show this user again
-  skipCount     Int         @default(0) // Incremented each time user skips
-  
+  skipCount Int @default(0) // Incremented each time user skips
+
   // Connection tracking
-  connectionSent Boolean    @default(false) // True if user sent connection request after INTERESTED
-  connectionId   String?    // Reference to UserConnection if request was sent
-  
+  connectionSent Boolean @default(false) // True if user sent connection request after INTERESTED
+  connectionId   String? // Reference to UserConnection if request was sent
+
   // Context for matching algorithm
-  shownInContext String?    // discover, nearby, community_members, etc.
-  distanceKm    Float?      // Distance between users at time of swipe
-  
+  shownInContext String? // discover, nearby, community_members, etc.
+  distanceKm     Float? // Distance between users at time of swipe
+
   // Relations
-  swiper        User        @relation("user_swipes_swiperId", fields: [swiperId], references: [id], onDelete: Cascade)
-  swipedUser    User        @relation("user_swipes_swipedUserId", fields: [swipedUserId], references: [id], onDelete: Cascade)
-  
+  swiper     User @relation("user_swipes_swiperId", fields: [swiperId], references: [id], onDelete: Cascade)
+  swipedUser User @relation("user_swipes_swipedUserId", fields: [swipedUserId], references: [id], onDelete: Cascade)
+
   @@index([swiperId, swipedUserId]) // Allow multiple swipes (for skip counting)
   @@index([swiperId, action])
   @@index([swipedUserId])
@@ -1299,27 +1299,27 @@ model UserSwipe {
 
 // Discovery session tracking to manage shown users
 model DiscoverySession {
-  id             String   @id @default(cuid())
-  userId         String   
-  startedAt      DateTime @default(now())
-  endedAt        DateTime?
-  
+  id        String    @id @default(cuid())
+  userId    String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
   // Session parameters
-  filters        Json?    // Applied filters (distance, age, interests, etc.)
-  latitude       Float?
-  longitude      Float?
-  
+  filters   Json? // Applied filters (distance, age, interests, etc.)
+  latitude  Float?
+  longitude Float?
+
   // Session stats
-  totalShown     Int      @default(0)
-  totalInterested Int     @default(0)
-  totalSkips     Int      @default(0)
-  totalConnections Int   @default(0)
-  
+  totalShown       Int @default(0)
+  totalInterested  Int @default(0)
+  totalSkips       Int @default(0)
+  totalConnections Int @default(0)
+
   // Track shown users to avoid duplicates in same session
-  shownUserIds   String[] @default([])
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  shownUserIds String[] @default([])
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, startedAt])
   @@map("discovery_sessions")
 }
@@ -1647,11 +1647,11 @@ model PaymentTransaction {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   // Payment retry and tracking fields
-  paymentMethod          String?               // 'xendit', 'stripe', 'ewallet', 'bank_transfer', etc.
-  transactionId          String?               // External transaction ID from payment gateway
-  xenditInvoiceId        String?               // Xendit specific invoice ID
-  xenditInvoiceUrl       String?               // Xendit invoice URL for retry payment
-  paidAt                 DateTime?             // When payment was completed
+  paymentMethod          String? // 'xendit', 'stripe', 'ewallet', 'bank_transfer', etc.
+  transactionId          String? // External transaction ID from payment gateway
+  xenditInvoiceId        String? // Xendit specific invoice ID
+  xenditInvoiceUrl       String? // Xendit invoice URL for retry payment
+  paidAt                 DateTime? // When payment was completed
   eventTickets           EventTicket[]
   marketplace_orders     MarketplaceOrder[]
   provider               PaymentProvider       @relation(fields: [providerId], references: [id])
@@ -2460,23 +2460,6 @@ model UserSecurity {
   @@map("user_security")
 }
 
-model UserServiceProfile {
-  userId           String   @id
-  isHostAvailable  Boolean  @default(false)
-  isGuideAvailable Boolean  @default(false)
-  isHostCertified  Boolean  @default(false)
-  hostDescription  String?
-  guideDescription String?
-  servicesOffered  Json?
-  updatedAt        DateTime @updatedAt
-  users            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([isGuideAvailable])
-  @@index([isHostAvailable])
-  @@index([isHostCertified])
-  @@map("user_service_profiles")
-}
-
 model UserSession {
   id             String   @id @default(cuid())
   userId         String
@@ -2629,7 +2612,6 @@ model User {
   privacy                     UserPrivacy?
   profile                     UserProfile?
   security                    UserSecurity?
-  serviceProfile              UserServiceProfile?
   sessions                    UserSession[]
   stats                       UserStat?
   subscriptions               UserSubscription[]
@@ -2658,8 +2640,8 @@ model User {
   berseGuideReviewsReceived    BerseGuideReview[]  @relation("guide_reviews_received")
 
   // Card Game relations
-  cardGameStreak               CardGameStreak?
-  cardGameAchievements         UserCardGameAchievement[]
+  cardGameStreak       CardGameStreak?
+  cardGameAchievements UserCardGameAchievement[]
 
   @@index([createdAt])
   @@index([deletedAt])
@@ -3681,14 +3663,14 @@ model ConfigHistory {
 
 // Card Game Streak Tracking
 model CardGameStreak {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
-  lastActiveDate  DateTime
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, currentStreak])
   @@map("card_game_streaks")
@@ -3696,15 +3678,15 @@ model CardGameStreak {
 
 // Card Game Achievement Definitions
 model CardGameAchievement {
-  id                   String                      @id @default(cuid())
-  code                 String                      @unique // e.g. "first-session", "thoughtful-contributor"
-  title                String
-  description          String
-  icon                 String // Emoji or image URL
-  criteria             Json // { type: "session_count", value: 1 }
-  createdAt            DateTime                    @default(now())
-  updatedAt            DateTime                    @updatedAt
-  userAchievements     UserCardGameAchievement[]
+  id               String                    @id @default(cuid())
+  code             String                    @unique // e.g. "first-session", "thoughtful-contributor"
+  title            String
+  description      String
+  icon             String // Emoji or image URL
+  criteria         Json // { type: "session_count", value: 1 }
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  userAchievements UserCardGameAchievement[]
 
   @@index([code])
   @@map("card_game_achievements")
@@ -3712,12 +3694,12 @@ model CardGameAchievement {
 
 // User's Unlocked Achievements
 model UserCardGameAchievement {
-  id              String              @id @default(cuid())
-  userId          String
-  achievementId   String
-  unlockedAt      DateTime            @default(now())
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement     CardGameAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  id            String              @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime            @default(now())
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   CardGameAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId])

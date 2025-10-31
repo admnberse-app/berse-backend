@@ -395,18 +395,14 @@ class AccessControlService {
         actions.push('Attend 3-5 events');
         actions.push('Get 2 vouches from connections');
         actions.push('Complete your profile fully');
-        break;
-      case TrustLevel.SCOUT:
-        actions.push('Attend 8-10 events');
-        actions.push('Get 3 vouches (1 primary, 2 secondary)');
-        actions.push('Join 1 verified community');
-        actions.push('Host or organize 1 event');
+        actions.push('Join verified communities');
         break;
       case TrustLevel.LEADER:
-        actions.push('Attend 15+ events');
-        actions.push('Get all vouches (1 primary, 3 secondary, 2 community)');
+        actions.push('Attend 10+ events');
+        actions.push('Get 4+ vouches from different connections');
         actions.push('Host multiple events with positive reviews');
         actions.push('Contribute consistently to communities');
+        actions.push('Build strong reputation in the platform');
         break;
     }
 

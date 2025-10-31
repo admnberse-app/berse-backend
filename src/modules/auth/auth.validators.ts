@@ -3,7 +3,6 @@ import { body } from 'express-validator';
 export const registerValidators = [
   body('email')
     .isEmail()
-    .normalizeEmail()
     .withMessage('Valid email is required'),
   body('password')
     .isLength({ min: 8 })
@@ -11,9 +10,9 @@ export const registerValidators = [
     .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character'),
   body('fullName')
     .trim()
-    .isLength({ min: 2, max: 100 })
+    .isLength({ min: 5, max: 100 })
     .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage('Full name must be 2-100 characters, letters only'),
+    .withMessage('Full name must be 5-100 characters, letters only'),
   body('username')
     .optional()
     .trim()
@@ -23,8 +22,14 @@ export const registerValidators = [
   body('phone')
     .optional()
     .trim()
-    .notEmpty()
-    .withMessage('Valid phone number is required'),
+    .isLength({ min: 6, max: 15 })
+    .matches(/^[0-9]+$/)
+    .withMessage('Phone must be 6-15 digits without country code'),
+  body('dialCode')
+    .optional()
+    .trim()
+    .matches(/^\+[0-9]{1,4}$/)
+    .withMessage('Dial code must start with + and be 1-4 digits (e.g., +60, +1)'),
   body('nationality')
     .optional()
     .trim()
@@ -57,11 +62,9 @@ export const registerValidators = [
     .matches(/^[A-Z]{3}\d{4}$/)
     .withMessage('Referral code must be 7 characters (3 letters + 4 numbers, e.g., ABC1234)'),
 ];
-
 export const loginValidators = [
   body('email')
     .isEmail()
-    .normalizeEmail()
     .withMessage('Valid email is required'),
   body('password')
     .notEmpty()
@@ -83,10 +86,8 @@ export const changePasswordValidators = [
 export const forgotPasswordValidators = [
   body('email')
     .isEmail()
-    .normalizeEmail()
     .withMessage('Valid email is required'),
 ];
-
 export const resetPasswordValidators = [
   body('token')
     .notEmpty()
@@ -95,4 +96,32 @@ export const resetPasswordValidators = [
     .isLength({ min: 8 })
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
     .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character'),
+];
+
+export const deactivateAccountValidators = [
+  body('reason')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 500 })
+    .withMessage('Reason must be 3-500 characters if provided'),
+];
+
+export const requestAccountDeletionValidators = [
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required for account deletion'),
+  body('reason')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 500 })
+    .withMessage('Reason must be 3-500 characters if provided'),
+];
+
+export const reactivateAccountValidators = [
+  body('email')
+    .isEmail()
+    .withMessage('Valid email is required'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required'),
 ];

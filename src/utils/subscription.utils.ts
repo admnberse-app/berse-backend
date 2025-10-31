@@ -28,8 +28,7 @@ export function formatCurrency(amount: number, currency: string = 'MYR'): string
 export function getTierDisplayName(tier: SubscriptionTier): string {
   const emojis = {
     [SubscriptionTier.FREE]: '🆓',
-    [SubscriptionTier.BASIC]: '⭐',
-    [SubscriptionTier.PREMIUM]: '👑',
+    [SubscriptionTier.BASIC]: '⭐'
   };
 
   return `${emojis[tier]} ${tier}`;
@@ -59,7 +58,7 @@ export function getTrustLevelProgress(score: number): {
   const progress = ((score - min) / (max - min)) * 100;
 
   // Get next level
-  const levels = [TrustLevel.STARTER, TrustLevel.TRUSTED, TrustLevel.SCOUT, TrustLevel.LEADER];
+  const levels = [TrustLevel.STARTER, TrustLevel.TRUSTED, TrustLevel.LEADER];
   const currentIndex = levels.indexOf(level);
   const nextLevel = currentIndex < levels.length - 1 ? levels[currentIndex + 1] : undefined;
   const pointsToNext = nextLevel ? getTrustLevelMinScore(nextLevel) - score : undefined;
@@ -164,8 +163,7 @@ export function suggestTier(
   // Count features per tier
   const tierCounts = {
     [SubscriptionTier.FREE]: 0,
-    [SubscriptionTier.BASIC]: 0,
-    [SubscriptionTier.PREMIUM]: 0,
+    [SubscriptionTier.BASIC]: 0
   };
 
   const blockedByTrust: FeatureCode[] = [];
@@ -186,9 +184,6 @@ export function suggestTier(
     if (!req.subscriptionTier || tierMeetsRequirement(SubscriptionTier.BASIC, req.subscriptionTier)) {
       tierCounts[SubscriptionTier.BASIC]++;
     }
-    if (!req.subscriptionTier || tierMeetsRequirement(SubscriptionTier.PREMIUM, req.subscriptionTier)) {
-      tierCounts[SubscriptionTier.PREMIUM]++;
-    }
   }
 
   // Determine recommended tier
@@ -198,12 +193,9 @@ export function suggestTier(
   if (tierCounts[SubscriptionTier.FREE] === desiredFeatures.length) {
     recommendedTier = SubscriptionTier.FREE;
     reason = 'All desired features available on Free tier';
-  } else if (tierCounts[SubscriptionTier.BASIC] === desiredFeatures.length) {
+  } else {
     recommendedTier = SubscriptionTier.BASIC;
     reason = 'Basic tier unlocks all desired features';
-  } else {
-    recommendedTier = SubscriptionTier.PREMIUM;
-    reason = 'Premium tier required for advanced features';
   }
 
   const unlockableFeatures = getAccessibleFeatures(recommendedTier, currentTrustLevel);
@@ -255,11 +247,11 @@ export function formatSubscriptionStatus(status: string, cancelAt?: Date, trialE
 // ============================================================================
 
 function tierMeetsRequirement(current: SubscriptionTier, required: SubscriptionTier): boolean {
-  const tiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC, SubscriptionTier.PREMIUM];
+  const tiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
   return tiers.indexOf(current) >= tiers.indexOf(required);
 }
 
 function trustLevelMeetsRequirement(current: TrustLevel, required: TrustLevel): boolean {
-  const levels = [TrustLevel.STARTER, TrustLevel.TRUSTED, TrustLevel.SCOUT, TrustLevel.LEADER];
+  const levels = [TrustLevel.STARTER, TrustLevel.TRUSTED, TrustLevel.LEADER];
   return levels.indexOf(current) >= levels.indexOf(required);
 }

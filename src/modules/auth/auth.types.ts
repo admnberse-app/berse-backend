@@ -18,6 +18,7 @@ export interface LocationInfo {
 export interface RegisterRequest {
   email: string;
   phone?: string;
+  dialCode?: string;
   password: string;
   fullName: string;
   username?: string;
