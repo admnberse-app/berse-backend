@@ -3134,8 +3134,40 @@ export class UserController {
         prisma.userConnection.count({ where: whereClause }),
       ]);
 
-      // Normalize the connection response
-      const normalizedConnections = connections.map((conn: any) => {
+      // Get current user's connections to calculate mutual connections
+      const currentUserConnections = await prisma.userConnection.findMany({
+        where: {
+          OR: [
+            { initiatorId: currentUserId },
+            { receiverId: currentUserId },
+          ],
+          status: 'ACCEPTED',
+        },
+        select: { initiatorId: true, receiverId: true },
+      });
+
+      const currentUserConnectionIds = currentUserConnections.map((conn) =>
+        conn.initiatorId === currentUserId ? conn.receiverId : conn.initiatorId
+      );
+
+      // Import storage service for URL conversion
+      const { storageService } = await import('../../services/storage.service');
+
+      // Helper function to convert profile picture key to full URL
+      const getProfilePictureUrl = (profilePicture: string | null): string | null => {
+        if (!profilePicture) return null;
+        // If already a full URL (starts with http/https or data:), return as-is
+        if (profilePicture.startsWith('http://') || 
+            profilePicture.startsWith('https://') || 
+            profilePicture.startsWith('data:')) {
+          return profilePicture;
+        }
+        // Convert key to full URL
+        return storageService.getPublicUrl(profilePicture);
+      };
+
+      // Normalize the connection response and add mutual connections/communities
+      const normalizedConnections = await Promise.all(connections.map(async (conn: any) => {
         const { 
           users_user_connections_initiatorIdTousers, 
           users_user_connections_receiverIdTousers,
@@ -3146,13 +3178,144 @@ export class UserController {
           trustStrength,
           ...rest 
         } = conn;
+
+        // Determine the other user in this connection (the one who is NOT the profile owner)
+        const otherUserId = conn.initiatorId === userId ? conn.receiverId : conn.initiatorId;
+        const otherUser = conn.initiatorId === userId 
+          ? users_user_connections_receiverIdTousers 
+          : users_user_connections_initiatorIdTousers;
+
+        // Get mutual connections and communities between current user and the other person
+        let mutualConnections: any[] = [];
+        let mutualCommunities: any[] = [];
+        
+        if (currentUserId !== userId && currentUserId !== otherUserId) {
+          // Get other user's connections
+          const otherUserConnections = await prisma.userConnection.findMany({
+            where: {
+              OR: [
+                { initiatorId: otherUserId },
+                { receiverId: otherUserId },
+              ],
+              status: 'ACCEPTED',
+            },
+            select: { initiatorId: true, receiverId: true },
+          });
+
+          const otherUserConnectionIds = otherUserConnections.map((c) =>
+            c.initiatorId === otherUserId ? c.receiverId : c.initiatorId
+          );
+
+          // Find mutual connection IDs (excluding the target user)
+          const mutualIds = currentUserConnectionIds.filter((id) =>
+            otherUserConnectionIds.includes(id) && id !== userId
+          );
+
+          // Get details of mutual connections
+          if (mutualIds.length > 0) {
+            mutualConnections = await prisma.user.findMany({
+              where: { id: { in: mutualIds } },
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            });
+          }
+
+          // Get mutual communities
+          const [currentUserCommunities, otherUserCommunities] = await Promise.all([
+            prisma.communityMember.findMany({
+              where: { userId: currentUserId, isApproved: true },
+              select: { communityId: true },
+            }),
+            prisma.communityMember.findMany({
+              where: { userId: otherUserId, isApproved: true },
+              select: { communityId: true },
+            }),
+          ]);
+
+          const currentUserCommunityIds = currentUserCommunities.map((cm) => cm.communityId);
+          const otherUserCommunityIds = otherUserCommunities.map((cm) => cm.communityId);
+
+          // Find mutual community IDs
+          const mutualCommunityIds = currentUserCommunityIds.filter((id) =>
+            otherUserCommunityIds.includes(id)
+          );
+
+          // Get details of mutual communities
+          if (mutualCommunityIds.length > 0) {
+            mutualCommunities = await prisma.community.findMany({
+              where: { id: { in: mutualCommunityIds } },
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                logoUrl: true,
+                coverImageUrl: true,
+                _count: {
+                  select: { communityMembers: true },
+                },
+              },
+            });
+          }
+        }
+
+        // Add mutual data to the other user object
+        const otherUserWithMutuals = {
+          ...otherUser,
+          profile: otherUser.profile ? {
+            ...otherUser.profile,
+            profilePicture: getProfilePictureUrl(otherUser.profile.profilePicture),
+          } : null,
+          mutualConnections: mutualConnections.map((mc: any) => ({
+            id: mc.id,
+            fullName: mc.fullName,
+            username: mc.username,
+            profilePicture: getProfilePictureUrl(mc.profile?.profilePicture),
+          })),
+          mutualCommunities: mutualCommunities.map((cm: any) => ({
+            id: cm.id,
+            name: cm.name,
+            description: cm.description,
+            logoUrl: cm.logoUrl,
+            coverImageUrl: cm.coverImageUrl,
+            memberCount: cm._count?.communityMembers || 0,
+          })),
+        };
+
+        // Convert profile picture for the profile owner user as well
+        const profileOwnerUser = conn.initiatorId === userId 
+          ? {
+              ...users_user_connections_initiatorIdTousers,
+              profile: users_user_connections_initiatorIdTousers.profile ? {
+                ...users_user_connections_initiatorIdTousers.profile,
+                profilePicture: getProfilePictureUrl(users_user_connections_initiatorIdTousers.profile.profilePicture),
+              } : null,
+            }
+          : {
+              ...users_user_connections_receiverIdTousers,
+              profile: users_user_connections_receiverIdTousers.profile ? {
+                ...users_user_connections_receiverIdTousers.profile,
+                profilePicture: getProfilePictureUrl(users_user_connections_receiverIdTousers.profile.profilePicture),
+              } : null,
+            };
         
         return {
           ...rest,
-          initiator: users_user_connections_initiatorIdTousers,
-          receiver: users_user_connections_receiverIdTousers,
+          initiator: conn.initiatorId === userId 
+            ? profileOwnerUser
+            : otherUserWithMutuals,
+          receiver: conn.receiverId === userId 
+            ? profileOwnerUser
+            : otherUserWithMutuals,
         };
-      });
+      }));
 
       sendSuccess(res, {
         connections: normalizedConnections,
