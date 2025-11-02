@@ -17,6 +17,31 @@ export class StorageService {
   private cdnEndpoint?: string;
   private isConfigured: boolean = false;
 
+  /**
+   * MIME type mapping for correct Content-Type headers
+   * Critical for proper image display in browsers
+   */
+  private readonly mimeTypes: Record<string, string> = {
+    // Images
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.bmp': 'image/bmp',
+    '.ico': 'image/x-icon',
+    // Documents
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.txt': 'text/plain',
+    // Other
+    '.json': 'application/json',
+    '.xml': 'application/xml',
+    '.zip': 'application/zip',
+  };
+
   constructor() {
     this.bucket = config.spaces.bucket || '';
     this.region = config.spaces.region || 'sgp1';
@@ -77,6 +102,15 @@ export class StorageService {
     const fileName = `${timestamp}-${randomString}${ext}`;
     
     return prefix ? `${prefix}/${fileName}` : fileName;
+  }
+
+  /**
+   * Get MIME type from file extension
+   * Ensures correct Content-Type header for proper browser handling
+   */
+  private getMimeType(fileName: string, fallbackMimeType?: string): string {
+    const ext = path.extname(fileName).toLowerCase();
+    return this.mimeTypes[ext] || fallbackMimeType || 'application/octet-stream';
   }
 
   /**
@@ -164,7 +198,7 @@ export class StorageService {
       }
 
       // Determine content type (might change after optimization)
-      let contentType = file.mimetype;
+      let contentType = this.getMimeType(key, file.mimetype);
       if (optimize && file.mimetype.startsWith('image/') && !file.mimetype.includes('gif')) {
         // Check if we converted to WebP
         const optimizedMeta = await sharp(fileBuffer).metadata();
@@ -178,7 +212,8 @@ export class StorageService {
         Bucket: this.bucket,
         Key: key,
         Body: fileBuffer,
-        ContentType: contentType,
+        ContentType: contentType, // Critical: ensures correct MIME type
+        ContentDisposition: contentType.startsWith('image/') ? 'inline' : 'attachment', // Display images inline
         ACL: isPublic ? 'public-read' : 'private',
         CacheControl: 'public, max-age=31536000', // 1 year cache
         Metadata: {
@@ -212,11 +247,25 @@ export class StorageService {
         error: error.message,
         errorName: error.name,
         errorCode: error.$metadata?.httpStatusCode,
+        errorStack: error.stack,
         fileName: file.originalname,
         bucket: this.bucket,
         region: this.region,
+        endpoint: config.spaces.endpoint,
       });
-      throw new Error(`Failed to upload file to storage: ${error.message}`);
+      
+      // Provide more specific error messages
+      if (error.name === 'CredentialsProviderError') {
+        throw new Error('Storage credentials are invalid or missing');
+      }
+      if (error.$metadata?.httpStatusCode === 403) {
+        throw new Error('Storage access denied - check credentials and bucket permissions');
+      }
+      if (error.$metadata?.httpStatusCode === 404) {
+        throw new Error('Storage bucket not found - check bucket name and region');
+      }
+      
+      throw new Error(`Failed to upload file to storage: ${error.name || 'UnknownError'} - ${error.message || 'No error message'}`);
     }
   }
 

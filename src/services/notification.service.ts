@@ -331,7 +331,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: 'Welcome to Berse! 🎉',
       message: `Hi ${userName}! Your account has been created successfully. Start exploring and connecting with the community!`,
-      actionUrl: '/explore',
+      actionUrl: null,
       priority: 'high',
       metadata: {
         event: 'registration_success',
@@ -348,7 +348,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: '📧 Verify Your Email',
       message: `Hi ${userName}! Please verify your email address to unlock all features. Check your inbox for the verification link.`,
-      actionUrl: '/settings/account',
+      actionUrl: null,
       priority: 'high',
       metadata: {
         event: 'email_verification_required',
@@ -367,7 +367,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: '✅ Email Verified!',
       message: `Great news ${userName}! Your email has been verified. You now have full access to all features.`,
-      actionUrl: '/explore',
+      actionUrl: null,
       priority: 'normal',
       metadata: {
         event: 'email_verified',
@@ -510,7 +510,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: '🔒 Password Changed',
       message: `Hi ${userName}, your password was recently changed. If this wasn't you, please contact support immediately.`,
-      actionUrl: '/settings/security',
+      actionUrl: null,
       priority: 'high',
       metadata: {
         event: 'password_changed',
@@ -528,7 +528,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: '⚠️ Security Alert',
       message,
-      actionUrl: '/settings/security',
+      actionUrl: null,
       priority: 'urgent',
       metadata: {
         event: 'security_alert',
@@ -569,7 +569,7 @@ export class NotificationService {
   static async sendSystemAnnouncement(
     title: string,
     message: string,
-    actionUrl?: string,
+    actionUrl: string | null = null,
     priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal'
   ) {
     // Get all active users
@@ -1983,7 +1983,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: '🎉 Subscription Activated',
       message: `Your ${tierName} subscription is now active! Enjoy your benefits until ${expiresAt.toLocaleDateString()}.`,
-      actionUrl: '/subscription',
+      actionUrl: null,
       priority: 'high',
       relatedEntityType: 'subscription',
       metadata: {
@@ -2007,7 +2007,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: 'Subscription Canceled',
       message: `Your ${tierName} subscription has been canceled. You'll have access until ${endsAt.toLocaleDateString()}.`,
-      actionUrl: '/subscription',
+      actionUrl: null,
       priority: 'normal',
       relatedEntityType: 'subscription',
       metadata: {
@@ -2056,7 +2056,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: 'Subscription Expired',
       message: `Your ${tierName} subscription has expired. Renew to continue enjoying premium benefits.`,
-      actionUrl: '/subscription',
+      actionUrl: null,
       priority: 'high',
       relatedEntityType: 'subscription',
       metadata: {
@@ -2079,7 +2079,7 @@ export class NotificationService {
       type: 'SYSTEM',
       title: '✅ Subscription Renewed',
       message: `Your ${tierName} subscription has been renewed! Valid until ${expiresAt.toLocaleDateString()}.`,
-      actionUrl: '/subscription',
+      actionUrl: null,
       priority: 'normal',
       relatedEntityType: 'subscription',
       metadata: {

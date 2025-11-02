@@ -1,6 +1,7 @@
 import { PrismaClient, SwipeAction } from '@prisma/client';
 import { DiscoveryFilters, DiscoveryUser, SwipeRequest, SwipeResponse, DiscoveryResponse, SwipeStatsResponse } from './matching.types';
 import { AppError } from '../../middleware/error';
+import { mapLanguageCodesToObjects } from '../../utils/languageMapper';
 
 const prisma = new PrismaClient();
 
@@ -216,7 +217,7 @@ export class MatchingService {
         distanceKm,
 
         interests: user.profile?.interests || [],
-        languages: user.profile?.languages || [],
+        languages: mapLanguageCodesToObjects(user.profile?.languages || []),
         occupation: user.profile?.occupation || undefined,
         profession: user.profile?.profession || undefined,
         travelStyles: user.profile?.travelStyle ? [user.profile.travelStyle] : [],

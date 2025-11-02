@@ -42,23 +42,50 @@ app.use(helmet({
   crossOriginEmbedderPolicy: !config.isDevelopment,
 }));
 
-// CORS configuration
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    const allowedOrigins = config.cors.origin;
-    if (!origin || allowedOrigins.includes(origin) || config.isDevelopment) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+// ============================================================================
+// CORS Configuration
+// ============================================================================
+const corsOptions = config.isDevelopment
+  ? {
+      // Development: Allow all origins for easier testing
+      origin: '*',
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'Accept'],
+      credentials: false, // Must be false when origin is '*'
+      optionsSuccessStatus: 200,
     }
-  },
-  credentials: true,
-  maxAge: 86400, // 24 hours
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-};
+  : {
+      // Production: Restrict to known domains
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        const allowedOrigins = config.cors.origin;
+        
+        // Allow requests with no origin (mobile apps, Postman, server-to-server)
+        if (!origin) {
+          return callback(null, true);
+        }
+        
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          logger.warn(`CORS: Blocked request from origin: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      maxAge: 86400, // 24 hours
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+      optionsSuccessStatus: 200,
+    };
 
 app.use(cors(corsOptions));
+
+// Log CORS configuration on startup
+if (config.isDevelopment) {
+  logger.info('✅ CORS enabled for all origins (development mode)');
+} else {
+  logger.info(`✅ CORS enabled for: ${config.cors.origin.join(', ')}`);
+}
 
 // Body parsing middleware
 app.use(express.json({ 

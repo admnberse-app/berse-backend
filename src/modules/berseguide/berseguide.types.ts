@@ -57,7 +57,7 @@ export interface BerseGuideProfileResponse {
   title: string;
   bio: string;
   guideTypes: GuideType[];
-  languages: string[];
+  languages: Array<{ code: string; label: string; native: string; emoji: string }>;
   specialties: string[];
   photos: string[];
   hourlyRate?: number;

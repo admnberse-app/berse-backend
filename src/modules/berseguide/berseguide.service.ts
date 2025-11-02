@@ -3,6 +3,7 @@ import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
 import { BerseGuideNotifications } from './berseguide.notifications';
 import { ProfileEnrichmentService } from '../../services/profile-enrichment.service';
+import { mapLanguageCodesToObjects } from '../../utils/languageMapper';
 import type {
   CreateBerseGuideProfileDTO,
   UpdateBerseGuideProfileDTO,
@@ -1687,7 +1688,7 @@ export class BerseGuideService {
       title: profile.title,
       bio: profile.description,
       guideTypes: profile.guideTypes,
-      languages: profile.languages,
+      languages: mapLanguageCodesToObjects(profile.languages || []),
       specialties: profile.customTypes || [],
       photos: profile.photos,
       hourlyRate: undefined, // Not in schema

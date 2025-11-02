@@ -12,11 +12,12 @@ import { RecommendationsService } from '../../services/recommendations.service';
 import { ConnectionStatus } from '@prisma/client';
 import { calculateProfileCompletion } from '../../jobs/profileCompletionReminders';
 import { filterLocationByPrivacy } from '../../utils/privacyHelper';
+import { mapLanguageCodesToObjects } from '../../utils/languageMapper';
 
 export class UserController {
   /**
    * Helper function to ensure consistent response format
-   * Transforms storage keys to full URLs dynamically
+   * Transforms storage keys to full URLs dynamically and language codes to user-friendly labels
    */
   private static transformUserResponse(user: any) {
     if (!user) return user;
@@ -35,6 +36,11 @@ export class UserController {
         const { storageService } = require('../../services/storage.service');
         user.profile.profilePicture = storageService.getPublicUrl(profilePicture);
       }
+    }
+
+    // Transform language codes to user-friendly objects with labels
+    if (user.profile?.languages && Array.isArray(user.profile.languages)) {
+      user.profile.languages = mapLanguageCodesToObjects(user.profile.languages);
     }
 
     return user;
@@ -207,7 +213,7 @@ export class UserController {
             label: trustLevelInfo.label,
             minScore: trustLevelInfo.min,
             maxScore: trustLevelInfo.max,
-            currentScore: Math.round(user.trustScore * 10) / 10,
+            currentScore: Math.ceil(user.trustScore),
             percentage: Math.round((user.trustScore / trustLevelInfo.max) * 100),
           },
           nextLevel: trustLevelInfo.nextLevel || null,
@@ -331,7 +337,7 @@ export class UserController {
       }
 
       // Perform updates in transaction
-      const updatedUser = await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         // Update core user fields
         if (Object.keys(userUpdate).length > 0) {
           await tx.user.update({
@@ -365,62 +371,14 @@ export class UserController {
             },
           });
         }
-
-        // Fetch updated user
-        return tx.user.findUnique({
-          where: { id: userId },
-          select: {
-            id: true,
-            email: true,
-            phone: true,
-            fullName: true,
-            username: true,
-            role: true,
-            totalPoints: true,
-            updatedAt: true,
-            profile: {
-              select: {
-                displayName: true,
-                profilePicture: true,
-                bio: true,
-                shortBio: true,
-                dateOfBirth: true,
-                gender: true,
-                age: true,
-                profession: true,
-                occupation: true,
-                website: true,
-                personalityType: true,
-                interests: true,
-                languages: true,
-                instagramHandle: true,
-                linkedinHandle: true,
-                travelStyle: true,
-                bucketList: true,
-                travelBio: true,
-              },
-            },
-            location: {
-              select: {
-                currentCity: true,
-                countryOfResidence: true,
-                currentLocation: true,
-                nationality: true,
-                originallyFrom: true,
-              },
-            },
-            metadata: {
-              select: {
-                membershipId: true,
-                referralCode: true,
-              },
-            },
-          },
-        });
       });
 
       logger.info('User profile updated', { userId });
-      sendSuccess(res, updatedUser, 'Profile updated successfully');
+      
+      // Return the same response format as getMyProfile
+      // Reuse the getMyProfile logic to return consistent response
+      req.user = { id: userId } as any;
+      return UserController.getMyProfile(req, res, next);
     } catch (error) {
       logger.error('Profile update failed', { 
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -525,7 +483,7 @@ export class UserController {
         profession: user.profile?.profession,
         age: user.profile?.age,
         personalityType: user.profile?.personalityType,
-        languages: user.profile?.languages || [],
+        languages: mapLanguageCodesToObjects(user.profile?.languages || []),
         location: {
           city: user.location?.currentCity,
           currentLocation: user.location?.currentLocation,
@@ -911,6 +869,7 @@ export class UserController {
           interests: user.profile?.interests || [],
           gender: user.profile?.gender,
           profession: user.profile?.profession,
+          languages: mapLanguageCodesToObjects(user.profile?.languages || []),
           location: filteredLocation ? {
             city: filteredLocation.currentCity,
             country: filteredLocation.countryOfResidence,
@@ -1034,6 +993,7 @@ export class UserController {
         profilePicture: rec.user.profile?.profilePicture,
         bio: rec.user.profile?.bio || rec.user.profile?.shortBio,
         interests: rec.user.profile?.interests || [],
+        languages: mapLanguageCodesToObjects(rec.user.profile?.languages || []),
         profession: rec.user.profile?.profession,
         gender: rec.user.profile?.gender,
         location: {
@@ -1432,7 +1392,7 @@ export class UserController {
       };
 
       // ==================== TRUST & REPUTATION ====================
-      const [vouchesReceived, vouchesGiven, activePrimaryVouches, activeSecondaryVouches] = await Promise.all([
+      const [vouchesReceived, vouchesGiven, activePrimaryVouches, activeSecondaryVouches, uniqueVouchersReceived, uniqueVouchersGiven] = await Promise.all([
         prisma.vouch.count({
           where: { voucheeId: userId, status: { in: ['APPROVED', 'ACTIVE'] } },
         }),
@@ -1440,35 +1400,60 @@ export class UserController {
           where: { voucherId: userId, status: { in: ['APPROVED', 'ACTIVE'] } },
         }),
         prisma.vouch.count({
-          where: { voucheeId: userId, vouchType: 'PRIMARY', status: 'ACTIVE' },
+          where: { voucheeId: userId, vouchType: 'PRIMARY', status: { in: ['APPROVED', 'ACTIVE'] } },
         }),
         prisma.vouch.count({
-          where: { voucheeId: userId, vouchType: 'SECONDARY', status: 'ACTIVE' },
+          where: { voucheeId: userId, vouchType: 'SECONDARY', status: { in: ['APPROVED', 'ACTIVE'] } },
         }),
+        prisma.vouch.findMany({
+          where: { voucheeId: userId, status: { in: ['APPROVED', 'ACTIVE'] } },
+          select: { voucherId: true },
+          distinct: ['voucherId'],
+        }).then(vouches => vouches.length),
+        prisma.vouch.findMany({
+          where: { voucherId: userId, status: { in: ['APPROVED', 'ACTIVE'] } },
+          select: { voucheeId: true },
+          distinct: ['voucheeId'],
+        }).then(vouches => vouches.length),
       ]);
 
+      const uniqueVouchers = uniqueVouchersReceived + uniqueVouchersGiven;
+
+      const badgesList = (user.userBadges || []).map(ub => ({
+        id: ub.badges.id,
+        name: ub.badges.name,
+        description: ub.badges.description,
+        imageUrl: ub.badges.imageUrl,
+        earnedAt: ub.earnedAt,
+      }));
+
       const trust = {
-        score: user.trustScore,
+        score: Math.ceil(user.trustScore),
         level: user.trustLevel,
-        badges: (user.userBadges || []).map(ub => ({
-          id: ub.badges.id,
-          name: ub.badges.name,
-          description: ub.badges.description,
-          imageUrl: ub.badges.imageUrl,
-          earnedAt: ub.earnedAt,
-        })),
-        vouches: {
-          received: vouchesReceived,
-          given: vouchesGiven,
-          activePrimary: activePrimaryVouches,
-          activeSecondary: activeSecondaryVouches,
-        },
         verifications: {
           email: !!user.security?.emailVerifiedAt,
           phone: !!user.security?.phoneVerifiedAt,
           identity: false, // TODO: Implement identity verification
           background: false, // TODO: Implement background check
         },
+      };
+
+      const badges = {
+        total: badgesList.length,
+        list: badgesList,
+      };
+
+      const vouches = {
+        total: vouchesReceived + vouchesGiven,
+        received: vouchesReceived,
+        given: vouchesGiven,
+        activePrimary: activePrimaryVouches,
+        activeSecondary: activeSecondaryVouches,
+        uniqueVouchers: uniqueVouchers,
+      };
+
+      const points = {
+        total: user.totalPoints,
       };
 
       // ==================== SERVICES SUMMARY ====================
@@ -1565,6 +1550,9 @@ export class UserController {
         },
         services,
         trust,
+        badges,
+        vouches,
+        points,
         statistics,
         privacy: {
           profileVisibility: user.privacy?.profileVisibility || 'public',
@@ -2389,7 +2377,7 @@ export class UserController {
       const trustLevelInfo = await getTrustLevelInfo(user.trustScore);
 
       const trust = {
-        score: Math.round(user.trustScore * 10) / 10,
+        score: Math.ceil(user.trustScore),
         level: user.trustLevel,
         badges: (user.userBadges || []).map(ub => ({
           id: ub.badges.id,
@@ -3232,26 +3220,35 @@ export class UserController {
         profilePictureKey = image;
         fullUrl = image;
       } else if (file) {
-        // Upload to Digital Ocean Spaces
+        // Check if storage service is configured
         const { storageService } = await import('../../services/storage.service');
         
-        const uploadResult = await storageService.uploadFile(file, 'avatars', {
-          optimize: true,
-          isPublic: true,
-          userId,
-        });
+        // If storage is not configured, convert file to base64 as fallback
+        if (!storageService['isConfigured']) {
+          logger.warn('Storage service not configured, falling back to base64', { userId });
+          const base64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+          profilePictureKey = base64;
+          fullUrl = base64;
+        } else {
+          // Upload to Digital Ocean Spaces
+          const uploadResult = await storageService.uploadFile(file, 'avatars', {
+            optimize: true,
+            isPublic: true,
+            userId,
+          });
 
-        // Store only the key in database
-        profilePictureKey = uploadResult.key;
-        uploadedFileKey = uploadResult.key;
-        fullUrl = uploadResult.url; // For response
+          // Store only the key in database
+          profilePictureKey = uploadResult.key;
+          uploadedFileKey = uploadResult.key;
+          fullUrl = uploadResult.url; // For response
 
-        logger.info('Avatar uploaded to Spaces', {
-          userId,
-          key: uploadResult.key,
-          url: uploadResult.url,
-          size: uploadResult.size,
-        });
+          logger.info('Avatar uploaded to Spaces', {
+            userId,
+            key: uploadResult.key,
+            url: uploadResult.url,
+            size: uploadResult.size,
+          });
+        }
       } else {
         throw new AppError('No image provided', 400);
       }

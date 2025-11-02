@@ -29,7 +29,7 @@ export interface DiscoveryUser {
   
   // Profile info
   interests?: string[];
-  languages?: string[];
+  languages?: Array<{ code: string; label: string; native: string; emoji: string }>;
   occupation?: string;
   profession?: string;
   travelStyles?: string[];

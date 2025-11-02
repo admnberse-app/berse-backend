@@ -1438,85 +1438,136 @@ export class EventService {
   ): Promise<ParticipantResponse[]> {
     try {
       const now = new Date();
-      const whereClause: any = { userId };
-
-      // Filter by specific event
+      
+      // Build where clause for events as participant
+      const participantWhere: any = { userId };
       if (filters?.eventId) {
-        whereClause.eventId = filters.eventId;
+        participantWhere.eventId = filters.eventId;
       }
-
-      // Filter by participation status
       if (filters?.status) {
-        whereClause.status = filters.status;
+        participantWhere.status = filters.status;
       }
-
-      // Filter by event type
       if (filters?.type) {
-        whereClause.events = {
-          type: filters.type
-        };
+        participantWhere.events = { type: filters.type };
       }
-
-      // Filter by time (upcoming/past)
       if (filters?.filter === 'upcoming') {
-        whereClause.events = {
-          ...whereClause.events,
-          date: { gte: now }
-        };
+        participantWhere.events = { ...participantWhere.events, date: { gte: now } };
       } else if (filters?.filter === 'past') {
-        whereClause.events = {
-          ...whereClause.events,
-          date: { lt: now }
-        };
+        participantWhere.events = { ...participantWhere.events, date: { lt: now } };
       }
 
-      const participants = await prisma.eventParticipant.findMany({
-        where: whereClause,
-        include: {
-          events: {
-            select: {
-              id: true,
-              title: true,
-              date: true,
-              location: true,
-              type: true,
-              images: true,
-              isFree: true,
+      // Build where clause for events as host
+      const hostWhere: any = { hostId: userId };
+      if (filters?.eventId) {
+        hostWhere.id = filters.eventId;
+      }
+      if (filters?.type) {
+        hostWhere.type = filters.type;
+      }
+      if (filters?.filter === 'upcoming') {
+        hostWhere.date = { gte: now };
+      } else if (filters?.filter === 'past') {
+        hostWhere.date = { lt: now };
+      }
+
+      // Fetch both participations and hosted events
+      const [participants, hostedEvents, hostUser] = await Promise.all([
+        // Events user is participating in
+        prisma.eventParticipant.findMany({
+          where: participantWhere,
+          include: {
+            events: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                location: true,
+                type: true,
+                images: true,
+                isFree: true,
+              },
             },
-          },
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              username: true,
-              email: true,
-              profile: { select: { profilePicture: true } },
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                username: true,
+                email: true,
+                profile: { select: { profilePicture: true } },
+              },
             },
-          },
-          eventTickets: {
-            select: {
-              id: true,
-              ticketNumber: true,
-              ticketType: true,
-              price: true,
-              currency: true,
-              status: true,
-              paymentStatus: true,
-              purchasedAt: true,
-              tier: {
-                select: {
-                  id: true,
-                  tierName: true,
-                  price: true,
+            eventTickets: {
+              select: {
+                id: true,
+                ticketNumber: true,
+                ticketType: true,
+                price: true,
+                currency: true,
+                status: true,
+                paymentStatus: true,
+                purchasedAt: true,
+                tier: {
+                  select: {
+                    id: true,
+                    tierName: true,
+                    price: true,
+                  }
                 }
               }
-            }
+            },
           },
-        },
-        orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: 'desc' },
+        }),
+        // Events user is hosting
+        prisma.event.findMany({
+          where: hostWhere,
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            location: true,
+            type: true,
+            images: true,
+            isFree: true,
+            createdAt: true,
+          },
+          orderBy: { date: 'desc' },
+        }),
+        // Fetch host user data
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            fullName: true,
+            username: true,
+            email: true,
+            profile: { select: { profilePicture: true } },
+          },
+        }),
+      ]);
+
+      // Transform hosted events to match participant format
+      const hostedAsParticipants = hostedEvents.map(event => ({
+        id: `host-${event.id}`, // Unique ID for hosting role
+        userId,
+        eventId: event.id,
+        status: 'HOST' as any,
+        createdAt: event.createdAt,
+        updatedAt: event.createdAt,
+        events: event,
+        user: hostUser,
+        eventTickets: [],
+        isHost: true,
+      }));
+
+      // Combine and sort by date
+      const allParticipations = [...participants, ...hostedAsParticipants].sort((a, b) => {
+        const dateA = a.events?.date || a.createdAt;
+        const dateB = b.events?.date || b.createdAt;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
       });
 
-      return participants as any[];
+      return allParticipations as any[];
     } catch (error: any) {
       logger.error('Error fetching user participations:', error);
       throw error;

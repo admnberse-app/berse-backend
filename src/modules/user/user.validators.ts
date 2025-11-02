@@ -92,8 +92,16 @@ export const updateProfileValidators = [
     .withMessage('Personality type must not exceed 50 characters'),
   body('interests')
     .optional()
-    .isArray({ max: 20 })
-    .withMessage('Maximum 20 interests allowed'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (!Array.isArray(value)) {
+        throw new Error('Interests must be an array');
+      }
+      if (value.length > 20) {
+        throw new Error('Maximum 20 interests allowed');
+      }
+      return true;
+    }),
   body('interests.*')
     .optional()
     .trim()
@@ -101,8 +109,16 @@ export const updateProfileValidators = [
     .withMessage('Each interest must be 1-50 characters'),
   body('topInterests')
     .optional()
-    .isArray({ max: 20 })
-    .withMessage('Maximum 20 interests allowed'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (!Array.isArray(value)) {
+        throw new Error('Top interests must be an array');
+      }
+      if (value.length > 20) {
+        throw new Error('Maximum 20 interests allowed');
+      }
+      return true;
+    }),
   body('topInterests.*')
     .optional()
     .trim()
@@ -110,8 +126,16 @@ export const updateProfileValidators = [
     .withMessage('Each interest must be 1-50 characters'),
   body('languages')
     .optional()
-    .isArray({ max: 10 })
-    .withMessage('Maximum 10 languages allowed'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (!Array.isArray(value)) {
+        throw new Error('Languages must be an array');
+      }
+      if (value.length > 10) {
+        throw new Error('Maximum 10 languages allowed');
+      }
+      return true;
+    }),
   body('languages.*')
     .optional()
     .trim()
@@ -184,8 +208,16 @@ export const updateProfileValidators = [
     .withMessage('Travel style must not exceed 100 characters'),
   body('bucketList')
     .optional()
-    .isArray({ max: 50 })
-    .withMessage('Maximum 50 bucket list items allowed'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (!Array.isArray(value)) {
+        throw new Error('Bucket list must be an array');
+      }
+      if (value.length > 50) {
+        throw new Error('Maximum 50 bucket list items allowed');
+      }
+      return true;
+    }),
   body('bucketList.*')
     .optional()
     .trim()
@@ -198,14 +230,30 @@ export const updateProfileValidators = [
     .withMessage('Travel bio must not exceed 500 characters'),
   body('travelHistory')
     .optional()
-    .isArray({ max: 100 })
-    .withMessage('Maximum 100 travel history items allowed'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (!Array.isArray(value)) {
+        throw new Error('Travel history must be an array');
+      }
+      if (value.length > 100) {
+        throw new Error('Maximum 100 travel history items allowed');
+      }
+      return true;
+    }),
   
   // Community
   body('servicesOffered')
     .optional()
-    .isArray({ max: 20 })
-    .withMessage('Maximum 20 services allowed'),
+    .custom((value) => {
+      if (value === undefined || value === null) return true;
+      if (!Array.isArray(value)) {
+        throw new Error('Services offered must be an array');
+      }
+      if (value.length > 20) {
+        throw new Error('Maximum 20 services allowed');
+      }
+      return true;
+    }),
   body('communityRole')
     .optional()
     .trim()

@@ -54,7 +54,8 @@ export class CardGameController {
         sortOrder: req.query.sortOrder as any,
         filters: {
           topicId: req.query.topicId as string,
-          userId: req.query.userId as string,
+          // Always filter by current user's feedback only
+          userId: userId,
           sessionNumber: req.query.sessionNumber ? parseInt(req.query.sessionNumber as string) : undefined,
           questionId: req.query.questionId as string,
           minRating: req.query.minRating ? parseInt(req.query.minRating as string) : undefined,
