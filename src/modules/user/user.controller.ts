@@ -1700,10 +1700,12 @@ export class UserController {
             where: {
               voucherId: currentUserId,
               voucheeId: id,
-              status: { in: ['APPROVED', 'ACTIVE'] },
+              status: { in: ['PENDING', 'APPROVED', 'ACTIVE'] },
             },
             select: {
               id: true,
+              voucherId: true,
+              voucheeId: true,
               vouchType: true,
               status: true,
               message: true,
@@ -1722,10 +1724,12 @@ export class UserController {
             where: {
               voucherId: id,
               voucheeId: currentUserId,
-              status: { in: ['APPROVED', 'ACTIVE'] },
+              status: { in: ['PENDING', 'APPROVED', 'ACTIVE'] },
             },
             select: {
               id: true,
+              voucherId: true,
+              voucheeId: true,
               vouchType: true,
               status: true,
               message: true,
@@ -1775,6 +1779,7 @@ export class UserController {
               trustImpact: vouchGiven.trustImpact,
               isCommunityVouch: vouchGiven.isCommunityVouch,
               isAutoVouched: vouchGiven.isAutoVouched,
+              isInitiator: vouchGiven.voucheeId === currentUserId,
               approvedAt: vouchGiven.approvedAt,
               activatedAt: vouchGiven.activatedAt,
               givenAt: vouchGiven.createdAt,
@@ -1787,6 +1792,7 @@ export class UserController {
               trustImpact: vouchReceived.trustImpact,
               isCommunityVouch: vouchReceived.isCommunityVouch,
               isAutoVouched: vouchReceived.isAutoVouched,
+              isInitiator: vouchReceived.voucheeId === currentUserId,
               approvedAt: vouchReceived.approvedAt,
               activatedAt: vouchReceived.activatedAt,
               givenAt: vouchReceived.createdAt,
@@ -1805,6 +1811,7 @@ export class UserController {
             communityId: vouchGiven.communityId,
             isAutoVouched: vouchGiven.isAutoVouched,
             autoVouchCriteria: vouchGiven.autoVouchCriteria,
+            isInitiator: vouchGiven.voucheeId === currentUserId,
             approvedAt: vouchGiven.approvedAt,
             activatedAt: vouchGiven.activatedAt,
             givenAt: vouchGiven.createdAt,
@@ -1823,6 +1830,7 @@ export class UserController {
             communityId: vouchReceived.communityId,
             isAutoVouched: vouchReceived.isAutoVouched,
             autoVouchCriteria: vouchReceived.autoVouchCriteria,
+            isInitiator: vouchReceived.voucheeId === currentUserId,
             approvedAt: vouchReceived.approvedAt,
             activatedAt: vouchReceived.activatedAt,
             givenAt: vouchReceived.createdAt,
@@ -2230,6 +2238,8 @@ export class UserController {
           select: {
             id: true,
             activityType: true,
+            entityType: true,
+            entityId: true,
             createdAt: true,
             visibility: true,
           },
@@ -2251,13 +2261,105 @@ export class UserController {
         }),
       ]);
 
+      // Fetch entity details for activities
+      const activityDetails = await Promise.all(
+        recentActivities.map(async (activity) => {
+          let entityDetails = null;
+          
+          try {
+            switch (activity.entityType) {
+              case 'EVENT':
+                const event = await prisma.event.findUnique({
+                  where: { id: activity.entityId },
+                  select: { id: true, title: true, type: true, date: true },
+                });
+                entityDetails = event ? { title: event.title, type: event.type, date: event.date } : null;
+                break;
+                
+              case 'COMMUNITY':
+                const community = await prisma.community.findUnique({
+                  where: { id: activity.entityId },
+                  select: { id: true, name: true, logoUrl: true },
+                });
+                entityDetails = community ? { name: community.name, logo: community.logoUrl } : null;
+                break;
+                
+              case 'CONNECTION':
+                const connection = await prisma.userConnection.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    users_user_connections_initiatorIdTousers: { select: { id: true, fullName: true } },
+                    users_user_connections_receiverIdTousers: { select: { id: true, fullName: true } },
+                  },
+                });
+                if (connection) {
+                  const otherUser = connection.users_user_connections_initiatorIdTousers.id === id
+                    ? connection.users_user_connections_receiverIdTousers
+                    : connection.users_user_connections_initiatorIdTousers;
+                  entityDetails = { connectedWith: otherUser.fullName };
+                }
+                break;
+                
+              case 'MARKETPLACE':
+                const listing = await prisma.marketplaceListing.findUnique({
+                  where: { id: activity.entityId },
+                  select: { 
+                    id: true, 
+                    title: true, 
+                    type: true, 
+                    category: true,
+                    pricingOptions: {
+                      where: { isDefault: true },
+                      select: { price: true, currency: true, pricingType: true },
+                      take: 1,
+                    },
+                  },
+                });
+                if (listing) {
+                  const pricing = listing.pricingOptions[0];
+                  entityDetails = { 
+                    title: listing.title, 
+                    type: listing.type,
+                    category: listing.category,
+                    price: pricing?.price, 
+                    currency: pricing?.currency,
+                    pricingType: pricing?.pricingType,
+                  };
+                } else {
+                  entityDetails = null;
+                }
+                break;
+                
+              case 'TRAVEL':
+                const trip = await prisma.travelTrip.findUnique({
+                  where: { id: activity.entityId },
+                  select: { id: true, title: true, countries: true, cities: true, startDate: true, endDate: true },
+                });
+                entityDetails = trip ? { 
+                  title: trip.title, 
+                  countries: trip.countries, 
+                  cities: trip.cities,
+                  startDate: trip.startDate, 
+                  endDate: trip.endDate 
+                } : null;
+                break;
+            }
+          } catch (error) {
+            // Entity might have been deleted, continue without details
+          }
+          
+          return {
+            type: activity.activityType,
+            entityType: activity.entityType,
+            entityDetails,
+            date: activity.createdAt,
+            visibility: activity.visibility,
+          };
+        })
+      );
+
       const recentActivity = {
-        highlights: recentActivities.map(activity => ({
-          type: activity.activityType,
-          title: activity.activityType, // Use activityType as title
-          date: activity.createdAt,
-          visibility: activity.visibility,
-        })),
+        highlights: activityDetails,
         trustMoments: recentTrustMoments.map(tm => ({
           id: tm.id,
           type: tm.momentType,
@@ -2276,6 +2378,7 @@ export class UserController {
         canConnect: relationship.connection.status === 'NONE',
         showEmail: isConnected,
         showPhone: isConnected,
+        allowMessagesViaPhone: user.privacy?.allowMessagesViaPhone ?? true,
         showBirthDate: false, // Never show birth date when viewing others
         showLocation: user.privacy?.showLocation ?? true,
         locationPrecision: user.privacy?.locationPrecision || 'city',

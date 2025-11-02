@@ -61,6 +61,21 @@ export class VouchController {
   }
 
   /**
+   * Withdraw a pending vouch request
+   * @route DELETE /v2/vouches/:vouchId/withdraw
+   */
+  static async withdrawVouchRequest(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { vouchId } = req.params;
+      await VouchService.withdrawVouchRequest(userId, vouchId);
+      sendSuccess(res, null, 'Vouch request withdrawn successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Community admin vouches for a user
    * @route POST /v2/vouches/community
    */

@@ -292,7 +292,7 @@ export class VouchService {
         updatedVouch = await prisma.vouch.update({
           where: { id: vouchId },
           data: {
-            status: VouchStatus.APPROVED,
+            status: VouchStatus.ACTIVE,
             approvedAt: new Date(),
             activatedAt: new Date(),
             trustImpact,
@@ -367,16 +367,16 @@ export class VouchService {
         // Send approval notification to vouchee
         NotificationService.notifyVouchApproved(
           vouch.voucheeId,
-          vouchId,
           voucherName,
+          voucherId,
           vouch.vouchType
         ).catch(err => logger.error('Failed to send vouch approval notification:', err));
 
         // Send activation notification
         NotificationService.notifyVouchActivated(
           vouch.voucheeId,
-          vouchId,
           voucherName,
+          voucherId,
           vouch.vouchType
         ).catch(err => logger.error('Failed to send vouch activation notification:', err));
 
@@ -619,6 +619,62 @@ export class VouchService {
       if (error instanceof AppError) throw error;
       logger.error('Error revoking vouch:', error);
       throw new AppError('Failed to revoke vouch', 500);
+    }
+  }
+
+  /**
+   * Withdraw a pending vouch request
+   */
+  static async withdrawVouchRequest(userId: string, vouchId: string): Promise<void> {
+    try {
+      // 1. Find the vouch and verify it exists
+      const vouch = await prisma.vouch.findUnique({
+        where: { id: vouchId },
+        include: {
+          users_vouches_voucherIdTousers: {
+            select: { id: true, fullName: true },
+          },
+          users_vouches_voucheeIdTousers: {
+            select: { id: true, fullName: true },
+          },
+        },
+      });
+
+      if (!vouch) {
+        throw new AppError('Vouch request not found', 404);
+      }
+
+      // 2. Verify the user is the voucher (sender)
+      if (vouch.voucherId !== userId) {
+        throw new AppError('You can only withdraw your own vouch requests', 403);
+      }
+
+      // 3. Verify the vouch is still pending
+      if (vouch.status !== VouchStatus.PENDING) {
+        throw new AppError('Only pending vouch requests can be withdrawn', 400);
+      }
+
+      // 4. Delete the vouch request
+      await prisma.vouch.delete({
+        where: { id: vouchId },
+      });
+
+      // 5. Send notification to vouchee
+      try {
+        await NotificationService.notifyVouchWithdrawn(
+          vouch.voucheeId,
+          userId,
+          vouch.users_vouches_voucherIdTousers.fullName
+        );
+      } catch (error) {
+        logger.error('Failed to send vouch withdrawal notification:', error);
+      }
+
+      logger.info(`Vouch request ${vouchId} withdrawn by ${userId}`);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      logger.error('Error withdrawing vouch request:', error);
+      throw new AppError('Failed to withdraw vouch request', 500);
     }
   }
 

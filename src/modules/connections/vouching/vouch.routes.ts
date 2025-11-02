@@ -194,6 +194,53 @@ router.post(
 
 /**
  * @swagger
+ * /v2/vouches/{vouchId}/withdraw:
+ *   delete:
+ *     summary: Withdraw pending vouch request
+ *     description: |
+ *       Cancel/withdraw a pending vouch request that you sent.
+ *       Only pending requests can be withdrawn. Use revoke for approved vouches.
+ *       
+ *       **Difference from Revoke:**
+ *       - Withdraw: Cancel PENDING request (no trust impact, deletes request)
+ *       - Revoke: Cancel APPROVED/ACTIVE vouch (reduces trust score, accountability chain)
+ *     tags: [Connections - Vouching]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vouchId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Vouch request withdrawn successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   example: Vouch request withdrawn successfully
+ *       400:
+ *         description: Only pending vouch requests can be withdrawn
+ *       403:
+ *         description: You can only withdraw your own vouch requests
+ *       404:
+ *         description: Vouch request not found
+ */
+router.delete(
+  '/:vouchId/withdraw',
+  authenticateToken,
+  VouchController.withdrawVouchRequest
+);
+
+/**
+ * @swagger
  * /v2/vouches/community:
  *   post:
  *     summary: Community vouch
