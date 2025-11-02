@@ -287,11 +287,8 @@ export class TrustScoreService {
     } catch (error) {
       logger.error('Error determining trust level:', error);
       // Fallback to hardcoded logic
-      if (score >= 90) return 'leader';
-      if (score >= 76) return 'trusted';
-      if (score >= 51) return 'established';
-      if (score >= 26) return 'growing';
-      if (score >= 11) return 'newcomer';
+      if (score >= 61) return 'leader';
+      if (score >= 31) return 'trusted';
       return 'starter';
     }
   }

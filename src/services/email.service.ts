@@ -443,6 +443,245 @@ export class EmailService {
       text: template.text,
     });
   }
+
+  // ============= SUBSCRIPTION PAYMENT EMAILS =============
+
+  /**
+   * Send subscription payment success email with invoice
+   */
+  async sendSubscriptionPaymentSuccess(
+    to: string,
+    data: {
+      userName: string;
+      tierName: string;
+      amount: number;
+      currency: string;
+      billingPeriodStart: string;
+      billingPeriodEnd: string;
+      nextBillingDate: string;
+      paymentMethod: string;
+      transactionId: string;
+      invoiceNumber: string;
+      invoiceUrl: string;
+    }
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .invoice-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb; }
+          .amount { font-size: 32px; font-weight: bold; color: #10b981; margin: 10px 0; }
+          .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+          .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>✅ Payment Successful</h1>
+          </div>
+          <div class="content">
+            <p>Hi ${data.userName},</p>
+            <p>Thank you! Your subscription payment has been processed successfully.</p>
+            
+            <div class="invoice-box">
+              <h3>Invoice: ${data.invoiceNumber}</h3>
+              <div class="amount">${data.amount} ${data.currency}</div>
+              
+              <div class="detail-row">
+                <span>Subscription Tier:</span>
+                <strong>${data.tierName}</strong>
+              </div>
+              <div class="detail-row">
+                <span>Billing Period:</span>
+                <strong>${data.billingPeriodStart} - ${data.billingPeriodEnd}</strong>
+              </div>
+              <div class="detail-row">
+                <span>Payment Method:</span>
+                <strong>${data.paymentMethod}</strong>
+              </div>
+              <div class="detail-row">
+                <span>Transaction ID:</span>
+                <strong>${data.transactionId}</strong>
+              </div>
+              <div class="detail-row">
+                <span>Next Billing Date:</span>
+                <strong>${data.nextBillingDate}</strong>
+              </div>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="${data.invoiceUrl}" class="button">Download Invoice</a>
+            </div>
+
+            <p style="margin-top: 30px;">Your subscription is active and all premium features are available.</p>
+            
+            <div class="footer">
+              <p>Questions? Contact us at support@berse.app</p>
+              <p>© ${new Date().getFullYear()} Berse. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to,
+      subject: `Payment Received - ${data.tierName} Subscription`,
+      html,
+      text: `Payment Successful\n\nHi ${data.userName},\n\nYour ${data.tierName} subscription payment of ${data.amount} ${data.currency} was successful.\n\nInvoice: ${data.invoiceNumber}\nBilling Period: ${data.billingPeriodStart} - ${data.billingPeriodEnd}\nNext Billing: ${data.nextBillingDate}\n\nView invoice: ${data.invoiceUrl}`,
+    });
+  }
+
+  /**
+   * Send subscription payment failed email
+   */
+  async sendSubscriptionPaymentFailed(
+    to: string,
+    data: {
+      userName: string;
+      tierName: string;
+      amount: number;
+      currency: string;
+      failureReason: string;
+      retryDate: string;
+      updatePaymentUrl: string;
+    }
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .alert-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 4px; }
+          .button { display: inline-block; background: #ef4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>⚠️ Payment Failed</h1>
+          </div>
+          <div class="content">
+            <p>Hi ${data.userName},</p>
+            
+            <div class="alert-box">
+              <h3>Your subscription payment could not be processed</h3>
+              <p><strong>Amount:</strong> ${data.amount} ${data.currency}</p>
+              <p><strong>Subscription:</strong> ${data.tierName}</p>
+              <p><strong>Reason:</strong> ${data.failureReason}</p>
+              <p><strong>Retry Date:</strong> ${data.retryDate}</p>
+            </div>
+
+            <p>To avoid service interruption, please update your payment method before ${data.retryDate}.</p>
+
+            <div style="text-align: center;">
+              <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
+            </div>
+
+            <p style="margin-top: 30px;">Your subscription will remain active until the retry date. If payment continues to fail, your subscription may be suspended.</p>
+            
+            <div class="footer">
+              <p>Need help? Contact us at support@berse.app</p>
+              <p>© ${new Date().getFullYear()} Berse. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to,
+      subject: `Action Required: Subscription Payment Failed`,
+      html,
+      text: `Payment Failed\n\nHi ${data.userName},\n\nYour ${data.tierName} subscription payment of ${data.amount} ${data.currency} failed.\n\nReason: ${data.failureReason}\nRetry Date: ${data.retryDate}\n\nPlease update your payment method: ${data.updatePaymentUrl}`,
+    });
+  }
+
+  /**
+   * Send upcoming subscription payment reminder
+   */
+  async sendUpcomingSubscriptionPayment(
+    to: string,
+    data: {
+      userName: string;
+      tierName: string;
+      amount: number;
+      currency: string;
+      billingDate: string;
+      paymentMethod: string;
+      manageSubscriptionUrl: string;
+    }
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .info-box { background: #eff6ff; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #bfdbfe; }
+          .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>💰 Upcoming Billing</h1>
+          </div>
+          <div class="content">
+            <p>Hi ${data.userName},</p>
+            <p>This is a friendly reminder that your subscription will renew soon.</p>
+            
+            <div class="info-box">
+              <h3>Billing Details</h3>
+              <p><strong>Subscription:</strong> ${data.tierName}</p>
+              <p><strong>Amount:</strong> ${data.amount} ${data.currency}</p>
+              <p><strong>Billing Date:</strong> ${data.billingDate}</p>
+              <p><strong>Payment Method:</strong> ${data.paymentMethod}</p>
+            </div>
+
+            <p>No action is needed - your subscription will renew automatically.</p>
+
+            <div style="text-align: center;">
+              <a href="${data.manageSubscriptionUrl}" class="button">Manage Subscription</a>
+            </div>
+
+            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">Want to make changes? You can update your payment method or cancel anytime.</p>
+            
+            <div class="footer">
+              <p>Questions? Contact us at support@berse.app</p>
+              <p>© ${new Date().getFullYear()} Berse. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to,
+      subject: `Reminder: Upcoming Billing for ${data.tierName} Subscription`,
+      html,
+      text: `Upcoming Billing\n\nHi ${data.userName},\n\nYour ${data.tierName} subscription of ${data.amount} ${data.currency} will be charged on ${data.billingDate}.\n\nPayment Method: ${data.paymentMethod}\n\nManage subscription: ${data.manageSubscriptionUrl}`,
+    });
+  }
 }
 
 // Export singleton instance

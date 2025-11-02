@@ -14,6 +14,8 @@ import {
   TierFeatures,
   DEFAULT_FREE_TIER_FEATURES,
 } from '../types/subscription.types';
+import { NotificationService } from './notification.service';
+import { emailService } from './email.service';
 
 class SubscriptionService {
   /**
@@ -332,9 +334,15 @@ class SubscriptionService {
         return null;
       }
 
-      // Calculate total spent (would need payment records)
-      const totalSpent = 0; // Placeholder
+      // Calculate total spent from successful payments
+      const payments = await prisma.subscriptionPayment.findMany({
+        where: {
+          userId,
+          status: 'SUCCEEDED',
+        },
+      });
 
+      const totalSpent = payments.reduce((sum, payment) => sum + payment.amount, 0);
       const memberSince = subscriptions[0].createdAt;
       const currentStreak = 0; // Placeholder - calculate consecutive months
 
@@ -347,6 +355,370 @@ class SubscriptionService {
     } catch (error) {
       console.error('Get subscription stats error:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get subscription payment history
+   */
+  async getSubscriptionPayments(userId: string, options?: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }) {
+    try {
+      const where: any = { userId };
+      if (options?.status) {
+        where.status = options.status;
+      }
+
+      const [payments, total] = await Promise.all([
+        prisma.subscriptionPayment.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take: options?.limit || 20,
+          skip: options?.offset || 0,
+          include: {
+            subscriptions: {
+              include: { tiers: true },
+            },
+          },
+        }),
+        prisma.subscriptionPayment.count({ where }),
+      ]);
+
+      // Calculate summary
+      const allPayments = await prisma.subscriptionPayment.findMany({
+        where: { userId },
+        select: {
+          amount: true,
+          status: true,
+          paidAt: true,
+          dueDate: true,
+        },
+      });
+
+      const summary = {
+        totalPayments: allPayments.length,
+        totalAmount: allPayments
+          .filter(p => p.status === 'SUCCEEDED')
+          .reduce((sum, p) => sum + p.amount, 0),
+        successfulPayments: allPayments.filter(p => p.status === 'SUCCEEDED').length,
+        failedPayments: allPayments.filter(p => p.status === 'FAILED').length,
+        pendingPayments: allPayments.filter(p => p.status === 'PENDING').length,
+        lastPaymentDate: allPayments
+          .filter(p => p.paidAt)
+          .sort((a, b) => (b.paidAt?.getTime() || 0) - (a.paidAt?.getTime() || 0))[0]?.paidAt,
+        nextPaymentDate: allPayments
+          .filter(p => p.status === 'PENDING')
+          .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())[0]?.dueDate,
+      };
+
+      return {
+        payments: payments.map(p => ({
+          id: p.id,
+          subscriptionId: p.subscriptionId,
+          amount: p.amount,
+          currency: p.currency,
+          status: p.status,
+          billingPeriodStart: p.billingPeriodStart,
+          billingPeriodEnd: p.billingPeriodEnd,
+          dueDate: p.dueDate,
+          paidAt: p.paidAt || undefined,
+          failedAt: p.failedAt || undefined,
+          failureReason: p.failureReason || undefined,
+          paymentTransactionId: p.paymentTransactionId || undefined,
+          gatewayInvoiceId: p.gatewayInvoiceId || undefined,
+          createdAt: p.createdAt,
+          tier: p.subscriptions?.tiers?.tierName,
+        })),
+        total,
+        summary,
+      };
+    } catch (error) {
+      console.error('Get subscription payments error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get subscription invoices (alias for payments with invoice format)
+   */
+  async getSubscriptionInvoices(userId: string, options?: {
+    limit?: number;
+    offset?: number;
+  }) {
+    try {
+      const result = await this.getSubscriptionPayments(userId, options);
+      
+      return {
+        invoices: result.payments.map(payment => ({
+          invoiceId: payment.id,
+          invoiceNumber: `INV-${payment.id.slice(-8).toUpperCase()}`,
+          amount: payment.amount,
+          currency: payment.currency,
+          status: payment.status,
+          billingPeriod: {
+            start: payment.billingPeriodStart,
+            end: payment.billingPeriodEnd,
+          },
+          dueDate: payment.dueDate,
+          paidAt: payment.paidAt,
+          tier: payment.tier,
+          gatewayInvoiceId: payment.gatewayInvoiceId,
+          downloadUrl: payment.gatewayInvoiceId 
+            ? `/api/subscriptions/invoices/${payment.id}/download` 
+            : undefined,
+        })),
+        total: result.total,
+        summary: result.summary,
+      };
+    } catch (error) {
+      console.error('Get subscription invoices error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user subscription with payment details
+   */
+  async getSubscriptionWithPayments(userId: string) {
+    try {
+      const subscription = await this.getUserSubscription(userId);
+      if (!subscription) {
+        return null;
+      }
+
+      // Get last payment
+      const lastPayment = await prisma.subscriptionPayment.findFirst({
+        where: {
+          userId,
+          status: 'SUCCEEDED',
+        },
+        orderBy: { paidAt: 'desc' },
+      });
+
+      // Get upcoming/pending payment
+      const upcomingPayment = await prisma.subscriptionPayment.findFirst({
+        where: {
+          userId,
+          subscriptionId: subscription.id !== 'default-free' ? subscription.id : undefined,
+          status: 'PENDING',
+          dueDate: { gte: new Date() },
+        },
+        orderBy: { dueDate: 'asc' },
+      });
+
+      // Get failed payment that can be retried
+      const failedPayment = await prisma.subscriptionPayment.findFirst({
+        where: {
+          userId,
+          subscriptionId: subscription.id !== 'default-free' ? subscription.id : undefined,
+          status: 'FAILED',
+        },
+        orderBy: { failedAt: 'desc' },
+      });
+
+      // Get subscription record for billing cycle info
+      const subscriptionRecord = subscription.id !== 'default-free'
+        ? await prisma.userSubscription.findUnique({
+            where: { id: subscription.id },
+          })
+        : null;
+
+      // Check if there's a payment that can be retried
+      const canRetryPayment = failedPayment !== null || (upcomingPayment && upcomingPayment.status === 'PENDING');
+      const paymentToRetry = failedPayment || upcomingPayment;
+
+      return {
+        ...subscription,
+        nextBillingDate: upcomingPayment?.dueDate,
+        nextBillingAmount: upcomingPayment?.amount,
+        canRetryPayment,
+        lastPayment: lastPayment ? {
+          id: lastPayment.id,
+          subscriptionId: lastPayment.subscriptionId,
+          amount: lastPayment.amount,
+          currency: lastPayment.currency,
+          status: lastPayment.status,
+          billingPeriodStart: lastPayment.billingPeriodStart,
+          billingPeriodEnd: lastPayment.billingPeriodEnd,
+          dueDate: lastPayment.dueDate,
+          paidAt: lastPayment.paidAt || undefined,
+          paymentTransactionId: lastPayment.paymentTransactionId || undefined,
+          createdAt: lastPayment.createdAt,
+        } : undefined,
+        upcomingPayment: upcomingPayment ? {
+          id: upcomingPayment.id,
+          subscriptionId: upcomingPayment.subscriptionId,
+          amount: upcomingPayment.amount,
+          currency: upcomingPayment.currency,
+          status: upcomingPayment.status,
+          billingPeriodStart: upcomingPayment.billingPeriodStart,
+          billingPeriodEnd: upcomingPayment.billingPeriodEnd,
+          dueDate: upcomingPayment.dueDate,
+          createdAt: upcomingPayment.createdAt,
+          gatewayInvoiceUrl: upcomingPayment.gatewayInvoiceId ? await this.getPaymentCheckoutUrl(upcomingPayment.id) : undefined,
+        } : undefined,
+        failedPayment: failedPayment ? {
+          id: failedPayment.id,
+          subscriptionId: failedPayment.subscriptionId,
+          amount: failedPayment.amount,
+          currency: failedPayment.currency,
+          status: failedPayment.status,
+          billingPeriodStart: failedPayment.billingPeriodStart,
+          billingPeriodEnd: failedPayment.billingPeriodEnd,
+          dueDate: failedPayment.dueDate,
+          failedAt: failedPayment.failedAt || undefined,
+          failureReason: failedPayment.failureReason || undefined,
+          createdAt: failedPayment.createdAt,
+        } : undefined,
+      };
+    } catch (error) {
+      console.error('Get subscription with payments error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send upcoming payment reminders (to be called by cron job)
+   * Sends reminders 3 days before billing date
+   */
+  async sendUpcomingPaymentReminders() {
+    try {
+      const threeDaysFromNow = new Date();
+      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+      
+      const fourDaysFromNow = new Date();
+      fourDaysFromNow.setDate(fourDaysFromNow.getDate() + 4);
+
+      // Find all pending payments due in 3 days
+      const upcomingPayments = await prisma.subscriptionPayment.findMany({
+        where: {
+          status: 'PENDING',
+          dueDate: {
+            gte: threeDaysFromNow,
+            lt: fourDaysFromNow,
+          },
+        },
+        include: {
+          user: true,
+          subscriptions: {
+            include: { tiers: true },
+          },
+        },
+      });
+
+      console.log(`Sending ${upcomingPayments.length} upcoming payment reminders`);
+
+      for (const payment of upcomingPayments) {
+        if (!payment.user || !payment.subscriptions) continue;
+
+        const tierName = payment.subscriptions.tiers.tierName;
+        const userName = payment.user.fullName || payment.user.email;
+
+        // Send in-app notification
+        NotificationService.notifyUpcomingSubscriptionPayment(
+          payment.userId,
+          tierName,
+          payment.amount,
+          payment.currency,
+          payment.dueDate
+        ).catch(err => console.error('Failed to send upcoming payment notification:', err));
+
+        // Send email
+        emailService.sendUpcomingSubscriptionPayment(
+          payment.user.email,
+          {
+            userName,
+            tierName,
+            amount: payment.amount,
+            currency: payment.currency,
+            billingDate: payment.dueDate.toLocaleDateString(),
+            paymentMethod: payment.subscriptions.paymentProviderId || 'Saved payment method',
+            manageSubscriptionUrl: `${process.env.FRONTEND_URL}/subscriptions/my`,
+          }
+        ).catch(err => console.error('Failed to send upcoming payment email:', err));
+      }
+
+      return upcomingPayments.length;
+    } catch (error) {
+      console.error('Send upcoming payment reminders error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payment checkout URL for retry
+   */
+  private async getPaymentCheckoutUrl(paymentId: string): Promise<string | undefined> {
+    try {
+      const payment = await prisma.subscriptionPayment.findUnique({
+        where: { id: paymentId },
+      });
+
+      if (!payment?.gatewayInvoiceId) {
+        return undefined;
+      }
+
+      // For now, return a placeholder. This should integrate with actual payment gateway
+      // to retrieve the checkout URL from Xendit/Stripe
+      return `${process.env.PAYMENT_GATEWAY_URL}/checkout/${payment.gatewayInvoiceId}`;
+    } catch (error) {
+      console.error('Get payment checkout URL error:', error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Retry failed subscription payment
+   */
+  async retrySubscriptionPayment(userId: string, paymentId: string) {
+    try {
+      const payment = await prisma.subscriptionPayment.findFirst({
+        where: {
+          id: paymentId,
+          userId,
+          status: { in: ['FAILED', 'PENDING'] },
+        },
+        include: {
+          subscriptions: {
+            include: { tiers: true },
+          },
+        },
+      });
+
+      if (!payment) {
+        throw new Error('Payment not found or cannot be retried');
+      }
+
+      // If payment already has a gateway invoice URL, return it
+      if (payment.gatewayInvoiceId) {
+        const checkoutUrl = await this.getPaymentCheckoutUrl(payment.id);
+        return {
+          paymentId: payment.id,
+          amount: payment.amount,
+          currency: payment.currency,
+          status: payment.status,
+          checkoutUrl,
+          gatewayInvoiceId: payment.gatewayInvoiceId,
+        };
+      }
+
+      // Otherwise, create a new payment intent
+      // This would integrate with subscription-payment.service.ts
+      // For now, return payment details
+      return {
+        paymentId: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        tierName: payment.subscriptions.tiers.tierName,
+        needsNewPaymentIntent: true,
+      };
+    } catch (error) {
+      console.error('Retry subscription payment error:', error);
+      throw error;
     }
   }
 

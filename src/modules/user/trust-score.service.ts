@@ -58,7 +58,7 @@ export class TrustScoreUserService {
 
       const result: TrustScoreDetail = {
         userId: user.id,
-        currentScore: user.trustScore,
+        currentScore: Math.round(user.trustScore * 100) / 100,
         trustLevel: user.trustLevel,
         scoreChange,
         lastCalculatedAt: user.updatedAt,
@@ -406,12 +406,9 @@ export class TrustScoreUserService {
    */
   private static getNextLevelInfo(currentScore: number, currentLevel: string): NextLevelInfo {
     const levels = [
-      { name: 'new', threshold: 0 },
-      { name: 'starter', threshold: 20 },
-      { name: 'growing', threshold: 40 },
-      { name: 'established', threshold: 60 },
-      { name: 'trusted', threshold: 75 },
-      { name: 'elite', threshold: 90 },
+      { name: 'starter', threshold: 0 },
+      { name: 'trusted', threshold: 31 },
+      { name: 'leader', threshold: 61 },
     ];
 
     const currentIndex = levels.findIndex(l => l.name === currentLevel);
@@ -419,7 +416,7 @@ export class TrustScoreUserService {
 
     const currentThreshold = levels[currentIndex]?.threshold || 0;
     const nextThreshold = nextLevel?.threshold || null;
-    const pointsNeeded = nextThreshold ? Math.max(0, nextThreshold - currentScore) : 0;
+    const pointsNeeded = nextThreshold ? Math.round((Math.max(0, nextThreshold - currentScore)) * 100) / 100 : 0;
     const progress = nextThreshold 
       ? Math.round(((currentScore - currentThreshold) / (nextThreshold - currentThreshold)) * 100)
       : 100;

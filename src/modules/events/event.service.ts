@@ -25,6 +25,8 @@ import QRCode from 'qrcode';
 import { cacheService, CacheKeys, CacheTTL } from '../../services/cache.service';
 import { NotificationService } from '../../services/notification.service';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
+import featureUsageService from '../../services/featureUsage.service';
+import { FeatureCode } from '../../types/subscription.types';
 
 export class EventService {
   
@@ -98,11 +100,23 @@ export class EventService {
           _count: {
             select: {
               eventParticipants: true,
-              
               eventTickets: true,
               tier: true,
             },
           },
+        },
+      });
+
+      // Track feature usage for event creation
+      await featureUsageService.recordFeatureUsage({
+        userId,
+        featureCode: data.isFree ? FeatureCode.CREATE_EVENTS : FeatureCode.CREATE_PAID_EVENTS,
+        entityType: 'event',
+        entityId: event.id,
+        metadata: {
+          eventType: event.type,
+          isFree: event.isFree,
+          status: event.status,
         },
       });
 

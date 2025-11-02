@@ -65,7 +65,7 @@ class SubscriptionController {
 
   /**
    * GET /api/subscriptions/my
-   * Get current user's subscription
+   * Get current user's subscription with payment details
    */
   async getMySubscription(req: AuthRequest, res: Response) {
     try {
@@ -77,7 +77,7 @@ class SubscriptionController {
         return;
       }
 
-      const subscription = await subscriptionService.getUserSubscription(req.user.id);
+      const subscription = await subscriptionService.getSubscriptionWithPayments(req.user.id);
 
       res.status(200).json({
         success: true,
@@ -239,11 +239,146 @@ class SubscriptionController {
       });
     } catch (error: any) {
       console.error('Upgrade error:', error);
+      
+      // Check if it's a downgrade attempt
+      if (error.message?.includes('Not an upgrade')) {
+        res.status(400).json({
+          success: false,
+          error: 'This is a downgrade. Use POST /subscriptions/downgrade instead.',
+          isDowngrade: true,
+        });
+        return;
+      }
+      
       res.status(400).json({
         success: false,
         error: error.message || 'Failed to upgrade subscription',
       });
     }
+  }
+
+  /**
+   * POST /api/subscriptions/downgrade
+   * Downgrade subscription to lower tier (with warnings)
+   */
+  async downgrade(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const { tierCode, confirmed } = req.body;
+
+      if (!tierCode) {
+        res.status(400).json({
+          success: false,
+          error: 'Tier code is required',
+        });
+        return;
+      }
+
+      // Get current subscription to show warning
+      const currentSub = await subscriptionService.getUserSubscription(req.user.id);
+      if (!currentSub || currentSub.tier === SubscriptionTier.FREE) {
+        res.status(400).json({
+          success: false,
+          error: 'No active paid subscription to downgrade',
+        });
+        return;
+      }
+
+      // Check if it's actually a downgrade
+      const tierHierarchy = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
+      const currentIndex = tierHierarchy.indexOf(currentSub.tier);
+      const newIndex = tierHierarchy.indexOf(tierCode as SubscriptionTier);
+
+      if (newIndex >= currentIndex) {
+        res.status(400).json({
+          success: false,
+          error: 'This is not a downgrade. Use PUT /subscriptions/upgrade instead.',
+        });
+        return;
+      }
+
+      // If not confirmed, return warning
+      if (!confirmed) {
+        // Get feature differences
+        const currentTier = await subscriptionService.getTierByCode(currentSub.tier);
+        const newTier = await subscriptionService.getTierByCode(tierCode as SubscriptionTier);
+
+        res.status(200).json({
+          success: false,
+          requiresConfirmation: true,
+          warning: {
+            message: 'Downgrading will limit your access to premium features',
+            currentTier: currentSub.tier,
+            newTier: tierCode,
+            effectiveDate: currentSub.currentPeriodEnd,
+            remainingDays: Math.ceil(
+              (currentSub.currentPeriodEnd.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+            ),
+            lostFeatures: this.getFeatureDifferences(currentTier, newTier),
+            instructions: 'To proceed, send the same request with "confirmed": true',
+          },
+        });
+        return;
+      }
+
+      // Proceed with downgrade
+      const subscription = await subscriptionService.downgradeSubscription(
+        req.user.id,
+        tierCode as SubscriptionTier
+      );
+
+      if (!subscription) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to downgrade subscription',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: subscription,
+        message: `Subscription will downgrade to ${tierCode} at end of current period`,
+      });
+    } catch (error: any) {
+      console.error('Downgrade error:', error);
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Failed to downgrade subscription',
+      });
+    }
+  }
+
+  /**
+   * Helper: Get feature differences between tiers
+   */
+  private getFeatureDifferences(currentTier: any, newTier: any): string[] {
+    if (!currentTier?.features || !newTier?.features) return [];
+
+    const lost: string[] = [];
+    const currentFeatures = currentTier.features as any;
+    const newFeatures = newTier.features as any;
+
+    // Check each feature
+    Object.keys(currentFeatures).forEach(feature => {
+      if (currentFeatures[feature] && !newFeatures[feature]) {
+        // Convert camelCase to readable format
+        const readable = feature
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/^./, str => str.toUpperCase())
+          .trim();
+        lost.push(readable);
+      }
+    });
+
+    return lost;
   }
 
   /**
@@ -447,6 +582,120 @@ class SubscriptionController {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch subscription stats',
+      });
+    }
+  }
+
+  /**
+   * GET /api/subscriptions/payments
+   * Get subscription payment history
+   */
+  async getPayments(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const status = req.query.status as string;
+
+      const result = await subscriptionService.getSubscriptionPayments(req.user.id, {
+        limit,
+        offset,
+        status,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get subscription payments error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch subscription payments',
+      });
+    }
+  }
+
+  /**
+   * GET /api/subscriptions/invoices
+   * Get subscription invoices (billing history)
+   */
+  async getInvoices(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const result = await subscriptionService.getSubscriptionInvoices(req.user.id, {
+        limit,
+        offset,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Get subscription invoices error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch subscription invoices',
+      });
+    }
+  }
+
+  /**
+   * POST /api/subscriptions/retry-payment
+   * Retry failed or pending subscription payment
+   */
+  async retryPayment(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const { paymentId } = req.body;
+
+      if (!paymentId) {
+        res.status(400).json({
+          success: false,
+          error: 'Payment ID is required',
+        });
+        return;
+      }
+
+      const result = await subscriptionService.retrySubscriptionPayment(req.user.id, paymentId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: result.checkoutUrl 
+          ? 'Payment checkout URL retrieved. Complete payment to activate subscription.'
+          : 'Payment retry initiated. Please complete payment.',
+      });
+    } catch (error: any) {
+      console.error('Retry payment error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to retry payment',
       });
     }
   }

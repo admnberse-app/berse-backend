@@ -41,48 +41,24 @@ const DEFAULT_TRUST_LEVELS: TrustLevelsConfig = {
       level: 0,
       name: 'Starter',
       minScore: 0,
-      maxScore: 10,
+      maxScore: 30,
       description: 'New to the platform - building trust',
       color: '#9CA3AF', // gray
     },
     {
       level: 1,
-      name: 'Newcomer',
-      minScore: 11,
-      maxScore: 25,
-      description: 'Getting started - learning the ropes',
-      color: '#60A5FA', // blue
-    },
-    {
-      level: 2,
-      name: 'Growing',
-      minScore: 26,
-      maxScore: 50,
-      description: 'Active participant - gaining recognition',
+      name: 'Trusted',
+      minScore: 31,
+      maxScore: 60,
+      description: 'Trusted member - active contributor',
       color: '#34D399', // green
     },
     {
-      level: 3,
-      name: 'Established',
-      minScore: 51,
-      maxScore: 75,
-      description: 'Trusted member - making an impact',
-      color: '#FBBF24', // yellow
-    },
-    {
-      level: 4,
-      name: 'Trusted',
-      minScore: 76,
-      maxScore: 90,
-      description: 'Highly trusted - community leader',
-      color: '#F97316', // orange
-    },
-    {
-      level: 5,
+      level: 2,
       name: 'Leader',
-      minScore: 91,
+      minScore: 61,
       maxScore: 100,
-      description: 'Exemplary member - platform ambassador',
+      description: 'Community leader - platform ambassador',
       color: '#A855F7', // purple
     },
   ],
@@ -95,42 +71,42 @@ const DEFAULT_TRUST_LEVELS: TrustLevelsConfig = {
 const DEFAULT_FEATURE_GATING: FeatureGatingConfig = {
   features: {
     // Events
-    createEvent: { requiredScore: 26, feature: 'create events' },
-    publishEvent: { requiredScore: 51, feature: 'publish events' },
-    hostPaidEvent: { requiredScore: 51, feature: 'host paid events' },
-    createRecurringEvent: { requiredScore: 51, feature: 'create recurring events' },
+    createEvent: { requiredScore: 31, feature: 'create events' },
+    publishEvent: { requiredScore: 31, feature: 'publish events' },
+    hostPaidEvent: { requiredScore: 31, feature: 'host paid events' },
+    createRecurringEvent: { requiredScore: 31, feature: 'create recurring events' },
     
     // Communities
-    createCommunity: { requiredScore: 76, feature: 'create communities' },
-    moderateCommunity: { requiredScore: 51, feature: 'moderate communities' },
-    createCommunityEvent: { requiredScore: 51, feature: 'create community events' },
+    createCommunity: { requiredScore: 61, feature: 'create communities' },
+    moderateCommunity: { requiredScore: 31, feature: 'moderate communities' },
+    createCommunityEvent: { requiredScore: 31, feature: 'create community events' },
     
     // Marketplace
-    createListing: { requiredScore: 51, feature: 'create marketplace listings' },
-    createPremiumListing: { requiredScore: 76, feature: 'create premium listings' },
-    acceptPayments: { requiredScore: 51, feature: 'accept payments' },
+    createListing: { requiredScore: 31, feature: 'create marketplace listings' },
+    createPremiumListing: { requiredScore: 61, feature: 'create premium listings' },
+    acceptPayments: { requiredScore: 31, feature: 'accept payments' },
     
     // Services
-    createService: { requiredScore: 51, feature: 'create services' },
-    createPremiumService: { requiredScore: 76, feature: 'create premium services' },
-    offerPaidService: { requiredScore: 51, feature: 'offer paid services' },
+    createService: { requiredScore: 31, feature: 'create services' },
+    createPremiumService: { requiredScore: 61, feature: 'create premium services' },
+    offerPaidService: { requiredScore: 31, feature: 'offer paid services' },
     
     // Vouching
-    vouchOthers: { requiredScore: 26, feature: 'vouch for others' },
-    secondaryVouch: { requiredScore: 51, feature: 'provide secondary vouches' },
-    communityVouch: { requiredScore: 76, feature: 'provide community vouches' },
+    vouchOthers: { requiredScore: 31, feature: 'vouch for others' },
+    secondaryVouch: { requiredScore: 31, feature: 'provide secondary vouches' },
+    communityVouch: { requiredScore: 61, feature: 'provide community vouches' },
     
     // Advanced Features
-    createAnnouncement: { requiredScore: 76, feature: 'create announcements' },
-    sendMassMessage: { requiredScore: 76, feature: 'send mass messages' },
-    accessAnalytics: { requiredScore: 51, feature: 'access analytics' },
-    createPoll: { requiredScore: 51, feature: 'create polls' },
-    scheduleContent: { requiredScore: 51, feature: 'schedule content' },
+    createAnnouncement: { requiredScore: 61, feature: 'create announcements' },
+    sendMassMessage: { requiredScore: 61, feature: 'send mass messages' },
+    accessAnalytics: { requiredScore: 31, feature: 'access analytics' },
+    createPoll: { requiredScore: 31, feature: 'create polls' },
+    scheduleContent: { requiredScore: 31, feature: 'schedule content' },
     
     // Platform Features
-    requestVerification: { requiredScore: 51, feature: 'request verification' },
-    applyForGuide: { requiredScore: 76, feature: 'apply for guide role' },
-    nominateForAward: { requiredScore: 76, feature: 'nominate for awards' },
+    requestVerification: { requiredScore: 31, feature: 'request verification' },
+    applyForGuide: { requiredScore: 61, feature: 'apply for guide role' },
+    nominateForAward: { requiredScore: 61, feature: 'nominate for awards' },
   },
 };
 

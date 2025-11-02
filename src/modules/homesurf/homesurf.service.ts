@@ -1,6 +1,8 @@
 import { PrismaClient, HomeSurfBookingStatus, ReviewerRole, Prisma } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import featureUsageService from '../../services/featureUsage.service';
+import { FeatureCode } from '../../types/subscription.types';
 import { HomeSurfNotifications } from './homesurf.notifications';
 import { ProfileEnrichmentService } from '../../services/profile-enrichment.service';
 import type {
@@ -162,6 +164,19 @@ export class HomeSurfService {
       });
 
       logger.info('HomeSurf profile created', { userId });
+
+      // Track feature usage for HomeSurf hosting
+      await featureUsageService.recordFeatureUsage({
+        userId,
+        featureCode: FeatureCode.HOMESURF_HOST,
+        entityType: 'homesurf_profile',
+        entityId: userId,
+        metadata: {
+          accommodationType: profile.accommodationType,
+          city: profile.city,
+          maxGuests: profile.maxGuests,
+        },
+      });
 
       return this.formatProfileResponse(profile, true);
     } catch (error) {

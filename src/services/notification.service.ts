@@ -2089,5 +2089,125 @@ export class NotificationService {
       },
     });
   }
+
+  /**
+   * Notify user when subscription payment succeeds
+   */
+  static async notifySubscriptionPaymentSuccess(
+    userId: string,
+    tierName: string,
+    amount: number,
+    currency: string,
+    invoiceId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: '💳 Payment Successful',
+      message: `Your ${tierName} subscription payment of ${amount} ${currency} was successful.`,
+      actionUrl: `/subscriptions/invoices/${invoiceId}`,
+      priority: 'normal',
+      relatedEntityId: invoiceId,
+      relatedEntityType: 'subscription_payment',
+      metadata: {
+        event: 'subscription_payment_success',
+        tierName,
+        amount,
+        currency,
+        invoiceId,
+      },
+    });
+  }
+
+  /**
+   * Notify user when subscription payment fails
+   */
+  static async notifySubscriptionPaymentFailed(
+    userId: string,
+    tierName: string,
+    amount: number,
+    currency: string,
+    reason: string,
+    retryDate?: Date
+  ) {
+    const retryMessage = retryDate 
+      ? ` We'll retry on ${retryDate.toLocaleDateString()}.`
+      : ' Please update your payment method.';
+
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: '⚠️ Payment Failed',
+      message: `Your ${tierName} subscription payment of ${amount} ${currency} failed. ${reason}.${retryMessage}`,
+      actionUrl: '/subscriptions/payment-method',
+      priority: 'urgent',
+      relatedEntityType: 'subscription_payment',
+      metadata: {
+        event: 'subscription_payment_failed',
+        tierName,
+        amount,
+        currency,
+        reason,
+        retryDate: retryDate?.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user of upcoming subscription payment (3 days before)
+   */
+  static async notifyUpcomingSubscriptionPayment(
+    userId: string,
+    tierName: string,
+    amount: number,
+    currency: string,
+    billingDate: Date
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'REMINDER',
+      title: '💰 Upcoming Billing',
+      message: `Your ${tierName} subscription of ${amount} ${currency} will be charged on ${billingDate.toLocaleDateString()}.`,
+      actionUrl: '/subscriptions/my',
+      priority: 'normal',
+      relatedEntityType: 'subscription_payment',
+      metadata: {
+        event: 'subscription_payment_upcoming',
+        tierName,
+        amount,
+        currency,
+        billingDate: billingDate.toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify user when invoice is ready
+   */
+  static async notifySubscriptionInvoiceReady(
+    userId: string,
+    invoiceNumber: string,
+    amount: number,
+    currency: string,
+    invoiceId: string
+  ) {
+    return await this.createNotification({
+      userId,
+      type: 'SYSTEM',
+      title: '📄 Invoice Ready',
+      message: `Your invoice ${invoiceNumber} for ${amount} ${currency} is ready to download.`,
+      actionUrl: `/subscriptions/invoices/${invoiceId}`,
+      priority: 'low',
+      relatedEntityId: invoiceId,
+      relatedEntityType: 'subscription_invoice',
+      metadata: {
+        event: 'subscription_invoice_ready',
+        invoiceNumber,
+        amount,
+        currency,
+        invoiceId,
+      },
+    });
+  }
 }
 

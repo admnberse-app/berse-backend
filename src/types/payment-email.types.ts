@@ -167,3 +167,53 @@ export interface PayoutNotificationData extends BaseEmailData {
   
   transactionId: string;
 }
+
+// ============= SUBSCRIPTION PAYMENT EMAIL DATA =============
+
+export interface SubscriptionPaymentSuccessData extends BaseEmailData {
+  userName: string;
+  tierName: string;
+  amount: number;
+  currency: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  nextBillingDate: string;
+  paymentMethod: string;
+  transactionId: string;
+  invoiceNumber: string;
+  invoiceUrl: string;
+}
+
+export interface SubscriptionPaymentFailedData extends BaseEmailData {
+  userName: string;
+  tierName: string;
+  amount: number;
+  currency: string;
+  failureReason: string;
+  retryDate: string;
+  updatePaymentUrl: string;
+}
+
+export interface SubscriptionUpcomingPaymentData extends BaseEmailData {
+  userName: string;
+  tierName: string;
+  amount: number;
+  currency: string;
+  billingDate: string;
+  paymentMethod: string;
+  manageSubscriptionUrl: string;
+}
+
+export interface SubscriptionInvoiceData extends BaseEmailData {
+  userName: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  tierName: string;
+  billingPeriod: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  transactionId: string;
+  invoiceUrl: string;
+  pdfUrl: string;
+}

@@ -50,6 +50,13 @@ router.post('/subscribe', authenticate, subscriptionController.subscribe);
 router.put('/upgrade', authenticate, subscriptionController.upgrade);
 
 /**
+ * POST /api/subscriptions/downgrade
+ * Downgrade to lower tier (with confirmation warning)
+ * Body: { tierCode: string, confirmed?: boolean }
+ */
+router.post('/downgrade', authenticate, subscriptionController.downgrade);
+
+/**
  * POST /api/subscriptions/cancel
  * Cancel subscription
  * Body: { immediately?: boolean }
@@ -80,6 +87,27 @@ router.get('/usage/:featureCode', authenticate, subscriptionController.getFeatur
  * Get subscription statistics
  */
 router.get('/stats', authenticate, subscriptionController.getStats);
+
+/**
+ * GET /api/subscriptions/payments
+ * Get subscription payment history
+ * Query: { limit?: number, offset?: number, status?: string }
+ */
+router.get('/payments', authenticate, subscriptionController.getPayments);
+
+/**
+ * GET /api/subscriptions/invoices
+ * Get subscription invoices (billing history)
+ * Query: { limit?: number, offset?: number }
+ */
+router.get('/invoices', authenticate, subscriptionController.getInvoices);
+
+/**
+ * POST /api/subscriptions/retry-payment
+ * Retry failed or pending subscription payment
+ * Body: { paymentId: string }
+ */
+router.post('/retry-payment', authenticate, subscriptionController.retryPayment);
 
 /**
  * POST /api/subscriptions/calculate-upgrade

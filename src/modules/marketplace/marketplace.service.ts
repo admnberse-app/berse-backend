@@ -29,6 +29,8 @@ import { ActivityLoggerService } from '../../services/activityLogger.service';
 import { PaymentService } from '../payments/payment.service';
 import { NotificationService } from '../../services/notification.service';
 import { emailService } from '../../services/email.service';
+import featureUsageService from '../../services/featureUsage.service';
+import { FeatureCode } from '../../types/subscription.types';
 import logger from '../../utils/logger';
 
 const prisma = new PrismaClient();
@@ -80,6 +82,19 @@ export class MarketplaceService {
         pricingOptions: true,
         priceHistory: true
       }
+    });
+
+    // Track feature usage for marketplace listing
+    await featureUsageService.recordFeatureUsage({
+      userId,
+      featureCode: FeatureCode.SELL_MARKETPLACE,
+      entityType: 'marketplace_listing',
+      entityId: listing.id,
+      metadata: {
+        listingType: listing.type,
+        category: listing.category,
+        status: listing.status,
+      },
     });
 
     // Update user stat for listing creation

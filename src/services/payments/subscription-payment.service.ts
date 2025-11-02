@@ -5,6 +5,8 @@
 
 import { prisma } from '../../config/database';
 import { SubscriptionTier, BillingCycle } from '../../types/subscription.types';
+import { NotificationService } from '../notification.service';
+import { emailService } from '../email.service';
 
 // Payment gateway types
 export enum PaymentGateway {
@@ -291,6 +293,12 @@ class SubscriptionPaymentService {
     // Update payment record
     const payment = await prisma.subscriptionPayment.findFirst({
       where: { gatewayInvoiceId: paymentData.id },
+      include: {
+        user: true,
+        subscriptions: {
+          include: { tiers: true },
+        },
+      },
     });
 
     if (!payment) {
@@ -301,7 +309,7 @@ class SubscriptionPaymentService {
     await prisma.subscriptionPayment.update({
       where: { id: payment.id },
       data: {
-        status: 'PAID' as any,
+        status: 'SUCCEEDED' as any,
         paidAt: new Date(),
       },
     });
@@ -313,6 +321,39 @@ class SubscriptionPaymentService {
         data: { status: 'ACTIVE' },
       });
     }
+
+    // Send notifications and emails
+    if (payment.user && payment.subscriptions) {
+      const tierName = payment.subscriptions.tiers.tierName;
+      const invoiceNumber = `INV-${payment.id.slice(-8).toUpperCase()}`;
+      
+      // Send in-app notification
+      NotificationService.notifySubscriptionPaymentSuccess(
+        payment.userId,
+        tierName,
+        payment.amount,
+        payment.currency,
+        payment.id
+      ).catch(err => console.error('Failed to send payment success notification:', err));
+
+      // Send email
+      emailService.sendSubscriptionPaymentSuccess(
+        payment.user.email,
+        {
+          userName: payment.user.fullName || payment.user.email,
+          tierName,
+          amount: payment.amount,
+          currency: payment.currency,
+          billingPeriodStart: payment.billingPeriodStart.toLocaleDateString(),
+          billingPeriodEnd: payment.billingPeriodEnd.toLocaleDateString(),
+          nextBillingDate: payment.billingPeriodEnd.toLocaleDateString(),
+          paymentMethod: gateway,
+          transactionId: payment.paymentTransactionId || payment.id,
+          invoiceNumber,
+          invoiceUrl: `${process.env.FRONTEND_URL}/subscriptions/invoices/${payment.id}`,
+        }
+      ).catch(err => console.error('Failed to send payment success email:', err));
+    }
   }
 
   private async handleFailedPayment(paymentData: any, gateway: PaymentGateway): Promise<void> {
@@ -321,6 +362,12 @@ class SubscriptionPaymentService {
     // Update payment record
     const payment = await prisma.subscriptionPayment.findFirst({
       where: { gatewayInvoiceId: paymentData.id },
+      include: {
+        user: true,
+        subscriptions: {
+          include: { tiers: true },
+        },
+      },
     });
 
     if (!payment) {
@@ -328,12 +375,16 @@ class SubscriptionPaymentService {
       return;
     }
 
+    const failureReason = paymentData.failure_reason || 'Payment failed';
+    const retryDate = new Date();
+    retryDate.setDate(retryDate.getDate() + 3); // Retry in 3 days
+
     await prisma.subscriptionPayment.update({
       where: { id: payment.id },
       data: {
         status: 'FAILED',
         failedAt: new Date(),
-        failureReason: paymentData.failure_reason || 'Payment failed',
+        failureReason,
       },
     });
 
@@ -343,6 +394,35 @@ class SubscriptionPaymentService {
         where: { id: payment.subscriptionId },
         data: { status: 'PAST_DUE' },
       });
+    }
+
+    // Send notifications and emails
+    if (payment.user && payment.subscriptions) {
+      const tierName = payment.subscriptions.tiers.tierName;
+      
+      // Send in-app notification
+      NotificationService.notifySubscriptionPaymentFailed(
+        payment.userId,
+        tierName,
+        payment.amount,
+        payment.currency,
+        failureReason,
+        retryDate
+      ).catch(err => console.error('Failed to send payment failure notification:', err));
+
+      // Send email
+      emailService.sendSubscriptionPaymentFailed(
+        payment.user.email,
+        {
+          userName: payment.user.fullName || payment.user.email,
+          tierName,
+          amount: payment.amount,
+          currency: payment.currency,
+          failureReason,
+          retryDate: retryDate.toLocaleDateString(),
+          updatePaymentUrl: `${process.env.FRONTEND_URL}/subscriptions/payment-method`,
+        }
+      ).catch(err => console.error('Failed to send payment failure email:', err));
     }
   }
 

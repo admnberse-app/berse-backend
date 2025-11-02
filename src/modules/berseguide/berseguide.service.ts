@@ -1,6 +1,8 @@
 import { PrismaClient, BerseGuideBookingStatus, ReviewerRole, Prisma } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import featureUsageService from '../../services/featureUsage.service';
+import { FeatureCode } from '../../types/subscription.types';
 import { BerseGuideNotifications } from './berseguide.notifications';
 import { ProfileEnrichmentService } from '../../services/profile-enrichment.service';
 import { mapLanguageCodesToObjects } from '../../utils/languageMapper';
@@ -161,6 +163,19 @@ export class BerseGuideService {
       });
 
       logger.info('BerseGuide profile created', { userId });
+
+      // Track feature usage for BerseGuide hosting
+      await featureUsageService.recordFeatureUsage({
+        userId,
+        featureCode: FeatureCode.BERSEGUIDE_HOST,
+        entityType: 'berseguide_profile',
+        entityId: userId,
+        metadata: {
+          guideTypes: profile.guideTypes,
+          city: profile.city,
+          maxGroupSize: profile.maxGroupSize,
+        },
+      });
 
       return this.formatProfileResponse(profile, true);
     } catch (error) {

@@ -358,6 +358,51 @@ export interface FeatureUsage {
   remainingUses?: number;
 }
 
+/**
+ * Subscription payment/invoice info
+ */
+export interface SubscriptionPaymentInfo {
+  id: string;
+  subscriptionId: string;
+  amount: number;
+  currency: string;
+  status: string; // PaymentStatus from Prisma
+  billingPeriodStart: Date;
+  billingPeriodEnd: Date;
+  dueDate: Date;
+  paidAt?: Date;
+  failedAt?: Date;
+  failureReason?: string;
+  paymentTransactionId?: string;
+  gatewayInvoiceId?: string;
+  createdAt: Date;
+}
+
+/**
+ * User subscription with payment details
+ */
+export interface UserSubscriptionWithPayments extends UserSubscriptionInfo {
+  nextBillingDate?: Date;
+  nextBillingAmount?: number;
+  canRetryPayment?: boolean;
+  lastPayment?: SubscriptionPaymentInfo;
+  upcomingPayment?: SubscriptionPaymentInfo & { gatewayInvoiceUrl?: string };
+  failedPayment?: SubscriptionPaymentInfo;
+}
+
+/**
+ * Subscription payment summary
+ */
+export interface SubscriptionPaymentSummary {
+  totalPayments: number;
+  totalAmount: number;
+  successfulPayments: number;
+  failedPayments: number;
+  pendingPayments: number;
+  lastPaymentDate?: Date;
+  nextPaymentDate?: Date;
+}
+
 // ============================================================================
 // TYPE GUARDS
 // ============================================================================

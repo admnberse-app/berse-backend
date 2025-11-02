@@ -24,6 +24,7 @@ import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
 import { homeSurfRoutes } from '../../modules/homesurf';
 import { berseGuideRoutes } from '../../modules/berseguide';
 import servicesRoutes from '../../modules/services/services.routes';
+import subscriptionRoutes from '../subscription.routes';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { param } from 'express-validator';
 import { handleValidationErrors } from '../../middleware/validation';
@@ -215,6 +216,12 @@ router.use('/berseguide', berseGuideRoutes);
  */
 router.use('/services', servicesRoutes);
 
+/**
+ * Subscription routes
+ * Base path: /v2/subscriptions
+ */
+router.use('/subscriptions', subscriptionRoutes);
+
 // ============================================================================
 // API HEALTH & DOCUMENTATION
 // ============================================================================
@@ -279,6 +286,8 @@ router.get('/health', (req, res) => {
       appConstants: '/v2/app-constants',
       homesurf: '/v2/homesurf',
       berseguide: '/v2/berseguide',
+      services: '/v2/services',
+      subscriptions: '/v2/subscriptions',
     },
   });
 });
@@ -605,6 +614,23 @@ router.get('/docs', (req, res) => {
         'GET /v2/berseguide/reviews/user/:userId': 'Get public reviews for user',
         'GET /v2/berseguide/search': 'Search BerseGuide profiles',
         'GET /v2/berseguide/dashboard': 'Get BerseGuide dashboard (auth required)',
+      },
+      subscriptions: {
+        'GET /v2/subscriptions/tiers': 'Get all subscription tiers',
+        'GET /v2/subscriptions/tiers/:tierCode': 'Get tier details',
+        'GET /v2/subscriptions/my': 'Get my subscription with payment details (auth required)',
+        'POST /v2/subscriptions/subscribe': 'Create new subscription (auth required)',
+        'PUT /v2/subscriptions/upgrade': 'Upgrade subscription tier (auth required)',
+        'POST /v2/subscriptions/downgrade': 'Downgrade subscription tier with warnings (auth required)',
+        'POST /v2/subscriptions/cancel': 'Cancel subscription (auth required)',
+        'POST /v2/subscriptions/check-feature': 'Check feature access (auth required)',
+        'GET /v2/subscriptions/access-summary': 'Get access summary (auth required)',
+        'GET /v2/subscriptions/usage/:featureCode': 'Get feature usage (auth required)',
+        'GET /v2/subscriptions/stats': 'Get subscription stats (auth required)',
+        'GET /v2/subscriptions/payments': 'Get payment history (auth required)',
+        'GET /v2/subscriptions/invoices': 'Get invoices/billing history (auth required)',
+        'POST /v2/subscriptions/retry-payment': 'Retry failed/pending payment (auth required)',
+        'POST /v2/subscriptions/calculate-upgrade': 'Calculate upgrade cost (auth required)',
       },
     },
     authentication: {
