@@ -37,8 +37,6 @@ export interface PointAction {
   // Events
   ATTEND_EVENT: number;
   HOST_EVENT: number;
-  RSVP_EVENT: number;
-  CANCEL_RSVP: number;
   JOIN_TRIP: number;
   CAFE_MEETUP: number;
   ILM_EVENT: number;
@@ -46,103 +44,103 @@ export interface PointAction {
   DONATE: number;
   
   // Connections & Social
-  FIRST_CONNECTION: number;
-  MAKE_CONNECTION: number;
-  RECEIVE_CONNECTION: number;
-  VOUCH_SOMEONE: number;
   RECEIVE_VOUCH: number;
   GIVE_TRUST_MOMENT: number;
   RECEIVE_POSITIVE_TRUST_MOMENT: number;
   
   // Community
   JOIN_COMMUNITY: number;
-  COMMUNITY_PARTICIPATION: number;
-  BECOME_MODERATOR: number;
+  POST_IN_COMMUNITY: number;
+  REACT_TO_COMMUNITY_POST: number;
   
   // Referrals
   REFERRAL: number;
-  REFEREE_SIGNUP: number;
-  
-  // Card Game
-  SUBMIT_CARD_GAME_FEEDBACK: number;
-  RECEIVE_HELPFUL_VOTE: number;
-  REPLY_TO_FEEDBACK: number;
   
   // Marketplace
-  FIRST_LISTING: number;
-  COMPLETE_TRANSACTION: number;
+  CREATE_LISTING: number;
+  PURCHASE_ITEM: number;
+  SELL_ITEM: number;
+  LEAVE_REVIEW: number;
   RECEIVE_POSITIVE_REVIEW: number;
   
-  // Achievements
-  EARN_BADGE: number;
-  REACH_TRUST_MILESTONE: number;
-  MAINTAIN_STREAK_WEEK: number;
-  MAINTAIN_STREAK_MONTH: number;
+  // BerseGuide
+  BECOME_GUIDE: number;
+  COMPLETE_GUIDE_SESSION: number;
+  RECEIVE_GUIDE_REVIEW: number;
+  BOOK_GUIDE_SESSION: number;
   
-  // Penalties
-  RECEIVE_NEGATIVE_TRUST_MOMENT: number;
-  REPORT_VALIDATED: number;
-  SPAM_DETECTED: number;
+  // HomeSurf
+  LIST_HOME: number;
+  HOST_TRAVELER: number;
+  STAY_AS_TRAVELER: number;
+  LEAVE_HOST_REVIEW: number;
+  RECEIVE_HOST_REVIEW: number;
+  
+  // Card Game (Topic Feedback)
+  SUBMIT_TOPIC_FEEDBACK: number;
+  RECEIVE_HELPFUL_VOTE: number;
+  REPLY_TO_FEEDBACK: number;
 }
 
 export const POINT_VALUES: PointAction = {
   // Registration & Setup
-  REGISTER: 30,
-  COMPLETE_PROFILE_BASIC: 50,
-  COMPLETE_PROFILE_FULL: 100,
-  VERIFY_EMAIL: 20,
-  VERIFY_PHONE: 20,
-  UPLOAD_PROFILE_PHOTO: 10,
+  REGISTER: 5,
+  COMPLETE_PROFILE_BASIC: 2,
+  COMPLETE_PROFILE_FULL: 2,
+  VERIFY_EMAIL: 2,
+  VERIFY_PHONE: 2,
+  UPLOAD_PROFILE_PHOTO: 2,
   
   // Events
   ATTEND_EVENT: 10,
   HOST_EVENT: 15,
-  RSVP_EVENT: 2,
-  CANCEL_RSVP: -2,
-  JOIN_TRIP: 5,
-  CAFE_MEETUP: 2,
-  ILM_EVENT: 3,
-  VOLUNTEER: 6,
-  DONATE: 4,
+  JOIN_TRIP: 12,
+  CAFE_MEETUP: 8,
+  ILM_EVENT: 10,
+  VOLUNTEER: 12,
+  DONATE: 5,
   
   // Connections & Social
-  FIRST_CONNECTION: 15,
-  MAKE_CONNECTION: 5,
-  RECEIVE_CONNECTION: 3,
-  VOUCH_SOMEONE: 10,
-  RECEIVE_VOUCH: 20,
-  GIVE_TRUST_MOMENT: 5,
-  RECEIVE_POSITIVE_TRUST_MOMENT: 10,
+  RECEIVE_VOUCH: 8,
+  GIVE_TRUST_MOMENT: 2,
+  RECEIVE_POSITIVE_TRUST_MOMENT: 1,
   
   // Community
-  JOIN_COMMUNITY: 5,
-  COMMUNITY_PARTICIPATION: 3,
-  BECOME_MODERATOR: 50,
+  JOIN_COMMUNITY: 3,
+  POST_IN_COMMUNITY: 2,
+  REACT_TO_COMMUNITY_POST: 1,
   
   // Referrals
-  REFERRAL: 10,
-  REFEREE_SIGNUP: 5,
-  
-  // Card Game
-  SUBMIT_CARD_GAME_FEEDBACK: 5,
-  RECEIVE_HELPFUL_VOTE: 2,
-  REPLY_TO_FEEDBACK: 3,
+  REFERRAL: 3,
   
   // Marketplace
-  FIRST_LISTING: 10,
-  COMPLETE_TRANSACTION: 5,
-  RECEIVE_POSITIVE_REVIEW: 10,
+  CREATE_LISTING: 5,
+  PURCHASE_ITEM: 3,
+  SELL_ITEM: 8,
+  LEAVE_REVIEW: 2,
+  RECEIVE_POSITIVE_REVIEW: 5,
   
-  // Achievements
-  EARN_BADGE: 25,
-  REACH_TRUST_MILESTONE: 30,
-  MAINTAIN_STREAK_WEEK: 10,
-  MAINTAIN_STREAK_MONTH: 50,
+  // BerseGuide
+  BECOME_GUIDE: 20,
+  COMPLETE_GUIDE_SESSION: 15,
+  RECEIVE_GUIDE_REVIEW: 3,
+  BOOK_GUIDE_SESSION: 5,
   
-  // Penalties (negative points)
-  RECEIVE_NEGATIVE_TRUST_MOMENT: -10,
-  REPORT_VALIDATED: -20,
-  SPAM_DETECTED: -50,
+  // HomeSurf
+  LIST_HOME: 10,
+  HOST_TRAVELER: 20,
+  STAY_AS_TRAVELER: 15,
+  LEAVE_HOST_REVIEW: 3,
+  RECEIVE_HOST_REVIEW: 5,
+  
+  // Card Game (Topic Feedback)
+  SUBMIT_TOPIC_FEEDBACK: 3,
+  RECEIVE_HELPFUL_VOTE: 1,
+  REPLY_TO_FEEDBACK: 2,
+  
+  // NOTE: Penalties removed - they affect TRUST SCORE, not points
+  // Points are only positive (for rewards/redemption)
+  // Trust score penalties handled in TrustScoreService
 };
 
 export interface ApiResponse<T = any> {

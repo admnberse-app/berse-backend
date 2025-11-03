@@ -265,6 +265,21 @@ router.get('/points', authenticateToken, GamificationController.getMyPoints);
 
 /**
  * @swagger
+ * /api/v2/gamification/points/stats:
+ *   get:
+ *     tags: [Gamification - Points]
+ *     summary: Get detailed points statistics and breakdown
+ *     description: Get comprehensive points stats including lifetime earned/spent, top actions, monthly breakdown, and category analysis
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Detailed points stats retrieved successfully
+ */
+router.get('/points/stats', authenticateToken, GamificationController.getDetailedPointsStats);
+
+/**
+ * @swagger
  * /api/v2/gamification/points/history:
  *   get:
  *     tags: [Gamification - Points]

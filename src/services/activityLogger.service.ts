@@ -168,6 +168,39 @@ interface SessionOptions {
  */
 export class ActivityLoggerService {
   /**
+   * Determine default visibility based on activity type
+   */
+  private static getDefaultVisibility(activityType: ActivityType): ActivityVisibility {
+    // Public activities - shown to everyone
+    const publicActivities = [
+      ActivityType.EVENT_CREATE,
+      ActivityType.EVENT_RSVP,
+      ActivityType.CONNECTION_REQUEST_ACCEPT,
+      ActivityType.PROFILE_UPDATE,
+      ActivityType.PROFILE_PICTURE_UPDATE,
+      ActivityType.LISTING_CREATE,
+      ActivityType.POINTS_EARN,
+    ];
+
+    // Friends-only activities - shown to connections
+    const friendsActivities = [
+      ActivityType.EVENT_TICKET_PURCHASE,
+      ActivityType.EVENT_CHECKIN,
+      ActivityType.CONNECTION_REQUEST_SEND,
+      ActivityType.ORDER_CREATE,
+      ActivityType.ORDER_COMPLETE,
+    ];
+
+    if (publicActivities.includes(activityType)) {
+      return ActivityVisibility.PUBLIC;
+    } else if (friendsActivities.includes(activityType)) {
+      return ActivityVisibility.FRIENDS;
+    } else {
+      return ActivityVisibility.PRIVATE;
+    }
+  }
+
+  /**
    * Log user activity
    */
   static async logActivity(options: ActivityLogOptions): Promise<void> {
@@ -179,7 +212,7 @@ export class ActivityLoggerService {
           activityType: options.activityType,
           entityType: options.entityType || 'unknown',
           entityId: options.entityId || '',
-          visibility: options.visibility || ActivityVisibility.PRIVATE,
+          visibility: options.visibility || this.getDefaultVisibility(options.activityType),
           createdAt: new Date(),
         },
       });
@@ -686,7 +719,7 @@ export class ActivityLoggerService {
         amount,
         ...metadata,
       },
-      visibility: ActivityVisibility.PRIVATE,
+      // Will use smart default: FRIENDS
     });
   }
 
@@ -705,7 +738,7 @@ export class ActivityLoggerService {
         transactionId,
         amount,
       },
-      visibility: ActivityVisibility.PRIVATE,
+      // Will use smart default: PRIVATE
     });
   }
 
@@ -720,7 +753,7 @@ export class ActivityLoggerService {
       entityType: 'marketplace_order',
       entityId: orderId,
       metadata: { trackingNumber },
-      visibility: ActivityVisibility.PRIVATE,
+      // Will use smart default: PRIVATE
     });
   }
 
@@ -735,7 +768,7 @@ export class ActivityLoggerService {
       entityType: 'marketplace_order',
       entityId: orderId,
       metadata: { reason },
-      visibility: ActivityVisibility.PRIVATE,
+      // Will use smart default: PRIVATE
     });
   }
 
@@ -758,7 +791,7 @@ export class ActivityLoggerService {
         quantity,
         amount,
       },
-      visibility: ActivityVisibility.FRIENDS,
+      // Will use smart default: FRIENDS
     });
   }
 
@@ -773,7 +806,7 @@ export class ActivityLoggerService {
       entityType: 'event',
       entityId: eventId,
       metadata: { ticketId },
-      visibility: ActivityVisibility.FRIENDS,
+      // Will use smart default: FRIENDS
     });
   }
 
@@ -796,7 +829,7 @@ export class ActivityLoggerService {
         sourceType,
         sourceId,
       },
-      visibility: ActivityVisibility.PRIVATE,
+      // Will use smart default: PRIVATE
     });
   }
 
@@ -815,7 +848,7 @@ export class ActivityLoggerService {
         orderId,
         amount,
       },
-      visibility: ActivityVisibility.PRIVATE,
+      // Will use smart default: PRIVATE
     });
   }
 }

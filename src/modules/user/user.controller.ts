@@ -584,8 +584,9 @@ export class UserController {
       const privacyConditions: any[] = [];
       
       if (currentUserId && connectedUserIds.length > 0) {
-        // Show public profiles OR friends-only profiles if connected
+        // Show public profiles OR friends-only profiles if connected OR users without privacy settings (default public)
         privacyConditions.push({ privacy: { profileVisibility: 'public' } });
+        privacyConditions.push({ privacy: null }); // Users without privacy settings are treated as public
         privacyConditions.push({
           AND: [
             { privacy: { profileVisibility: 'friends' } },
@@ -593,8 +594,9 @@ export class UserController {
           ],
         });
       } else {
-        // Only show public profiles if not logged in or no connections
+        // Only show public profiles or users without privacy settings if not logged in or no connections
         privacyConditions.push({ privacy: { profileVisibility: 'public' } });
+        privacyConditions.push({ privacy: null }); // Users without privacy settings are treated as public
       }
 
       // Text search - respects privacy settings for username/email/phone searches
@@ -604,32 +606,47 @@ export class UserController {
           { profile: { bio: { contains: query, mode: 'insensitive' } } },
         ];
 
-        // Add username search only if user allows it
+        // Add username search only if user allows it OR has no privacy settings (default searchable)
         searchConditions.push({
           AND: [
             { username: { contains: query, mode: 'insensitive' } },
-            { privacy: { searchableByUsername: true } },
+            {
+              OR: [
+                { privacy: { searchableByUsername: true } },
+                { privacy: null }, // No privacy settings = searchable by default
+              ],
+            },
           ],
         });
 
-        // Add email search if query looks like email AND user allows email search
+        // Add email search if query looks like email AND user allows email search OR has no privacy settings
         if (query.includes('@')) {
           searchConditions.push({
             AND: [
               { email: { equals: query, mode: 'insensitive' } },
-              { privacy: { searchableByEmail: true } },
+              {
+                OR: [
+                  { privacy: { searchableByEmail: true } },
+                  { privacy: null }, // No privacy settings = searchable by default
+                ],
+              },
             ],
           });
         }
 
-        // Add phone search if query looks like phone AND user allows phone search
+        // Add phone search if query looks like phone AND user allows phone search OR has no privacy settings
         // Phone patterns: starts with + or contains only digits
         if (/^[\d+\s()-]+$/.test(query)) {
           const cleanPhone = query.replace(/[\s()-]/g, ''); // Remove formatting
           searchConditions.push({
             AND: [
               { phone: { contains: cleanPhone } },
-              { privacy: { searchableByPhone: true } },
+              {
+                OR: [
+                  { privacy: { searchableByPhone: true } },
+                  { privacy: null }, // No privacy settings = searchable by default
+                ],
+              },
             ],
           });
         }

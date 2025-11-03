@@ -973,6 +973,17 @@ export class CommunityService {
         },
       });
 
+      // Emit point event for joining community
+      try {
+        const { pointsEvents } = await import('../../services/points-events.service');
+        pointsEvents.trigger('community.joined', userId, {
+          communityName: community.name
+        });
+        logger.info(`Point event emitted for joining community: ${communityId}`);
+      } catch (error) {
+        logger.error('Failed to emit point event for joining community:', error);
+      }
+
       logger.info('Community join request sent', { communityId, userId });
 
       return this.formatMemberResponse(member);

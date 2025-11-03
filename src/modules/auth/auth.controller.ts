@@ -250,13 +250,19 @@ export class AuthController {
         }
       }
 
-      // Award registration points
-      await PointsService.awardPoints(user.id, 'REGISTER');
+      // Emit registration point event
+      const { pointsEvents } = await import('../../services/points-events.service');
+      pointsEvents.trigger('user.registered', user.id);
 
       // Award referral points and create referral record if applicable
       if (referredBy && referralCode) {
-        // Award points to referrer
-        await PointsService.awardPoints(referredBy.id, 'REFERRAL', `Referred ${user.fullName}`);
+        // Emit referral point events
+        pointsEvents.trigger('referral.successful', referredBy.id, {
+          refereeName: user.fullName
+        });
+        pointsEvents.trigger('referral.signed-up', user.id, {
+          referrerName: referredBy.fullName
+        });
         
         // Create referral record to track the relationship
         await prisma.referral.create({
@@ -507,6 +513,10 @@ export class AuthController {
         });
         throw new AppError('Invalid credentials', 401);
       }
+
+      // Ensure all required user records exist (security, privacy, profile, location, settings, notifications)
+      const { ensureUserRecords } = await import('../../utils/ensureUserRecords');
+      await ensureUserRecords(user.id);
 
       // Auto-reactivate deactivated accounts on successful login
       if (user.status === 'DEACTIVATED') {

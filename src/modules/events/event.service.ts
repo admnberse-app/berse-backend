@@ -1142,6 +1142,17 @@ export class EventService {
         },
       });
 
+      // Emit point event for RSVP
+      try {
+        const { pointsEvents } = await import('../../services/points-events.service');
+        pointsEvents.trigger('event.rsvp.created', userId, {
+          eventTitle: participant.events.title
+        });
+        logger.info(`Point event emitted for RSVP: ${eventId}`);
+      } catch (error) {
+        logger.error('Failed to emit point event for RSVP:', error);
+      }
+
       // Send registration confirmation to user
       NotificationService.notifyEventRegistrationConfirmed(
         userId,
@@ -1779,6 +1790,19 @@ export class EventService {
       } catch (error) {
         // Non-critical error - log but don't fail the check-in
         logger.error('Failed to trigger trust score update after event check-in:', error);
+      }
+
+      // Emit point event for event attendance
+      try {
+        const { pointsEvents } = await import('../../services/points-events.service');
+        
+        pointsEvents.trigger('event.attended', targetUserId, {
+          eventTitle: event.title,
+          eventType: event.type
+        });
+        logger.info(`Awarded points for attending event: ${eventId}`);
+      } catch (error) {
+        logger.error('Failed to award points for event attendance:', error);
       }
 
       // Log check-in activity

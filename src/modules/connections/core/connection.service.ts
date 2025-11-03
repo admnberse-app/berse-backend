@@ -23,6 +23,7 @@ import {
 import { ConnectionStatus, Prisma } from '@prisma/client';
 import logger from '../../../utils/logger';
 import { NotificationService } from '../../../services/notification.service';
+import { pointsEvents } from '../../../services/points-events.service';
 
 export class ConnectionService {
   
@@ -285,6 +286,57 @@ export class ConnectionService {
 
         // Calculate mutual connections
         await this.calculateMutualConnections(data.connectionId);
+        
+        // Award points for connection
+        try {
+          const { PointsService } = await import('../../../services/points.service');
+          
+          // Check if this is first connection for each user
+          const initiatorConnectionCount = await prisma.userConnection.count({
+            where: {
+              OR: [
+                { initiatorId: connection.initiatorId },
+                { receiverId: connection.initiatorId },
+              ],
+              status: ConnectionStatus.ACCEPTED,
+            },
+          });
+
+          const receiverConnectionCount = await prisma.userConnection.count({
+            where: {
+              OR: [
+                { initiatorId: connection.receiverId },
+                { receiverId: connection.receiverId },
+              ],
+              status: ConnectionStatus.ACCEPTED,
+            },
+          });
+
+          // Emit point events for connection
+          if (initiatorConnectionCount === 1) {
+            pointsEvents.trigger('connection.first.made', connection.initiatorId, {
+              partnerName: updatedConnection.users_user_connections_receiverIdTousers?.fullName || 'someone'
+            });
+          } else {
+            pointsEvents.trigger('connection.made', connection.initiatorId, {
+              partnerName: updatedConnection.users_user_connections_receiverIdTousers?.fullName || 'someone'
+            });
+          }
+
+          if (receiverConnectionCount === 1) {
+            pointsEvents.trigger('connection.first.made', connection.receiverId, {
+              partnerName: updatedConnection.users_user_connections_initiatorIdTousers?.fullName || 'someone'
+            });
+          } else {
+            pointsEvents.trigger('connection.received', connection.receiverId, {
+              partnerName: updatedConnection.users_user_connections_initiatorIdTousers?.fullName || 'someone'
+            });
+          }
+
+          logger.info(`Point events emitted for connection: ${data.connectionId}`);
+        } catch (error) {
+          logger.error('Failed to award points for connection:', error);
+        }
         
         // Send notification to initiator
         const accepterName = updatedConnection.users_user_connections_receiverIdTousers?.fullName || 
@@ -1379,13 +1431,23 @@ export class ConnectionService {
 
       // Build activity filter
       const activityWhere: any = {
-        visibility: 'public',
         userId: { not: userId }, // Exclude own activities
       };
 
-      // Apply user filter based on scope
-      if (targetUserIds !== undefined) {
+      // Set visibility filter based on scope
+      if (scope === 'connections') {
+        // Show public AND friends activities from connections
+        activityWhere.visibility = { in: ['public', 'friends'] };
         activityWhere.userId = { in: targetUserIds, not: userId };
+      } else if (scope === 'community' || scope === 'nearby') {
+        // Show public AND friends activities from community/nearby users
+        activityWhere.visibility = { in: ['public', 'friends'] };
+        if (targetUserIds !== undefined) {
+          activityWhere.userId = { in: targetUserIds, not: userId };
+        }
+      } else {
+        // Public scope - only show public activities
+        activityWhere.visibility = 'public';
       }
 
       if (activityTypes && activityTypes.length > 0) {
@@ -1519,6 +1581,13 @@ export class ConnectionService {
             logger.error(`Error fetching entity details for ${activity.entityType}:`, error);
           }
 
+          // Generate user-friendly message and metadata
+          const processedActivity = this.processActivityForUI(
+            activity.activityType,
+            activity.users,
+            entityDetails
+          );
+
           return {
             id: activity.id,
             activityType: activity.activityType,
@@ -1532,6 +1601,13 @@ export class ConnectionService {
               username: activity.users.username,
               profilePicture: activity.users.profile?.profilePicture,
             },
+            // User-friendly fields for frontend
+            message: processedActivity.message,
+            actionText: processedActivity.actionText,
+            icon: processedActivity.icon,
+            color: processedActivity.color,
+            deepLink: processedActivity.deepLink,
+            priority: processedActivity.priority,
           };
         })
       );
@@ -1545,6 +1621,163 @@ export class ConnectionService {
       logger.error('Error fetching recent activities:', error);
       throw new AppError('Failed to fetch recent activities', 500);
     }
+  }
+
+  /**
+   * Process activity data for frontend UI display
+   */
+  private static processActivityForUI(
+    activityType: string,
+    user: any,
+    entityDetails: any
+  ): {
+    message: string;
+    actionText: string;
+    icon: string;
+    color: string;
+    deepLink: string | null;
+    priority: 'high' | 'medium' | 'low';
+  } {
+    const userName = user.fullName;
+
+    // Activity templates with icon, color, and priority
+    const activityTemplates: Record<string, any> = {
+      // Events
+      EVENT_CREATE: {
+        message: `${userName} created an event${entityDetails?.title ? ': ' + entityDetails.title : ''}`,
+        actionText: 'created an event',
+        icon: '📅',
+        color: '#4CAF50',
+        deepLink: entityDetails?.id ? `/events/${entityDetails.id}` : null,
+        priority: 'high',
+      },
+      EVENT_RSVP: {
+        message: `${userName} is attending${entityDetails?.title ? ': ' + entityDetails.title : ' an event'}`,
+        actionText: 'is attending',
+        icon: '✓',
+        color: '#2196F3',
+        deepLink: entityDetails?.id ? `/events/${entityDetails.id}` : null,
+        priority: 'medium',
+      },
+      EVENT_CHECKIN: {
+        message: `${userName} checked in at${entityDetails?.title ? ': ' + entityDetails.title : ' an event'}`,
+        actionText: 'checked in',
+        icon: '📍',
+        color: '#FF9800',
+        deepLink: entityDetails?.id ? `/events/${entityDetails.id}` : null,
+        priority: 'medium',
+      },
+      EVENT_TICKET_PURCHASE: {
+        message: `${userName} purchased tickets${entityDetails?.title ? ' for ' + entityDetails.title : ''}`,
+        actionText: 'purchased tickets',
+        icon: '🎫',
+        color: '#9C27B0',
+        deepLink: entityDetails?.id ? `/events/${entityDetails.id}` : null,
+        priority: 'medium',
+      },
+
+      // Profile & Social
+      PROFILE_UPDATE: {
+        message: `${userName} updated their profile`,
+        actionText: 'updated profile',
+        icon: '👤',
+        color: '#607D8B',
+        deepLink: `/profile/${user.id}`,
+        priority: 'low',
+      },
+      PROFILE_PICTURE_UPDATE: {
+        message: `${userName} changed their profile picture`,
+        actionText: 'updated photo',
+        icon: '📸',
+        color: '#E91E63',
+        deepLink: `/profile/${user.id}`,
+        priority: 'low',
+      },
+      CONNECTION_REQUEST_ACCEPT: {
+        message: `${userName} made a new connection`,
+        actionText: 'new connection',
+        icon: '🤝',
+        color: '#00BCD4',
+        deepLink: `/profile/${user.id}`,
+        priority: 'medium',
+      },
+      CONNECTION_REQUEST_SEND: {
+        message: `${userName} sent a connection request`,
+        actionText: 'connection request',
+        icon: '👋',
+        color: '#03A9F4',
+        deepLink: `/profile/${user.id}`,
+        priority: 'low',
+      },
+
+      // Marketplace
+      LISTING_CREATE: {
+        message: `${userName} listed${entityDetails?.title ? ': ' + entityDetails.title : ' an item'}`,
+        actionText: 'listed item',
+        icon: '🛍️',
+        color: '#FF5722',
+        deepLink: entityDetails?.id ? `/marketplace/${entityDetails.id}` : null,
+        priority: 'high',
+      },
+      ORDER_CREATE: {
+        message: `${userName} made a purchase`,
+        actionText: 'purchased',
+        icon: '💰',
+        color: '#4CAF50',
+        deepLink: null,
+        priority: 'low',
+      },
+      ORDER_COMPLETE: {
+        message: `${userName} completed a transaction`,
+        actionText: 'sold item',
+        icon: '✅',
+        color: '#8BC34A',
+        deepLink: null,
+        priority: 'low',
+      },
+
+      // Community
+      JOIN_COMMUNITY: {
+        message: `${userName} joined${entityDetails?.name ? ': ' + entityDetails.name : ' a community'}`,
+        actionText: 'joined community',
+        icon: '🏘️',
+        color: '#9C27B0',
+        deepLink: entityDetails?.id ? `/communities/${entityDetails.id}` : null,
+        priority: 'medium',
+      },
+
+      // Points & Achievements
+      POINTS_EARN: {
+        message: `${userName} earned points`,
+        actionText: 'earned points',
+        icon: '⭐',
+        color: '#FFC107',
+        deepLink: `/profile/${user.id}`,
+        priority: 'low',
+      },
+
+      // Travel
+      JOIN_TRIP: {
+        message: `${userName} joined${entityDetails?.title ? ': ' + entityDetails.title : ' a trip'}`,
+        actionText: 'joined trip',
+        icon: '✈️',
+        color: '#00BCD4',
+        deepLink: entityDetails?.id ? `/trips/${entityDetails.id}` : null,
+        priority: 'high',
+      },
+    };
+
+    // Get template or use default
+    const template = activityTemplates[activityType] || {
+      message: `${userName} performed an action`,
+      actionText: activityType.toLowerCase().replace(/_/g, ' '),
+      icon: '•',
+      color: '#9E9E9E',
+      deepLink: null,
+      priority: 'low',
+    };
+
+    return template;
   }
 
   /**

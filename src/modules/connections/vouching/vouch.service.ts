@@ -273,6 +273,7 @@ export class VouchService {
 
       let updatedVouch;
       const voucherName = vouch.users_vouches_voucherIdTousers.fullName;
+      const voucheeName = vouch.users_vouches_voucheeIdTousers.fullName;
 
       if (action === 'approve') {
         // 3. Approve vouch
@@ -335,6 +336,25 @@ export class VouchService {
           where: { id: vouch.voucheeId },
           select: { trustScore: true },
         }).then(u => u?.trustScore || 0);
+
+        // Emit point events for vouching
+        try {
+          const { pointsEvents } = await import('../../../services/points-events.service');
+          
+          // Emit event for voucher (person giving the vouch)
+          pointsEvents.trigger('vouch.given', vouch.voucherId, {
+            voucheeName
+          });
+
+          // Emit event for vouchee (person receiving the vouch)
+          pointsEvents.trigger('vouch.received', vouch.voucheeId, {
+            voucherName
+          });
+
+          logger.info(`Point events emitted for vouch: ${vouchId}`);
+        } catch (error) {
+          logger.error('Failed to emit point events for vouch:', error);
+        }
 
         await TrustScoreUserService.recordScoreChange(
           vouch.voucheeId,
