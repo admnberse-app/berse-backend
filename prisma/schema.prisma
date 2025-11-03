@@ -1732,18 +1732,22 @@ model PlatformFeeConfig {
 }
 
 model PointHistory {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   points      Int
   action      String
   description String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime? // When points expire
+  expired     Boolean   @default(false) // Whether points have expired
+  expiredAt   DateTime? // When points actually expired
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([action])
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([userId])
+  @@index([expiresAt, expired])
   @@map("point_histories")
 }
 
@@ -2540,6 +2544,8 @@ model User {
   fullName                    String
   role                        UserRole                 @default(GENERAL_USER)
   totalPoints                 Int                      @default(0)
+  pointsExpired               Int                      @default(0) // Lifetime expired points
+  pointsSpent                 Int                      @default(0) // Lifetime spent/redeemed points
   createdAt                   DateTime                 @default(now())
   updatedAt                   DateTime                 @updatedAt
   referredById                String?

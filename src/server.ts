@@ -8,6 +8,7 @@ import os from 'os';
 // import { initializeProfileReminderJob } from './jobs/profileCompletionReminders';
 import { MembershipService } from './services/membership.service';
 import { SchedulerService } from './services/scheduler.service';
+import { PointExpiryCron } from './cron/expire-points.cron';
 
 // Enable cluster mode for production
 const setupCluster = () => {
@@ -81,6 +82,14 @@ const startServer = async () => {
           logger.info('✅ Scheduler service initialized');
         } catch (error) {
           logger.error('Failed to initialize scheduler service:', error);
+        }
+
+        // Initialize point expiry cron job
+        try {
+          PointExpiryCron.start();
+          logger.info('✅ Point expiry cron job initialized');
+        } catch (error) {
+          logger.error('Failed to initialize point expiry cron:', error);
         }
       }
       

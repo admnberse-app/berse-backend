@@ -250,21 +250,14 @@ export class AuthController {
         }
       }
 
-      // Emit registration point event
+      // Emit registration point event (will only award after email verification)
       const { pointsEvents } = await import('../../services/points-events.service');
-      pointsEvents.trigger('user.registered', user.id);
+      // Note: Registration points will be awarded after email verification
 
-      // Award referral points and create referral record if applicable
+      // Create referral record if applicable (pending verification)
       if (referredBy && referralCode) {
-        // Emit referral point events
-        pointsEvents.trigger('referral.successful', referredBy.id, {
-          refereeName: user.fullName
-        });
-        pointsEvents.trigger('referral.signed-up', user.id, {
-          referrerName: referredBy.fullName
-        });
-        
         // Create referral record to track the relationship
+        // Points will be awarded ONLY after email verification
         await prisma.referral.create({
           data: {
             id: crypto.randomUUID(),
@@ -275,9 +268,9 @@ export class AuthController {
             referralSource: (req.query.utm_source as string) || 'direct',
             clickedAt: new Date(), // User clicked/entered the code
             signedUpAt: new Date(), // User just signed up
-            activatedAt: new Date(), // Immediately activated upon signup
-            isActivated: true,
-            referrerRewardGiven: true, // Points already awarded
+            activatedAt: null, // Will be set after email verification
+            isActivated: false, // Will be true after email verification
+            referrerRewardGiven: false, // Will be true after email verification
             refereeRewardGiven: false, // Can be used for future rewards
             ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
             userAgent: req.get('user-agent') || 'unknown',
@@ -287,37 +280,30 @@ export class AuthController {
               utmSource: req.query.utm_source,
               utmMedium: req.query.utm_medium,
               utmCampaign: req.query.utm_campaign,
+              pendingVerification: true,
             },
           },
         });
         
-        // Update referral stats for referrer
+        // Update referral stats for referrer (only signups, not activated yet)
         await prisma.referralStat.upsert({
           where: { userId: referredBy.id },
           create: {
             userId: referredBy.id,
             totalReferrals: 1,
             totalSignups: 1,
-            totalActivated: 1,
+            totalActivated: 0, // Will be incremented after email verification
             lastReferralAt: new Date(),
           },
           update: {
             totalReferrals: { increment: 1 },
             totalSignups: { increment: 1 },
-            totalActivated: { increment: 1 },
+            // Don't increment totalActivated yet - waiting for email verification
             lastReferralAt: new Date(),
           },
         });
 
-        // Notify referrer that their code was used
-        await NotificationService.notifyReferralUsed(
-          referredBy.id,
-          user.fullName,
-          user.id,
-          referralCode
-        );
-
-        logger.info('Referral recorded', {
+        logger.info('Referral recorded (pending email verification)', {
           referrerId: referredBy.id,
           refereeId: user.id,
           referralCode,
@@ -1773,6 +1759,73 @@ export class AuthController {
           exploreUrl: `${process.env.APP_URL}/explore`,
         }
       );
+
+      // Award registration points now that email is verified
+      const { pointsEvents } = await import('../../services/points-events.service');
+      pointsEvents.trigger('user.registered', user.id);
+
+      // Check if user was referred and activate referral
+      const pendingReferral = await prisma.referral.findFirst({
+        where: {
+          refereeId: user.id,
+          isActivated: false,
+        },
+        include: {
+          users_referrals_referrerIdTousers: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+        },
+      });
+
+      if (pendingReferral) {
+        // Activate the referral and award points
+        await prisma.referral.update({
+          where: { id: pendingReferral.id },
+          data: {
+            isActivated: true,
+            activatedAt: new Date(),
+            referrerRewardGiven: true,
+            metadata: {
+              ...((pendingReferral.metadata as any) || {}),
+              pendingVerification: false,
+              verifiedAt: new Date(),
+            },
+          },
+        });
+
+        // Award referral points to both users
+        pointsEvents.trigger('referral.successful', pendingReferral.referrerId, {
+          refereeName: user.fullName,
+        });
+        pointsEvents.trigger('referral.signed-up', user.id, {
+          referrerName: pendingReferral.users_referrals_referrerIdTousers.fullName,
+        });
+
+        // Update referral stats to mark as activated
+        await prisma.referralStat.update({
+          where: { userId: pendingReferral.referrerId },
+          data: {
+            totalActivated: { increment: 1 },
+          },
+        });
+
+        // Notify referrer that their referral is now activated
+        await NotificationService.notifyReferralUsed(
+          pendingReferral.referrerId,
+          user.fullName,
+          user.id,
+          pendingReferral.referralCode
+        );
+
+        logger.info('Referral activated and points awarded', {
+          referrerId: pendingReferral.referrerId,
+          refereeId: user.id,
+          referralCode: pendingReferral.referralCode,
+        });
+      }
 
       // Send email verified notification
       await NotificationService.notifyEmailVerified(user.id, user.fullName);

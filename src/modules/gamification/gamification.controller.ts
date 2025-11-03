@@ -121,10 +121,37 @@ export class GamificationController {
   static async getMyPoints(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user?.id!;
-      const points = await PointsService.getUserPoints(userId);
+      const [points, user, availablePoints, expiring30, expiring7, expiring1] = await Promise.all([
+        PointsService.getUserPoints(userId),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { totalPoints: true, pointsExpired: true, pointsSpent: true },
+        }),
+        PointsService.getAvailablePoints(userId),
+        PointsService.getExpiringPoints(userId, 30),
+        PointsService.getExpiringPoints(userId, 7),
+        PointsService.getExpiringPoints(userId, 1),
+      ]);
       
       sendSuccess(res, {
-        ...points,
+        totalPoints: user?.totalPoints || 0,
+        availablePoints,
+        pointsExpired: user?.pointsExpired || 0,
+        pointsSpent: user?.pointsSpent || 0,
+        expiringPoints: {
+          in30Days: expiring30.totalExpiring,
+          in7Days: expiring7.totalExpiring,
+          in1Day: expiring1.totalExpiring,
+          nextExpiryDate: expiring30.nextExpiryDate,
+          daysUntilNextExpiry: expiring30.daysUntilNextExpiry,
+        },
+        breakdown: {
+          active: availablePoints,
+          expiringSoon: expiring30.totalExpiring,
+          expired: user?.pointsExpired || 0,
+          spent: user?.pointsSpent || 0,
+        },
+        pointHistories: points?.pointHistories || [],
         howToEarnPoints: {
           description: "Earn points by participating in activities across the Berse platform. Points contribute to your Trust Score and unlock rewards.",
           categories: [

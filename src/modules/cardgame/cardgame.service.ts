@@ -1,5 +1,6 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
+import { getProfilePictureUrl } from '../../utils/image.helpers';
 import { 
   SubmitFeedbackRequest,
   UpdateFeedbackRequest,
@@ -1079,7 +1080,13 @@ export class CardGameService {
       isHelpful: feedback.isHelpful,
       createdAt: feedback.createdAt,
       updatedAt: feedback.updatedAt,
-      user: feedback.user,
+      user: feedback.user ? {
+        ...feedback.user,
+        profile: feedback.user.profile ? {
+          ...feedback.user.profile,
+          profilePicture: getProfilePictureUrl(feedback.user.profile.profilePicture),
+        } : null,
+      } : null,
       upvoteCount: feedback.upvoteCount || 0,
       hasUpvoted: currentUserId
         ? feedback.cardGameUpvotes?.some((u: any) => u.userId === currentUserId) || false
@@ -1105,7 +1112,13 @@ export class CardGameService {
         : false,
       createdAt: reply.createdAt,
       updatedAt: reply.updatedAt,
-      user: reply.user,
+      user: reply.user ? {
+        ...reply.user,
+        profile: reply.user.profile ? {
+          ...reply.user.profile,
+          profilePicture: getProfilePictureUrl(reply.user.profile.profilePicture),
+        } : null,
+      } : null,
       childReplies: reply.childReplies?.map((r: any) => this.formatReply(r, currentUserId)),
       _count: reply._count,
     };
@@ -2402,7 +2415,7 @@ export class CardGameService {
           rank: index + 1,
           userId: user.userId,
           fullName: userDetail?.fullName || 'Unknown',
-          profilePicture: userDetail?.profile?.profilePicture,
+          profilePicture: getProfilePictureUrl(userDetail?.profile?.profilePicture),
           score: user.score || user._count?.id || user._avg?.rating || 0,
           breakdown,
         };
@@ -2440,7 +2453,7 @@ export class CardGameService {
       rank: allUsers.length + 1,
       userId,
       fullName: userDetail?.fullName || '',
-      profilePicture: userDetail?.profile?.profilePicture || null,
+      profilePicture: getProfilePictureUrl(userDetail?.profile?.profilePicture),
       score: 0,
       breakdown,
     };

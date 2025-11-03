@@ -2,6 +2,7 @@ import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config';
+import { getProfilePictureUrl } from '../../utils/image.helpers';
 import { 
   CreateEventRequest, 
   UpdateEventRequest, 
@@ -330,14 +331,14 @@ export class EventService {
           id: p.user.id,
           fullName: p.user.fullName,
           username: p.user.username,
-          profilePicture: p.user.profile?.profilePicture,
+          profilePicture: getProfilePictureUrl(p.user.profile?.profilePicture),
           checkedInAt: p.checkedInAt!,
         })),
         participantsPreview: allParticipants.map(p => ({
           id: p.user.id,
           fullName: p.user.fullName,
           username: p.user.username,
-          profilePicture: p.user.profile?.profilePicture,
+          profilePicture: getProfilePictureUrl(p.user.profile?.profilePicture),
           createdAt: p.createdAt,
           status: p.status,
         })),
@@ -1943,7 +1944,7 @@ export class EventService {
           fullName: p.user.fullName,
           username: p.user.username,
           email: p.user.email,
-          profilePicture: p.user.profile?.profilePicture,
+          profilePicture: getProfilePictureUrl(p.user.profile?.profilePicture),
         },
         tickets: p.eventTickets,
       }));
