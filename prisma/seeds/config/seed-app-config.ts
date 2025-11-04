@@ -904,10 +904,9 @@ We believe in authentic relationships, not vanity metrics.`,
 - **30%** - Activity participation (events, engagement)
 
 ### Trust Levels:
-- **Starter** (0-39): New member
-- **Trusted** (40-69): Established member
-- **Scout** (70-89): Active contributor
-- **Leader** (90-100): Community champion
+- **Starter** (0-30): New member
+- **Trusted** (31-60): Established member
+- **Leader** (61-100): Community champion
 
 Increase your score by:
 - Getting vouched
@@ -1325,10 +1324,9 @@ Trust is the foundation of Berse. Learn how our unique trust system works.
 Your trust score is a number from 0-100 that represents your credibility in the community.
 
 ### Trust Levels
-- 🌱 **Starter** (0-39): New member
-- ✅ **Trusted** (40-69): Established member  
-- ⭐ **Scout** (70-89): Active contributor
-- 👑 **Leader** (90-100): Community champion
+- 🌱 **Starter** (0-30): New member
+- ✅ **Trusted** (31-60): Established member  
+- 👑 **Leader** (61-100): Community champion
 
 ## How Trust Score is Calculated
 

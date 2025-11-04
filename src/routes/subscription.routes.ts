@@ -14,13 +14,13 @@ const router = Router();
 // ============================================================================
 
 /**
- * GET /api/subscriptions/tiers
+ * GET /subscriptions/tiers
  * Get all available subscription tiers
  */
 router.get('/tiers', subscriptionController.getTiers);
 
 /**
- * GET /api/subscriptions/tiers/:tierCode
+ * GET /subscriptions/tiers/:tierCode
  * Get specific tier details
  */
 router.get('/tiers/:tierCode', subscriptionController.getTierDetails);
@@ -30,87 +30,95 @@ router.get('/tiers/:tierCode', subscriptionController.getTierDetails);
 // ============================================================================
 
 /**
- * GET /api/subscriptions/my
+ * GET /subscriptions/my
  * Get current user's subscription
  */
 router.get('/my', authenticate, subscriptionController.getMySubscription);
 
 /**
- * POST /api/subscriptions/subscribe
+ * POST /subscriptions/subscribe
  * Create new subscription
  * Body: { tierCode: string, billingCycle?: 'MONTHLY' | 'ANNUAL' }
  */
 router.post('/subscribe', authenticate, subscriptionController.subscribe);
 
 /**
- * PUT /api/subscriptions/upgrade
+ * PUT /subscriptions/upgrade
  * Upgrade to higher tier
  * Body: { tierCode: string }
  */
 router.put('/upgrade', authenticate, subscriptionController.upgrade);
 
 /**
- * POST /api/subscriptions/downgrade
+ * POST /subscriptions/downgrade
  * Downgrade to lower tier (with confirmation warning)
  * Body: { tierCode: string, confirmed?: boolean }
  */
 router.post('/downgrade', authenticate, subscriptionController.downgrade);
 
 /**
- * POST /api/subscriptions/cancel
+ * POST /subscriptions/cancel
  * Cancel subscription
  * Body: { immediately?: boolean }
  */
 router.post('/cancel', authenticate, subscriptionController.cancel);
 
 /**
- * POST /api/subscriptions/check-feature
+ * POST /subscriptions/check-feature
  * Check if user can access a feature
  * Body: { featureCode: string }
  */
 router.post('/check-feature', authenticate, subscriptionController.checkFeature);
 
 /**
- * GET /api/subscriptions/access-summary
+ * GET /subscriptions/features/availability
+ * Get all feature availability in one optimized call (RECOMMENDED)
+ * Returns subscription status, trust level, and all feature states
+ * Frontend should call this once and cache the result
+ */
+router.get('/features/availability', authenticate, subscriptionController.getFeatureAvailability);
+
+/**
+ * GET /subscriptions/access-summary
  * Get complete access summary (subscription + trust + features)
  */
 router.get('/access-summary', authenticate, subscriptionController.getAccessSummary);
 
 /**
- * GET /api/subscriptions/usage/:featureCode
+ * GET /subscriptions/usage/:featureCode
  * Get feature usage for current period
  */
 router.get('/usage/:featureCode', authenticate, subscriptionController.getFeatureUsage);
 
 /**
- * GET /api/subscriptions/stats
+ * GET /subscriptions/stats
  * Get subscription statistics
  */
 router.get('/stats', authenticate, subscriptionController.getStats);
 
 /**
- * GET /api/subscriptions/payments
+ * GET /subscriptions/payments
  * Get subscription payment history
  * Query: { limit?: number, offset?: number, status?: string }
  */
 router.get('/payments', authenticate, subscriptionController.getPayments);
 
 /**
- * GET /api/subscriptions/invoices
+ * GET /subscriptions/invoices
  * Get subscription invoices (billing history)
  * Query: { limit?: number, offset?: number }
  */
 router.get('/invoices', authenticate, subscriptionController.getInvoices);
 
 /**
- * POST /api/subscriptions/retry-payment
+ * POST /subscriptions/retry-payment
  * Retry failed or pending subscription payment
  * Body: { paymentId: string }
  */
 router.post('/retry-payment', authenticate, subscriptionController.retryPayment);
 
 /**
- * POST /api/subscriptions/calculate-upgrade
+ * POST /subscriptions/calculate-upgrade
  * Calculate upgrade cost
  * Body: { targetTier: string, billingCycle?: 'MONTHLY' | 'ANNUAL' }
  */

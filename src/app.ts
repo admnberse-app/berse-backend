@@ -272,12 +272,7 @@ app.use('/v2', apiV2Router);      // New v2 routes (primary)
 // Health and monitoring routes
 app.use('/', healthRoutes);
 
-// Subscription routes (new module)
-app.use('/api/subscriptions', subscriptionRoutes);
-app.use('/v2/subscriptions', subscriptionRoutes);
-
-// Admin subscription management routes
-app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
+// Admin subscription management routes (v2 only)
 app.use('/v2/admin/subscriptions', adminSubscriptionRoutes);
 
 // Payment webhook routes (before CSRF validation)

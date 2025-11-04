@@ -735,7 +735,7 @@ router.get('/trending-interests', authenticateToken, UserController.getTrendingI
  *         name: trustLevel
  *         schema:
  *           type: string
- *           enum: [NEW, BUILDING, ESTABLISHED, TRUSTED, VERIFIED]
+ *           enum: [starter, trusted, leader]
  *         description: Filter by trust level
  *       - in: query
  *         name: minEventsAttended
@@ -2408,7 +2408,7 @@ router.get('/metadata/interest-categories', UserController.getInterestCategories
  *                       example: 85
  *                     trustLevel:
  *                       type: string
- *                       enum: [new, starter, growing, established, trusted, elite]
+ *                       enum: [starter, trusted, leader]
  *                     lastCalculatedAt:
  *                       type: string
  *                       format: date-time

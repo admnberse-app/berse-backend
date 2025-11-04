@@ -80,7 +80,7 @@ export async function seedEnhancedUsers() {
       status: UserStatus.ACTIVE,
       totalPoints: 850,
       trustScore: 88.0,
-      trustLevel: 'scout',
+      trustLevel: 'leader',
       profile: {
         displayName: 'Sarah',
         bio: 'Certified event host in KL with 5 years experience. Passionate about bringing people together and creating memorable experiences. Specialize in food tours and cultural events!',

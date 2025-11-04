@@ -325,8 +325,8 @@ export const searchUsersValidators = [
     .withMessage('Max trust score must be 0-100'),
   query('trustLevel')
     .optional()
-    .isIn(['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'])
-    .withMessage('Trust level must be: NEW, BUILDING, ESTABLISHED, TRUSTED, or VERIFIED'),
+    .isIn(['starter', 'trusted', 'leader'])
+    .withMessage('Trust level must be: starter, trusted, or leader'),
   
   // Activity filters
   query('minEventsAttended')

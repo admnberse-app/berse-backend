@@ -6,9 +6,9 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/featureAccess.middleware';
 import subscriptionService from '../services/subscription.service';
-import accessControlService from '../services/accessControl.service';
+import accessControlService from '../modules/subscription/access-control/access-control.service';
 import subscriptionPaymentService, { PaymentGateway } from '../services/payments/subscription-payment.service';
-import { FeatureCode, SubscriptionTier, BillingCycle } from '../types/subscription.types';
+import { FeatureCode, SubscriptionTier, BillingCycle } from '../modules/subscription/subscription.types';
 
 class SubscriptionController {
   /**
@@ -283,7 +283,7 @@ class SubscriptionController {
 
       // Get current subscription to show warning
       const currentSub = await subscriptionService.getUserSubscription(req.user.id);
-      if (!currentSub || currentSub.tier === SubscriptionTier.FREE) {
+      if (!currentSub || currentSub.tierCode === SubscriptionTier.FREE) {
         res.status(400).json({
           success: false,
           error: 'No active paid subscription to downgrade',
@@ -293,7 +293,7 @@ class SubscriptionController {
 
       // Check if it's actually a downgrade
       const tierHierarchy = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
-      const currentIndex = tierHierarchy.indexOf(currentSub.tier);
+      const currentIndex = tierHierarchy.indexOf(currentSub.tierCode as SubscriptionTier);
       const newIndex = tierHierarchy.indexOf(tierCode as SubscriptionTier);
 
       if (newIndex >= currentIndex) {
@@ -307,7 +307,7 @@ class SubscriptionController {
       // If not confirmed, return warning
       if (!confirmed) {
         // Get feature differences
-        const currentTier = await subscriptionService.getTierByCode(currentSub.tier);
+        const currentTier = await subscriptionService.getTierByCode(currentSub.tierCode as SubscriptionTier);
         const newTier = await subscriptionService.getTierByCode(tierCode as SubscriptionTier);
 
         res.status(200).json({
@@ -315,7 +315,7 @@ class SubscriptionController {
           requiresConfirmation: true,
           warning: {
             message: 'Downgrading will limit your access to premium features',
-            currentTier: currentSub.tier,
+            currentTier: currentSub.tierCode,
             newTier: tierCode,
             effectiveDate: currentSub.currentPeriodEnd,
             remainingDays: Math.ceil(
@@ -474,6 +474,47 @@ class SubscriptionController {
       res.status(500).json({
         success: false,
         error: 'Failed to check feature access',
+      });
+    }
+  }
+
+  /**
+   * GET /api/subscriptions/features/availability
+   * Get all feature availability in one optimized call
+   * This endpoint is designed for frontend to fetch once and cache
+   */
+  async getFeatureAvailability(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user?.id) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const availability = await accessControlService.getFeatureAvailability(req.user.id);
+
+      if (!availability) {
+        res.status(404).json({
+          success: false,
+          error: 'User not found',
+        });
+        return;
+      }
+
+      // Set cache headers (5 minutes)
+      res.set('Cache-Control', 'private, max-age=300');
+
+      res.status(200).json({
+        success: true,
+        data: availability,
+      });
+    } catch (error) {
+      console.error('Get feature availability error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch feature availability',
       });
     }
   }
@@ -736,7 +777,7 @@ class SubscriptionController {
       }
 
       const cost = subscriptionService.calculateUpgradeCost(
-        currentSubscription.tier,
+        currentSubscription.tierCode as SubscriptionTier,
         targetTier,
         billingCycle || BillingCycle.MONTHLY
       );
@@ -744,7 +785,7 @@ class SubscriptionController {
       res.status(200).json({
         success: true,
         data: {
-          currentTier: currentSubscription.tier,
+          currentTier: currentSubscription.tierCode,
           targetTier,
           billingCycle: billingCycle || BillingCycle.MONTHLY,
           upgradeCost: cost,

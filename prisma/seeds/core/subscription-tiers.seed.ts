@@ -144,8 +144,8 @@ const tiers = [
       // Travel (trust-gated)
       travelAccess: {
         canJoin: true,         // Trust-gated: Trusted+
-        canHost: true,         // Trust-gated: Scout+
-        canHostHomestay: true, // Trust-gated: Scout+
+        canHost: true,         // Trust-gated: Leader+
+        canHostHomestay: true, // Trust-gated: Leader+
         canBeHomestayGuest: true, // Trust-gated: Trusted+
       },
 

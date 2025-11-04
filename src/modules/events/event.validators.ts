@@ -73,11 +73,6 @@ export const createEventValidators = [
     .notEmpty().withMessage('isFree is required')
     .isBoolean().withMessage('isFree must be a boolean'),
   
-  body('price')
-    .if(body('isFree').equals('false'))
-    .notEmpty().withMessage('Price is required for paid events')
-    .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-  
   body('currency')
     .optional()
     .isString()

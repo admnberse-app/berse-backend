@@ -13,6 +13,7 @@ import { ConnectionStatus } from '@prisma/client';
 import { calculateProfileCompletion } from '../../jobs/profileCompletionReminders';
 import { filterLocationByPrivacy } from '../../utils/privacyHelper';
 import { mapLanguageCodesToObjects } from '../../utils/languageMapper';
+import { getProfilePictureUrl } from '../../utils/image.helpers';
 
 export class UserController {
   /**
@@ -477,7 +478,7 @@ export class UserController {
         email: user.email,
         role: user.role,
         totalPoints: user.totalPoints,
-        profilePicture: user.profile?.profilePicture,
+        profilePicture: getProfilePictureUrl(user.profile?.profilePicture),
         bio: user.profile?.bio || user.profile?.shortBio,
         interests: user.profile?.interests || [],
         profession: user.profile?.profession,
@@ -865,7 +866,7 @@ export class UserController {
             mutualConnections: mutuals.slice(0, 3).map(mc => ({
               id: mc.id,
               fullName: mc.fullName,
-              profilePicture: mc.profile?.profilePicture,
+              profilePicture: getProfilePictureUrl(mc.profile?.profilePicture),
             })),
           };
         });
@@ -881,7 +882,7 @@ export class UserController {
           role: user.role,
           trustScore: user.trustScore,
           trustLevel: user.trustLevel,
-          profilePicture: user.profile?.profilePicture,
+          profilePicture: getProfilePictureUrl(user.profile?.profilePicture),
           bio: user.profile?.bio || user.profile?.shortBio,
           interests: user.profile?.interests || [],
           gender: user.profile?.gender,
@@ -991,7 +992,7 @@ export class UserController {
             mutualConnections: mutuals.slice(0, 3).map(mc => ({
               id: mc.id,
               fullName: mc.fullName,
-              profilePicture: mc.profile?.profilePicture,
+              profilePicture: getProfilePictureUrl(mc.profile?.profilePicture),
             })),
           };
         });
@@ -1007,7 +1008,7 @@ export class UserController {
         trustLevel: rec.user.trustLevel,
         score: rec.score,
         reasons: rec.reasons,
-        profilePicture: rec.user.profile?.profilePicture,
+        profilePicture: getProfilePictureUrl(rec.user.profile?.profilePicture),
         bio: rec.user.profile?.bio || rec.user.profile?.shortBio,
         interests: rec.user.profile?.interests || [],
         languages: mapLanguageCodesToObjects(rec.user.profile?.languages || []),
@@ -1209,7 +1210,7 @@ export class UserController {
             mutualConnections: mutuals.slice(0, 3).map(mc => ({
               id: mc.id,
               fullName: mc.fullName,
-              profilePicture: mc.profile?.profilePicture,
+              profilePicture: getProfilePictureUrl(mc.profile?.profilePicture),
             })),
           };
         });
@@ -1222,7 +1223,7 @@ export class UserController {
         username: user.username,
         distance: user.distance,
         distanceFormatted: user.distanceFormatted,
-        profilePicture: user.profile?.profilePicture,
+        profilePicture: getProfilePictureUrl(user.profile?.profilePicture),
         bio: user.profile?.bio || user.profile?.shortBio,
         interests: user.profile?.interests || [],
         profession: user.profile?.profession,
@@ -1535,7 +1536,7 @@ export class UserController {
           username: user.username,
           email: user.email,
           phone: phoneData,
-          profilePicture: user.profile?.profilePicture || null,
+          profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || null,
           bio: user.profile?.bio || null,
           shortBio: user.profile?.shortBio || null,
           location: {
@@ -1931,7 +1932,7 @@ export class UserController {
             id: u.id,
             fullName: u.fullName,
             username: u.username,
-            profilePicture: u.profile?.profilePicture || null,
+            profilePicture: getProfilePictureUrl(u.profile?.profilePicture) || null,
           }));
         }
       }
@@ -2442,7 +2443,7 @@ export class UserController {
         username: user.username,
         email: privacy.showEmail ? user.email : null,
         phone: privacy.showPhone ? user.phone : null,
-        profilePicture: user.profile?.profilePicture || null,
+        profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || null,
         bio: user.profile?.bio || null,
         shortBio: user.profile?.shortBio || null,
         location: (() => {
@@ -2614,7 +2615,7 @@ export class UserController {
           id: user.id,
           fullName: user.fullName,
           username: user.username,
-          profilePicture: user.profile?.profilePicture || null,
+          profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || null,
           trustScore: user.trustScore,
           trustLevel: user.trustLevel,
           currentCity: user.location?.currentCity || null,
@@ -3120,6 +3121,8 @@ export class UserController {
                 id: true,
                 fullName: true,
                 username: true,
+                trustScore: true,
+                trustLevel: true,
                 profile: {
                   select: {
                     profilePicture: true,
@@ -3133,6 +3136,8 @@ export class UserController {
                 id: true,
                 fullName: true,
                 username: true,
+                trustScore: true,
+                trustLevel: true,
                 profile: {
                   select: {
                     profilePicture: true,
@@ -3283,9 +3288,16 @@ export class UserController {
           }
         }
 
+        // Get trust level info for the other user
+        const { getTrustLevelInfo } = await import('../../middleware/trust-level.middleware');
+        const trustLevelInfo = await getTrustLevelInfo(otherUser.trustScore || 0);
+
         // Add mutual data to the other user object
         const otherUserWithMutuals = {
           ...otherUser,
+          trustScore: Math.round((otherUser.trustScore || 0) * 10) / 10,
+          trustLevel: trustLevelInfo.level,
+          trustLevelLabel: trustLevelInfo.label,
           profile: otherUser.profile ? {
             ...otherUser.profile,
             profilePicture: getProfilePictureUrl(otherUser.profile.profilePicture),
@@ -3306,22 +3318,23 @@ export class UserController {
           })),
         };
 
-        // Convert profile picture for the profile owner user as well
-        const profileOwnerUser = conn.initiatorId === userId 
-          ? {
-              ...users_user_connections_initiatorIdTousers,
-              profile: users_user_connections_initiatorIdTousers.profile ? {
-                ...users_user_connections_initiatorIdTousers.profile,
-                profilePicture: getProfilePictureUrl(users_user_connections_initiatorIdTousers.profile.profilePicture),
-              } : null,
-            }
-          : {
-              ...users_user_connections_receiverIdTousers,
-              profile: users_user_connections_receiverIdTousers.profile ? {
-                ...users_user_connections_receiverIdTousers.profile,
-                profilePicture: getProfilePictureUrl(users_user_connections_receiverIdTousers.profile.profilePicture),
-              } : null,
-            };
+        // Convert profile picture and trust level for the profile owner user as well
+        const ownerUserData = conn.initiatorId === userId 
+          ? users_user_connections_initiatorIdTousers
+          : users_user_connections_receiverIdTousers;
+        
+        const ownerTrustLevelInfo = await getTrustLevelInfo(ownerUserData.trustScore || 0);
+        
+        const profileOwnerUser = {
+          ...ownerUserData,
+          trustScore: Math.round((ownerUserData.trustScore || 0) * 10) / 10,
+          trustLevel: ownerTrustLevelInfo.level,
+          trustLevelLabel: ownerTrustLevelInfo.label,
+          profile: ownerUserData.profile ? {
+            ...ownerUserData.profile,
+            profilePicture: getProfilePictureUrl(ownerUserData.profile.profilePicture),
+          } : null,
+        };
         
         return {
           ...rest,

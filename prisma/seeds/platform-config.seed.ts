@@ -60,13 +60,13 @@ async function seedPlatformConfig() {
       },
       update: {
         value: DEFAULT_TRUST_LEVELS as any,
-        description: '6 trust level tiers with score ranges and descriptions',
+        description: '3 trust level tiers with score ranges and descriptions',
       },
       create: {
         category: ConfigCategory.TRUST_LEVELS,
         key: ConfigKey.LEVELS,
         value: DEFAULT_TRUST_LEVELS as any,
-        description: '6 trust level tiers with score ranges and descriptions',
+        description: '3 trust level tiers with score ranges and descriptions',
       },
     });
     console.log('  ✅ Trust Levels seeded\n');
@@ -211,7 +211,7 @@ async function seedPlatformConfig() {
     // Display summary
     console.log('📋 Configuration Summary:');
     console.log('  - Trust Formula: Vouch 40% | Activity 30% | Trust Moments 30%');
-    console.log('  - Trust Levels: 6 tiers (Starter to Leader)');
+    console.log('  - Trust Levels: 3 tiers (Starter, Trusted, Leader)');
     console.log('  - Feature Gating: 23 features with score requirements');
     console.log('  - Accountability: 40% penalty / 20% reward distribution');
     console.log('  - Badges: 8 badge types with 4 tiers each');

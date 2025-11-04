@@ -4,6 +4,7 @@ import { prisma } from '../../config/database';
 import { cacheService } from '../../services/cache.service';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { getProfilePictureUrl } from '../../utils/image.helpers';
 import {
   QRCodeGenerateRequest,
   QRCodeGenerateResponse,
@@ -185,7 +186,7 @@ export class QRCodeService {
           id: user.id,
           fullName: user.fullName,
           username: user.username || undefined,
-          profilePicture: user.profile?.profilePicture || undefined,
+          profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || undefined,
           trustLevel: user.trustLevel,
           trustScore: user.trustScore,
         },

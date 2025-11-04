@@ -699,12 +699,60 @@ export class EventController {
    */
   static async getEventTypes(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Custom labels for better user experience
+      const labelMap: Record<string, string> = {
+        'SOCIAL': 'Social',
+        'SPORTS': 'Sports',
+        'TRIP': 'Trip',
+        'ILM': 'ILM (Islamic Learning)',
+        'CAFE_MEETUP': 'Cafe Meetup',
+        'VOLUNTEER': 'Volunteer',
+        'MONTHLY_EVENT': 'Monthly Event',
+        'LOCAL_TRIP': 'Local Trip',
+        'EDUCATIONAL': 'Educational',
+        'NETWORKING': 'Networking',
+        'WORKSHOP': 'Workshop',
+        'CONFERENCE': 'Conference',
+        'CHARITY': 'Charity',
+        'RELIGIOUS': 'Religious',
+        'CULTURAL': 'Cultural',
+        'OTHERS': 'Others'
+      };
+
       const eventTypes = Object.values(EventType).map(type => ({
         value: type,
-        label: type.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')
+        label: labelMap[type] || type.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ')
       }));
 
       sendSuccess(res, eventTypes, 'Event types retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get communities user can represent when creating events
+   * @route GET /v2/events/available-communities
+   */
+  static async getAvailableCommunitiesForEvents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+
+      const communities = await EventService.getAvailableCommunitiesForEvents(userId);
+
+      const message = communities.length > 0
+        ? 'Available communities retrieved successfully'
+        : 'You are not an admin or owner of any communities yet';
+
+      sendSuccess(res, {
+        communities,
+        info: {
+          canRepresentCommunity: communities.length > 0,
+          message: communities.length > 0
+            ? 'You can create events on behalf of these communities. As an admin or owner, you can set the event host type to "Community" to represent your community.'
+            : 'You need to be an admin or owner of a community to create events on its behalf. Join or create a community to get started!',
+        },
+      }, message);
     } catch (error) {
       next(error);
     }

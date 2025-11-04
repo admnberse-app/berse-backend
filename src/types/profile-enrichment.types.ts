@@ -10,7 +10,7 @@ export interface VerificationBadges {
 }
 
 export interface TrustMetrics {
-  trustLevel: string; // starter, established, trusted, verified
+  trustLevel: string; // starter, trusted, leader
   trustScore: number; // 0-100
   isVerified: boolean;
   verificationBadges: VerificationBadges;

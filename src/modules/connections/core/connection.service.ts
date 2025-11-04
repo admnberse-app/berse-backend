@@ -24,6 +24,7 @@ import { ConnectionStatus, Prisma } from '@prisma/client';
 import logger from '../../../utils/logger';
 import { NotificationService } from '../../../services/notification.service';
 import { pointsEvents } from '../../../services/points-events.service';
+import { getProfilePictureUrl } from '../../../utils/image.helpers';
 
 export class ConnectionService {
   
@@ -842,7 +843,7 @@ export class ConnectionService {
         id: user.id,
         fullName: user.fullName,
         username: user.username || undefined,
-        profilePicture: user.profile?.profilePicture || undefined,
+        profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || undefined,
         trustScore: user.trustScore,
         trustLevel: user.trustLevel,
         location: user.location
@@ -946,7 +947,7 @@ export class ConnectionService {
             id: user.id,
             fullName: user.fullName,
             username: user.username || undefined,
-            profilePicture: user.profile?.profilePicture || undefined,
+            profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || undefined,
             trustScore: user.trustScore,
             trustLevel: user.trustLevel,
             location: user.location
@@ -1109,7 +1110,7 @@ export class ConnectionService {
           fullName: block.users_user_blocks_blockedIdTousers.fullName,
           username: block.users_user_blocks_blockedIdTousers.username || undefined,
           profilePicture:
-            block.users_user_blocks_blockedIdTousers.profile?.profilePicture || undefined,
+            getProfilePictureUrl(block.users_user_blocks_blockedIdTousers.profile?.profilePicture) || undefined,
           trustScore: block.users_user_blocks_blockedIdTousers.trustScore,
           trustLevel: block.users_user_blocks_blockedIdTousers.trustLevel,
           location: block.users_user_blocks_blockedIdTousers.location
@@ -1599,7 +1600,7 @@ export class ConnectionService {
               id: activity.users.id,
               fullName: activity.users.fullName,
               username: activity.users.username,
-              profilePicture: activity.users.profile?.profilePicture,
+              profilePicture: getProfilePictureUrl(activity.users.profile?.profilePicture),
             },
             // User-friendly fields for frontend
             message: processedActivity.message,
@@ -1810,7 +1811,7 @@ export class ConnectionService {
         id: otherUser.id,
         fullName: otherUser.fullName,
         username: otherUser.username || undefined,
-        profilePicture: otherUser.profile?.profilePicture || undefined,
+        profilePicture: getProfilePictureUrl(otherUser.profile?.profilePicture) || undefined,
         bio: otherUser.profile?.bio || undefined,
         trustScore: otherUser.trustScore,
         trustLevel: otherUser.trustLevel,

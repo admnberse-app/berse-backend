@@ -61,7 +61,7 @@ const swaggerDefinition = {
 
 #### Trust Score System
 - Trust scores visible in user profiles (0-100 scale)
-- Trust levels: NEW, BUILDING, ESTABLISHED, TRUSTED, VERIFIED
+- Trust levels: Starter (0-30), Trusted (31-60), Leader (61-100)
 - Calculation: 40% vouches + 30% activity + 30% trust moments
 - Automatic updates on vouch approvals and event attendance
 
@@ -201,7 +201,7 @@ const swaggerDefinition = {
     },
     {
       name: 'Connections - Trust Score',
-      description: '🎯 Trust score calculation and analytics. Algorithm: 40% vouches + 30% activity + 30% trust moments. Levels: NEW → BUILDING → ESTABLISHED → TRUSTED → VERIFIED.',
+      description: '🎯 Trust score calculation and analytics. Algorithm: 40% vouches + 30% activity + 30% trust moments. Levels: Starter (0-30) → Trusted (31-60) → Leader (61-100).',
     },
     {
       name: 'Connections - Accountability',
@@ -536,8 +536,8 @@ const swaggerDefinition = {
           },
           trustLevel: { 
             type: 'string',
-            description: 'Trust level based on score: NEW (0-20), BUILDING (20-40), ESTABLISHED (40-60), TRUSTED (60-80), VERIFIED (80+)',
-            example: 'TRUSTED',
+            description: 'Trust level based on score: starter (0-30), trusted (31-60), leader (61-100)',
+            example: 'trusted',
           },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
@@ -982,7 +982,7 @@ const swaggerDefinition = {
               displayName: { type: 'string' },
               profilePicture: { type: 'string', format: 'uri' },
               trustScore: { type: 'number', minimum: 0, maximum: 100 },
-              trustLevel: { type: 'string', enum: ['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'] },
+              trustLevel: { type: 'string', enum: ['starter', 'trusted', 'leader'] },
             },
           },
         },
@@ -1061,7 +1061,7 @@ const swaggerDefinition = {
               username: { type: 'string', nullable: true },
               profilePicture: { type: 'string', format: 'uri', nullable: true },
               trustScore: { type: 'number', minimum: 0, maximum: 100 },
-              trustLevel: { type: 'string', enum: ['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'] },
+              trustLevel: { type: 'string', enum: ['starter', 'trusted', 'leader'] },
             },
           },
           receiver: {
@@ -1073,7 +1073,7 @@ const swaggerDefinition = {
               username: { type: 'string', nullable: true },
               profilePicture: { type: 'string', format: 'uri', nullable: true },
               trustScore: { type: 'number', minimum: 0, maximum: 100 },
-              trustLevel: { type: 'string', enum: ['NEW', 'BUILDING', 'ESTABLISHED', 'TRUSTED', 'VERIFIED'] },
+              trustLevel: { type: 'string', enum: ['starter', 'trusted', 'leader'] },
             },
           },
           event: {

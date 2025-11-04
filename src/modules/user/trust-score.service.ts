@@ -2,6 +2,7 @@ import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
 import { configService } from '../platform/config.service';
+import { getProfilePictureUrl } from '../../utils/image.helpers';
 import {
   TrustScoreDetail,
   TrustScoreBreakdown,
@@ -157,7 +158,7 @@ export class TrustScoreUserService {
           voucherId: v.voucherId,
           voucherName: v.users_vouches_voucherIdTousers.fullName,
           voucherUsername: v.users_vouches_voucherIdTousers.username || undefined,
-          voucherProfilePicture: v.users_vouches_voucherIdTousers.profile?.profilePicture || undefined,
+          voucherProfilePicture: getProfilePictureUrl(v.users_vouches_voucherIdTousers.profile?.profilePicture) || undefined,
           voucherTrustScore: v.users_vouches_voucherIdTousers.trustScore,
           voucherTrustLevel: v.users_vouches_voucherIdTousers.trustLevel,
           vouchType: v.vouchType,
@@ -614,7 +615,7 @@ export class TrustScoreUserService {
               id: tm.giver.id,
               fullName: tm.giver.fullName,
               username: tm.giver.username || undefined,
-              profilePicture: tm.giver.profile?.profilePicture || undefined,
+              profilePicture: getProfilePictureUrl(tm.giver.profile?.profilePicture) || undefined,
             },
           },
         });

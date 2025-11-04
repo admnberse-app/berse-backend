@@ -85,7 +85,7 @@ export interface UserSearchQuery {
   // Trust score filters
   minTrustScore?: number;
   maxTrustScore?: number;
-  trustLevel?: 'NEW' | 'BUILDING' | 'ESTABLISHED' | 'TRUSTED' | 'VERIFIED';
+  trustLevel?: 'starter' | 'trusted' | 'leader';
   
   // Activity filters
   minEventsAttended?: number;

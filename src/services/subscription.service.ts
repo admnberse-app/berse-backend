@@ -13,7 +13,7 @@ import {
   TIER_PRICING,
   TierFeatures,
   DEFAULT_FREE_TIER_FEATURES,
-} from '../types/subscription.types';
+} from '../modules/subscription/subscription.types';
 import { NotificationService } from './notification.service';
 import { emailService } from './email.service';
 
@@ -73,7 +73,14 @@ class SubscriptionService {
       return {
         id: subscription.id,
         userId: subscription.userId,
-        tier: subscription.tiers.tierCode as SubscriptionTier,
+        tierCode: subscription.tiers.tierCode,
+        tier: {
+          tierCode: subscription.tiers.tierCode,
+          name: subscription.tiers.tierName,
+          price: subscription.tiers.price,
+          currency: subscription.tiers.currency,
+          billingCycle: subscription.tiers.billingCycle,
+        },
         tierName: subscription.tiers.tierName,
         status: subscription.status as SubscriptionStatus,
         currentPeriodStart: subscription.currentPeriodStart,
@@ -146,7 +153,14 @@ class SubscriptionService {
       return {
         id: subscription.id,
         userId: subscription.userId,
-        tier: subscription.tiers.tierCode as SubscriptionTier,
+        tierCode: subscription.tiers.tierCode,
+        tier: {
+          tierCode: subscription.tiers.tierCode,
+          name: subscription.tiers.tierName,
+          price: subscription.tiers.price,
+          currency: subscription.tiers.currency,
+          billingCycle: subscription.tiers.billingCycle,
+        },
         tierName: subscription.tiers.tierName,
         status: subscription.status as SubscriptionStatus,
         currentPeriodStart: subscription.currentPeriodStart,
@@ -176,7 +190,7 @@ class SubscriptionService {
 
       // Check if it's actually an upgrade
       const currentTiers = [SubscriptionTier.FREE, SubscriptionTier.BASIC];
-      const currentIndex = currentTiers.indexOf(current.tier);
+      const currentIndex = currentTiers.indexOf(current.tierCode as SubscriptionTier);
       const newIndex = currentTiers.indexOf(newTierCode);
 
       if (newIndex <= currentIndex) {
@@ -755,7 +769,14 @@ class SubscriptionService {
     return {
       id: 'default-free',
       userId,
-      tier: SubscriptionTier.FREE,
+      tierCode: SubscriptionTier.FREE,
+      tier: {
+        tierCode: SubscriptionTier.FREE,
+        name: 'Free',
+        price: 0,
+        currency: 'USD',
+        billingCycle: 'monthly',
+      },
       tierName: 'Free',
       status: SubscriptionStatus.ACTIVE as any,
       currentPeriodStart: new Date(),

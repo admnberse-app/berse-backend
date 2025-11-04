@@ -38,7 +38,7 @@ const router = Router();
  * /v2/events/types:
  *   get:
  *     summary: Get all event types
- *     description: Retrieve all available event types for filtering and categorization
+ *     description: Retrieve all available event types for filtering and categorization. ILM stands for Islamic Learning/Knowledge.
  *     tags: [Events]
  *     responses:
  *       200:
@@ -61,7 +61,7 @@ const router = Router();
  *                     properties:
  *                       value:
  *                         type: string
- *                         enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP]
+ *                         enum: [SOCIAL, SPORTS, TRIP, ILM, CAFE_MEETUP, VOLUNTEER, MONTHLY_EVENT, LOCAL_TRIP, EDUCATIONAL, NETWORKING, WORKSHOP, CONFERENCE, CHARITY, RELIGIOUS, CULTURAL, OTHERS]
  *                         example: SOCIAL
  *                       label:
  *                         type: string
@@ -254,6 +254,95 @@ router.post(
   authenticateToken,
   uploadImage.single('image'),
   EventController.uploadEventImage
+);
+
+/**
+ * @swagger
+ * /v2/events/available-communities:
+ *   get:
+ *     summary: Get communities available for event creation
+ *     description: |
+ *       Retrieve list of communities where the authenticated user can create events.
+ *       Only returns communities where the user is an ADMIN or OWNER.
+ *       
+ *       **Use Case:** Called on event creation page load to populate community selector.
+ *       
+ *       **Permissions:**
+ *       - OWNER (creator): Full permissions
+ *       - ADMIN: Can create events on behalf of the community
+ *       - MEMBER: Cannot create events (not returned)
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Available communities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Available communities retrieved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: cm1234abcd
+ *                           name:
+ *                             type: string
+ *                             example: Tech Enthusiasts Malaysia
+ *                           logoUrl:
+ *                             type: string
+ *                             example: https://cdn.example.com/communities/logo.jpg
+ *                           coverImageUrl:
+ *                             type: string
+ *                             example: https://cdn.example.com/communities/cover.jpg
+ *                           memberCount:
+ *                             type: integer
+ *                             example: 250
+ *                           role:
+ *                             type: string
+ *                             enum: [OWNER, ADMIN]
+ *                             example: ADMIN
+ *                           canCreateEvents:
+ *                             type: boolean
+ *                             example: true
+ *                           permissions:
+ *                             type: object
+ *                             properties:
+ *                               isAdmin:
+ *                                 type: boolean
+ *                                 example: true
+ *                               isOwner:
+ *                                 type: boolean
+ *                                 example: false
+ *                     info:
+ *                       type: object
+ *                       properties:
+ *                         canRepresentCommunity:
+ *                           type: boolean
+ *                           example: true
+ *                         message:
+ *                           type: string
+ *                           example: You can create events on behalf of these communities. As an admin or owner, you can set the event host type to "Community" to represent your community.
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get(
+  '/available-communities',
+  authenticateToken,
+  EventController.getAvailableCommunitiesForEvents
 );
 
 /**

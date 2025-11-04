@@ -3208,4 +3208,80 @@ export class EventService {
       throw error;
     }
   }
+
+  /**
+   * Get communities where user can create events
+   * Only returns communities where user is ADMIN or OWNER
+   */
+  static async getAvailableCommunitiesForEvents(userId: string): Promise<Array<{
+    id: string;
+    name: string;
+    logoUrl?: string;
+    coverImageUrl?: string;
+    memberCount: number;
+    role: string;
+    canCreateEvents: boolean;
+    permissions: {
+      isAdmin: boolean;
+      isOwner: boolean;
+    };
+  }>> {
+    try {
+      // Fetch communities where user is ADMIN or the creator
+      const memberships = await prisma.communityMember.findMany({
+        where: {
+          userId,
+          isApproved: true,
+          role: { in: ['ADMIN'] }, // Only admins can create events
+        },
+        include: {
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              logoUrl: true,
+              coverImageUrl: true,
+              createdById: true,
+              _count: {
+                select: {
+                  communityMembers: {
+                    where: { isApproved: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const communities = memberships.map(membership => {
+        const isOwner = membership.communities.createdById === userId;
+        const isAdmin = membership.role === 'ADMIN';
+
+        return {
+          id: membership.communities.id,
+          name: membership.communities.name,
+          logoUrl: membership.communities.logoUrl || undefined,
+          coverImageUrl: membership.communities.coverImageUrl || undefined,
+          memberCount: membership.communities._count.communityMembers,
+          role: isOwner ? 'OWNER' : membership.role,
+          canCreateEvents: true, // All returned communities allow event creation
+          permissions: {
+            isAdmin,
+            isOwner,
+          },
+        };
+      });
+
+      logger.info('Available communities for events retrieved', {
+        userId,
+        count: communities.length,
+      });
+
+      return communities;
+    } catch (error: any) {
+      logger.error('Error fetching available communities for events:', error);
+      throw error;
+    }
+  }
 }
