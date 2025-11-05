@@ -1,1 +1,0 @@
-export { CompactHeader } from './CompactHeader';

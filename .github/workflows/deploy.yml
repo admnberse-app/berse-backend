@@ -38,12 +38,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
-          cd ..
-      
       - name: Setup test environment
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/bersemuka_test
@@ -73,23 +67,11 @@ jobs:
       
       - name: Build backend
         run: npm run build
-      
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
-          cd ..
   
-  # Deploy job removed - Using Railway and Netlify auto-deployment instead
+  # Deploy job removed - Using Railway auto-deployment instead
   # Railway backend: Automatically deploys from main branch to api.berse.app
-  # Netlify frontend: Automatically deploys from main branch to berse.app (primary domain)
   # 
-  # The SSH deployment steps are not needed since:
-  # 1. Railway handles backend deployment automatically
-  # 2. Netlify handles frontend deployment automatically
-  # 3. Both services trigger on GitHub push to main branch
+  # The SSH deployment steps are not needed since Railway handles backend deployment automatically
+  # and triggers on GitHub push to main branch
   # 
-  # If you need deployment notifications in the future, you can add:
-  # - Railway webhook notifications
-  # - Netlify deploy notifications
-  # - GitHub deployment status API
+  # If you need deployment notifications in the future, you can add Railway webhook notifications

@@ -60,7 +60,6 @@ nginx/
 
 # Misc
 .DS_Store
-.netlify/
 *.swp
 *.swo
 *~

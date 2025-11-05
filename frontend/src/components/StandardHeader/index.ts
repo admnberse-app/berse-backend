@@ -1,1 +1,0 @@
-export { StandardHeader } from './StandardHeader';

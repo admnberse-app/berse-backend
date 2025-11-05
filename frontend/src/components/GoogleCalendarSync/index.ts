@@ -1,1 +1,0 @@
-export { GoogleCalendarSync } from './GoogleCalendarSync';
