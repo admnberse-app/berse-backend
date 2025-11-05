@@ -105,9 +105,6 @@ echo ""
 echo "   Copy from Berse App Logo folder:"
 echo "   cp './Berse App Logo/Berse App Horizontal words Logo.png' '$LOGO_DEST'"
 echo ""
-echo "   Copy from frontend public folder:"
-echo "   cp './frontend/public/berse-horizontal-logo.png' '$LOGO_DEST'"
-echo ""
 echo "   Test if logo is accessible (when server is running):"
 echo "   curl -I http://localhost:3000/assets/logos/berse-email-logo.png"
 echo ""
@@ -122,12 +119,6 @@ if [ -f "./Berse App Logo/Berse App Horizontal words Logo.png" ]; then
   echo ""
   echo "   cp './Berse App Logo/Berse App Horizontal words Logo.png' '$LOGO_DEST'"
   echo ""
-elif [ -f "./frontend/public/berse-horizontal-logo.png" ]; then
-  echo "🎯 Suggestion:"
-  echo "   I found a logo in frontend folder."
-  echo "   Would you like to copy it? Run:"
-  echo ""
-  echo "   cp './frontend/public/berse-horizontal-logo.png' '$LOGO_DEST'"
   echo ""
 fi
 

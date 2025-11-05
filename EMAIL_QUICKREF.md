@@ -14,9 +14,6 @@ npm run setup:email-logo
 
 # Copy from Berse App Logo folder
 cp "./Berse App Logo/Berse App Horizontal words Logo.png" ./public/assets/logos/berse-email-logo.png
-
-# Or copy from frontend
-cp ./frontend/public/berse-horizontal-logo.png ./public/assets/logos/berse-email-logo.png
 ```
 
 ### Logo Requirements:

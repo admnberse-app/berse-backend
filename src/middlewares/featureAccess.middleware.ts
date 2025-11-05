@@ -95,7 +95,7 @@ export const requireSubscription = (minTier: 'FREE' | 'BASIC' | 'PREMIUM') => {
 
       // Check tier
       const tiers = ['FREE', 'BASIC', 'PREMIUM'];
-      const userTierIndex = tiers.indexOf(subscription.tier);
+      const userTierIndex = tiers.indexOf(subscription.tierCode);
       const requiredTierIndex = tiers.indexOf(minTier);
 
       if (userTierIndex < requiredTierIndex) {
@@ -103,7 +103,7 @@ export const requireSubscription = (minTier: 'FREE' | 'BASIC' | 'PREMIUM') => {
           success: false,
           error: `Requires ${minTier} subscription or higher`,
           code: 'SUBSCRIPTION_REQUIRED',
-          currentTier: subscription.tier,
+          currentTier: subscription.tierCode,
           requiredTier: minTier,
         });
       }

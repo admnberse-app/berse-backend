@@ -46,12 +46,6 @@ npm run test
 echo -e "${YELLOW}Building application...${NC}"
 npm run build
 
-# Build frontend
-echo -e "${YELLOW}Building frontend...${NC}"
-cd frontend
-npm run build
-cd ..
-
 # Prisma migrations
 echo -e "${YELLOW}Running database migrations...${NC}"
 npx prisma migrate deploy
