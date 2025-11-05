@@ -390,6 +390,8 @@ router.get('/docs', (req, res) => {
         'GET /v2/users/all': 'Get all users (discovery)',
         'GET /v2/users/search': 'Search users',
         'GET /v2/users/:id': 'Get user by ID',
+        'GET /v2/users/:id/communities': 'Get user communities',
+        'GET /v2/users/:id/services': 'Get user services (HomeSurf & BerseGuide)',
         'POST /v2/users/follow/:id': 'Follow user / Send friend request',
         'DELETE /v2/users/follow/:id': 'Unfollow user',
         'POST /v2/users/upload-avatar': 'Upload profile picture',
@@ -614,6 +616,11 @@ router.get('/docs', (req, res) => {
         'GET /v2/berseguide/reviews/user/:userId': 'Get public reviews for user',
         'GET /v2/berseguide/search': 'Search BerseGuide profiles',
         'GET /v2/berseguide/dashboard': 'Get BerseGuide dashboard (auth required)',
+      },
+      services: {
+        'GET /v2/services': 'Unified search for HomeSurf and BerseGuide services',
+        'GET /v2/services/discover': 'Get curated service discovery sections (personalized)',
+        'GET /v2/services/metadata': 'Get service filter metadata and options',
       },
       subscriptions: {
         'GET /v2/subscriptions/tiers': 'Get all subscription tiers',

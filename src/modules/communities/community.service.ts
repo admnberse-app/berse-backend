@@ -3,6 +3,7 @@ import { AppError } from '../../middleware/error';
 import { NotificationService } from '../../services/notification.service';
 import logger from '../../utils/logger';
 import QRCode from 'qrcode';
+import { getProfilePictureUrl } from '../../utils/image.helpers';
 import type {
   CreateCommunityInput,
   UpdateCommunityInput,
@@ -318,9 +319,12 @@ export class CommunityService {
           }
         } else {
           // Check if user can join (not a member, not pending)
-          // Get current community count (approved + pending)
+          // Get current community count (only approved memberships)
           const currentCommunityCount = await prisma.communityMember.count({
-            where: { userId },
+            where: { 
+              userId,
+              isApproved: true,
+            },
           });
 
           // Get user's subscription info
@@ -338,7 +342,7 @@ export class CommunityService {
 
           const activeSubscription = userWithSubscription?.subscriptions[0];
           const features = activeSubscription?.tiers?.features as any;
-          const maxCommunities = features?.communityAccess?.maxCommunities || 3;
+          const maxCommunities = features?.communityAccess?.maxCommunities || 2;
 
           canJoin = maxCommunities === -1 || currentCommunityCount < maxCommunities;
           joinLimit = {
@@ -458,7 +462,7 @@ export class CommunityService {
           id: m.user.id,
           fullName: m.user.fullName,
           username: m.user.username,
-          profilePicture: m.user.profile?.profilePicture,
+          profilePicture: getProfilePictureUrl(m.user.profile?.profilePicture),
           trustLevel: m.user.trustLevel || 'starter',
           role: m.role,
           joinedAt: m.joinedAt.toISOString(),
@@ -920,11 +924,11 @@ export class CommunityService {
       }
 
       // Check community join limit based on subscription tier
-      // Count both approved AND pending memberships
+      // Count only approved memberships (pending don't count toward limit)
       const currentCommunityCount = await prisma.communityMember.count({
         where: {
           userId,
-          // Include both approved and pending (isApproved: true OR false)
+          isApproved: true,
         },
       });
 
@@ -943,7 +947,7 @@ export class CommunityService {
 
       const activeSubscription = userWithSubscription?.subscriptions[0];
       const features = activeSubscription?.tiers?.features as any;
-      const maxCommunities = features?.communityAccess?.maxCommunities || 3; // Default to FREE tier limit
+      const maxCommunities = features?.communityAccess?.maxCommunities || 2; // Default to FREE tier limit
 
       if (maxCommunities !== -1 && currentCommunityCount >= maxCommunities) {
         throw new AppError(
@@ -1969,7 +1973,7 @@ export class CommunityService {
       id: community.user.id,
       fullName: community.user.fullName,
       username: community.user.username || undefined,
-      profilePicture: community.user.userProfiles?.profilePicture || undefined,
+      profilePicture: getProfilePictureUrl(community.user.profile?.profilePicture) || undefined,
       trustLevel: community.user.trustLevel || 'starter',
     };
 
@@ -2011,7 +2015,7 @@ export class CommunityService {
       id: member.user.id,
       fullName: member.user.fullName,
       username: member.user.username || undefined,
-      profilePicture: member.user.profile?.profilePicture || undefined,
+      profilePicture: getProfilePictureUrl(member.user.profile?.profilePicture) || undefined,
       trustLevel: member.user.trustLevel || 'starter',
     };
 

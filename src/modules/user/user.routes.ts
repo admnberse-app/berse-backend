@@ -2172,6 +2172,348 @@ router.get('/settings/export', authenticateToken, SettingsController.exportSetti
 
 router.get('/:id', authenticateToken, UserController.getUserById);
 
+/**
+ * @swagger
+ * /v2/users/{id}/communities:
+ *   get:
+ *     summary: Get user's communities
+ *     description: |
+ *       Get all communities a user belongs to, with role information and membership details.
+ *       
+ *       **Features:**
+ *       - Shows all communities user is a member of
+ *       - Grouped by role (founded, moderating, member)
+ *       - Indicates shared communities (if viewing another user)
+ *       - Includes member count and event count per community
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User communities retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         fullName:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                           description: Total communities
+ *                         founded:
+ *                           type: integer
+ *                           description: Communities where user is OWNER
+ *                         moderating:
+ *                           type: integer
+ *                           description: Communities where user is ADMIN or MODERATOR
+ *                         member:
+ *                           type: integer
+ *                           description: Communities where user is regular MEMBER
+ *                         shared:
+ *                           type: integer
+ *                           description: Communities you both belong to (only when viewing another user)
+ *                     communities:
+ *                       type: object
+ *                       properties:
+ *                         all:
+ *                           type: array
+ *                           description: All communities in joined order
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               description:
+ *                                 type: string
+ *                               logoUrl:
+ *                                 type: string
+ *                               coverImageUrl:
+ *                                 type: string
+ *                               interests:
+ *                                 type: array
+ *                                 items:
+ *                                   type: string
+ *                               isVerified:
+ *                                 type: boolean
+ *                               memberCount:
+ *                                 type: integer
+ *                               eventCount:
+ *                                 type: integer
+ *                               userRole:
+ *                                 type: string
+ *                                 enum: [OWNER, ADMIN, MODERATOR, MEMBER]
+ *                               joinedAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                               isShared:
+ *                                 type: boolean
+ *                                 description: Whether you're also a member (only when viewing another user)
+ *                               yourRole:
+ *                                 type: string
+ *                                 description: Your role in this community (only for shared communities)
+ *                         grouped:
+ *                           type: object
+ *                           properties:
+ *                             founded:
+ *                               type: array
+ *                               description: Communities user founded/owns
+ *                               items:
+ *                                 type: object
+ *                             moderating:
+ *                               type: array
+ *                               description: Communities user moderates or admins
+ *                               items:
+ *                                 type: object
+ *                             member:
+ *                               type: array
+ *                               description: Communities user is a regular member
+ *                               items:
+ *                                 type: object
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/:id/communities', authenticateToken, UserController.getUserCommunities);
+
+/**
+ * @swagger
+ * /v2/users/{id}/services:
+ *   get:
+ *     summary: Get user's service profiles (HomeSurf & BerseGuide)
+ *     description: |
+ *       Get detailed information about user's HomeSurf and BerseGuide service profiles.
+ *       
+ *       **Includes:**
+ *       - HomeSurf hosting profile (if available)
+ *       - BerseGuide tour guide profile (if available)
+ *       - Complete booking and review statistics
+ *       - Payment options for each service
+ *       - User interaction history (if viewing another user)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User services retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         fullName:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         profilePicture:
+ *                           type: string
+ *                     services:
+ *                       type: object
+ *                       properties:
+ *                         homeSurf:
+ *                           type: object
+ *                           nullable: true
+ *                           description: HomeSurf hosting profile (null if not set up)
+ *                           properties:
+ *                             isEnabled:
+ *                               type: boolean
+ *                             title:
+ *                               type: string
+ *                               example: "Cozy apartment in downtown KL"
+ *                             description:
+ *                               type: string
+ *                             accommodationType:
+ *                               type: string
+ *                               enum: [PRIVATE_ROOM, SHARED_ROOM, COUCH, ENTIRE_PLACE]
+ *                             maxGuests:
+ *                               type: integer
+ *                             amenities:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               example: ["wifi", "kitchen", "parking"]
+ *                             paymentOptions:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   paymentType:
+ *                                     type: string
+ *                                     enum: [MONEY, SKILL_TRADE, TREAT_ME, BERSE_POINTS, FREE]
+ *                                   amount:
+ *                                     type: number
+ *                                   currency:
+ *                                     type: string
+ *                                   description:
+ *                                     type: string
+ *                             city:
+ *                               type: string
+ *                             neighborhood:
+ *                               type: string
+ *                             stats:
+ *                               type: object
+ *                               properties:
+ *                                 totalBookings:
+ *                                   type: integer
+ *                                 completedBookings:
+ *                                   type: integer
+ *                                 upcomingBookings:
+ *                                   type: integer
+ *                                 totalGuests:
+ *                                   type: integer
+ *                                 rating:
+ *                                   type: number
+ *                                   format: float
+ *                                 reviewCount:
+ *                                   type: integer
+ *                                 responseRate:
+ *                                   type: number
+ *                                   description: Percentage (0-100)
+ *                                 averageResponseTime:
+ *                                   type: integer
+ *                                   description: In hours
+ *                         berseGuide:
+ *                           type: object
+ *                           nullable: true
+ *                           description: BerseGuide tour profile (null if not set up)
+ *                           properties:
+ *                             isEnabled:
+ *                               type: boolean
+ *                             title:
+ *                               type: string
+ *                               example: "KL Food Tour Expert"
+ *                             description:
+ *                               type: string
+ *                             tagline:
+ *                               type: string
+ *                               example: "Hidden gems & local flavors"
+ *                             guideTypes:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               example: ["FOOD_TOUR", "CULTURAL", "NIGHTLIFE"]
+ *                             languages:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               example: ["English", "Malay", "Chinese"]
+ *                             city:
+ *                               type: string
+ *                             neighborhoods:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                             paymentOptions:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                             highlights:
+ *                               type: array
+ *                               items:
+ *                                 type: string
+ *                               example: ["Best ramen spots", "Hidden temples"]
+ *                             stats:
+ *                               type: object
+ *                               properties:
+ *                                 totalBookings:
+ *                                   type: integer
+ *                                 totalSessions:
+ *                                   type: integer
+ *                                 completedSessions:
+ *                                   type: integer
+ *                                 upcomingSessions:
+ *                                   type: integer
+ *                                 totalToursGiven:
+ *                                   type: integer
+ *                                 rating:
+ *                                   type: number
+ *                                 reviewCount:
+ *                                   type: integer
+ *                                 responseRate:
+ *                                   type: number
+ *                                 yearsGuiding:
+ *                                   type: integer
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         hasHomeSurf:
+ *                           type: boolean
+ *                         hasBerseGuide:
+ *                           type: boolean
+ *                         activeServicesCount:
+ *                           type: integer
+ *                     userInteractions:
+ *                       type: object
+ *                       nullable: true
+ *                       description: Only present when viewing another user
+ *                       properties:
+ *                         homeSurf:
+ *                           type: object
+ *                           nullable: true
+ *                           properties:
+ *                             hasBookedBefore:
+ *                               type: boolean
+ *                             lastBooking:
+ *                               type: object
+ *                         berseGuide:
+ *                           type: object
+ *                           nullable: true
+ *                           properties:
+ *                             hasBookedBefore:
+ *                               type: boolean
+ *                             lastBooking:
+ *                               type: object
+ *       404:
+ *         $ref: '#/components/responses/NotFoundError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/:id/services', authenticateToken, UserController.getUserServices);
+
 // ============================================================================
 // ADMIN ROUTES
 // ============================================================================

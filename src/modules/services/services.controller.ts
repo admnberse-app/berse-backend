@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { servicesService } from './services.service';
 import type { SearchServicesDTO } from './services.types';
 import logger from '../../utils/logger';
+import { prisma } from '../../config/database';
 
 export class ServicesController {
   /**
@@ -121,6 +122,54 @@ export class ServicesController {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch metadata',
+      });
+    }
+  }
+
+  /**
+   * GET /v2/services/discover
+   * Get curated and personalized service discovery sections
+   * Requires authentication
+   */
+  async discoverServices(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id; // From authenticateToken middleware
+      
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required',
+        });
+        return;
+      }
+
+      const { city } = req.query;
+
+      // Get user's city if not provided in query
+      let userCity = city as string | undefined;
+
+      if (!userCity) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            location: {
+              select: {
+                currentCity: true,
+              },
+            },
+          },
+        });
+        userCity = user?.location?.currentCity || undefined;
+      }
+
+      const result = await servicesService.discoverServices(userId, userCity);
+
+      res.json(result);
+    } catch (error) {
+      logger.error('Error discovering services', { error });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to discover services',
       });
     }
   }

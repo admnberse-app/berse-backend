@@ -2000,7 +2000,13 @@ export class EventService {
       status: event.status,
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
-      host: event.user,
+      host: event.user ? {
+        ...event.user,
+        profile: event.user.profile ? {
+          ...event.user.profile,
+          profilePicture: getProfilePictureUrl(event.user.profile.profilePicture),
+        } : undefined,
+      } : undefined,
       community: event.communities,
       ticketTiers: event.tier?.map((tier: any) => this.transformTicketTierResponse(tier)),
       _count: event._count,

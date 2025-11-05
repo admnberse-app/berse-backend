@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { PointsService } from './points.service';
+import { BadgeService } from './badge.service';
 import logger from '../utils/logger';
 import { POINT_VALUES } from '../types';
 
@@ -367,6 +368,18 @@ class PointsEventService extends EventEmitter {
         points,
         description,
       });
+      
+      // Automatically check and award badges after any point-earning activity
+      try {
+        await BadgeService.checkAndAwardBadges(userId);
+      } catch (badgeError) {
+        logger.error(`❌ Failed to check badges after ${action}`, {
+          userId,
+          action,
+          error: badgeError instanceof Error ? badgeError.message : 'Unknown error',
+        });
+        // Don't throw - badge checks should not break the main flow
+      }
     } catch (error) {
       logger.error(`❌ Failed to award points for ${action}`, {
         userId,

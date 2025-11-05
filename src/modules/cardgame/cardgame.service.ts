@@ -2788,6 +2788,58 @@ export class CardGameService {
       },
     });
 
+    // Get feedback data for completed sessions to calculate summary stats
+    const completedSessionNumbers = userSessions
+      .filter(s => s.completedAt)
+      .map(s => s.sessionNumber);
+
+    const userFeedbackBySessions = await prisma.cardGameFeedback.groupBy({
+      by: ['sessionNumber'],
+      where: {
+        userId,
+        topicId,
+        sessionNumber: { in: completedSessionNumbers },
+      },
+      _count: {
+        id: true,
+        comment: true,
+      },
+      _sum: {
+        upvoteCount: true,
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
+    // Get replies count for each completed session
+    const repliesBySession = await Promise.all(
+      completedSessionNumbers.map(async (sessionNum) => {
+        const count = await prisma.cardGameReply.count({
+          where: {
+            cardGameFeedbacks: {
+              userId,
+              topicId,
+              sessionNumber: sessionNum,
+            },
+          },
+        });
+        return { sessionNumber: sessionNum, repliesCount: count };
+      })
+    );
+
+    // Get community averages for completed sessions
+    const communityStatsBySessions = await prisma.cardGameFeedback.groupBy({
+      by: ['sessionNumber'],
+      where: {
+        topicId,
+        sessionNumber: { in: completedSessionNumbers },
+      },
+      _avg: {
+        rating: true,
+      },
+    });
+
     const statuses = [];
     const questionsPerSession = 5; // Default, will be calculated from session questions
 
@@ -2795,12 +2847,28 @@ export class CardGameService {
       const userSession = userSessions.find(s => s.sessionNumber === i);
       
       if (userSession?.completedAt) {
+        const feedbackStats = userFeedbackBySessions.find(f => f.sessionNumber === i);
+        const repliesData = repliesBySession.find(r => r.sessionNumber === i);
+        const communityStats = communityStatsBySessions.find(c => c.sessionNumber === i);
+
+        // Calculate percentile
+        const yourPercentile = feedbackStats?._avg.rating
+          ? await this.calculatePercentile(userId, topicId, i, feedbackStats._avg.rating)
+          : 0;
+
         statuses.push({
           sessionNumber: i,
           status: 'completed' as const,
           completedAt: userSession.completedAt,
           questionsCount: questionsPerSession,
           yourAverageRating: userSession.averageRating || undefined,
+          summary: {
+            commentsGiven: feedbackStats?._count.comment || 0,
+            upvotesReceived: feedbackStats?._sum.upvoteCount || 0,
+            repliesReceived: repliesData?.repliesCount || 0,
+            communityAverage: parseFloat((communityStats?._avg.rating || 0).toFixed(2)),
+            yourPercentile,
+          },
         });
       } else if (userSession?.status === 'in-progress') {
         statuses.push({

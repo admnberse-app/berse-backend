@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { servicesController } from './services.controller';
-import { optionalAuth } from '../../middleware/auth';
+import { authenticateToken } from '../../middleware/auth';
 import { asyncHandler } from '../../utils/asyncHandler';
 
 const router = Router();
@@ -212,7 +212,7 @@ const router = Router();
  */
 router.get(
   '/',
-  optionalAuth,
+  authenticateToken,
   asyncHandler(servicesController.searchServices.bind(servicesController))
 );
 
@@ -257,6 +257,87 @@ router.get(
 router.get(
   '/metadata',
   asyncHandler(servicesController.getMetadata.bind(servicesController))
+);
+
+/**
+ * @swagger
+ * /v2/services/discover:
+ *   get:
+ *     summary: Discover curated services (HomeSurf & BerseGuide)
+ *     description: Get personalized and curated service sections including matches, nearby, top-rated, and recently active. Authentication required.
+ *     tags: [Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: city
+ *         schema:
+ *           type: string
+ *         description: Override city for nearby services (optional, uses user's city if logged in)
+ *     responses:
+ *       200:
+ *         description: Discovery sections retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: object
+ *                   properties:
+ *                     forYou:
+ *                       type: object
+ *                       description: Personalized matches (always present for authenticated users)
+ *                       properties:
+ *                         title:
+ *                           type: string
+ *                         description:
+ *                           type: string
+ *                         homesurf:
+ *                           type: array
+ *                         berseguide:
+ *                           type: array
+ *                     nearby:
+ *                       type: object
+ *                       description: Nearby services (only if city available)
+ *                       properties:
+ *                         title:
+ *                           type: string
+ *                         description:
+ *                           type: string
+ *                         homesurf:
+ *                           type: array
+ *                         berseguide:
+ *                           type: array
+ *                     topRated:
+ *                       type: object
+ *                       properties:
+ *                         title:
+ *                           type: string
+ *                         description:
+ *                           type: string
+ *                         homesurf:
+ *                           type: array
+ *                         berseguide:
+ *                           type: array
+ *                     recentlyActive:
+ *                       type: object
+ *                       properties:
+ *                         title:
+ *                           type: string
+ *                         description:
+ *                           type: string
+ *                         berseguide:
+ *                           type: array
+ *       500:
+ *         description: Server error
+ *       401:
+ *         description: Unauthorized - Authentication required
+ */
+router.get(
+  '/discover',
+  authenticateToken,
+  asyncHandler(servicesController.discoverServices.bind(servicesController))
 );
 
 export default router;

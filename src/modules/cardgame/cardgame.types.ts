@@ -512,6 +512,15 @@ export interface SessionStatus {
   questionsAnswered?: number;
   totalQuestions?: number;
   yourAverageRating?: number;
+  summary?: SessionSummary;
+}
+
+export interface SessionSummary {
+  commentsGiven: number;
+  upvotesReceived: number;
+  repliesReceived: number;
+  communityAverage: number;
+  yourPercentile: number;
 }
 
 export interface CommunityTopicStats {

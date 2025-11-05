@@ -1,5 +1,6 @@
 import logger from '../../utils/logger';
 import { AccommodationType, PaymentType, GuideType } from '@prisma/client';
+import { prisma } from '../../config/database';
 import { HomeSurfService } from '../homesurf/homesurf.service';
 import { BerseGuideService } from '../berseguide/berseguide.service';
 import type { 
@@ -276,6 +277,240 @@ export class ServicesService {
     } catch (error) {
       logger.error('Failed to get service metadata', { error });
       throw error;
+    }
+  }
+
+  /**
+   * Discover services - curated and personalized sections
+   * Requires authenticated user
+   */
+  async discoverServices(userId: string, userCity?: string): Promise<any> {
+    try {
+      logger.info('Discovering services', { userId, userCity });
+
+      // Run all discovery queries in parallel
+      const [
+        matchingProfiles,
+        topRatedHomesurf,
+        topRatedBerseguide,
+        recentlyActiveHomesurf,
+        recentlyActiveBerseguide,
+        nearbyHomesurf,
+        nearbyBerseguide,
+      ] = await Promise.all([
+        // Matching profiles based on user interests/location
+        this.getMatchingProfiles(userId),
+        // Top rated services
+        this.getTopRatedServices('homesurf', 6),
+        this.getTopRatedServices('berseguide', 6),
+        // Recently active
+        this.getRecentlyActiveServices('homesurf', 6),
+        this.getRecentlyActiveServices('berseguide', 6),
+        // Nearby (if user has city)
+        userCity ? this.getNearbyServices('homesurf', userCity, 6) : Promise.resolve([]),
+        userCity ? this.getNearbyServices('berseguide', userCity, 6) : Promise.resolve([]),
+      ]);
+
+      return {
+        success: true,
+        data: {
+          // Personalized section (always present for authenticated users)
+          forYou: {
+            title: 'Matches Your Profile',
+            description: 'Based on your interests and preferences',
+            homesurf: matchingProfiles.homesurf,
+            berseguide: matchingProfiles.berseguide,
+          },
+
+          // Nearby section (only if user has location)
+          ...(userCity && {
+            nearby: {
+              title: `Services in ${userCity}`,
+              description: 'Discover local experiences',
+              homesurf: nearbyHomesurf,
+              berseguide: nearbyBerseguide,
+            },
+          }),
+
+          // Top rated section
+          topRated: {
+            title: 'Highly Rated',
+            description: 'Top-rated services from our community',
+            homesurf: topRatedHomesurf,
+            berseguide: topRatedBerseguide,
+          },
+
+          // Recently active section
+          recentlyActive: {
+            title: 'Recently Active',
+            description: 'Fresh listings and updated profiles',
+            homesurf: recentlyActiveHomesurf,
+            berseguide: recentlyActiveBerseguide,
+          },
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to discover services', { error, userId, userCity });
+      throw error;
+    }
+  }
+
+  /**
+   * Get profiles matching user's interests and preferences
+   */
+  private async getMatchingProfiles(userId: string): Promise<{
+    homesurf: HomeSurfProfileResponse[];
+    berseguide: BerseGuideProfileResponse[];
+  }> {
+    try {
+      // Fetch user's profile to get interests and location
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          profile: {
+            select: {
+              interests: true,
+            },
+          },
+          location: {
+            select: {
+              currentCity: true,
+            },
+          },
+        },
+      });
+
+      const city = user?.location?.currentCity;
+
+      // Search both services with user's city
+      const [homesurfResults, berseguideResults] = await Promise.all([
+        city
+          ? this.homesurfService.searchProfiles({
+              city,
+              page: 1,
+              limit: 6,
+              sortBy: 'rating',
+              sortOrder: 'desc',
+              requestingUserId: userId,
+            })
+          : Promise.resolve({ data: [], pagination: { total: 0, page: 1, totalPages: 0, limit: 6 } }),
+        city
+          ? this.berseguideService.searchProfiles({
+              city,
+              page: 1,
+              limit: 6,
+              sortBy: 'rating',
+              sortOrder: 'desc',
+              requestingUserId: userId,
+            })
+          : Promise.resolve({ data: [], pagination: { total: 0, page: 1, totalPages: 0, limit: 6 } }),
+      ]);
+
+      return {
+        homesurf: homesurfResults.data,
+        berseguide: berseguideResults.data,
+      };
+    } catch (error) {
+      logger.error('Failed to get matching profiles', { error, userId });
+      return { homesurf: [], berseguide: [] };
+    }
+  }
+
+  /**
+   * Get top-rated services
+   */
+  private async getTopRatedServices(
+    type: 'homesurf' | 'berseguide',
+    limit: number = 6
+  ): Promise<any[]> {
+    try {
+      if (type === 'homesurf') {
+        const result = await this.homesurfService.searchProfiles({
+          page: 1,
+          limit,
+          sortBy: 'rating',
+          sortOrder: 'desc',
+          minRating: 4.0,
+        });
+        return result.data;
+      } else {
+        const result = await this.berseguideService.searchProfiles({
+          page: 1,
+          limit,
+          sortBy: 'rating',
+          sortOrder: 'desc',
+          minRating: 4.0,
+        });
+        return result.data;
+      }
+    } catch (error) {
+      logger.error('Failed to get top rated services', { error, type });
+      return [];
+    }
+  }
+
+  /**
+   * Get recently active services
+   */
+  private async getRecentlyActiveServices(
+    type: 'homesurf' | 'berseguide',
+    limit: number = 6
+  ): Promise<any[]> {
+    try {
+      if (type === 'homesurf') {
+        const result = await this.homesurfService.searchProfiles({
+          page: 1,
+          limit,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+        return result.data;
+      } else {
+        const result = await this.berseguideService.searchProfiles({
+          page: 1,
+          limit,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        });
+        return result.data;
+      }
+    } catch (error) {
+      logger.error('Failed to get recently active services', { error, type });
+      return [];
+    }
+  }
+
+  /**
+   * Get nearby services based on city
+   */
+  private async getNearbyServices(
+    type: 'homesurf' | 'berseguide',
+    city: string,
+    limit: number = 6
+  ): Promise<any[]> {
+    try {
+      if (type === 'homesurf') {
+        const result = await this.homesurfService.searchProfiles({
+          city,
+          page: 1,
+          limit,
+          sortBy: 'rating',
+          sortOrder: 'desc',
+        });
+        return result.data;
+      } else {
+        const result = await this.berseguideService.searchProfiles({
+          city,
+          page: 1,
+          limit,
+          sortBy: 'rating',
+          sortOrder: 'desc',
+        });
+        return result.data;
+      }
+    } catch (error) {
+      logger.error('Failed to get nearby services', { error, type, city });
+      return [];
     }
   }
 }

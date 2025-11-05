@@ -391,6 +391,7 @@ export class UserController {
 
   /**
    * Get all users (for match/discovery screen)
+   * Sorted by profile completion (most complete first)
    * @route GET /v2/users/all
    */
   static async getAllUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -401,46 +402,66 @@ export class UserController {
       // Sanitize pagination parameters
       const pageNum = Math.max(1, Number(page));
       const limitNum = Math.min(100, Math.max(1, Number(limit)));
-      const skip = (pageNum - 1) * limitNum;
 
-      // Get all users except the current user
+      // Get all users except the current user (without pagination initially - we'll sort by completion first)
       const [users, total] = await Promise.all([
         prisma.user.findMany({
           where: {
             id: { not: currentUserId },
             status: 'ACTIVE',
+            deletedAt: null,
             // Only show users with verified emails (filters out test accounts)
             security: {
               emailVerifiedAt: { not: null },
             },
-            // Only show users with public profiles
-            privacy: {
-              profileVisibility: 'public',
-            },
+            // Only show users with public profiles or no privacy settings
+            OR: [
+              { privacy: { profileVisibility: { equals: 'public', mode: 'insensitive' } } },
+              { privacy: { profileVisibility: { equals: 'Public', mode: 'insensitive' } } },
+              { privacy: null },
+            ],
           },
           select: {
             id: true,
             fullName: true,
             email: true,
+            phone: true,
             role: true,
-            totalPoints: true,
+            trustScore: true,
+            trustLevel: true,
             profile: {
               select: {
                 profilePicture: true,
                 bio: true,
                 shortBio: true,
+                displayName: true,
+                dateOfBirth: true,
                 age: true,
+                gender: true,
                 profession: true,
+                occupation: true,
                 interests: true,
                 languages: true,
                 personalityType: true,
+                instagramHandle: true,
+                linkedinHandle: true,
+                website: true,
+                locationPrivacy: true,
               },
             },
             location: {
               select: {
                 currentCity: true,
                 currentLocation: true,
+                countryOfResidence: true,
+                nationality: true,
                 originallyFrom: true,
+              },
+            },
+            security: {
+              select: {
+                emailVerifiedAt: true,
+                lastSeenAt: true,
               },
             },
             metadata: {
@@ -449,49 +470,112 @@ export class UserController {
               },
             },
           },
-          skip,
-          take: Number(limit),
-          orderBy: {
-            createdAt: 'desc',
-          },
         }),
         prisma.user.count({
           where: {
             id: { not: currentUserId },
             status: 'ACTIVE',
+            deletedAt: null,
             // Only show users with verified emails (filters out test accounts)
             security: {
               emailVerifiedAt: { not: null },
             },
-            // Only show users with public profiles
-            privacy: {
-              profileVisibility: 'public',
-            },
+            // Only show users with public profiles or no privacy settings
+            OR: [
+              { privacy: { profileVisibility: { equals: 'public', mode: 'insensitive' } } },
+              { privacy: { profileVisibility: { equals: 'Public', mode: 'insensitive' } } },
+              { privacy: null },
+            ],
           },
         }),
       ]);
 
+      // Calculate profile completion for each user and sort by completion percentage
+      const usersWithCompletion = users.map(user => {
+        // Calculate completion inline using same logic as calculateProfileCompletion
+        const fields = {
+          // Basic User Info (35 points)
+          fullName: { value: user.fullName, weight: 5 },
+          email: { value: user.email, weight: 5 },
+          phone: { value: user.phone, weight: 5 },
+          
+          // Profile Fields from UserProfile table (40 points)
+          displayName: { value: user.profile?.displayName, weight: 3 },
+          profilePicture: { value: user.profile?.profilePicture, weight: 10 },
+          bio: { value: user.profile?.bio, weight: 8 },
+          shortBio: { value: user.profile?.shortBio, weight: 3 },
+          dateOfBirth: { value: user.profile?.dateOfBirth, weight: 5 },
+          gender: { value: user.profile?.gender, weight: 3 },
+          profession: { value: user.profile?.profession, weight: 4 },
+          occupation: { value: user.profile?.occupation, weight: 4 },
+          
+          // Location Info from UserLocation table (10 points)
+          currentCity: { value: user.location?.currentCity, weight: 4 },
+          countryOfResidence: { value: user.location?.countryOfResidence, weight: 3 },
+          nationality: { value: user.location?.nationality, weight: 3 },
+          
+          // Social & Interests from UserProfile (15 points)
+          interests: { value: user.profile?.interests && user.profile.interests.length > 0, weight: 5 },
+          languages: { value: user.profile?.languages && user.profile.languages.length > 0, weight: 3 },
+          personalityType: { value: user.profile?.personalityType, weight: 2 },
+          instagramHandle: { value: user.profile?.instagramHandle, weight: 2 },
+          linkedinHandle: { value: user.profile?.linkedinHandle, weight: 2 },
+          website: { value: user.profile?.website, weight: 1 }
+        };
+
+        let totalWeight = 0;
+        let completedWeight = 0;
+
+        Object.entries(fields).forEach(([_, field]) => {
+          totalWeight += field.weight;
+          if (field.value) {
+            completedWeight += field.weight;
+          }
+        });
+
+        const completionPercentage = Math.round((completedWeight / totalWeight) * 100);
+
+        return {
+          user,
+          completionPercentage
+        };
+      });
+
+      // Sort by completion percentage (highest to lowest)
+      usersWithCompletion.sort((a, b) => b.completionPercentage - a.completionPercentage);
+
+      // Apply pagination after sorting
+      const skip = (pageNum - 1) * limitNum;
+      const paginatedUsers = usersWithCompletion.slice(skip, skip + limitNum);
+
       // Transform to flat structure
-      const transformedUsers = users.map(user => ({
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        totalPoints: user.totalPoints,
-        profilePicture: getProfilePictureUrl(user.profile?.profilePicture),
-        bio: user.profile?.bio || user.profile?.shortBio,
-        interests: user.profile?.interests || [],
-        profession: user.profile?.profession,
-        age: user.profile?.age,
-        personalityType: user.profile?.personalityType,
-        languages: mapLanguageCodesToObjects(user.profile?.languages || []),
-        location: {
-          city: user.location?.currentCity,
-          currentLocation: user.location?.currentLocation,
-          originallyFrom: user.location?.originallyFrom,
-        },
-        membershipId: user.metadata?.membershipId,
-      }));
+      const transformedUsers = paginatedUsers.map(({ user, completionPercentage }) => {
+        const filteredLocation = filterLocationByPrivacy(user.location, { locationPrivacy: user.profile?.locationPrivacy }, false);
+        return {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+          trustScore: Math.round((user.trustScore || 0) * 10) / 10,
+          trustLevel: user.trustLevel,
+          profilePicture: getProfilePictureUrl(user.profile?.profilePicture),
+          bio: user.profile?.bio || user.profile?.shortBio,
+          interests: user.profile?.interests || [],
+          gender: user.profile?.gender,
+          profession: user.profile?.profession,
+          age: user.profile?.age,
+          personalityType: user.profile?.personalityType,
+          languages: mapLanguageCodesToObjects(user.profile?.languages || []),
+          location: filteredLocation ? {
+            city: filteredLocation.currentCity,
+            country: filteredLocation.countryOfResidence,
+          } : null,
+          isVerified: !!user.security?.emailVerifiedAt,
+          lastSeen: user.security?.lastSeenAt,
+          membershipId: user.metadata?.membershipId,
+          profileCompletion: completionPercentage, // Include completion percentage in response
+        };
+      });
 
       sendSuccess(res, {
         users: transformedUsers,
@@ -586,17 +670,24 @@ export class UserController {
       
       if (currentUserId && connectedUserIds.length > 0) {
         // Show public profiles OR friends-only profiles if connected OR users without privacy settings (default public)
-        privacyConditions.push({ privacy: { profileVisibility: 'public' } });
+        privacyConditions.push({ privacy: { profileVisibility: { equals: 'public', mode: 'insensitive' } } });
+        privacyConditions.push({ privacy: { profileVisibility: { equals: 'Public', mode: 'insensitive' } } });
         privacyConditions.push({ privacy: null }); // Users without privacy settings are treated as public
         privacyConditions.push({
           AND: [
-            { privacy: { profileVisibility: 'friends' } },
+            {
+              OR: [
+                { privacy: { profileVisibility: { equals: 'friends', mode: 'insensitive' } } },
+                { privacy: { profileVisibility: { equals: 'Friends', mode: 'insensitive' } } },
+              ]
+            },
             { id: { in: connectedUserIds } },
           ],
         });
       } else {
         // Only show public profiles or users without privacy settings if not logged in or no connections
-        privacyConditions.push({ privacy: { profileVisibility: 'public' } });
+        privacyConditions.push({ privacy: { profileVisibility: { equals: 'public', mode: 'insensitive' } } });
+        privacyConditions.push({ privacy: { profileVisibility: { equals: 'Public', mode: 'insensitive' } } });
         privacyConditions.push({ privacy: null }); // Users without privacy settings are treated as public
       }
 
@@ -604,7 +695,7 @@ export class UserController {
       if (query) {
         const searchConditions: any[] = [
           { fullName: { contains: query, mode: 'insensitive' } },
-          { profile: { bio: { contains: query, mode: 'insensitive' } } },
+          { profile: { displayName: { contains: query, mode: 'insensitive' } } },
         ];
 
         // Add username search only if user allows it OR has no privacy settings (default searchable)
@@ -2852,6 +2943,51 @@ export class UserController {
       });
 
       logger.info('Connection request accepted', { connectionId, userId });
+      
+      // Emit point events for both users (automatic badge checking happens via pointsEvents)
+      try {
+        const { pointsEvents } = await import('../../services/points-events.service');
+        
+        // Check if this is first connection for each user
+        const [initiatorConnectionCount, receiverConnectionCount] = await Promise.all([
+          prisma.userConnection.count({
+            where: {
+              OR: [
+                { initiatorId: connection.initiatorId, status: 'ACCEPTED' },
+                { receiverId: connection.initiatorId, status: 'ACCEPTED' },
+              ],
+            },
+          }),
+          prisma.userConnection.count({
+            where: {
+              OR: [
+                { initiatorId: connection.receiverId, status: 'ACCEPTED' },
+                { receiverId: connection.receiverId, status: 'ACCEPTED' },
+              ],
+            },
+          }),
+        ]);
+
+        const receiverName = result.users_user_connections_receiverIdTousers?.fullName || 'someone';
+        const initiatorName = result.users_user_connections_initiatorIdTousers?.fullName || 'someone';
+
+        // Emit events (this will automatically trigger badge checks)
+        if (initiatorConnectionCount === 1) {
+          pointsEvents.trigger('connection.first.made', connection.initiatorId, { partnerName: receiverName });
+        } else {
+          pointsEvents.trigger('connection.made', connection.initiatorId, { partnerName: receiverName });
+        }
+
+        if (receiverConnectionCount === 1) {
+          pointsEvents.trigger('connection.first.made', connection.receiverId, { partnerName: initiatorName });
+        } else {
+          pointsEvents.trigger('connection.received', connection.receiverId, { partnerName: initiatorName });
+        }
+      } catch (pointsError) {
+        logger.error('Failed to emit points events after connection acceptance', { error: pointsError });
+        // Don't fail the connection acceptance if points/badge events fail
+      }
+      
       sendSuccess(res, result, 'Connection request accepted');
     } catch (error) {
       next(error);
@@ -3789,6 +3925,411 @@ export class UserController {
       ];
 
       sendSuccess(res, { interestCategories });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get communities for a specific user
+   * @route GET /v2/users/:id/communities
+   */
+  static async getUserCommunities(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const currentUserId = req.user?.id;
+
+      // Verify user exists
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, fullName: true, username: true },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Get user's communities
+      const communityMemberships = await prisma.communityMember.findMany({
+        where: {
+          userId: id,
+          isApproved: true,
+        },
+        include: {
+          communities: {
+            include: {
+              _count: {
+                select: {
+                  communityMembers: true,
+                  events: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          joinedAt: 'desc',
+        },
+      });
+
+      // Transform communities and check if current user is also a member
+      const communities = await Promise.all(
+        communityMemberships.map(async (membership) => {
+          const community = membership.communities;
+          
+          // Check if current user is also a member (for shared communities indicator)
+          let isShared = false;
+          let currentUserRole = null;
+          
+          if (currentUserId && currentUserId !== id) {
+            const currentUserMembership = await prisma.communityMember.findFirst({
+              where: {
+                communityId: community.id,
+                userId: currentUserId,
+                isApproved: true,
+              },
+              select: { role: true },
+            });
+            
+            if (currentUserMembership) {
+              isShared = true;
+              currentUserRole = currentUserMembership.role;
+            }
+          }
+
+          return {
+            id: community.id,
+            name: community.name,
+            description: community.description,
+            logoUrl: community.logoUrl,
+            coverImageUrl: community.coverImageUrl,
+            interests: community.interests,
+            isVerified: community.isVerified,
+            memberCount: community._count.communityMembers,
+            eventCount: community._count.events,
+            userRole: membership.role,
+            joinedAt: membership.joinedAt,
+            // Only include these if viewing another user's communities
+            ...(currentUserId !== id && {
+              isShared,
+              yourRole: currentUserRole,
+            }),
+          };
+        })
+      );
+
+      // Group by role
+      const grouped = {
+        founded: communities.filter(c => c.userRole === 'OWNER'),
+        moderating: communities.filter(c => c.userRole === 'ADMIN' || c.userRole === 'MODERATOR'),
+        member: communities.filter(c => c.userRole === 'MEMBER'),
+      };
+
+      const stats = {
+        total: communities.length,
+        founded: grouped.founded.length,
+        moderating: grouped.moderating.length,
+        member: grouped.member.length,
+        shared: communities.filter(c => c.isShared).length,
+      };
+
+      sendSuccess(res, {
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          username: user.username,
+        },
+        stats,
+        communities: {
+          all: communities,
+          grouped,
+        },
+      }, `Retrieved ${communities.length} communities for user`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get services for a specific user (HomeSurf & BerseGuide)
+   * @route GET /v2/users/:id/services
+   */
+  static async getUserServices(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const currentUserId = req.user?.id;
+
+      // Verify user exists
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { 
+          id: true, 
+          fullName: true, 
+          username: true,
+          profile: {
+            select: {
+              profilePicture: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Fetch HomeSurf profile with stats
+      const homeSurf = await prisma.userHomeSurf.findUnique({
+        where: { userId: id },
+        include: {
+          paymentOptions: true,
+          _count: {
+            select: {
+              bookings: true,
+              reviews: true,
+            },
+          },
+        },
+      });
+
+      // Fetch BerseGuide profile with stats
+      const berseGuide = await prisma.userBerseGuide.findUnique({
+        where: { userId: id },
+        include: {
+          paymentOptions: true,
+          _count: {
+            select: {
+              bookings: true,
+              reviews: true,
+              sessions: true,
+            },
+          },
+        },
+      });
+
+      // Get additional booking stats for HomeSurf
+      let homeSurfStats = null;
+      if (homeSurf) {
+        const [completedBookings, approvedBookings, totalGuests] = await Promise.all([
+          prisma.homeSurfBooking.count({
+            where: {
+              hostId: id,
+              status: 'COMPLETED',
+            },
+          }),
+          prisma.homeSurfBooking.count({
+            where: {
+              hostId: id,
+              status: { in: ['APPROVED', 'CHECKED_IN'] },
+            },
+          }),
+          prisma.homeSurfBooking.aggregate({
+            where: {
+              hostId: id,
+              status: 'COMPLETED',
+            },
+            _sum: {
+              numberOfGuests: true,
+            },
+          }),
+        ]);
+
+        homeSurfStats = {
+          totalBookings: homeSurf._count.bookings,
+          completedBookings,
+          upcomingBookings: approvedBookings,
+          totalGuests: totalGuests._sum.numberOfGuests || homeSurf.totalGuests || 0,
+          rating: homeSurf.rating || 0,
+          reviewCount: homeSurf._count.reviews,
+          responseRate: homeSurf.responseRate || 0,
+          averageResponseTime: homeSurf.averageResponseTime || null,
+        };
+      }
+
+      // Get additional booking stats for BerseGuide
+      let berseGuideStats = null;
+      if (berseGuide) {
+        const now = new Date();
+        const [completedSessions, approvedBookings, upcomingSessions] = await Promise.all([
+          // Completed sessions = sessions that have already occurred (date in the past)
+          prisma.berseGuideSession.count({
+            where: {
+              guideId: id,
+              date: { lt: now },
+            },
+          }),
+          // Approved bookings = bookings that are approved or in progress
+          prisma.berseGuideBooking.count({
+            where: {
+              guideId: id,
+              status: { in: ['APPROVED', 'IN_PROGRESS'] },
+            },
+          }),
+          // Upcoming sessions = sessions scheduled for the future
+          prisma.berseGuideSession.count({
+            where: {
+              guideId: id,
+              date: { gte: now },
+            },
+          }),
+        ]);
+
+        berseGuideStats = {
+          totalBookings: berseGuide._count.bookings,
+          totalSessions: berseGuide._count.sessions,
+          completedSessions,
+          upcomingSessions,
+          totalToursGiven: berseGuide.totalSessions || completedSessions,
+          rating: berseGuide.rating || 0,
+          reviewCount: berseGuide._count.reviews,
+          responseRate: berseGuide.responseRate || 0,
+          averageResponseTime: berseGuide.averageResponseTime || null,
+          yearsGuiding: berseGuide.yearsGuiding || null,
+        };
+      }
+
+      // Check if current user has interacted with these services
+      let userInteractions = null;
+      if (currentUserId && currentUserId !== id) {
+        const [homeSurfBooking, berseGuideBooking] = await Promise.all([
+          homeSurf ? prisma.homeSurfBooking.findFirst({
+            where: {
+              hostId: id,
+              guestId: currentUserId,
+            },
+            select: {
+              id: true,
+              status: true,
+              checkInDate: true,
+              checkOutDate: true,
+            },
+            orderBy: { requestedAt: 'desc' },
+          }) : null,
+          berseGuide ? prisma.berseGuideBooking.findFirst({
+            where: {
+              guideId: id,
+              travelerId: currentUserId,
+            },
+            select: {
+              id: true,
+              status: true,
+              agreedDate: true,
+            },
+            orderBy: { requestedAt: 'desc' },
+          }) : null,
+        ]);
+
+        userInteractions = {
+          homeSurf: homeSurfBooking ? {
+            hasBookedBefore: true,
+            lastBooking: homeSurfBooking,
+          } : null,
+          berseGuide: berseGuideBooking ? {
+            hasBookedBefore: true,
+            lastBooking: berseGuideBooking,
+          } : null,
+        };
+      }
+
+      // Transform HomeSurf data
+      const homeSurfData = homeSurf ? {
+        isEnabled: homeSurf.isEnabled,
+        title: homeSurf.title,
+        description: homeSurf.description,
+        accommodationType: homeSurf.accommodationType,
+        maxGuests: homeSurf.maxGuests,
+        amenities: homeSurf.amenities,
+        houseRules: homeSurf.houseRules,
+        photos: homeSurf.photos,
+        paymentOptions: homeSurf.paymentOptions.map(opt => ({
+          id: opt.id,
+          paymentType: opt.paymentType,
+          amount: opt.amount,
+          currency: opt.currency,
+          description: opt.description,
+          isPreferred: opt.isPreferred,
+        })),
+        availabilityNotes: homeSurf.availabilityNotes,
+        minimumStay: homeSurf.minimumStay,
+        maximumStay: homeSurf.maximumStay,
+        advanceNotice: homeSurf.advanceNotice,
+        city: homeSurf.city,
+        neighborhood: homeSurf.neighborhood,
+        stats: homeSurfStats,
+        createdAt: homeSurf.createdAt,
+        updatedAt: homeSurf.updatedAt,
+        lastActiveAt: homeSurf.lastActiveAt,
+      } : {
+        isEnabled: false,
+        profileExists: false,
+        message: 'User has not set up a HomeSurf hosting profile',
+      };
+
+      // Transform BerseGuide data
+      const berseGuideData = berseGuide ? {
+        isEnabled: berseGuide.isEnabled,
+        title: berseGuide.title,
+        description: berseGuide.description,
+        tagline: berseGuide.tagline,
+        guideTypes: berseGuide.guideTypes,
+        customTypes: berseGuide.customTypes,
+        languages: berseGuide.languages,
+        city: berseGuide.city,
+        neighborhoods: berseGuide.neighborhoods,
+        coverageRadius: berseGuide.coverageRadius,
+        paymentOptions: berseGuide.paymentOptions.map(opt => ({
+          id: opt.id,
+          paymentType: opt.paymentType,
+          amount: opt.amount,
+          currency: opt.currency,
+          description: opt.description,
+          isPreferred: opt.isPreferred,
+        })),
+        availabilityNotes: berseGuide.availabilityNotes,
+        typicalDuration: berseGuide.typicalDuration,
+        minDuration: berseGuide.minDuration,
+        maxDuration: berseGuide.maxDuration,
+        maxGroupSize: berseGuide.maxGroupSize,
+        advanceNotice: berseGuide.advanceNotice,
+        yearsGuiding: berseGuide.yearsGuiding,
+        photos: berseGuide.photos,
+        highlights: berseGuide.highlights,
+        sampleItinerary: berseGuide.sampleItinerary,
+        stats: berseGuideStats,
+        createdAt: berseGuide.createdAt,
+        updatedAt: berseGuide.updatedAt,
+        lastActiveAt: berseGuide.lastActiveAt,
+      } : {
+        isEnabled: false,
+        profileExists: false,
+        message: 'User has not set up a BerseGuide tour profile',
+      };
+
+      const response = {
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          username: user.username,
+          profilePicture: getProfilePictureUrl(user.profile?.profilePicture),
+        },
+        services: {
+          homeSurf: homeSurfData,
+          berseGuide: berseGuideData,
+        },
+        summary: {
+          hasHomeSurf: !!homeSurf && homeSurf.isEnabled,
+          hasBerseGuide: !!berseGuide && berseGuide.isEnabled,
+          activeServicesCount: [homeSurf?.isEnabled, berseGuide?.isEnabled].filter(Boolean).length,
+        },
+        ...(userInteractions && { userInteractions }),
+      };
+
+      const servicesCount = response.summary.activeServicesCount;
+      const message = servicesCount > 0 
+        ? `User has ${servicesCount} active service${servicesCount > 1 ? 's' : ''}`
+        : 'User has no active services';
+
+      sendSuccess(res, response, message);
     } catch (error) {
       next(error);
     }
