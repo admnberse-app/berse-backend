@@ -3,6 +3,7 @@ import { BerseGuideController } from './berseguide.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { uploadImage } from '../../middleware/upload';
 
 const router = Router();
 const berseGuideController = new BerseGuideController();
@@ -186,9 +187,109 @@ router.get(
   asyncHandler(berseGuideController.checkEligibility.bind(berseGuideController))
 );
 
+/**
+ * @swagger
+ * /v2/berseguide/profile/upload-photo:
+ *   post:
+ *     summary: Upload BerseGuide profile photo
+ *     description: Upload a photo for BerseGuide profile. Returns the photo URL to be used in profile creation/update.
+ *     tags: [BerseGuide]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - photo
+ *             properties:
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *                 description: Photo file (JPEG, PNG, GIF, WebP - max 5MB)
+ *     responses:
+ *       200:
+ *         description: Photo uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     photoUrl:
+ *                       type: string
+ *                       description: URL of the uploaded photo
+ *       400:
+ *         description: No file uploaded or invalid file type
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  '/profile/upload-photo',
+  authenticateToken,
+  uploadImage.single('photo'),
+  asyncHandler(berseGuideController.uploadPhoto.bind(berseGuideController))
+);
+
 // ============================================================================
 // PAYMENT OPTIONS ROUTES
 // ============================================================================
+
+/**
+ * @swagger
+ * /v2/berseguide/payment-options:
+ *   get:
+ *     summary: Get payment options
+ *     description: Get all payment options for the current user's BerseGuide profile
+ *     tags: [BerseGuide]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payment options retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       paymentType:
+ *                         type: string
+ *                         enum: [CASH, ONLINE_TRANSFER, CARD, E_WALLET]
+ *                       description:
+ *                         type: string
+ *                       isPreferred:
+ *                         type: boolean
+ *                       amount:
+ *                         type: number
+ *                       currency:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: BerseGuide profile not found
+ */
+router.get(
+  '/payment-options',
+  authenticateToken,
+  asyncHandler(berseGuideController.getPaymentOptions.bind(berseGuideController))
+);
 
 /**
  * @swagger

@@ -204,9 +204,53 @@ export class BerseGuideController {
     }
   }
 
+  /**
+   * Upload BerseGuide profile photo
+   * POST /api/v2/berseguide/profile/upload-photo
+   */
+  async uploadPhoto(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+
+      if (!req.file) {
+        throw new AppError('No file uploaded', 400);
+      }
+
+      const photoUrl = await berseGuideService.uploadPhoto(userId, req.file);
+
+      res.json({
+        success: true,
+        message: 'Photo uploaded successfully',
+        data: { photoUrl },
+      });
+    } catch (error) {
+      logger.error('Failed to upload photo', { error, userId: req.user?.id });
+      throw error;
+    }
+  }
+
   // ============================================================================
   // PAYMENT OPTIONS
   // ============================================================================
+
+  /**
+   * Get payment options
+   * GET /api/v2/berseguide/payment-options
+   */
+  async getPaymentOptions(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const paymentOptions = await berseGuideService.getPaymentOptions(userId);
+
+      res.json({
+        success: true,
+        data: paymentOptions,
+      });
+    } catch (error) {
+      logger.error('Failed to get payment options', { error, userId: req.user?.id });
+      throw error;
+    }
+  }
 
   /**
    * Add payment option

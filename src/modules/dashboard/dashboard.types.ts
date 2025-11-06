@@ -68,17 +68,49 @@ export interface DashboardSummary {
 }
 
 export interface Alert {
-  type: 'community_approvals' | 'upcoming_events' | 'new_messages' | 'listing_interest';
+  type: 
+    | 'community_approvals' 
+    | 'event_payment_required' 
+    | 'event_payment_pending_attendees'
+    | 'event_upcoming' 
+    | 'event_new_participants'
+    | 'connection_requests' 
+    | 'vouch_requests'
+    | 'new_messages' 
+    | 'listing_interest';
   count: number;
   priority: 'high' | 'medium' | 'low';
   message: string;
   targetId?: string;
   targetName?: string;
-  targetType?: 'community' | 'event' | 'listing' | 'message';
-  nextEvent?: {
-    id: string;
-    title: string;
-    startsAt: Date;
+  targetType?: 'community' | 'event' | 'listing' | 'message' | 'connection' | 'vouch';
+  actionUrl: string;  // Deep link for action
+  metadata?: {
+    // For events
+    eventDate?: Date;
+    participantCount?: number;
+    unpaidCount?: number;
+    maxAttendees?: number;
+    daysUntilEvent?: number;
+    
+    // For communities
+    communityId?: string;
+    pendingMembers?: Array<{
+      userId: string;
+      userName: string;
+      profilePicture?: string;
+      requestedAt: Date;
+    }>;
+    
+    // For connections/vouches
+    requests?: Array<{
+      id: string;
+      fromUserId: string;
+      fromUserName: string;
+      fromUserProfilePicture?: string;
+      requestedAt: Date;
+      message?: string;
+    }>;
   };
 }
 

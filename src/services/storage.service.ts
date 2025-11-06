@@ -166,7 +166,7 @@ export class StorageService {
    */
   async uploadFile(
     file: Express.Multer.File,
-    folder: 'avatars' | 'events' | 'communities' | 'marketplace' | 'temp',
+    folder: 'avatars' | 'events' | 'communities' | 'marketplace' | 'berseguide' | 'temp',
     options?: {
       optimize?: boolean;
       isPublic?: boolean;

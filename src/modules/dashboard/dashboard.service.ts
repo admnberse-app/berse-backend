@@ -734,12 +734,14 @@ export class DashboardService {
 
   private async generateAlerts(userId: string): Promise<Alert[]> {
     const alerts: Alert[] = [];
+    const now = new Date();
+    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Check for pending community approvals
-    const adminCommunities = await prisma.communityMember.findMany({
+    // 1. COMMUNITY APPROVALS (High Priority) - For admins and moderators only
+    const adminModeratorCommunities = await prisma.communityMember.findMany({
       where: {
         userId,
-        role: 'ADMIN',
+        role: { in: ['ADMIN', 'MODERATOR'] },
         isApproved: true,
       },
       select: {
@@ -747,43 +749,316 @@ export class DashboardService {
       },
     });
 
-    // Fetch community details
-    const communityIds = adminCommunities.map(m => m.communityId);
-    const communities = await prisma.community.findMany({
-      where: { id: { in: communityIds } },
-      select: { id: true, name: true },
-    });
-    const communityMap = new Map(communities.map(c => [c.id, c]));
-
-    for (const membership of adminCommunities) {
-      const pendingCount = await prisma.communityMember.count({
-        where: {
-          communityId: membership.communityId,
-          isApproved: false,
-        },
+    if (adminModeratorCommunities.length > 0) {
+      const communityIds = adminModeratorCommunities.map(m => m.communityId);
+      const communities = await prisma.community.findMany({
+        where: { id: { in: communityIds } },
+        select: { id: true, name: true },
       });
+      const communityMap = new Map(communities.map(c => [c.id, c]));
 
-      if (pendingCount > 0) {
-        const community = communityMap.get(membership.communityId);
-        if (community) {
-          alerts.push({
-            type: 'community_approvals',
-            count: pendingCount,
-            priority: 'high',
-            message: `${pendingCount} pending community approval${pendingCount > 1 ? 's' : ''}`,
-            targetId: community.id,
-            targetName: community.name,
-            targetType: 'community',
-          });
+      for (const membership of adminModeratorCommunities) {
+        const pendingMembers = await prisma.communityMember.findMany({
+          where: {
+            communityId: membership.communityId,
+            isApproved: false,
+          },
+          include: {
+            user: {
+              select: {
+                fullName: true,
+                profile: {
+                  select: {
+                    profilePicture: true,
+                  },
+                },
+              },
+            },
+          },
+          take: 5, // Show up to 5 pending members in metadata
+          orderBy: { joinedAt: 'desc' },
+        });
+
+        if (pendingMembers.length > 0) {
+          const community = communityMap.get(membership.communityId);
+          if (community) {
+            const totalPending = await prisma.communityMember.count({
+              where: {
+                communityId: membership.communityId,
+                isApproved: false,
+              },
+            });
+
+            alerts.push({
+              type: 'community_approvals',
+              count: totalPending,
+              priority: 'high',
+              message: `${totalPending} pending member${totalPending > 1 ? 's' : ''} in ${community.name}`,
+              targetId: community.id,
+              targetName: community.name,
+              targetType: 'community',
+              actionUrl: `/communities/${community.id}/members/pending`,
+              metadata: {
+                communityId: community.id,
+                pendingMembers: pendingMembers.map(pm => ({
+                  userId: pm.userId,
+                  userName: pm.user.fullName,
+                  profilePicture: pm.user.profile?.profilePicture,
+                  requestedAt: pm.joinedAt,
+                })),
+              },
+            });
+          }
         }
       }
     }
 
-    // Check for upcoming events this week
-    const now = new Date();
-    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // 2. CONNECTION REQUESTS (High Priority) - Received requests
+    const pendingConnections = await prisma.userConnection.findMany({
+      where: {
+        receiverId: userId,
+        status: 'PENDING',
+      },
+      include: {
+        users_user_connections_initiatorIdTousers: {
+          select: {
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    });
 
-    const upcomingEvents = await prisma.event.findMany({
+    if (pendingConnections.length > 0) {
+      const totalConnectionRequests = await prisma.userConnection.count({
+        where: {
+          receiverId: userId,
+          status: 'PENDING',
+        },
+      });
+
+      alerts.push({
+        type: 'connection_requests',
+        count: totalConnectionRequests,
+        priority: 'high',
+        message: `${totalConnectionRequests} pending connection request${totalConnectionRequests > 1 ? 's' : ''}`,
+        targetType: 'connection',
+        actionUrl: '/profile/connections',
+        metadata: {
+          requests: pendingConnections.map(conn => ({
+            id: conn.id,
+            fromUserId: conn.initiatorId,
+            fromUserName: conn.users_user_connections_initiatorIdTousers.fullName,
+            fromUserProfilePicture: conn.users_user_connections_initiatorIdTousers.profile?.profilePicture,
+            requestedAt: conn.createdAt,
+          })),
+        },
+      });
+    }
+
+    // 3. VOUCH REQUESTS (High Priority) - Received vouch requests
+    const pendingVouches = await prisma.vouch.findMany({
+      where: {
+        voucheeId: userId,
+        status: 'PENDING',
+      },
+      include: {
+        users_vouches_voucherIdTousers: {
+          select: {
+            fullName: true,
+            profile: {
+              select: {
+                profilePicture: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    });
+
+    if (pendingVouches.length > 0) {
+      const totalVouchRequests = await prisma.vouch.count({
+        where: {
+          voucheeId: userId,
+          status: 'PENDING',
+        },
+      });
+
+      alerts.push({
+        type: 'vouch_requests',
+        count: totalVouchRequests,
+        priority: 'high',
+        message: `${totalVouchRequests} pending vouch request${totalVouchRequests > 1 ? 's' : ''}`,
+        targetType: 'vouch',
+        actionUrl: '/vouches/requests',
+        metadata: {
+          requests: pendingVouches.map(vouch => ({
+            id: vouch.id,
+            fromUserId: vouch.voucherId,
+            fromUserName: vouch.users_vouches_voucherIdTousers.fullName,
+            fromUserProfilePicture: vouch.users_vouches_voucherIdTousers.profile?.profilePicture,
+            requestedAt: vouch.createdAt,
+            message: vouch.message || undefined,
+          })),
+        },
+      });
+    }
+
+    // 4. EVENT PAYMENT REQUIRED (High Priority) - User needs to pay for events
+    const unpaidTickets = await prisma.eventTicket.findMany({
+      where: {
+        userId,
+        paymentStatus: 'PENDING',
+        status: 'PENDING',
+        events: {
+          date: { gte: now },
+        },
+      },
+      include: {
+        events: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+          },
+        },
+      },
+      orderBy: {
+        events: {
+          date: 'asc',
+        },
+      },
+    });
+
+    for (const ticket of unpaidTickets) {
+      const daysUntil = Math.ceil((ticket.events.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      alerts.push({
+        type: 'event_payment_required',
+        count: 1,
+        priority: 'high',
+        message: `Payment required for "${ticket.events.title}"`,
+        targetId: ticket.events.id,
+        targetName: ticket.events.title,
+        targetType: 'event',
+        actionUrl: `/events/${ticket.events.id}/payment`,
+        metadata: {
+          eventDate: ticket.events.date,
+          daysUntilEvent: daysUntil,
+        },
+      });
+    }
+
+    // 5. EVENT PAYMENT PENDING ATTENDEES (High Priority) - For hosts with unpaid attendees
+    const hostedEventsWithPayments = await prisma.event.findMany({
+      where: {
+        hostId: userId,
+        date: { gte: now },
+      },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        eventTickets: {
+          where: {
+            paymentStatus: 'PENDING',
+            status: 'PENDING',
+          },
+        },
+      },
+    });
+
+    for (const event of hostedEventsWithPayments) {
+      const unpaidCount = event.eventTickets.length;
+      
+      if (unpaidCount > 0) {
+        const daysUntil = Math.ceil((event.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        alerts.push({
+          type: 'event_payment_pending_attendees',
+          count: unpaidCount,
+          priority: 'high',
+          message: `${unpaidCount} unpaid attendee${unpaidCount > 1 ? 's' : ''} for "${event.title}"`,
+          targetId: event.id,
+          targetName: event.title,
+          targetType: 'event',
+          actionUrl: `/events/${event.id}/participants?filter=unpaid`,
+          metadata: {
+            eventDate: event.date,
+            unpaidCount,
+            daysUntilEvent: daysUntil,
+          },
+        });
+      }
+    }
+
+    // 6. NEW EVENT PARTICIPANTS (Medium Priority) - For hosts
+    const recentParticipants = await prisma.eventParticipant.findMany({
+      where: {
+        events: {
+          hostId: userId,
+          date: { gte: now },
+        },
+        userId: { not: userId },
+        createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }, // Last 24 hours
+      },
+      include: {
+        events: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            maxAttendees: true,
+          },
+        },
+      },
+    });
+
+    // Group by event
+    const participantsByEvent = new Map<string, typeof recentParticipants>();
+    for (const participant of recentParticipants) {
+      const existing = participantsByEvent.get(participant.eventId) || [];
+      existing.push(participant);
+      participantsByEvent.set(participant.eventId, existing);
+    }
+
+    for (const [eventId, participants] of participantsByEvent) {
+      const event = participants[0].events;
+      const totalParticipants = await prisma.eventParticipant.count({
+        where: {
+          eventId,
+          status: { in: ['REGISTERED', 'CONFIRMED'] },
+        },
+      });
+
+      alerts.push({
+        type: 'event_new_participants',
+        count: participants.length,
+        priority: 'medium',
+        message: `${participants.length} new participant${participants.length > 1 ? 's' : ''} for "${event.title}"`,
+        targetId: event.id,
+        targetName: event.title,
+        targetType: 'event',
+        actionUrl: `/events/${event.id}/participants`,
+        metadata: {
+          eventDate: event.date,
+          participantCount: totalParticipants,
+          maxAttendees: event.maxAttendees || undefined,
+        },
+      });
+    }
+
+    // 7. UPCOMING EVENTS (Medium Priority) - Events in next 3 days
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const urgentUpcomingEvents = await prisma.event.findMany({
       where: {
         OR: [
           { hostId: userId },
@@ -798,47 +1073,55 @@ export class DashboardService {
         ],
         date: {
           gte: now,
-          lte: weekFromNow,
+          lte: threeDaysFromNow,
         },
       },
-      orderBy: { date: 'asc' },
-      take: 1,
-    });
-
-    if (upcomingEvents.length > 0) {
-      const nextEvent = upcomingEvents[0];
-      const totalUpcoming = await prisma.event.count({
-        where: {
-          OR: [
-            { hostId: userId },
-            {
-              eventParticipants: {
-                some: {
-                  userId,
-                  status: { in: ['REGISTERED', 'CONFIRMED'] },
-                },
-              },
-            },
-          ],
-          date: {
-            gte: now,
-            lte: weekFromNow,
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        hostId: true,
+        eventParticipants: {
+          where: {
+            status: { in: ['REGISTERED', 'CONFIRMED'] },
           },
         },
-      });
+        maxAttendees: true,
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    for (const event of urgentUpcomingEvents) {
+      const daysUntil = Math.ceil((event.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const isHost = event.hostId === userId;
+      const participantCount = event.eventParticipants.length;
 
       alerts.push({
-        type: 'upcoming_events',
-        count: totalUpcoming,
-        priority: 'medium',
-        message: `${totalUpcoming} upcoming event${totalUpcoming > 1 ? 's' : ''} this week`,
-        nextEvent: {
-          id: nextEvent.id,
-          title: nextEvent.title,
-          startsAt: nextEvent.date,
+        type: 'event_upcoming',
+        count: 1,
+        priority: daysUntil <= 1 ? 'high' : 'medium',
+        message: `"${event.title}" is ${daysUntil === 0 ? 'today' : daysUntil === 1 ? 'tomorrow' : `in ${daysUntil} days`}`,
+        targetId: event.id,
+        targetName: event.title,
+        targetType: 'event',
+        actionUrl: `/events/${event.id}`,
+        metadata: {
+          eventDate: event.date,
+          daysUntilEvent: daysUntil,
+          participantCount: isHost ? participantCount : undefined,
+          maxAttendees: isHost ? event.maxAttendees || undefined : undefined,
         },
       });
     }
+
+    // Sort alerts by priority and then by count
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    alerts.sort((a, b) => {
+      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      return b.count - a.count;
+    });
 
     return alerts;
   }

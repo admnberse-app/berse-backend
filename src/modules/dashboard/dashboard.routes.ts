@@ -22,10 +22,22 @@ router.use(authenticateToken);
  *       Returns a complete dashboard summary including:
  *       - User's basic info (name, profile picture, trust score, trust level, points, badges, vouches)
  *       - Quick stats (communities, events, listings, connections, events attended/hosted)
- *       - Alerts (pending approvals, upcoming events)
+ *       - Comprehensive alerts system (pending approvals, payments, connections, vouches, upcoming events)
  *       - Summary breakdowns (admin/member communities, hosting/attending events, active/sold listings)
  *       - Services (HomeSurf and BerseGuide status, bookings, ratings)
  *       - Recent activity feed (last 10 activities)
+ *       
+ *       **Alert Types:**
+ *       - `community_approvals`: Pending member approvals for communities you admin/moderate (High priority)
+ *       - `connection_requests`: Pending connection requests received (High priority)
+ *       - `vouch_requests`: Pending vouch requests received (High priority)
+ *       - `event_payment_required`: Your unpaid event tickets (High priority)
+ *       - `event_payment_pending_attendees`: Unpaid attendees for events you host (High priority)
+ *       - `event_new_participants`: New participants for your hosted events (Medium priority)
+ *       - `event_upcoming`: Events happening in next 3 days (High/Medium priority)
+ *       
+ *       Each alert includes an `actionUrl` for deep linking and `metadata` with contextual details.
+ *       Alerts are sorted by priority (high → medium → low) and then by count.
  *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []
@@ -148,19 +160,55 @@ router.use(authenticateToken);
  *                           description: Tour highlights and specialties
  *                     alerts:
  *                       type: array
+ *                       description: Action items requiring user attention, sorted by priority
  *                       items:
  *                         type: object
  *                         properties:
  *                           type:
  *                             type: string
- *                             enum: [community_approvals, upcoming_events, new_messages, listing_interest]
+ *                             enum: [community_approvals, event_payment_required, event_payment_pending_attendees, event_upcoming, event_new_participants, connection_requests, vouch_requests, new_messages, listing_interest]
  *                           count:
  *                             type: integer
+ *                             description: Number of items requiring attention
  *                           priority:
  *                             type: string
  *                             enum: [high, medium, low]
  *                           message:
  *                             type: string
+ *                             description: Human-readable alert message
+ *                           targetId:
+ *                             type: string
+ *                             description: ID of the related entity
+ *                           targetName:
+ *                             type: string
+ *                             description: Name of the related entity
+ *                           targetType:
+ *                             type: string
+ *                             enum: [community, event, listing, message, connection, vouch]
+ *                           actionUrl:
+ *                             type: string
+ *                             description: Deep link URL for taking action
+ *                           metadata:
+ *                             type: object
+ *                             description: Additional context specific to alert type
+ *                             properties:
+ *                               eventDate:
+ *                                 type: string
+ *                                 format: date-time
+ *                               participantCount:
+ *                                 type: integer
+ *                               unpaidCount:
+ *                                 type: integer
+ *                               daysUntilEvent:
+ *                                 type: integer
+ *                               pendingMembers:
+ *                                 type: array
+ *                                 items:
+ *                                   type: object
+ *                               requests:
+ *                                 type: array
+ *                                 items:
+ *                                   type: object
  *                     communitySummary:
  *                       type: object
  *                       properties:

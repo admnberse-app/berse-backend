@@ -107,6 +107,30 @@ export class BerseGuideService {
   }
 
   /**
+   * Upload photo for BerseGuide profile
+   */
+  async uploadPhoto(userId: string, file: Express.Multer.File): Promise<string> {
+    try {
+      const { StorageService } = await import('../../services/storage.service');
+      const storageService = new StorageService();
+
+      // Upload to Digital Ocean Spaces in berseguide folder
+      const uploadResult = await storageService.uploadFile(file, 'berseguide' as any, {
+        optimize: true,
+        isPublic: true,
+        userId,
+      });
+
+      logger.info('BerseGuide photo uploaded', { userId, url: uploadResult.url });
+
+      return uploadResult.url;
+    } catch (error) {
+      logger.error('Failed to upload BerseGuide photo', { error, userId });
+      throw error;
+    }
+  }
+
+  /**
    * Create BerseGuide profile
    */
   async createProfile(userId: string, data: CreateBerseGuideProfileDTO): Promise<BerseGuideProfileResponse> {
@@ -315,6 +339,36 @@ export class BerseGuideService {
   // ============================================================================
   // PAYMENT OPTIONS MANAGEMENT
   // ============================================================================
+
+  /**
+   * Get payment options for a BerseGuide
+   */
+  async getPaymentOptions(userId: string): Promise<PaymentOptionResponse[]> {
+    try {
+      const profile = await prisma.userBerseGuide.findUnique({
+        where: { userId },
+      });
+
+      if (!profile) {
+        throw new AppError('BerseGuide profile not found', 404);
+      }
+
+      const paymentOptions = await prisma.berseGuidePaymentOption.findMany({
+        where: { berseGuideId: userId },
+        orderBy: [
+          { isPreferred: 'desc' },
+        ],
+      });
+
+      return paymentOptions.map(option => ({
+        ...option,
+        createdAt: new Date(), // Schema doesn't have createdAt, use current date
+      }));
+    } catch (error) {
+      logger.error('Failed to get payment options', { error, userId });
+      throw error;
+    }
+  }
 
   /**
    * Add payment option
