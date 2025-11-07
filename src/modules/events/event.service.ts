@@ -1511,6 +1511,7 @@ export class EventService {
                 type: true,
                 images: true,
                 isFree: true,
+                status: true,
               },
             },
             user: {
@@ -1555,6 +1556,7 @@ export class EventService {
             type: true,
             images: true,
             isFree: true,
+            status: true,
             createdAt: true,
           },
           orderBy: { date: 'desc' },

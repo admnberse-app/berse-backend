@@ -1,6 +1,7 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
 import { getProfilePictureUrl } from '../../utils/image.helpers';
+import { ActivityLoggerService, ActivityType, ActivityVisibility } from '../../services/activityLogger.service';
 import { 
   SubmitFeedbackRequest,
   UpdateFeedbackRequest,
@@ -127,6 +128,9 @@ export class CardGameService {
     this.updateTopicStats(data.topicId).catch((err) => {
       logger.error(`Error updating topic stats for ${data.topicId}:`, err);
     });
+
+    // Note: We don't log individual feedback submissions as activities
+    // Instead, we aggregate them in the session completion activity
 
     return this.formatFeedback(feedback);
   }
@@ -459,10 +463,29 @@ export class CardGameService {
     // Get updated count from cached field
     const updatedFeedback = await prisma.cardGameFeedback.findUnique({
       where: { id: feedbackId },
-      select: { upvoteCount: true, questionText: true },
+      select: { upvoteCount: true, questionText: true, topicTitle: true, topicId: true },
     });
 
     newUpvoteCount = updatedFeedback?.upvoteCount || 0;
+
+    // Log activity when upvoting (not when removing)
+    if (hasUpvoted) {
+      ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.CARDGAME_FEEDBACK_UPVOTE,
+        entityType: 'cardgame_feedback',
+        entityId: feedbackId,
+        visibility: ActivityVisibility.PUBLIC,
+        metadata: {
+          topicId: updatedFeedback?.topicId,
+          topicTitle: updatedFeedback?.topicTitle,
+          questionText: updatedFeedback?.questionText?.substring(0, 100),
+          upvoteCount: newUpvoteCount,
+        },
+      }).catch((err) => {
+        logger.error('Error logging upvote activity:', err);
+      });
+    }
 
     // Send notification if upvoted and reached popular threshold (10+ upvotes)
     if (hasUpvoted) {
@@ -547,6 +570,22 @@ export class CardGameService {
       feedback.topicTitle
     ).catch((err) => {
       logger.error('Failed to send card game reply notification:', err);
+    });
+
+    // Log activity
+    ActivityLoggerService.logActivity({
+      userId,
+      activityType: ActivityType.CARDGAME_REPLY_ADD,
+      entityType: 'cardgame_reply',
+      entityId: reply.id,
+      visibility: ActivityVisibility.PUBLIC,
+      metadata: {
+        feedbackId,
+        topicTitle: feedback.topicTitle,
+        replyText: data.text.substring(0, 100), // First 100 chars
+      },
+    }).catch((err) => {
+      logger.error('Error logging reply activity:', err);
     });
 
     return this.formatReply(reply);
@@ -645,6 +684,23 @@ export class CardGameService {
       logger.error('Failed to send card game nested reply notification:', err);
     });
 
+    // Log activity
+    ActivityLoggerService.logActivity({
+      userId,
+      activityType: ActivityType.CARDGAME_NESTED_REPLY_ADD,
+      entityType: 'cardgame_reply',
+      entityId: reply.id,
+      visibility: ActivityVisibility.PUBLIC,
+      metadata: {
+        parentReplyId,
+        feedbackId: parentReply.feedbackId,
+        topicTitle: parentReply.cardGameFeedbacks.topicTitle,
+        replyText: data.text.substring(0, 100),
+      },
+    }).catch((err) => {
+      logger.error('Error logging nested reply activity:', err);
+    });
+
     return reply;
   }
 
@@ -734,6 +790,22 @@ export class CardGameService {
       const upvoter = await prisma.user.findUnique({
         where: { id: userId },
         select: { fullName: true },
+      });
+
+      // Log activity
+      ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.CARDGAME_REPLY_UPVOTE,
+        entityType: 'cardgame_reply',
+        entityId: replyId,
+        visibility: ActivityVisibility.PUBLIC,
+        metadata: {
+          feedbackId: reply.feedbackId,
+          topicTitle: reply.cardGameFeedbacks.topicTitle,
+          upvoteCount: newUpvoteCount,
+        },
+      }).catch((err) => {
+        logger.error('Error logging reply upvote activity:', err);
       });
 
       // Send upvote notification (async, don't wait)
@@ -1467,7 +1539,7 @@ export class CardGameService {
       throw new AppError('Session already completed', 409);
     }
 
-    return await prisma.cardGameSession.create({
+    const newSession = await prisma.cardGameSession.create({
       data: {
         userId,
         topicId: data.topicId,
@@ -1479,6 +1551,22 @@ export class CardGameService {
         topic: true,
       },
     });
+
+    // Log activity
+    await ActivityLoggerService.logActivity({
+      userId,
+      activityType: ActivityType.CARDGAME_SESSION_START,
+      entityType: 'cardgame_session',
+      entityId: newSession.id,
+      visibility: ActivityVisibility.PUBLIC,
+      metadata: {
+        topicId: data.topicId,
+        topicTitle: newSession.topic.title,
+        sessionNumber: data.sessionNumber,
+      },
+    });
+
+    return newSession;
   }
 
   /**
@@ -1517,6 +1605,15 @@ export class CardGameService {
       throw new AppError('Session already completed', 400);
     }
 
+    // Get feedback count for this session
+    const feedbackCount = await prisma.cardGameFeedback.count({
+      where: {
+        userId,
+        topicId: session.topicId,
+        sessionNumber: session.sessionNumber,
+      },
+    });
+
     const completed = await prisma.cardGameSession.update({
       where: { id: sessionId },
       data: {
@@ -1525,6 +1622,23 @@ export class CardGameService {
       },
       include: {
         topic: true,
+      },
+    });
+
+    // Log activity with enriched details
+    await ActivityLoggerService.logActivity({
+      userId,
+      activityType: ActivityType.CARDGAME_SESSION_COMPLETE,
+      entityType: 'cardgame_session',
+      entityId: sessionId,
+      visibility: ActivityVisibility.PUBLIC,
+      metadata: {
+        topicId: session.topic.id,
+        topicTitle: session.topic.title,
+        sessionNumber: session.sessionNumber,
+        averageRating: data.averageRating,
+        questionsAnswered: feedbackCount,
+        totalQuestions: session.totalQuestions,
       },
     });
 

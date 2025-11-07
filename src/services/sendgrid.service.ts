@@ -93,7 +93,7 @@ export class SendGridService {
    * Send verification email
    */
   static async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+    const verificationUrl = `${process.env.APP_URL || process.env.FRONTEND_URL}/verify-email?token=${token}`;
     
     const html = `
       <!DOCTYPE html>
@@ -146,7 +146,7 @@ export class SendGridService {
    * Send password reset email
    */
   static async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.APP_URL || process.env.FRONTEND_URL}/reset-password?token=${token}`;
     
     const html = `
       <!DOCTYPE html>

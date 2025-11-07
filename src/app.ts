@@ -281,6 +281,20 @@ app.use('/api/webhooks/payment', paymentWebhookRoutes);
 // CSRF token endpoint
 app.get('/csrf-token', csrfTokenEndpoint);
 
+// ============================================================================
+// PUBLIC AUTH PAGES
+// ============================================================================
+
+// Email verification page
+app.get('/verify-email', (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../public/verify-email.html'));
+});
+
+// Password reset page
+app.get('/reset-password', (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../public/reset-password.html'));
+});
+
 // Root route
 app.get('/', (_req: Request, res: Response) => {
   res.json({ 

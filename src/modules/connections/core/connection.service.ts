@@ -1453,6 +1453,18 @@ export class ConnectionService {
 
       if (activityTypes && activityTypes.length > 0) {
         activityWhere.activityType = { in: activityTypes };
+      } else {
+        // Exclude repetitive/uninteresting activity types from the feed
+        activityWhere.activityType = {
+          notIn: [
+            'AUTH_LOGIN',
+            'AUTH_REGISTER',
+            'AUTH_PASSWORD_RESET_REQUEST',
+            'AUTH_PASSWORD_RESET_COMPLETE',
+            'AUTH_EMAIL_VERIFY_COMPLETE',
+            'CARDGAME_FEEDBACK_SUBMIT', // No longer created, but filter existing ones
+          ],
+        };
       }
 
       // Get total count
@@ -1576,6 +1588,66 @@ export class ConnectionService {
                     },
                   },
                 });
+                break;
+
+              case 'cardgame_session':
+                entityDetails = await prisma.cardGameSession.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    topicId: true,
+                    sessionNumber: true,
+                    averageRating: true,
+                    questionsAnswered: true,
+                    totalQuestions: true,
+                    topic: {
+                      select: {
+                        id: true,
+                        title: true,
+                      },
+                    },
+                  },
+                });
+                // Flatten topic data
+                if (entityDetails) {
+                  entityDetails.topicTitle = entityDetails.topic?.title;
+                  entityDetails.topicId = entityDetails.topic?.id;
+                }
+                break;
+
+              case 'cardgame_feedback':
+                entityDetails = await prisma.cardGameFeedback.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    topicId: true,
+                    topicTitle: true,
+                    questionText: true,
+                    rating: true,
+                  },
+                });
+                break;
+
+              case 'cardgame_reply':
+                entityDetails = await prisma.cardGameReply.findUnique({
+                  where: { id: activity.entityId },
+                  select: {
+                    id: true,
+                    feedbackId: true,
+                    text: true,
+                    cardGameFeedbacks: {
+                      select: {
+                        topicId: true,
+                        topicTitle: true,
+                      },
+                    },
+                  },
+                });
+                // Flatten feedback data
+                if (entityDetails?.cardGameFeedbacks) {
+                  entityDetails.topicTitle = entityDetails.cardGameFeedbacks.topicTitle;
+                  entityDetails.topicId = entityDetails.cardGameFeedbacks.topicId;
+                }
                 break;
             }
           } catch (error) {
@@ -1765,6 +1837,64 @@ export class ConnectionService {
         color: '#00BCD4',
         deepLink: entityDetails?.id ? `/trips/${entityDetails.id}` : null,
         priority: 'high',
+      },
+
+      // Card Game
+      CARDGAME_SESSION_START: {
+        message: `${userName} started a card game session${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}`,
+        actionText: 'started session',
+        icon: '🎮',
+        color: '#673AB7',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'medium',
+      },
+      CARDGAME_SESSION_COMPLETE: {
+        message: `${userName} completed a card game session${entityDetails?.questionsAnswered ? ` answering ${entityDetails.questionsAnswered} question${entityDetails.questionsAnswered !== 1 ? 's' : ''}` : ''}${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}${entityDetails?.averageRating ? ` (avg rating: ${entityDetails.averageRating.toFixed(1)}/5)` : ''}`,
+        actionText: 'completed session',
+        icon: '🏆',
+        color: '#4CAF50',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'medium',
+      },
+      CARDGAME_FEEDBACK_SUBMIT: {
+        message: `${userName} answered a question${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}`,
+        actionText: 'answered question',
+        icon: '💭',
+        color: '#2196F3',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'low',
+      },
+      CARDGAME_FEEDBACK_UPVOTE: {
+        message: `${userName} upvoted${entityDetails?.questionText ? ` an answer to "${entityDetails.questionText.substring(0, 50)}${entityDetails.questionText.length > 50 ? '...' : ''}"` : ' feedback'}${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}`,
+        actionText: 'upvoted feedback',
+        icon: '👍',
+        color: '#FF9800',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'low',
+      },
+      CARDGAME_REPLY_ADD: {
+        message: `${userName} replied to${entityDetails?.text ? ` "${entityDetails.text.substring(0, 40)}${entityDetails.text.length > 40 ? '...' : ''}"` : ' feedback'}${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}`,
+        actionText: 'replied',
+        icon: '💬',
+        color: '#9C27B0',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'low',
+      },
+      CARDGAME_REPLY_UPVOTE: {
+        message: `${userName} upvoted a reply${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}`,
+        actionText: 'upvoted reply',
+        icon: '👍',
+        color: '#FF9800',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'low',
+      },
+      CARDGAME_NESTED_REPLY_ADD: {
+        message: `${userName} replied to a comment${entityDetails?.topicTitle ? ' in: ' + entityDetails.topicTitle : ''}`,
+        actionText: 'replied',
+        icon: '💬',
+        color: '#9C27B0',
+        deepLink: entityDetails?.topicId ? `/cardgame/${entityDetails.topicId}` : '/cardgame',
+        priority: 'low',
       },
     };
 
