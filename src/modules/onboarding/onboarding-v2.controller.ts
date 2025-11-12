@@ -46,6 +46,8 @@ export class OnboardingV2Controller {
           iconName: true,
           ctaText: true,
           ctaAction: true,
+          primaryButton: true,
+          secondaryButton: true,
           backgroundColor: true,
           textColor: true,
           isSkippable: true,

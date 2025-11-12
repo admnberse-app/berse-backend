@@ -125,3 +125,22 @@ export interface TrustMomentStats {
     fromNegative: number;
   };
 }
+
+// ============================================================================
+// ELIGIBILITY CHECK TYPES
+// ============================================================================
+
+export interface CanCreateTrustMomentResponse {
+  canCreate: boolean;
+  reason: string;
+  sharedEvents: Array<{
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    hasTrustMoment: boolean;
+    hasConnection: boolean;
+  }>;
+  eligibleEventsCount: number;
+  connectionId?: string;
+}

@@ -1605,7 +1605,7 @@ router.post(
  */
 router.get(
   '/:id/participants',
-  authenticateToken,
+  optionalAuth,
   eventIdValidator,
   handleValidationErrors,
   EventController.getEventParticipants

@@ -1451,8 +1451,12 @@ model AppPreviewScreen {
   videoUrl        String?
   animationUrl    String?
   iconName        String?
+  // Legacy fields - use primaryButton and secondaryButton instead
   ctaText         String?
   ctaAction       String? // "next", "skip", "get_started"
+  // New dual button support
+  primaryButton   Json? // { text: "Get Started", action: "get_started", style: "primary", icon?: "arrow-right" }
+  secondaryButton Json? // { text: "Skip", action: "skip", style: "secondary", icon?: "forward" }
   backgroundColor String?              @default("#FFFFFF")
   textColor       String?              @default("#000000")
   isSkippable     Boolean              @default(true)

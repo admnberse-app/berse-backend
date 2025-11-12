@@ -206,4 +206,24 @@ export class TrustMomentController {
       next(error);
     }
   }
+
+  /**
+   * Check if logged-in user can create trust moment with target user
+   * @route GET /v2/users/:userId/trust-moments/can-create
+   */
+  static async canCreateTrustMoment(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const currentUserId = req.user!.id;
+      const { userId: targetUserId } = req.params;
+
+      const result = await TrustMomentService.canCreateTrustMoment(currentUserId, targetUserId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

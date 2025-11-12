@@ -494,4 +494,79 @@ router.get(
   TrustMomentController.getTrustMomentStats
 );
 
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-moments/can-create:
+ *   get:
+ *     summary: Check if logged-in user can create trust moment with target user
+ *     description: Checks eligibility based on shared event participation and existing trust moments
+ *     tags: [Connections - Trust Moments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Target user ID to check eligibility with
+ *     responses:
+ *       200:
+ *         description: Eligibility check completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     canCreate:
+ *                       type: boolean
+ *                       description: Whether logged-in user can create trust moment with target user
+ *                     reason:
+ *                       type: string
+ *                       enum: [eligible, no_shared_events, no_connection, all_events_have_trust_moments, cannot_create_for_self]
+ *                       description: Reason for eligibility status
+ *                     sharedEvents:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           location:
+ *                             type: string
+ *                           hasTrustMoment:
+ *                             type: boolean
+ *                             description: Whether trust moment already exists for this event
+ *                           hasConnection:
+ *                             type: boolean
+ *                             description: Whether users have accepted connection
+ *                     eligibleEventsCount:
+ *                       type: integer
+ *                       description: Number of events eligible for creating trust moment
+ *                     connectionId:
+ *                       type: string
+ *                       description: Connection ID if connection exists
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.get(
+  '/users/:userId/trust-moments/can-create',
+  authenticateToken,
+  userIdParamValidator,
+  handleValidationErrors,
+  TrustMomentController.canCreateTrustMoment
+);
+
 export default router;

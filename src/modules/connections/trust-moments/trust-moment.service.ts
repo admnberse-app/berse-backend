@@ -752,6 +752,144 @@ export class TrustMomentService {
   }
 
   /**
+   * Check if logged-in user can create trust moment with target user
+   * Based on shared event participation (both users checked in)
+   */
+  static async canCreateTrustMoment(
+    currentUserId: string,
+    targetUserId: string
+  ): Promise<{
+    canCreate: boolean;
+    reason: string;
+    sharedEvents: Array<{
+      id: string;
+      title: string;
+      date: string;
+      location: string;
+      hasTrustMoment: boolean;
+      hasConnection: boolean;
+    }>;
+    eligibleEventsCount: number;
+    connectionId?: string;
+  }> {
+    try {
+      // 1. Cannot create trust moment for yourself
+      if (currentUserId === targetUserId) {
+        return {
+          canCreate: false,
+          reason: 'cannot_create_for_self',
+          sharedEvents: [],
+          eligibleEventsCount: 0,
+        };
+      }
+
+      // 2. Find all events where BOTH users checked in
+      const sharedEvents = await prisma.eventParticipant.findMany({
+        where: {
+          userId: currentUserId,
+          checkedInAt: { not: null },
+          events: {
+            eventParticipants: {
+              some: {
+                userId: targetUserId,
+                checkedInAt: { not: null },
+              },
+            },
+          },
+        },
+        include: {
+          events: {
+            select: {
+              id: true,
+              title: true,
+              date: true,
+              location: true,
+            },
+          },
+        },
+        orderBy: {
+          events: {
+            date: 'desc',
+          },
+        },
+      });
+
+      if (sharedEvents.length === 0) {
+        return {
+          canCreate: false,
+          reason: 'no_shared_events',
+          sharedEvents: [],
+          eligibleEventsCount: 0,
+        };
+      }
+
+      // 3. Check if connection exists between users
+      const connection = await prisma.userConnection.findFirst({
+        where: {
+          status: ConnectionStatus.ACCEPTED,
+          OR: [
+            { initiatorId: currentUserId, receiverId: targetUserId },
+            { initiatorId: targetUserId, receiverId: currentUserId },
+          ],
+        },
+      });
+
+      if (!connection) {
+        return {
+          canCreate: false,
+          reason: 'no_connection',
+          sharedEvents: sharedEvents.map(sp => ({
+            id: sp.events.id,
+            title: sp.events.title,
+            date: sp.events.date.toISOString(),
+            location: sp.events.location,
+            hasTrustMoment: false,
+            hasConnection: false,
+          })),
+          eligibleEventsCount: 0,
+        };
+      }
+
+      // 4. Check which events already have trust moments from current user to target user
+      const existingTrustMoments = await prisma.trustMoment.findMany({
+        where: {
+          connectionId: connection.id,
+          giverId: currentUserId,
+          receiverId: targetUserId,
+          eventId: { in: sharedEvents.map(sp => sp.events.id) },
+        },
+        select: { eventId: true },
+      });
+
+      const existingEventIds = new Set(existingTrustMoments.map(tm => tm.eventId));
+
+      // 5. Format shared events with trust moment status
+      const formattedEvents = sharedEvents.map(sp => ({
+        id: sp.events.id,
+        title: sp.events.title,
+        date: sp.events.date.toISOString(),
+        location: sp.events.location,
+        hasTrustMoment: existingEventIds.has(sp.events.id),
+        hasConnection: true,
+      }));
+
+      // 6. Count eligible events (events without trust moments yet)
+      const eligibleEventsCount = formattedEvents.filter(e => !e.hasTrustMoment).length;
+
+      return {
+        canCreate: eligibleEventsCount > 0,
+        reason: eligibleEventsCount > 0 ? 'eligible' : 'all_events_have_trust_moments',
+        sharedEvents: formattedEvents,
+        eligibleEventsCount,
+        connectionId: connection.id,
+      };
+    } catch (error) {
+      logger.error('Error checking trust moment eligibility:', error);
+      throw new AppError('Failed to check trust moment eligibility', 500);
+    }
+  }
+
+  /**
    * Calculate trust moment statistics for user
    */
   static async getTrustMomentStats(userId: string): Promise<TrustMomentStats> {
