@@ -19,21 +19,16 @@ async function seedOnboardingScreens() {
       imageUrl: 'https://cdn.pixabay.com/photo/2021/10/11/23/49/app-6702045_1280.png',
       iconName: 'handshake',
       // Legacy fields for backward compatibility
-      ctaText: 'Next',
+      ctaText: 'Learn More',
       ctaAction: 'next',
-      // New dual button support
+      // New dual button support - single button only
       primaryButton: {
-        text: 'Get Started',
+        text: 'Learn More',
         action: 'next',
         style: 'primary',
         icon: 'arrow-right',
       },
-      secondaryButton: {
-        text: 'Learn More',
-        action: 'learn_more',
-        style: 'secondary',
-        icon: 'info',
-      },
+      secondaryButton: null,
       backgroundColor: '#4F46E5',
       textColor: '#FFFFFF',
       isSkippable: false,
@@ -101,7 +96,7 @@ async function seedOnboardingScreens() {
       ctaText: 'Get Started',
       ctaAction: 'get_started',
       primaryButton: {
-        text: 'Create Account',
+        text: 'Get Started',
         action: 'get_started',
         style: 'primary',
         icon: 'rocket',

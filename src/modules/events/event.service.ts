@@ -192,6 +192,20 @@ export class EventService {
               eventTitle: event.title,
             },
           }).catch(err => logger.error('Failed to send event creation notifications:', err));
+
+          // Send emails to community members (for community events only)
+          if (data.communityId) {
+            this.sendEventCreationEmails(
+              notificationUserIds,
+              event.id,
+              event.title,
+              event.description || '',
+              event.date,
+              event.location || '',
+              hostName,
+              event.communities?.name || 'your community'
+            ).catch(err => logger.error('Failed to send event creation emails:', err));
+          }
         }
       }
 
@@ -2035,6 +2049,81 @@ export class EventService {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = crypto.randomBytes(3).toString('hex').toUpperCase();
     return `TKT-${timestamp}-${random}`;
+  }
+
+  /**
+   * Send event creation emails to community members
+   */
+  private static async sendEventCreationEmails(
+    userIds: string[],
+    eventId: string,
+    eventTitle: string,
+    eventDescription: string,
+    eventDate: Date,
+    eventLocation: string,
+    hostName: string,
+    communityName: string
+  ): Promise<void> {
+    try {
+      // Fetch users with emails
+      const users = await prisma.user.findMany({
+        where: {
+          id: { in: userIds },
+          email: { not: null },
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+        },
+      });
+
+      if (users.length === 0) {
+        logger.info('No users with emails to notify for event creation');
+        return;
+      }
+
+      // Import email queue service
+      const { EmailQueue } = await import('../../services/emailQueue.service');
+      const emailQueue = new EmailQueue();
+
+      // Get frontend URL from CORS origin
+      const frontendUrl = config.cors.origin[0] || 'https://app.berseapp.com';
+
+      // Queue emails for all community members
+      for (const user of users) {
+        if (!user.email) continue;
+
+        emailQueue.add(
+          user.email,
+          'EVENT_INVITATION' as any,
+          {
+            userName: user.fullName || 'Community Member',
+            eventTitle,
+            eventDescription,
+            eventDate: eventDate.toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            eventLocation,
+            eventUrl: `${frontendUrl}/events/${eventId}`,
+            hostName,
+            communityName,
+            ctaText: 'View Event Details',
+            ctaUrl: `${frontendUrl}/events/${eventId}`,
+          }
+        );
+      }
+
+      logger.info(`Queued ${users.length} event creation emails for event: ${eventTitle}`);
+    } catch (error) {
+      logger.error('Error sending event creation emails:', error);
+      // Don't throw - this is a background operation
+    }
   }
 
   // ============================================================================

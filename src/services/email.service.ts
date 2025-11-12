@@ -10,7 +10,8 @@ import {
   PasswordResetEmailData,
   PasswordChangedEmailData,
   EventEmailData,
-  CampaignEmailData
+  CampaignEmailData,
+  EmailAttachment
 } from '../types/email.types';
 import {
   MarketplaceOrderReceiptData,
@@ -23,6 +24,7 @@ import {
   PayoutNotificationData
 } from '../types/payment-email.types';
 import { renderEmailTemplate } from '../utils/emailTemplates';
+import { generateICalendar } from '../utils/calendar.helper';
 
 export class EmailService {
   private fromEmail: string;
@@ -90,7 +92,7 @@ export class EmailService {
       }
 
       // Update recipients to only enabled ones
-      const msg = {
+      const msg: any = {
         to: enabledRecipients.length === 1 ? enabledRecipients[0] : enabledRecipients,
         from: {
           email: this.fromEmail,
@@ -102,6 +104,16 @@ export class EmailService {
         cc: options.cc,
         bcc: options.bcc,
       };
+
+      // Add attachments if provided
+      if (options.attachments && options.attachments.length > 0) {
+        msg.attachments = options.attachments.map(att => ({
+          filename: att.filename,
+          content: att.content ? (Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content) : undefined,
+          type: att.contentType,
+          disposition: 'attachment',
+        }));
+      }
 
       await sgMail.send(msg);
       
@@ -183,12 +195,14 @@ export class EmailService {
    */
   async sendEventInvitationEmail(to: string, data: EventEmailData): Promise<boolean> {
     const template = renderEmailTemplate(EmailTemplate.EVENT_INVITATION, data);
+    const calendarAttachment = this.generateEventCalendarAttachment(data);
     
     return this.sendEmail({
       to,
       subject: `You're Invited: ${data.eventTitle}`,
       html: template.html,
       text: template.text,
+      attachments: calendarAttachment ? [calendarAttachment] : undefined,
     });
   }
 
@@ -197,12 +211,14 @@ export class EmailService {
    */
   async sendEventReminderEmail(to: string, data: EventEmailData): Promise<boolean> {
     const template = renderEmailTemplate(EmailTemplate.EVENT_REMINDER, data);
+    const calendarAttachment = this.generateEventCalendarAttachment(data);
     
     return this.sendEmail({
       to,
       subject: `Reminder: ${data.eventTitle} is Coming Up!`,
       html: template.html,
       text: template.text,
+      attachments: calendarAttachment ? [calendarAttachment] : undefined,
     });
   }
 
@@ -211,12 +227,14 @@ export class EmailService {
    */
   async sendEventConfirmationEmail(to: string, data: EventEmailData): Promise<boolean> {
     const template = renderEmailTemplate(EmailTemplate.EVENT_CONFIRMATION, data);
+    const calendarAttachment = this.generateEventCalendarAttachment(data);
     
     return this.sendEmail({
       to,
       subject: `Confirmed: ${data.eventTitle}`,
       html: template.html,
       text: template.text,
+      attachments: calendarAttachment ? [calendarAttachment] : undefined,
     });
   }
 
@@ -681,6 +699,43 @@ export class EmailService {
       html,
       text: `Upcoming Billing\n\nHi ${data.userName},\n\nYour ${data.tierName} subscription of ${data.amount} ${data.currency} will be charged on ${data.billingDate}.\n\nPayment Method: ${data.paymentMethod}\n\nManage subscription: ${data.manageSubscriptionUrl}`,
     });
+  }
+
+  /**
+   * Generate calendar attachment for event emails
+   */
+  private generateEventCalendarAttachment(data: EventEmailData): EmailAttachment | null {
+    try {
+      if (!data.eventDate || !data.eventTitle) {
+        return null;
+      }
+
+      // Parse event date
+      const startDate = new Date(data.eventDate);
+      
+      // Generate iCalendar content
+      const icsContent = generateICalendar({
+        title: data.eventTitle,
+        description: data.eventDescription || '',
+        location: data.eventLocation || '',
+        startDate,
+        url: data.eventUrl,
+        organizer: data.hostName ? {
+          name: data.hostName,
+          email: this.fromEmail,
+        } : undefined,
+      });
+
+      // Return attachment
+      return {
+        filename: `${data.eventTitle.replace(/[^a-z0-9]/gi, '_')}.ics`,
+        content: Buffer.from(icsContent, 'utf-8'),
+        contentType: 'text/calendar; charset=utf-8; method=REQUEST',
+      };
+    } catch (error) {
+      logger.error('Failed to generate calendar attachment', { error, eventTitle: data.eventTitle });
+      return null;
+    }
   }
 }
 
