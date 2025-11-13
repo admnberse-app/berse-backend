@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { servicesController } from './services.controller';
-import { authenticateToken } from '../../middleware/auth';
+import { authenticateToken, optionalAuth } from '../../middleware/auth';
 import { asyncHandler } from '../../utils/asyncHandler';
 
 const router = Router();
@@ -212,7 +212,7 @@ const router = Router();
  */
 router.get(
   '/',
-  authenticateToken,
+  optionalAuth,
   asyncHandler(servicesController.searchServices.bind(servicesController))
 );
 
@@ -336,7 +336,7 @@ router.get(
  */
 router.get(
   '/discover',
-  authenticateToken,
+  optionalAuth,
   asyncHandler(servicesController.discoverServices.bind(servicesController))
 );
 

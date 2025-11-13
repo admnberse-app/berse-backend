@@ -1839,7 +1839,7 @@ export class NotificationService {
       type: 'ACHIEVEMENT',
       title: `🏆 Badge Earned: ${badgeName}`,
       message: badgeDescription,
-      actionUrl: `/users/me/badges`,
+      actionUrl: `/profile/badges`,
       priority: 'normal',
       relatedEntityId: badgeId,
       relatedEntityType: 'badge',

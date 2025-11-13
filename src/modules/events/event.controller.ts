@@ -89,6 +89,11 @@ export class EventController {
       const { id } = req.params;
       const userId = req.user?.id;
 
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       const event = await EventService.getEventById(id, userId);
 
       sendSuccess(res, event, 'Event retrieved successfully');

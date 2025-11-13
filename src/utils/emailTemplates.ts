@@ -675,13 +675,6 @@ const eventConfirmationTemplate = (data: EventEmailData): TemplateRenderResult =
       <p><strong>📍 Location:</strong> ${data.eventLocation}</p>
     </div>
     
-    ${data.qrCode ? `
-      <div style="text-align: center; margin: 30px 0;">
-        <img src="${data.qrCode}" alt="QR Code" style="max-width: 200px; height: auto;">
-        <p style="color: #666; font-size: 14px;">Show this QR code at the event for check-in</p>
-      </div>
-    ` : ''}
-    
     <div style="text-align: center;">
       <a href="${data.eventUrl || '#'}" class="button">View Event Details</a>
     </div>

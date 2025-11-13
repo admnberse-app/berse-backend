@@ -367,7 +367,7 @@ export class BadgeService {
       type: 'ACHIEVEMENT',
       title: '⭐ New Badge Earned!',
       message: `Congratulations! You've earned the "${badge.name}" badge! ${badge.description}`,
-      actionUrl: '/badges',
+      actionUrl: '/profile/badges',
       priority: 'high',
       relatedEntityId: badge.id,
       relatedEntityType: 'badge',
@@ -381,8 +381,8 @@ export class BadgeService {
     // Send dedicated badge earned notification
     NotificationService.notifyBadgeEarned(
       userId,
-      badge.id,
       badge.name,
+      badge.id,
       badge.description
     ).catch(err => console.error('Failed to send badge earned notification:', err));
   }

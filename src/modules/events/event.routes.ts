@@ -1905,7 +1905,7 @@ router.get(
  */
 router.get(
   '/discovery/recommended',
-  authenticateToken,
+  optionalAuth,
   getRecommendedEventsValidators,
   handleValidationErrors,
   EventController.getRecommendedEvents
@@ -1998,7 +1998,7 @@ router.get(
  */
 router.get(
   '/discovery/my-communities',
-  authenticateToken,
+  optionalAuth,
   getCommunityEventsValidators,
   handleValidationErrors,
   EventController.getCommunityEvents

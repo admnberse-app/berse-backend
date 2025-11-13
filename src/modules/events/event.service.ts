@@ -1072,6 +1072,14 @@ export class EventService {
     try {
       const event = await prisma.event.findUnique({
         where: { id: eventId },
+        include: {
+          user: {
+            select: {
+              fullName: true,
+              username: true,
+            },
+          },
+        },
       });
 
       if (!event) {
@@ -1175,6 +1183,39 @@ export class EventService {
         eventId,
         participant.events.date
       ).catch(err => logger.error('Failed to send event registration notification:', err));
+
+      // Send confirmation email with calendar attachment
+      if (participant.user?.email) {
+        try {
+          const { EmailQueue } = await import('../../services/emailQueue.service');
+          const { EmailTemplate } = await import('../../types/email.types');
+          const emailQueue = new EmailQueue();
+
+          const frontendUrl = config.cors.origin[0] || 'https://app.berseapp.com';
+          
+          const emailData = {
+            recipientName: participant.user.fullName || participant.user.username || 'there',
+            eventTitle: participant.events.title,
+            eventDescription: event.description,
+            eventDate: participant.events.date,
+            eventLocation: participant.events.location || 'TBA',
+            eventType: participant.events.type,
+            hostName: event.user?.fullName || event.user?.username || 'Event Host',
+            eventUrl: `${frontendUrl}/events/${eventId}`,
+          };
+          
+          emailQueue.add(
+            participant.user.email,
+            EmailTemplate.EVENT_CONFIRMATION,
+            emailData
+          );
+          
+          logger.info(`Event confirmation email queued for user ${userId}`);
+        } catch (error) {
+          logger.error('Failed to queue event confirmation email:', error);
+          // Don't throw - this is a background operation
+        }
+      }
 
       return participant as any;
     } catch (error: any) {
