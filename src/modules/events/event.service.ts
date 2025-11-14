@@ -63,13 +63,16 @@ export class EventService {
         );
       }
 
+      // Determine the event date - use startDate if provided, otherwise use legacy date field
+      const eventDate = data.startDate ? new Date(data.startDate) : (data.date ? new Date(data.date) : new Date());
+
       const event = await prisma.event.create({
         data: {
           title: data.title,
           description: data.description,
           type: data.type,
-          date: new Date(data.date),
-          startDate: data.startDate ? new Date(data.startDate) : new Date(data.date),
+          date: eventDate, // Use computed date for backward compatibility
+          startDate: data.startDate ? new Date(data.startDate) : undefined,
           endDate: data.endDate ? new Date(data.endDate) : undefined,
           startTime: data.startTime,
           endTime: data.endTime,
@@ -2060,6 +2063,10 @@ export class EventService {
       description: event.description,
       type: event.type,
       date: event.date,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      startTime: event.startTime,
+      endTime: event.endTime,
       location: event.location,
       mapLink: event.mapLink,
       maxAttendees: event.maxAttendees,

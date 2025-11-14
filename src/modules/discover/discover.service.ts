@@ -1670,7 +1670,7 @@ export class DiscoverService {
       description: event.description,
       imageUrl: event.images?.[0],
       startTime: event.date.toISOString(),
-      endTime: event.endTime?.toISOString(),
+      endTime: event.endDate?.toISOString(),
       location: event.location ? {
         name: event.location,
         city: event.location,

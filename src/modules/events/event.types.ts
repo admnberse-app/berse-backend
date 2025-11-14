@@ -8,7 +8,7 @@ export interface CreateEventRequest {
   title: string;
   description?: string;
   type: EventType;
-  date: string | Date; // Legacy field for backward compatibility
+  date?: string | Date; // Legacy field for backward compatibility (optional)
   startDate?: string | Date; // New field: event start date
   endDate?: string | Date; // New field: event end date
   startTime?: string; // New field: event start time (HH:mm format)
@@ -173,6 +173,10 @@ export interface EventResponse {
   description?: string;
   type: EventType;
   date: Date;
+  startDate?: Date;
+  endDate?: Date;
+  startTime?: string;
+  endTime?: string;
   location: string;
   mapLink?: string;
   maxAttendees?: number;
