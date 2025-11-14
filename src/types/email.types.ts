@@ -36,6 +36,8 @@ export enum EmailTemplate {
   ACCOUNT_REACTIVATED = 'account_reactivated',
   ACCOUNT_DELETION_SCHEDULED = 'account_deletion_scheduled',
   ACCOUNT_DELETION_CANCELLED = 'account_deletion_cancelled',
+  EMAIL_CHANGE_VERIFICATION = 'email_change_verification',
+  EMAIL_CHANGE_ALERT = 'email_change_alert',
   // Marketplace
   MARKETPLACE_ORDER_RECEIPT = 'marketplace_order_receipt',
   MARKETPLACE_NEW_ORDER = 'marketplace_new_order',
@@ -82,6 +84,21 @@ export interface PasswordChangedEmailData extends BaseEmailData {
   changeDate: Date;
   ipAddress?: string;
   location?: string;
+}
+
+export interface EmailChangeVerificationData extends BaseEmailData {
+  verificationUrl: string;
+  verificationCode: string;
+  newEmail: string;
+  expiresIn: string;
+}
+
+export interface EmailChangeAlertData extends BaseEmailData {
+  oldEmail: string;
+  newEmail: string;
+  changeDate: Date;
+  ipAddress?: string;
+  supportUrl?: string;
 }
 
 export interface EventEmailData extends BaseEmailData {

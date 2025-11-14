@@ -10,7 +10,7 @@ ADD COLUMN IF NOT EXISTS "pointsExpired" INTEGER NOT NULL DEFAULT 0,
 ADD COLUMN IF NOT EXISTS "pointsSpent" INTEGER NOT NULL DEFAULT 0;
 
 -- CreateIndex: Add index for efficient expiry queries
-CREATE INDEX IF NOT EXISTS "PointHistory_expiresAt_expired_idx" ON "point_histories"("expiresAt", "expired");
+CREATE INDEX IF NOT EXISTS "point_histories_expiresAt_expired_idx" ON "point_histories"("expiresAt", "expired");
 
 -- Backfill existing PointHistory records with expiresAt (createdAt + 12 months)
 -- This was done via backfill-point-expiry.ts script

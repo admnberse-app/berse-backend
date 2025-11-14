@@ -1421,6 +1421,253 @@ export class AuthController {
   }
 
   /**
+   * Request email change
+   * @route POST /v2/auth/email/change/request
+   */
+  static async requestEmailChange(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { newEmail, currentPassword } = req.body;
+
+      if (!userId) {
+        throw new AppError('Unauthorized', 401);
+      }
+
+      // Get current user
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, fullName: true, password: true },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isPasswordValid) {
+        throw new AppError('Current password is incorrect', 401);
+      }
+
+      // Check if new email is same as current
+      if (newEmail.toLowerCase() === user.email.toLowerCase()) {
+        throw new AppError('New email is the same as your current email', 400);
+      }
+
+      // Check if new email is already in use
+      const emailExists = await prisma.user.findUnique({
+        where: { email: newEmail.toLowerCase() },
+      });
+
+      if (emailExists) {
+        throw new AppError('This email is already registered', 400);
+      }
+
+      // Delete any existing pending email change requests
+      await prisma.emailChangeRequest.deleteMany({
+        where: { userId },
+      });
+
+      // Generate verification token and code
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Token expires in 15 minutes
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      // Save email change request
+      await prisma.emailChangeRequest.create({
+        data: {
+          userId,
+          oldEmail: user.email,
+          newEmail: newEmail.toLowerCase(),
+          token: tokenHash,
+          expiresAt,
+        },
+      });
+
+      // Create verification URL
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationUrl = `${frontendUrl}/verify-email-change?token=${token}`;
+
+      // Send verification email to NEW email address
+      emailQueue.add(
+        newEmail,
+        EmailTemplate.EMAIL_CHANGE_VERIFICATION,
+        {
+          userName: user.fullName,
+          newEmail,
+          verificationUrl,
+          verificationCode,
+          expiresIn: '15 minutes',
+        }
+      );
+
+      // Send security alert to OLD email address
+      emailQueue.add(
+        user.email,
+        EmailTemplate.EMAIL_CHANGE_ALERT,
+        {
+          userName: user.fullName,
+          oldEmail: user.email,
+          newEmail,
+          changeDate: new Date(),
+          ipAddress: req.ip,
+        }
+      );
+
+      // Log activity
+      await ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.AUTH_EMAIL_CHANGE_REQUEST,
+        entityType: 'user',
+        entityId: userId,
+        metadata: {
+          oldEmail: user.email,
+          newEmail,
+        },
+      });
+
+      logger.info('Email change requested', { userId, oldEmail: user.email, newEmail });
+
+      sendSuccess(res, null, 'Verification email sent to your new email address. Please check your inbox.');
+    } catch (error) {
+      logger.error('Email change request failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: (req as any).user?.id 
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * Verify and complete email change
+   * @route POST /v2/auth/email/change/verify
+   */
+  static async verifyEmailChange(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+      const { token } = req.body;
+
+      if (!userId) {
+        throw new AppError('Unauthorized', 401);
+      }
+
+      // Hash the token
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+      // Find email change request
+      const changeRequest = await prisma.emailChangeRequest.findFirst({
+        where: {
+          userId,
+          token: tokenHash,
+          verified: false,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!changeRequest) {
+        throw new AppError('Invalid or expired verification token', 400);
+      }
+
+      // Get user
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, fullName: true },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Update user email and mark request as verified
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            email: changeRequest.newEmail,
+          },
+        }),
+        prisma.emailChangeRequest.update({
+          where: { id: changeRequest.id },
+          data: { verified: true },
+        }),
+        // Reset email verification status in security table
+        prisma.userSecurity.update({
+          where: { userId },
+          data: {
+            emailVerifiedAt: new Date(), // Mark new email as verified
+          },
+        }),
+      ]);
+
+      // Invalidate all sessions (force re-login with new email)
+      await prisma.userSession.updateMany({
+        where: { userId, isActive: true },
+        data: { isActive: false },
+      });
+
+      // Also invalidate refresh tokens
+      await prisma.refreshToken.deleteMany({
+        where: { userId },
+      });
+
+      // Send confirmation to both emails
+      emailQueue.add(
+        changeRequest.newEmail,
+        EmailTemplate.EMAIL_CHANGE_ALERT,
+        {
+          userName: user.fullName,
+          oldEmail: changeRequest.oldEmail,
+          newEmail: changeRequest.newEmail,
+          changeDate: new Date(),
+          ipAddress: req.ip,
+        }
+      );
+
+      // Log activity
+      await ActivityLoggerService.logActivity({
+        userId,
+        activityType: ActivityType.AUTH_EMAIL_CHANGED,
+        entityType: 'user',
+        entityId: userId,
+        metadata: {
+          oldEmail: changeRequest.oldEmail,
+          newEmail: changeRequest.newEmail,
+        },
+      });
+
+      // Log security event
+      await ActivityLoggerService.logSecurityEvent({
+        userId,
+        eventType: 'EMAIL_CHANGED',
+        severity: SecuritySeverity.HIGH,
+        description: 'User email address changed',
+        ...ActivityLoggerService.getRequestMetadata(req),
+        metadata: {
+          oldEmail: changeRequest.oldEmail,
+          newEmail: changeRequest.newEmail,
+        },
+      });
+
+      logger.info('Email changed successfully', { 
+        userId, 
+        oldEmail: changeRequest.oldEmail, 
+        newEmail: changeRequest.newEmail 
+      });
+
+      sendSuccess(res, null, 'Email changed successfully. Please log in again with your new email address.');
+    } catch (error) {
+      logger.error('Email change verification failed', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: (req as any).user?.id 
+      });
+      next(error);
+    }
+  }
+
+  /**
    * Request password reset
    * @route POST /v2/auth/forgot-password
    */

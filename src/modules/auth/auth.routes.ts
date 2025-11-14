@@ -763,6 +763,91 @@ router.post(
 
 /**
  * @swagger
+ * /v2/auth/email/change/request:
+ *   post:
+ *     summary: Request email change
+ *     description: Request to change account email address. Sends verification to new email and alert to old email.
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newEmail
+ *               - currentPassword
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *                 format: email
+ *                 example: newemail@example.com
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *                 example: CurrentPassword123!
+ *     responses:
+ *       200:
+ *         description: Verification email sent successfully
+ *       400:
+ *         description: Invalid request (email already in use, same as current, etc.)
+ *       401:
+ *         description: Incorrect password
+ */
+router.post(
+  '/email/change/request',
+  authenticateToken,
+  [
+    body('newEmail').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+  ],
+  handleValidationErrors,
+  AuthController.requestEmailChange
+);
+
+/**
+ * @swagger
+ * /v2/auth/email/change/verify:
+ *   post:
+ *     summary: Verify email change
+ *     description: Verify and complete email change using token from verification email.
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: a1b2c3d4e5f6...
+ *     responses:
+ *       200:
+ *         description: Email changed successfully. User logged out from all devices.
+ *       400:
+ *         description: Invalid or expired token
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  '/email/change/verify',
+  authenticateToken,
+  [
+    body('token').notEmpty().withMessage('Verification token is required'),
+  ],
+  handleValidationErrors,
+  AuthController.verifyEmailChange
+);
+
+/**
+ * @swagger
  * /v2/auth/deactivate-account:
  *   post:
  *     summary: Deactivate account

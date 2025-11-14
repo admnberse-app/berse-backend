@@ -109,6 +109,8 @@ export class DashboardService {
         total: communitiesData.total,
         admin: communitiesData.admin,
         member: communitiesData.member,
+        pendingRequests: communitiesData.pendingRequests,
+        pendingJoinRequests: communitiesData.pendingJoinRequests,
       },
       eventSummary: {
         total: eventsData.total,
@@ -539,6 +541,7 @@ export class DashboardService {
       },
       select: {
         role: true,
+        communityId: true,
       },
     });
 
@@ -546,7 +549,30 @@ export class DashboardService {
     const admin = memberships.filter(m => m.role === 'ADMIN').length;
     const member = memberships.filter(m => m.role === 'MEMBER').length;
 
-    return { total, admin, member };
+    // Count pending join requests for communities where user is admin (to approve)
+    const adminCommunityIds = memberships
+      .filter(m => m.role === 'ADMIN')
+      .map(m => m.communityId);
+
+    // Count user's own pending join requests (waiting for approval)
+    const [pendingRequests, pendingJoinRequests] = await Promise.all([
+      adminCommunityIds.length > 0
+        ? prisma.communityMember.count({
+            where: {
+              communityId: { in: adminCommunityIds },
+              isApproved: false,
+            },
+          })
+        : 0,
+      prisma.communityMember.count({
+        where: {
+          userId,
+          isApproved: false,
+        },
+      }),
+    ]);
+
+    return { total, admin, member, pendingRequests, pendingJoinRequests };
   }
 
   private async getEventsSummary(userId: string) {
@@ -813,7 +839,47 @@ export class DashboardService {
       }
     }
 
-    // 2. CONNECTION REQUESTS (High Priority) - Received requests
+    // 2. USER'S PENDING COMMUNITY JOIN REQUESTS (High Priority)
+    const userPendingJoins = await prisma.communityMember.findMany({
+      where: {
+        userId,
+        isApproved: false,
+      },
+      include: {
+        communities: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+          },
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+      take: 5,
+    });
+
+    if (userPendingJoins.length > 0) {
+      const totalPendingJoins = userPendingJoins.length;
+
+      alerts.push({
+        type: 'community_join_pending',
+        count: totalPendingJoins,
+        priority: 'medium',
+        message: `${totalPendingJoins} community join request${totalPendingJoins > 1 ? 's' : ''} pending approval`,
+        targetType: 'community',
+        actionUrl: '/profile/communities',
+        metadata: {
+          pendingCommunities: userPendingJoins.map(pj => ({
+            communityId: pj.communityId,
+            communityName: pj.communities?.name || 'Unknown',
+            communityLogo: pj.communities?.logoUrl,
+            requestedAt: pj.joinedAt,
+          })),
+        },
+      });
+    }
+
+    // 3. CONNECTION REQUESTS (High Priority) - Received requests
     const pendingConnections = await prisma.userConnection.findMany({
       where: {
         receiverId: userId,
@@ -862,7 +928,7 @@ export class DashboardService {
       });
     }
 
-    // 3. VOUCH REQUESTS (High Priority) - Received vouch requests
+    // 4. VOUCH REQUESTS (High Priority) - Received vouch requests
     const pendingVouches = await prisma.vouch.findMany({
       where: {
         voucheeId: userId,

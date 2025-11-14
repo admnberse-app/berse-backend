@@ -262,8 +262,6 @@ class ProfileMetadataService {
       items: [
         { value: 'male', label: 'Male', emoji: '♂️' },
         { value: 'female', label: 'Female', emoji: '♀️' },
-        { value: 'other', label: 'Other', emoji: '✨' },
-        { value: 'prefer_not_to_say', label: 'Prefer not to say', emoji: '🤐' },
       ],
     };
   }

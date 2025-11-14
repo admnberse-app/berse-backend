@@ -529,6 +529,23 @@ model EmailVerificationToken {
   @@map("email_verification_tokens")
 }
 
+model EmailChangeRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  oldEmail  String
+  newEmail  String
+  token     String   @unique
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_change_requests")
+}
+
 model EventParticipant {
   id           String                 @id @default(cuid())
   userId       String
@@ -620,7 +637,11 @@ model Event {
   title             String
   description       String?
   type              EventType
-  date              DateTime
+  date              DateTime // Legacy field, kept for backward compatibility
+  startDate         DateTime? // Event start date
+  endDate           DateTime? // Event end date
+  startTime         String? // Event start time (HH:mm format)
+  endTime           String? // Event end time (HH:mm format)
   location          String
   city              String? // City name for filtering
   country           String? // Country name for filtering
@@ -2571,6 +2592,7 @@ model User {
   connectionStats             ConnectionStat?
   deviceRegistrations         DeviceRegistration[]
   emailVerificationTokens     EmailVerificationToken[]
+  emailChangeRequests         EmailChangeRequest[]
   eventParticipants           EventParticipant[]
   eventTickets                EventTicket[]
   events                      Event[]

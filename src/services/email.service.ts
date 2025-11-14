@@ -107,12 +107,18 @@ export class EmailService {
 
       // Add attachments if provided
       if (options.attachments && options.attachments.length > 0) {
-        msg.attachments = options.attachments.map(att => ({
-          filename: att.filename,
-          content: att.content ? (Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content) : undefined,
-          type: att.contentType,
-          disposition: 'attachment',
-        }));
+        msg.attachments = options.attachments.map(att => {
+          // Extract base MIME type (remove charset and other parameters)
+          // SendGrid doesn't accept ';' or CRLF in the type field
+          const baseType = att.contentType?.split(';')[0].trim() || 'application/octet-stream';
+          
+          return {
+            filename: att.filename,
+            content: att.content ? (Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content) : undefined,
+            type: baseType,
+            disposition: 'attachment',
+          };
+        });
       }
 
       await sgMail.send(msg);
@@ -713,12 +719,22 @@ export class EmailService {
       // Parse event date
       const startDate = new Date(data.eventDate);
       
+      // If eventTime is provided, adjust the startDate to include the time
+      if (data.eventTime) {
+        const [hours, minutes] = data.eventTime.split(':').map(Number);
+        startDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Calculate end date (default 1 hour if not provided)
+      let endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+      
       // Generate iCalendar content
       const icsContent = generateICalendar({
         title: data.eventTitle,
         description: data.eventDescription || '',
         location: data.eventLocation || '',
         startDate,
+        endDate,
         url: data.eventUrl,
         organizer: data.hostName ? {
           name: data.hostName,

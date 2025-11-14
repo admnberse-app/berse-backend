@@ -60,8 +60,8 @@ export const updateProfileValidators = [
     .withMessage('Date of birth must be a valid date'),
   body('gender')
     .optional()
-    .isIn(['male', 'female', 'other', 'prefer_not_to_say'])
-    .withMessage('Gender must be male, female, other, or prefer_not_to_say'),
+    .isIn(['male', 'female'])
+    .withMessage('Gender must be either male or female'),
   body('age')
     .optional()
     .isInt({ min: 13, max: 120 })

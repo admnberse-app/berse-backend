@@ -923,15 +923,6 @@ export class CommunityService {
         throw new AppError('Already a member or request pending', 409);
       }
 
-      // Check community join limit based on subscription tier
-      // Count only approved memberships (pending don't count toward limit)
-      const currentCommunityCount = await prisma.communityMember.count({
-        where: {
-          userId,
-          isApproved: true,
-        },
-      });
-
       // Get user's subscription info to check maxCommunities limit
       const userWithSubscription = await prisma.user.findUnique({
         where: { id: userId },
@@ -949,11 +940,31 @@ export class CommunityService {
       const features = activeSubscription?.tiers?.features as any;
       const maxCommunities = features?.communityAccess?.maxCommunities || 2; // Default to FREE tier limit
 
-      if (maxCommunities !== -1 && currentCommunityCount >= maxCommunities) {
-        throw new AppError(
-          `You have reached your community limit (${maxCommunities}). Upgrade your subscription to join more communities.`,
-          403
-        );
+      // Check community join limit based on subscription tier
+      // Count BOTH approved memberships AND pending requests (total slots used)
+      const [approvedCount, pendingCount] = await Promise.all([
+        prisma.communityMember.count({
+          where: {
+            userId,
+            isApproved: true,
+          },
+        }),
+        prisma.communityMember.count({
+          where: {
+            userId,
+            isApproved: false,
+          },
+        }),
+      ]);
+
+      const totalCommunitySlots = approvedCount + pendingCount;
+
+      if (maxCommunities !== -1 && totalCommunitySlots >= maxCommunities) {
+        const message = pendingCount > 0
+          ? `You have reached your community limit (${maxCommunities}). You currently have ${approvedCount} joined and ${pendingCount} pending. Upgrade your subscription to join more communities.`
+          : `You have reached your community limit (${maxCommunities}). Upgrade your subscription to join more communities.`;
+        
+        throw new AppError(message, 403);
       }
 
       // Create membership record (pending approval)

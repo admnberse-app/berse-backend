@@ -69,6 +69,10 @@ export class EventService {
           description: data.description,
           type: data.type,
           date: new Date(data.date),
+          startDate: data.startDate ? new Date(data.startDate) : new Date(data.date),
+          endDate: data.endDate ? new Date(data.endDate) : undefined,
+          startTime: data.startTime,
+          endTime: data.endTime,
           location: data.location,
           mapLink: data.mapLink,
           maxAttendees: data.maxAttendees,
@@ -576,6 +580,10 @@ export class EventService {
           ...(data.description !== undefined && { description: data.description }),
           ...(data.type && { type: data.type }),
           ...(data.date && { date: new Date(data.date) }),
+          ...(data.startDate && { startDate: new Date(data.startDate) }),
+          ...(data.endDate && { endDate: new Date(data.endDate) }),
+          ...(data.startTime !== undefined && { startTime: data.startTime }),
+          ...(data.endTime !== undefined && { endTime: data.endTime }),
           ...(data.location && { location: data.location }),
           ...(data.mapLink !== undefined && { mapLink: data.mapLink }),
           ...(data.maxAttendees !== undefined && { maxAttendees: data.maxAttendees }),
@@ -1193,11 +1201,16 @@ export class EventService {
 
           const frontendUrl = config.cors.origin[0] || 'https://app.berseapp.com';
           
+          // Use new time fields if available, fall back to legacy date field
+          const eventDate = event.startDate || event.date;
+          const eventTime = event.startTime || undefined;
+          
           const emailData = {
             recipientName: participant.user.fullName || participant.user.username || 'there',
             eventTitle: participant.events.title,
             eventDescription: event.description,
-            eventDate: participant.events.date,
+            eventDate,
+            eventTime,
             eventLocation: participant.events.location || 'TBA',
             eventType: participant.events.type,
             hostName: event.user?.fullName || event.user?.username || 'Event Host',
@@ -1643,8 +1656,14 @@ export class EventService {
         isHost: true,
       }));
 
+      // Add isHost flag to regular participants (they are not hosts)
+      const participantsWithHostFlag = participants.map(p => ({
+        ...p,
+        isHost: false,
+      }));
+
       // Combine and sort by date
-      const allParticipations = [...participants, ...hostedAsParticipants].sort((a, b) => {
+      const allParticipations = [...participantsWithHostFlag, ...hostedAsParticipants].sort((a, b) => {
         const dateA = a.events?.date || a.createdAt;
         const dateB = b.events?.date || b.createdAt;
         return new Date(dateB).getTime() - new Date(dateA).getTime();

@@ -11,6 +11,8 @@ import {
   RewardEmailData,
   CampaignEmailData,
   NotificationEmailData,
+  EmailChangeVerificationData,
+  EmailChangeAlertData,
 } from '../types/email.types';
 import {
   MarketplaceOrderReceiptData,
@@ -32,6 +34,7 @@ const COMPANY_ADDRESS = process.env.COMPANY_ADDRESS || 'Jln Palimbayan Indah 1, 
 const PRIMARY_COLOR = '#00B14F'; // Grab Green - Main brand color
 const PRIMARY_DARK = '#009440';
 const PRIMARY_LIGHT = '#33C16D';
+const TEXT_SECONDARY = '#6B7280'; // Gray for secondary text
 const BORDER_RADIUS = '12px';
 
 /**
@@ -587,6 +590,135 @@ ${data.location ? `Location: ${data.location}` : ''}
 ⚠️ Security Alert: If you didn't make this change, please contact our support team immediately at ${SUPPORT_EMAIL}
 
 Review your security settings: ${APP_URL}/settings/security
+
+Stay safe,
+The ${APP_NAME} Team
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Email Change Verification Template
+ */
+const emailChangeVerificationTemplate = (data: EmailChangeVerificationData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2>Verify Your New Email Address</h2>
+    <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
+    <p>You requested to change your email address to:</p>
+    
+    <div style="background: linear-gradient(to right, #f0fdf4 0%, #e6f9ef 100%); border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid ${PRIMARY_LIGHT}; text-align: center;">
+      <p style="font-size: 18px; font-weight: 600; color: ${PRIMARY_DARK}; margin: 0;">${data.newEmail}</p>
+    </div>
+    
+    <p>To complete this change, please verify your new email address by clicking the button below or entering the verification code:</p>
+    
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${data.verificationUrl}" class="button">Verify New Email Address</a>
+    </div>
+    
+    <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 24px 0; text-align: center;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: ${TEXT_SECONDARY};">Or enter this verification code:</p>
+      <p style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: ${PRIMARY_COLOR}; margin: 0; font-family: 'Courier New', monospace;">${data.verificationCode}</p>
+    </div>
+    
+    <div class="alert-box">
+      <p style="margin: 0;"><strong>⚠️ Important:</strong> This verification link will expire in ${data.expiresIn}. If you didn't request this change, please ignore this email or contact support immediately.</p>
+    </div>
+    
+    <hr class="divider" />
+    
+    <p style="margin-top: 24px; font-size: 14px;"><strong>Stay secure,</strong><br>The ${APP_NAME} Team</p>
+  `, 'Verify your new email address');
+
+  const text = `
+Verify Your New Email Address
+
+Hi ${data.userName || 'there'},
+
+You requested to change your email address to: ${data.newEmail}
+
+To complete this change, please verify your new email address:
+
+Verification URL: ${data.verificationUrl}
+
+Or enter this verification code: ${data.verificationCode}
+
+⚠️ Important: This link expires in ${data.expiresIn}. If you didn't request this change, please ignore this email or contact support.
+
+Stay secure,
+The ${APP_NAME} Team
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return { html, text };
+};
+
+/**
+ * Email Change Alert Template (sent to old email)
+ */
+const emailChangeAlertTemplate = (data: EmailChangeAlertData): TemplateRenderResult => {
+  const html = baseTemplate(`
+    <h2>Email Address Change Notice</h2>
+    <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
+    <p>This is an important security notification regarding your ${APP_NAME} account.</p>
+    
+    <div style="background: linear-gradient(to right, #fef2f2 0%, #fee2e2 100%); border-radius: 12px; padding: 20px; margin: 24px 0; border: 2px solid #fca5a5;">
+      <h3 style="margin: 0 0 12px 0; color: #dc2626; font-size: 16px;">⚠️ Your email address was changed</h3>
+      <p style="margin: 8px 0;"><strong>Old email:</strong> ${data.oldEmail}</p>
+      <p style="margin: 8px 0;"><strong>New email:</strong> ${data.newEmail}</p>
+      <p style="margin: 8px 0;"><strong>Changed at:</strong> ${new Date(data.changeDate).toLocaleString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}</p>
+      ${data.ipAddress ? `<p style="margin: 8px 0;"><strong>IP Address:</strong> ${data.ipAddress}</p>` : ''}
+    </div>
+    
+    <div class="alert-box">
+      <p style="margin: 0 0 12px 0;"><strong>🔒 Security Notice:</strong></p>
+      <p style="margin: 0;">If you did NOT make this change, your account may be compromised. Please contact our support team immediately.</p>
+    </div>
+    
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${data.supportUrl || `${APP_URL}/support`}" class="button" style="background: #dc2626;">Contact Support</a>
+    </div>
+    
+    <p style="font-size: 14px; color: ${TEXT_SECONDARY};">For your security, you've been logged out of all devices. You can log in again using your new email address.</p>
+    
+    <hr class="divider" />
+    
+    <p style="margin-top: 24px; font-size: 14px;"><strong>Stay safe,</strong><br>The ${APP_NAME} Team</p>
+  `, 'Your email address was changed');
+
+  const text = `
+Email Address Change Notice ⚠️
+
+Hi ${data.userName || 'there'},
+
+This is an important security notification regarding your ${APP_NAME} account.
+
+Your email address was changed:
+- Old email: ${data.oldEmail}
+- New email: ${data.newEmail}
+- Changed at: ${new Date(data.changeDate).toLocaleString()}
+${data.ipAddress ? `- IP Address: ${data.ipAddress}` : ''}
+
+🔒 Security Notice: If you did NOT make this change, your account may be compromised. Please contact our support team immediately.
+
+Contact Support: ${data.supportUrl || `${APP_URL}/support`}
+
+For your security, you've been logged out of all devices. You can log in again using your new email address.
 
 Stay safe,
 The ${APP_NAME} Team
@@ -1679,6 +1811,10 @@ export const renderEmailTemplate = (
       return accountDeletionScheduledTemplate(data);
     case EmailTemplate.ACCOUNT_DELETION_CANCELLED:
       return accountDeletionCancelledTemplate(data);
+    case EmailTemplate.EMAIL_CHANGE_VERIFICATION:
+      return emailChangeVerificationTemplate(data);
+    case EmailTemplate.EMAIL_CHANGE_ALERT:
+      return emailChangeAlertTemplate(data);
     // Marketplace templates
     case EmailTemplate.MARKETPLACE_ORDER_RECEIPT:
       return marketplaceOrderReceiptTemplate(data);

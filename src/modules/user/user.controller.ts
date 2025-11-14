@@ -254,7 +254,10 @@ export class UserController {
       // Core user fields
       if (data.fullName !== undefined) userUpdate.fullName = data.fullName;
       if (data.username !== undefined) userUpdate.username = data.username;
-      if (data.email !== undefined) userUpdate.email = data.email;
+      // Email cannot be changed through profile update - use dedicated email change flow for security
+      if (data.email !== undefined) {
+        throw new AppError('Email cannot be changed through profile update. Please use the email change endpoint.', 400);
+      }
       
       // Handle phone and dialCode
       if (data.phone !== undefined || data.dialCode !== undefined) {

@@ -51,6 +51,8 @@ export interface DashboardSummary {
     total: number;
     admin: number;
     member: number;
+    pendingRequests: number; // Pending requests to approve (for admins)
+    pendingJoinRequests: number; // User's own pending join requests
   };
   eventSummary: {
     total: number;
@@ -70,6 +72,7 @@ export interface DashboardSummary {
 export interface Alert {
   type: 
     | 'community_approvals' 
+    | 'community_join_pending'
     | 'event_payment_required' 
     | 'event_payment_pending_attendees'
     | 'event_upcoming' 
@@ -93,12 +96,20 @@ export interface Alert {
     maxAttendees?: number;
     daysUntilEvent?: number;
     
-    // For communities
+    // For communities (admin approvals)
     communityId?: string;
     pendingMembers?: Array<{
       userId: string;
       userName: string;
       profilePicture?: string;
+      requestedAt: Date;
+    }>;
+    
+    // For user's pending community joins
+    pendingCommunities?: Array<{
+      communityId: string;
+      communityName: string;
+      communityLogo?: string;
       requestedAt: Date;
     }>;
     
