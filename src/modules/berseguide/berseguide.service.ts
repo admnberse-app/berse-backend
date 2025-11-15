@@ -534,6 +534,26 @@ export class BerseGuideService {
         throw new AppError(`Group size must be between 1 and ${guideProfile.maxGroupSize}`, 400);
       }
 
+      // If payment option is selected, validate it exists and belongs to the guide
+      let selectedPaymentOption = null;
+      if (data.selectedPaymentOptionId) {
+        selectedPaymentOption = await prisma.berseGuidePaymentOption.findUnique({
+          where: { id: data.selectedPaymentOptionId },
+        });
+
+        if (!selectedPaymentOption) {
+          throw new AppError('Selected payment option not found', 404);
+        }
+
+        if (selectedPaymentOption.berseGuideId !== data.guideId) {
+          throw new AppError('Payment option does not belong to this guide', 400);
+        }
+
+        if (!selectedPaymentOption.isActive) {
+          throw new AppError('Selected payment option is not available', 400);
+        }
+      }
+
       // Create booking
       const booking = await prisma.berseGuideBooking.create({
         data: {
@@ -545,6 +565,10 @@ export class BerseGuideService {
           specificRequests: data.specialRequests,
           message: data.message,
           status: 'PENDING',
+          // Store selected payment option details
+          agreedPaymentType: selectedPaymentOption?.paymentType,
+          agreedPaymentAmount: selectedPaymentOption?.amount,
+          agreedPaymentDetails: selectedPaymentOption?.description,
         },
         include: {
           guide: {

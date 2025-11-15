@@ -130,6 +130,7 @@ export interface CreateBookingRequestDTO {
   checkInDate: Date | string;
   checkOutDate: Date | string;
   numberOfGuests: number;
+  selectedPaymentOptionId?: string; // Guest selects from host's payment options
   message?: string;
 }
 

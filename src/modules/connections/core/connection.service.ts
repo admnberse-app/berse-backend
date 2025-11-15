@@ -919,10 +919,7 @@ export class ConnectionService {
         where: {
           id: { notIn: excludeIds },
           status: 'ACTIVE',
-          // Only suggest users with verified emails (filters out test accounts)
-          security: {
-            emailVerifiedAt: { not: null },
-          },
+          deletedAt: null,
           // Only suggest users with public profiles
           privacy: {
             profileVisibility: 'public',

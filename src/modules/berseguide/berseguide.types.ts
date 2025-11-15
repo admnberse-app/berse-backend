@@ -126,6 +126,7 @@ export interface CreateBookingRequestDTO {
   startTime: string; // ISO datetime string
   endTime: string; // ISO datetime string
   numberOfPeople: number;
+  selectedPaymentOptionId?: string; // Traveler selects from guide's payment options
   interests?: string[];
   specialRequests?: string;
   message?: string;

@@ -479,6 +479,26 @@ export class HomeSurfService {
         throw new AppError('Host is not available for these dates', 409);
       }
 
+      // If payment option is selected, validate it exists and belongs to the host
+      let selectedPaymentOption = null;
+      if (data.selectedPaymentOptionId) {
+        selectedPaymentOption = await prisma.homeSurfPaymentOption.findUnique({
+          where: { id: data.selectedPaymentOptionId },
+        });
+
+        if (!selectedPaymentOption) {
+          throw new AppError('Selected payment option not found', 404);
+        }
+
+        if (selectedPaymentOption.homeSurfId !== data.hostId) {
+          throw new AppError('Payment option does not belong to this host', 400);
+        }
+
+        if (!selectedPaymentOption.isActive) {
+          throw new AppError('Selected payment option is not available', 400);
+        }
+      }
+
       // Create booking
       const booking = await prisma.homeSurfBooking.create({
         data: {
@@ -489,6 +509,10 @@ export class HomeSurfService {
           numberOfGuests: data.numberOfGuests,
           message: data.message,
           status: 'PENDING',
+          // Store selected payment option details
+          agreedPaymentType: selectedPaymentOption?.paymentType,
+          agreedPaymentAmount: selectedPaymentOption?.amount,
+          agreedPaymentDetails: selectedPaymentOption?.description,
         },
         include: {
           host: {

@@ -55,7 +55,7 @@ const corsOptions = config.isDevelopment
       optionsSuccessStatus: 200,
     }
   : {
-      // Production: Restrict to known domains
+      // Production: Restrict to known domains with wildcard support
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         const allowedOrigins = config.cors.origin;
         
@@ -64,12 +64,22 @@ const corsOptions = config.isDevelopment
           return callback(null, true);
         }
         
+        // Check for exact match
         if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          logger.warn(`CORS: Blocked request from origin: ${origin}`);
-          callback(new Error('Not allowed by CORS'));
+          return callback(null, true);
         }
+        
+        // Check for wildcard patterns (e.g., *.berse-app.com)
+        const wildcardPatterns = allowedOrigins.filter(pattern => pattern.startsWith('*.'));
+        for (const pattern of wildcardPatterns) {
+          const domain = pattern.substring(2); // Remove '*.' prefix
+          if (origin.endsWith(`.${domain}`) || origin === domain) {
+            return callback(null, true);
+          }
+        }
+        
+        logger.warn(`CORS: Blocked request from origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
       },
       credentials: true,
       maxAge: 86400, // 24 hours

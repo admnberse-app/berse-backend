@@ -487,13 +487,6 @@ const passwordResetTemplate = (data: PasswordResetEmailData): TemplateRenderResu
     <p>Hi <strong>${data.userName || 'there'}</strong>,</p>
     <p>We received a request to reset your password for your ${APP_NAME} account. Don't worry – it happens to the best of us!</p>
     
-    ${data.resetCode ? `
-      <div class="code-box">
-        ${data.resetCode}
-      </div>
-      <p style="text-align: center; color: #666; font-size: 14px; margin-top: -10px;">Use this code to reset your password</p>
-    ` : ''}
-    
     <div style="text-align: center; margin: 32px 0;">
       <a href="${data.resetUrl}" class="button">Reset Password</a>
     </div>
@@ -523,8 +516,6 @@ Reset Your Password
 Hi ${data.userName || 'there'},
 
 We received a request to reset your password.
-
-${data.resetCode ? `Reset Code: ${data.resetCode}\n` : ''}
 
 Click here to reset: ${data.resetUrl}
 

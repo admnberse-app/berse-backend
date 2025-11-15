@@ -89,10 +89,7 @@ export class MatchingService {
     const where: any = {
       id: { notIn: excludeUserIds },
       status: 'ACTIVE',
-      // Only show users with verified emails (filters out test accounts)
-      security: {
-        emailVerifiedAt: { not: null },
-      },
+      deletedAt: null,
       // Only show users with public profiles in discovery
       privacy: {
         profileVisibility: 'public',

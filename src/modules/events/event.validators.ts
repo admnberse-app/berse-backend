@@ -55,7 +55,16 @@ export const createEventValidators = [
   body('mapLink')
     .optional()
     .trim()
-    .isURL().withMessage('Invalid map link URL'),
+    .custom((value) => {
+      if (!value) return true;
+      // Allow Google Maps, Apple Maps, and standard URLs
+      const urlPattern = /^https?:\/\/.+/i;
+      if (!urlPattern.test(value)) {
+        throw new Error('Invalid map link URL');
+      }
+      return true;
+    })
+    .withMessage('Invalid map link URL'),
   
   body('maxAttendees')
     .optional()
@@ -134,7 +143,16 @@ export const updateEventValidators = [
   body('mapLink')
     .optional()
     .trim()
-    .isURL().withMessage('Invalid map link URL'),
+    .custom((value) => {
+      if (!value) return true;
+      // Allow Google Maps, Apple Maps, and standard URLs
+      const urlPattern = /^https?:\/\/.+/i;
+      if (!urlPattern.test(value)) {
+        throw new Error('Invalid map link URL');
+      }
+      return true;
+    })
+    .withMessage('Invalid map link URL'),
   
   body('maxAttendees')
     .optional()

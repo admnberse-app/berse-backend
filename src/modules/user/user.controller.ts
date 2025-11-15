@@ -656,11 +656,7 @@ export class UserController {
       const where: any = {
         status: 'ACTIVE',
         deletedAt: null,
-        // By default, only show users with verified emails (filters out test accounts)
-        // Can be overridden with isVerified=false parameter
-        security: {
-          emailVerifiedAt: { not: null },
-        },
+        // Show all active users regardless of verification status
       };
 
       // Exclude current user

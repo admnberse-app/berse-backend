@@ -392,7 +392,8 @@ export class AuthController {
         });
 
         // Send verification email
-        const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
         
         await emailQueue.add(
           user.email,
@@ -626,7 +627,8 @@ export class AuthController {
             });
 
             // Send verification email
-            const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
             await emailQueue.add(
               user.email,
               EmailTemplate.VERIFICATION,
@@ -1728,9 +1730,6 @@ export class AuthController {
         } as any,
       });
 
-      // Generate 6-digit code for backup
-      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-
       // Create reset URL
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
@@ -1742,7 +1741,6 @@ export class AuthController {
         {
           userName: user.fullName,
           resetUrl,
-          resetCode,
           expiresIn: '1 hour',
         }
       );
@@ -1937,7 +1935,8 @@ export class AuthController {
       });
 
       // Send verification email
-      const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
       
       await emailQueue.add(
         user.email,
@@ -2266,7 +2265,8 @@ export class AuthController {
       });
 
       // Send verification email
-      const verificationUrl = `${process.env.APP_URL}/verify-email?token=${verificationToken}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
       
       await emailQueue.add(
         user.email,
