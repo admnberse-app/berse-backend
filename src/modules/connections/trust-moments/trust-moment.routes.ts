@@ -19,6 +19,66 @@ const router = Router();
 
 /**
  * @swagger
+ * /v2/trust-moments/popular-tags:
+ *   get:
+ *     summary: Get popular tags across all trust moments
+ *     description: Get the most commonly used tags in trust moments (useful for tag suggestions when creating new trust moments)
+ *     tags: [Connections - Trust Moments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Maximum number of tags to return
+ *       - in: query
+ *         name: momentType
+ *         schema:
+ *           type: string
+ *           enum: [event, travel, collaboration, service, general]
+ *         description: Filter tags by moment type
+ *       - in: query
+ *         name: minOccurrences
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 2
+ *         description: Minimum number of occurrences for a tag to be included
+ *     responses:
+ *       200:
+ *         description: Popular tags retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tag:
+ *                         type: string
+ *                         example: "reliable"
+ *                       count:
+ *                         type: integer
+ *                         example: 145
+ */
+router.get(
+  '/trust-moments/popular-tags',
+  authenticateToken,
+  TrustMomentController.getPopularTags
+);
+
+/**
+ * @swagger
  * /v2/connections/{connectionId}/trust-moments:
  *   post:
  *     summary: Create trust moment
@@ -214,6 +274,79 @@ router.delete(
   deleteTrustMomentValidators,
   handleValidationErrors,
   TrustMomentController.deleteTrustMoment
+);
+
+/**
+ * @swagger
+ * /v2/users/{userId}/trust-moments:
+ *   get:
+ *     summary: Get all trust moments for user
+ *     description: Get public trust moments received by a user (for profile viewing) - paginated
+ *     tags: [Connections - Trust Moments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *       - in: query
+ *         name: momentType
+ *         schema:
+ *           type: string
+ *           enum: [event, travel, collaboration, service, general]
+ *       - in: query
+ *         name: eventId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: minRating
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *       - in: query
+ *         name: maxRating
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, rating, trustImpact]
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Trust moments retrieved successfully
+ */
+router.get(
+  '/users/:userId/trust-moments',
+  authenticateToken,
+  [...userIdParamValidator, ...trustMomentQueryValidators],
+  handleValidationErrors,
+  TrustMomentController.getUserTrustMoments
 );
 
 /**

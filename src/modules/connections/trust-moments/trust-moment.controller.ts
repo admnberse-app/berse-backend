@@ -95,6 +95,38 @@ export class TrustMomentController {
   }
 
   /**
+   * Get all trust moments for user (both received and given)
+   * @route GET /v2/users/:userId/trust-moments
+   */
+  static async getUserTrustMoments(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+
+      const query: TrustMomentQuery = {
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        momentType: req.query.momentType as string | undefined,
+        eventId: req.query.eventId as string | undefined,
+        minRating: req.query.minRating ? parseInt(req.query.minRating as string, 10) : undefined,
+        maxRating: req.query.maxRating ? parseInt(req.query.maxRating as string, 10) : undefined,
+        isPublic: req.query.isPublic === 'true' ? true : req.query.isPublic === 'false' ? false : undefined,
+        sortBy: req.query.sortBy as any,
+        sortOrder: req.query.sortOrder as any,
+      };
+
+      const result = await TrustMomentService.getUserTrustMoments(userId, query);
+
+      res.status(200).json({
+        success: true,
+        data: result.moments,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Get trust moments received by user
    * @route GET /v2/users/:userId/trust-moments/received
    */
@@ -221,6 +253,31 @@ export class TrustMomentController {
       res.status(200).json({
         success: true,
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get popular tags across all trust moments
+   * @route GET /v2/trust-moments/popular-tags
+   */
+  static async getPopularTags(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const momentType = req.query.momentType as string | undefined;
+      const minOccurrences = req.query.minOccurrences ? parseInt(req.query.minOccurrences as string, 10) : undefined;
+
+      const tags = await TrustMomentService.getPopularTags({
+        limit,
+        momentType,
+        minOccurrences,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: tags,
       });
     } catch (error) {
       next(error);

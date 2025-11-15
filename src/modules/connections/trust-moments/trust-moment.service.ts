@@ -519,6 +519,86 @@ export class TrustMomentService {
   }
 
   /**
+   * Get all trust moments for user (both received and given) - for profile viewing
+   * By default shows only public trust moments received (most common use case)
+   */
+  static async getUserTrustMoments(
+    userId: string,
+    query: TrustMomentQuery
+  ): Promise<PaginatedTrustMomentsResponse> {
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        momentType,
+        eventId,
+        minRating,
+        maxRating,
+        isPublic = true, // Default to public only for profile viewing
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+      } = query;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause - show received trust moments by default (what others say about this user)
+      const where: any = {
+        receiverId: userId,
+        isPublic, // Only show public trust moments when viewing profiles
+      };
+
+      if (momentType) where.momentType = momentType;
+      if (eventId) where.eventId = eventId;
+      if (minRating !== undefined || maxRating !== undefined) {
+        where.rating = {};
+        if (minRating !== undefined) where.rating.gte = minRating;
+        if (maxRating !== undefined) where.rating.lte = maxRating;
+      }
+
+      // Execute queries
+      const [moments, total] = await Promise.all([
+        prisma.trustMoment.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            giver: {
+              include: {
+                profile: {
+                  select: { profilePicture: true },
+                },
+              },
+            },
+            receiver: {
+              include: {
+                profile: {
+                  select: { profilePicture: true },
+                },
+              },
+            },
+            event: true,
+          },
+        }),
+        prisma.trustMoment.count({ where }),
+      ]);
+
+      return {
+        moments: moments.map(m => this.formatTrustMomentResponse(m)),
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting user trust moments:', error);
+      throw new AppError('Failed to get user trust moments', 500);
+    }
+  }
+
+  /**
    * Get trust moments received by user (paginated)
    */
   static async getTrustMomentsReceived(
@@ -1000,6 +1080,62 @@ export class TrustMomentService {
     } catch (error) {
       logger.error('Error getting trust moment stats:', error);
       throw new AppError('Failed to get trust moment statistics', 500);
+    }
+  }
+
+  /**
+   * Get global popular tags across all trust moments
+   * Useful for suggesting tags when creating new trust moments
+   */
+  static async getPopularTags(options?: {
+    limit?: number;
+    momentType?: string;
+    minOccurrences?: number;
+  }): Promise<Array<{ tag: string; count: number }>> {
+    try {
+      const {
+        limit = 50,
+        momentType,
+        minOccurrences = 2,
+      } = options || {};
+
+      // Build where clause
+      const where: any = {
+        isPublic: true, // Only count tags from public trust moments
+      };
+
+      if (momentType) {
+        where.momentType = momentType;
+      }
+
+      // Get all trust moments with tags
+      const moments = await prisma.trustMoment.findMany({
+        where,
+        select: {
+          tags: true,
+        },
+      });
+
+      // Count tag occurrences
+      const tagCounts: Record<string, number> = {};
+      moments.forEach(moment => {
+        moment.tags.forEach(tag => {
+          const normalizedTag = tag.toLowerCase().trim();
+          tagCounts[normalizedTag] = (tagCounts[normalizedTag] || 0) + 1;
+        });
+      });
+
+      // Filter by minimum occurrences and sort by count
+      const popularTags = Object.entries(tagCounts)
+        .filter(([_, count]) => count >= minOccurrences)
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      return popularTags;
+    } catch (error) {
+      logger.error('Error getting popular tags:', error);
+      throw new AppError('Failed to get popular tags', 500);
     }
   }
 }
