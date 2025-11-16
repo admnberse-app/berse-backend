@@ -4,26 +4,12 @@ const prisma = new PrismaClient();
 
 /**
  * Seed data for new badge types
- * These badges encourage engagement, travel, hosting, trust, and community building
+ * Badge points calculated based on activity points:
+ * - Register: 5 pts | Attend event: 10 pts | Host event: 15 pts
+ * - Get vouch: 8 pts | Give trust moment: 2 pts | Receive positive: 1 pt
+ * - Complete profile section: 2 pts | Join community: 3 pts | Refer friend: 3 pts
  */
 const newBadges = [
-  {
-    type: BadgeType.EXPLORER,
-    name: '🌍 Explorer',
-    description: 'You love to travel',
-    criteria: 'Visit and log 5+ countries in Travel Logbook',
-    category: 'Travel',
-    tier: 'Bronze',
-    points: 150,
-    requiredCount: 5,
-    criteriaConfig: {
-      type: 'travel_countries',
-      minCountries: 5,
-      requiresLogbook: true,
-    },
-    imageUrl: '/badges/explorer.png',
-    isActive: true,
-  },
   {
     type: BadgeType.CONNECTOR,
     name: '🤝 Connector',
@@ -31,12 +17,12 @@ const newBadges = [
     criteria: 'Connect 10+ friends on Berse App',
     category: 'Social',
     tier: 'Bronze',
-    points: 100,
+    points: 30, // ~10 connections would earn indirectly through vouches/trust moments
     requiredCount: 10,
     criteriaConfig: {
       type: 'connections_count',
       minConnections: 10,
-      connectionType: 'ACCEPTED', // Only count accepted connections
+      connectionType: 'ACCEPTED',
     },
     imageUrl: '/badges/connector.png',
     isActive: true,
@@ -48,15 +34,32 @@ const newBadges = [
     criteria: 'Host 5+ events with good feedback',
     category: 'Events',
     tier: 'Silver',
-    points: 200,
+    points: 75, // 5 events × 15 pts = 75 pts
     requiredCount: 5,
     criteriaConfig: {
       type: 'hosted_events',
       minEvents: 5,
-      minAverageRating: 4.0, // Events must have 4.0+ average rating
+      minAverageRating: 4.0,
       requireCompletedEvents: true,
     },
     imageUrl: '/badges/host-master.png',
+    isActive: true,
+  },
+  {
+    type: BadgeType.EXPLORER,
+    name: '🌍 Explorer',
+    description: 'You love to travel',
+    criteria: 'Visit and log 5+ countries in Travel Logbook',
+    category: 'Travel',
+    tier: 'Bronze',
+    points: 50, // Achievement-based, roughly 5 events attended (50 pts)
+    requiredCount: 5,
+    criteriaConfig: {
+      type: 'travel_countries',
+      minCountries: 5,
+      requiresLogbook: true,
+    },
+    imageUrl: '/badges/explorer.png',
     isActive: true,
   },
   {
@@ -66,7 +69,7 @@ const newBadges = [
     criteria: 'Reach 80+ trust score',
     category: 'Trust',
     tier: 'Gold',
-    points: 300,
+    points: 100, // High achievement, reflects significant trust-building activity
     requiredCount: 80,
     criteriaConfig: {
       type: 'trust_score',
@@ -85,18 +88,18 @@ const newBadges = [
     criteria: 'Create or help manage an active community',
     category: 'Community',
     tier: 'Silver',
-    points: 250,
+    points: 60, // Joining 20 communities = 60 pts, managing is more valuable
     requiredCount: 1,
     criteriaConfig: {
       type: 'community_management',
       options: [
         {
           action: 'created_community',
-          minMembers: 10, // Community must have at least 10 members
+          minMembers: 10,
         },
         {
           action: 'moderator_role',
-          minActiveDays: 30, // Active moderator for 30+ days
+          minActiveDays: 30,
         },
       ],
     },
@@ -110,11 +113,11 @@ const newBadges = [
     criteria: 'Get 4.5+ star rating across 20+ services',
     category: 'Service',
     tier: 'Gold',
-    points: 350,
+    points: 120, // ~20 events with positive reviews (20 × ~5 pts avg)
     requiredCount: 20,
     criteriaConfig: {
       type: 'service_rating',
-      minServices: 20, // At least 20 completed services
+      minServices: 20,
       minAverageRating: 4.5,
       serviceTypes: ['marketplace', 'events', 'homesurf', 'guide'],
     },
@@ -128,12 +131,12 @@ const newBadges = [
     criteria: 'Join Berse in the first 1,000 users',
     category: 'Achievement',
     tier: 'Platinum',
-    points: 500,
+    points: 150, // Prestigious achievement, one-time reward
     requiredCount: 1,
     criteriaConfig: {
       type: 'user_registration',
-      maxUserNumber: 1000, // User ID must be within first 1000
-      registrationBefore: '2026-12-31T23:59:59Z', // Adjust based on launch date
+      maxUserNumber: 1000,
+      registrationBefore: '2026-12-31T23:59:59Z',
     },
     imageUrl: '/badges/early-adopter.png',
     isActive: true,
@@ -145,7 +148,7 @@ const newBadges = [
     criteria: 'Have connections on 5+ continents',
     category: 'Travel',
     tier: 'Platinum',
-    points: 400,
+    points: 200, // Rare achievement requiring extensive networking and travel
     requiredCount: 5,
     criteriaConfig: {
       type: 'connections_geography',
@@ -162,6 +165,40 @@ const newBadges = [
       requiresLocationData: true,
     },
     imageUrl: '/badges/global-citizen.png',
+    isActive: true,
+  },
+  {
+    type: BadgeType.EVENT_ENTHUSIAST,
+    name: '🎉 Event Enthusiast',
+    description: 'You love attending events',
+    criteria: 'Attend 20+ events',
+    category: 'Events',
+    tier: 'Gold',
+    points: 200, // 20 events × 10 pts = 200 pts
+    requiredCount: 20,
+    criteriaConfig: {
+      type: 'attended_events',
+      minEvents: 20,
+      requireCompletedEvents: true,
+    },
+    imageUrl: '/badges/event-enthusiast.png',
+    isActive: true,
+  },
+  {
+    type: BadgeType.REFERRAL_CHAMPION,
+    name: '📢 Referral Champion',
+    description: 'You bring amazing people',
+    criteria: 'Refer 10+ friends who join',
+    category: 'Social',
+    tier: 'Silver',
+    points: 30, // 10 referrals × 3 pts = 30 pts
+    requiredCount: 10,
+    criteriaConfig: {
+      type: 'referrals',
+      minReferrals: 10,
+      requireSuccessfulSignups: true,
+    },
+    imageUrl: '/badges/referral-champion.png',
     isActive: true,
   },
 ];

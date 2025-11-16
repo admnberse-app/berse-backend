@@ -20,7 +20,10 @@ const prisma = new PrismaClient();
 
 /**
  * Seed data for new badge types
- * These badges encourage engagement, travel, hosting, trust, and community building
+ * Badge points calculated based on activity points:
+ * - Register: 5 pts | Attend event: 10 pts | Host event: 15 pts
+ * - Get vouch: 8 pts | Give trust moment: 2 pts | Receive positive: 1 pt
+ * - Complete profile section: 2 pts | Join community: 3 pts | Refer friend: 3 pts
  */
 const newBadges = [
   {
@@ -30,7 +33,7 @@ const newBadges = [
     criteria: 'Visit and log 5+ countries in Travel Logbook',
     category: 'Travel',
     tier: 'Bronze',
-    points: 150,
+    points: 50,
     requiredCount: 5,
     criteriaConfig: {
       type: 'travel_countries',
@@ -47,7 +50,7 @@ const newBadges = [
     criteria: 'Connect 10+ friends on Berse App',
     category: 'Social',
     tier: 'Bronze',
-    points: 100,
+    points: 30,
     requiredCount: 10,
     criteriaConfig: {
       type: 'connections_count',
@@ -64,7 +67,7 @@ const newBadges = [
     criteria: 'Host 5+ events with good feedback',
     category: 'Events',
     tier: 'Silver',
-    points: 200,
+    points: 75,
     requiredCount: 5,
     criteriaConfig: {
       type: 'hosted_events',
@@ -82,7 +85,7 @@ const newBadges = [
     criteria: 'Reach 80+ trust score',
     category: 'Trust',
     tier: 'Gold',
-    points: 300,
+    points: 100,
     requiredCount: 80,
     criteriaConfig: {
       type: 'trust_score',
@@ -101,7 +104,7 @@ const newBadges = [
     criteria: 'Create or help manage an active community',
     category: 'Community',
     tier: 'Silver',
-    points: 250,
+    points: 60,
     requiredCount: 1,
     criteriaConfig: {
       type: 'community_management',
@@ -126,7 +129,7 @@ const newBadges = [
     criteria: 'Get 4.5+ star rating across 20+ services',
     category: 'Service',
     tier: 'Gold',
-    points: 350,
+    points: 120,
     requiredCount: 20,
     criteriaConfig: {
       type: 'service_rating',
@@ -144,7 +147,7 @@ const newBadges = [
     criteria: 'Join Berse in the first 1,000 users',
     category: 'Achievement',
     tier: 'Platinum',
-    points: 500,
+    points: 150,
     requiredCount: 1,
     criteriaConfig: {
       type: 'user_registration',
@@ -161,7 +164,7 @@ const newBadges = [
     criteria: 'Have connections on 5+ continents',
     category: 'Travel',
     tier: 'Platinum',
-    points: 400,
+    points: 200,
     requiredCount: 5,
     criteriaConfig: {
       type: 'connections_geography',

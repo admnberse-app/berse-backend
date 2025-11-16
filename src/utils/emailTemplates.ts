@@ -330,6 +330,10 @@ const baseTemplate = (content: string, preheader?: string): string => `
         ${content}
       </div>
       <div class="footer">
+        <p style="background: #fff9e6; border-left: 4px solid #ffc107; padding: 12px; margin: 0 0 20px 0; border-radius: 4px; font-size: 13px; color: #856404; text-align: left;">
+          <strong>⚠️ This is an automated email. Please do not reply to this message.</strong><br/>
+          For questions or support, contact us at <a href="mailto:admn.berse@gmail.com" style="color: #856404; font-weight: 600;">admn.berse@gmail.com</a>
+        </p>
         <p style="font-weight: 600; color: #4a4a4a; margin-bottom: 12px;">© ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
         <p style="margin: 12px 0;">
           <a href="${APP_URL}">Visit Website</a> • 
