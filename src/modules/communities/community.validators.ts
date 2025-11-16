@@ -93,16 +93,22 @@ export const createCommunityValidators = [
     .trim()
     .custom((value) => {
       if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('Instagram must be a valid URL'),
+      if (!/^https?:\/\/.+/.test(value)) {
+        throw new Error('Instagram must be a valid URL');
+      }
+      return true;
+    }),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
     .custom((value) => {
       if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('Facebook must be a valid URL'),
+      if (!/^https?:\/\/.+/.test(value)) {
+        throw new Error('Facebook must be a valid URL');
+      }
+      return true;
+    }),
 
   body('socialLinks.linkedin')
     .optional()
@@ -117,8 +123,11 @@ export const createCommunityValidators = [
     .trim()
     .custom((value) => {
       if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('Twitter must be a valid URL'),
+      if (!/^https?:\/\/.+/.test(value)) {
+        throw new Error('Twitter must be a valid URL');
+      }
+      return true;
+    }),
 
   body('socialLinks.youtube')
     .optional()
@@ -239,16 +248,22 @@ export const updateCommunityValidators = [
     .trim()
     .custom((value) => {
       if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('Instagram must be a valid URL'),
+      if (!/^https?:\/\/.+/.test(value)) {
+        throw new Error('Instagram must be a valid URL');
+      }
+      return true;
+    }),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
     .custom((value) => {
       if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('Facebook must be a valid URL'),
+      if (!/^https?:\/\/.+/.test(value)) {
+        throw new Error('Facebook must be a valid URL');
+      }
+      return true;
+    }),
 
   body('socialLinks.linkedin')
     .optional()
@@ -263,8 +278,11 @@ export const updateCommunityValidators = [
     .trim()
     .custom((value) => {
       if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('Twitter must be a valid URL'),
+      if (!/^https?:\/\/.+/.test(value)) {
+        throw new Error('Twitter must be a valid URL');
+      }
+      return true;
+    }),
 
   body('socialLinks.youtube')
     .optional()
