@@ -89,22 +89,22 @@ export const createCommunityValidators = [
     .isObject().withMessage('socialLinks must be an object'),
 
   body('socialLinks.instagram')
-    .optional()
+    .optional(),
 
   body('socialLinks.facebook')
-    .optional()
+    .optional(),
 
   body('socialLinks.linkedin')
-    .optional()
+    .optional(),
 
   body('socialLinks.twitter')
-    .optional()
+    .optional(),
 
   body('socialLinks.youtube')
-    .optional()
+    .optional(),
 
   body('socialLinks.tiktok')
-    .optional()
+    .optional(),
 
   body('websiteUrl')
     .optional()
@@ -205,22 +205,22 @@ export const updateCommunityValidators = [
     .isObject().withMessage('socialLinks must be an object'),
 
   body('socialLinks.instagram')
-    .optional()
+    .optional(),
 
   body('socialLinks.facebook')
-    .optional()
+    .optional(),
 
   body('socialLinks.linkedin')
-    .optional()
+    .optional(),
 
   body('socialLinks.twitter')
-    .optional()
+    .optional(),
 
   body('socialLinks.youtube')
-    .optional()
+    .optional(),
 
   body('socialLinks.tiktok')
-    .optional()
+    .optional(),
 
   body('websiteUrl')
     .optional()
