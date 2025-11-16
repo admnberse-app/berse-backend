@@ -24,6 +24,9 @@ import healthRoutes from './routes/health.routes';
 
 const app: Application = express();
 
+// Disable JSON escaping to prevent HTML encoding of URLs
+app.set('json escape', false);
+
 // Trust proxy for production
 if (config.isProduction) {
   app.set('trust proxy', 1);

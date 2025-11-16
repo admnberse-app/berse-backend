@@ -413,7 +413,7 @@ export class CommunityController {
       entityId: communityId, // Link to community if provided
     });
 
-    sendSuccess(res, { logoUrl: uploadResult.url }, 'Community logo uploaded successfully');
+    sendSuccess(res, { logoUrl: uploadResult.key }, 'Community logo uploaded successfully');
   }
 
   /**
@@ -440,7 +440,7 @@ export class CommunityController {
       entityId: communityId, // Link to community if provided
     });
 
-    sendSuccess(res, { coverImageUrl: uploadResult.url }, 'Community cover image uploaded successfully');
+    sendSuccess(res, { coverImageUrl: uploadResult.key }, 'Community cover image uploaded successfully');
   }
 
   // ============================================================================

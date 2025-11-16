@@ -3,7 +3,7 @@ import { AppError } from '../../middleware/error';
 import { NotificationService } from '../../services/notification.service';
 import logger from '../../utils/logger';
 import QRCode from 'qrcode';
-import { getProfilePictureUrl } from '../../utils/image.helpers';
+import { getProfilePictureUrl, getImageUrl } from '../../utils/image.helpers';
 import type {
   CreateCommunityInput,
   UpdateCommunityInput,
@@ -1991,8 +1991,8 @@ export class CommunityService {
       id: community.id,
       name: community.name,
       description: community.description,
-      logoUrl: community.logoUrl,
-      coverImageUrl: community.coverImageUrl,
+      logoUrl: getImageUrl(community.logoUrl),
+      coverImageUrl: getImageUrl(community.coverImageUrl),
       category: community.category,
       interests: community.interests || [],
       isVerified: community.isVerified,
