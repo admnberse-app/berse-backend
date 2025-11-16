@@ -91,12 +91,12 @@ export const createCommunityValidators = [
   body('socialLinks.instagram')
     .optional()
     .trim()
-    .matches(/^https?:\/\/.+/).withMessage('Instagram must be a valid URL'),
+    .matches('^https?:\\/\\/.+').withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
-    .matches(/^https?:\/\/.+/).withMessage('Facebook must be a valid URL'),
+    .matches('^https?:\\/\\/.+').withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
@@ -109,7 +109,7 @@ export const createCommunityValidators = [
   body('socialLinks.twitter')
     .optional()
     .trim()
-    .matches(/^https?:\/\/.+/).withMessage('Twitter must be a valid URL'),
+    .matches('^https?:\\/\\/.+').withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
@@ -228,12 +228,12 @@ export const updateCommunityValidators = [
   body('socialLinks.instagram')
     .optional()
     .trim()
-    .matches(/^https?:\/\/.+/).withMessage('Instagram must be a valid URL'),
+    .matches('^https?:\\/\\/.+').withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
-    .matches(/^https?:\/\/.+/).withMessage('Facebook must be a valid URL'),
+    .matches('^https?:\\/\\/.+').withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
@@ -246,7 +246,7 @@ export const updateCommunityValidators = [
   body('socialLinks.twitter')
     .optional()
     .trim()
-    .matches(/^https?:\/\/.+/).withMessage('Twitter must be a valid URL'),
+    .matches('^https?:\\/\\/.+').withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
