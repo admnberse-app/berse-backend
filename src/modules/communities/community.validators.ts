@@ -90,42 +90,21 @@ export const createCommunityValidators = [
 
   body('socialLinks.instagram')
     .optional()
-    .trim()
-    .matches('^https?:\\/\\/.+').withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
-    .trim()
-    .matches('^https?:\\/\\/.+').withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('LinkedIn must be a valid URL'),
 
   body('socialLinks.twitter')
     .optional()
-    .trim()
-    .matches('^https?:\\/\\/.+').withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('YouTube must be a valid URL'),
 
   body('socialLinks.tiktok')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('TikTok must be a valid URL'),
 
   body('websiteUrl')
     .optional()
@@ -227,42 +206,21 @@ export const updateCommunityValidators = [
 
   body('socialLinks.instagram')
     .optional()
-    .trim()
-    .matches('^https?:\\/\\/.+').withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
-    .trim()
-    .matches('^https?:\\/\\/.+').withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('LinkedIn must be a valid URL'),
 
   body('socialLinks.twitter')
     .optional()
-    .trim()
-    .matches('^https?:\\/\\/.+').withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('YouTube must be a valid URL'),
 
   body('socialLinks.tiktok')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      return /^https?:\/\/.+/.test(value);
-    }).withMessage('TikTok must be a valid URL'),
 
   body('websiteUrl')
     .optional()
