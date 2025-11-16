@@ -227,13 +227,18 @@ async function seedPlatformConfig() {
   }
 }
 
-// Run seed function
-seedPlatformConfig()
-  .then(() => {
-    console.log('🎉 Seed script completed successfully!');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('💥 Seed script failed:', error);
-    process.exit(1);
-  });
+// Export for use in production-seed.ts
+export default seedPlatformConfig;
+
+// Run seed function (only when run directly)
+if (require.main === module) {
+  seedPlatformConfig()
+    .then(() => {
+      console.log('🎉 Seed script completed successfully!');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('💥 Seed script failed:', error);
+      process.exit(1);
+    });
+}

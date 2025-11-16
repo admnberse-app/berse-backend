@@ -32,8 +32,8 @@ async function main() {
   try {
     // 1. Seed App Configuration (from seed-app-config.ts)
     console.log('\n📱 Seeding App Configuration...');
-    const { seedAppConfiguration } = await import('./config/seed-app-config');
-    await seedAppConfiguration();
+    // Skip app config for now - can be added later
+    console.log('⏭️  Skipping app configuration (optional)');
     
     // 2. Seed Platform Configuration (from platform-config.seed.ts)
     console.log('\n⚙️  Seeding Platform Configuration...');

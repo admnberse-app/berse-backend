@@ -226,6 +226,10 @@ async function seedOnboardingScreens() {
   console.log('✨ Onboarding screens seeded successfully!');
 }
 
+// Export for use in production-seed.ts
+export default seedOnboardingScreens;
+export { seedOnboardingScreens };
+
 // Run if called directly
 if (require.main === module) {
   seedOnboardingScreens()
@@ -237,5 +241,3 @@ if (require.main === module) {
       await prisma.$disconnect();
     });
 }
-
-export default seedOnboardingScreens;

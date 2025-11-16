@@ -1803,12 +1803,17 @@ Thank you for your patience!`,
   console.log('='.repeat(60) + '\n');
 }
 
-// Main execution
-seedAppConfiguration()
-  .catch((e) => {
-    console.error('❌ App configuration seed failed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Export for use in production-seed.ts
+export { seedAppConfiguration };
+
+// Main execution (only when run directly)
+if (require.main === module) {
+  seedAppConfiguration()
+    .catch((e) => {
+      console.error('❌ App configuration seed failed:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
