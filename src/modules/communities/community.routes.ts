@@ -977,10 +977,20 @@ router.use('/', vouchOfferRoutes);
  * /v2/communities/upload-logo:
  *   post:
  *     summary: Upload community logo image
- *     description: Upload a logo image for a community. Returns the image URL to be used in community creation/update.
+ *     description: |
+ *       Upload a logo image for a community. Returns the image URL to be used in community creation/update.
+ *       
+ *       **Optional:** Include `communityId` to link the uploaded image to a specific community for tracking.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: communityId
+ *         schema:
+ *           type: string
+ *         description: Optional community ID to link this image to (for existing communities)
+ *         example: clx1234567890
  *     requestBody:
  *       required: true
  *       content:
@@ -994,6 +1004,10 @@ router.use('/', vouchOfferRoutes);
  *                 type: string
  *                 format: binary
  *                 description: Community logo image file (JPEG, PNG, GIF, WebP)
+ *               communityId:
+ *                 type: string
+ *                 description: Optional community ID to link this image to (can be in body or query)
+ *                 example: clx1234567890
  *     responses:
  *       200:
  *         description: Logo uploaded successfully
@@ -1031,10 +1045,20 @@ router.post(
  * /v2/communities/upload-cover-image:
  *   post:
  *     summary: Upload community cover/banner image
- *     description: Upload a cover image for a community. Returns the image URL to be used in community creation/update.
+ *     description: |
+ *       Upload a cover image for a community. Returns the image URL to be used in community creation/update.
+ *       
+ *       **Optional:** Include `communityId` to link the uploaded image to a specific community for tracking.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: communityId
+ *         schema:
+ *           type: string
+ *         description: Optional community ID to link this image to (for existing communities)
+ *         example: clx1234567890
  *     requestBody:
  *       required: true
  *       content:
@@ -1048,6 +1072,10 @@ router.post(
  *                 type: string
  *                 format: binary
  *                 description: Community cover/banner image file (JPEG, PNG, GIF, WebP)
+ *               communityId:
+ *                 type: string
+ *                 description: Optional community ID to link this image to (can be in body or query)
+ *                 example: clx1234567890
  *     responses:
  *       200:
  *         description: Cover image uploaded successfully

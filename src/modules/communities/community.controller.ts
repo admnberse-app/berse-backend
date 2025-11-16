@@ -397,6 +397,7 @@ export class CommunityController {
   async uploadLogo(req: Request, res: Response): Promise<void> {
     const userId = req.user!.id;
     const file = req.file;
+    const communityId = req.body.communityId || req.query.communityId as string | undefined;
 
     if (!file) {
       throw new AppError('No logo file provided', 400);
@@ -409,6 +410,7 @@ export class CommunityController {
       optimize: true,
       isPublic: true,
       userId,
+      entityId: communityId, // Link to community if provided
     });
 
     sendSuccess(res, { logoUrl: uploadResult.url }, 'Community logo uploaded successfully');
@@ -422,6 +424,7 @@ export class CommunityController {
   async uploadCoverImage(req: Request, res: Response): Promise<void> {
     const userId = req.user!.id;
     const file = req.file;
+    const communityId = req.body.communityId || req.query.communityId as string | undefined;
 
     if (!file) {
       throw new AppError('No cover image file provided', 400);
@@ -434,6 +437,7 @@ export class CommunityController {
       optimize: true,
       isPublic: true,
       userId,
+      entityId: communityId, // Link to community if provided
     });
 
     sendSuccess(res, { coverImageUrl: uploadResult.url }, 'Community cover image uploaded successfully');
