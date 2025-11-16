@@ -2002,6 +2002,15 @@ model Reward {
   quantity       Int          @default(0)
   imageUrl       String?
   isActive       Boolean      @default(true)
+  
+  // Redemption fulfillment data (configured by admin)
+  voucherCode     String?      // Promo/discount code to show user
+  voucherImageUrl String?      // QR code or voucher image URL
+  redemptionLink  String?      // External link for redemption
+  instructions    String?      // Instructions on how to use the reward
+  validityDays    Int?         // How many days the reward is valid after redemption
+  fulfillmentData Json?        // Flexible JSON field for any additional data
+  
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   redemptions    Redemption[]
