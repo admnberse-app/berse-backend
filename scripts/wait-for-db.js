@@ -2,11 +2,17 @@
 
 const { PrismaClient } = require('@prisma/client');
 
+// Add connection pool limits to prevent exhausting database connections
+const databaseUrl = process.env.DATABASE_URL;
+const urlWithPoolLimit = databaseUrl && !databaseUrl.includes('connection_limit=')
+  ? `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=5`
+  : databaseUrl;
+
 const prisma = new PrismaClient({
   log: ['info', 'warn', 'error'],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL
+      url: urlWithPoolLimit
     }
   }
 });

@@ -10,10 +10,15 @@ export const prisma = global.prisma || new PrismaClient({
   datasources: {
     db: {
       url: process.env.DATABASE_URL ? 
-        // Add connection pool parameters to DATABASE_URL
-        process.env.DATABASE_URL.includes('?') 
-          ? `${process.env.DATABASE_URL}&connection_limit=5&pool_timeout=20`
-          : `${process.env.DATABASE_URL}?connection_limit=5&pool_timeout=20`
+        // Add connection pool parameters if not already present
+        (() => {
+          const url = process.env.DATABASE_URL!;
+          if (url.includes('connection_limit=')) {
+            return url; // Already has connection limit
+          }
+          const separator = url.includes('?') ? '&' : '?';
+          return `${url}${separator}connection_limit=10&pool_timeout=20`;
+        })()
         : undefined,
     },
   },
