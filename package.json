@@ -13,9 +13,9 @@
     "start:prod": "cross-env NODE_ENV=production node dist/server.js",
     "start:staging": "cross-env NODE_ENV=staging node dist/server.js",
     "railway:build": "npm run build",
-    "railway:start": "node scripts/wait-for-db.js && npx prisma generate && npx prisma migrate deploy && npm run start:prod",
+    "railway:start": "node scripts/wait-for-db.js && npx prisma generate && npx prisma migrate deploy && npx ts-node prisma/seeds/production-seed.ts && npm run start:prod",
     "railway:start:staging": "node scripts/wait-for-db.js && npx prisma generate && npx prisma migrate deploy && npm run start:staging",
-    "railway:start:production": "node scripts/wait-for-db.js && npx prisma generate && npx prisma migrate deploy && npm run start:prod",
+    "railway:start:production": "node scripts/wait-for-db.js && npx prisma generate && npx prisma migrate deploy && npx ts-node prisma/seeds/production-seed.ts && npm run start:prod",
     "railway:start:migrate": "npm run prisma:migrate:prod && npm run start:prod",
     "railway:debug": "echo 'Railway Environment Debug:' && env | grep -E '(DATABASE|NODE_ENV|PORT|RAILWAY)' && node scripts/wait-for-db.js",
     "railway:seed": "ts-node prisma/seeds/index.ts",
@@ -117,7 +117,8 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/web-push": "^3.6.4",
     "copyfiles": "^2.4.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.9.0",
@@ -129,8 +130,7 @@
     "nodemon": "^3.1.10",
     "rimraf": "^6.0.1",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.0",
-    "ts-node": "^10.9.2"
+    "ts-jest": "^29.4.0"
   },
   "prisma": {
     "seed": "ts-node prisma/seeds/index.ts"
