@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import logger from '../utils/logger';
-import { config } from '../config/environment';
+import { config } from '../config';
 import prisma from '../lib/prisma';
 
 // Simple in-memory cache for MFA operations (replace with Redis in production)
