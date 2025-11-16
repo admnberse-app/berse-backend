@@ -6,7 +6,6 @@ import cluster from 'cluster';
 import os from 'os';
 // TEMPORARILY DISABLED - Job needs schema compliance updates
 // import { initializeProfileReminderJob } from './jobs/profileCompletionReminders';
-import { MembershipService } from './services/membership.service';
 import { SchedulerService } from './services/scheduler.service';
 import { PointExpiryCron } from './cron/expire-points.cron';
 
@@ -42,16 +41,7 @@ const startServer = async () => {
         await prisma.$connect();
         logger.info('✅ Database connected successfully');
         
-        // Skip membership check - causes too many connections on startup
-        // Run manually if needed: MembershipService.fixMissingMembershipIds()
-        // if (!config.isDevelopment) {
-        //   try {
-        //     await MembershipService.fixMissingMembershipIds();
-        //     logger.info('✅ Checked and fixed missing membership IDs');
-        //   } catch (error) {
-        //     logger.error('Failed to fix missing membership IDs:', error);
-        //   }
-        // }
+
         
         break;
       } catch (dbError) {

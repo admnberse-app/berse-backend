@@ -36,70 +36,7 @@ export class MembershipService {
     throw new Error(`Failed to generate unique membership ID after ${maxAttempts} attempts`);
   }
 
-  /**
-   * Fix missing membership IDs for all users
-   */
-  static async fixMissingMembershipIds(): Promise<void> {
-    try {
-      // Find all users without membership IDs in their metadata
-      const usersWithoutIds = await prisma.user.findMany({
-        where: {
-          OR: [
-            { metadata: { is: { membershipId: null } } },
-            { metadata: { is: null } }
-          ]
-        },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          metadata: {
-            select: {
-              membershipId: true
-            }
-          }
-        }
-      });
-      
-      if (usersWithoutIds.length === 0) {
-        return;
-      }
-      
-      logger.info(`Found ${usersWithoutIds.length} users without membership IDs`);
-      
-      for (const user of usersWithoutIds) {
-        try {
-          const membershipId = await this.generateUniqueMembershipId();
-          
-          // Upsert the metadata with membership ID
-          await prisma.userMetadata.upsert({
-            where: { userId: user.id },
-            update: { membershipId, updatedAt: new Date() },
-            create: {
-              userId: user.id,
-              membershipId,
-              referralCode: `REF-${user.id.substring(0, 8).toUpperCase()}`,
-              updatedAt: new Date()
-            } as any
-          });
-          
-          logger.info('Generated membership ID for user', {
-            userId: user.id,
-            email: user.email,
-            membershipId
-          });
-        } catch (error) {
-          logger.error('Failed to generate membership ID for user', {
-            userId: user.id,
-            email: user.email,
-            error
-          });
-        }
-      }
-    } catch (error) {
-      logger.error('Error fixing missing membership IDs', { error });
-    }
-  }
+
 
   /**
    * Ensure user has membership ID (called after user creation)
