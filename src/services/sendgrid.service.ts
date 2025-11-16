@@ -37,6 +37,10 @@ export class SendGridService {
       subject: options.subject,
       text: options.text || options.html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
       html: options.html,
+      trackingSettings: {
+        clickTracking: { enable: false },
+        openTracking: { enable: false },
+      },
     };
 
     try {
@@ -74,6 +78,10 @@ export class SendGridService {
       subject: options.subject,
       text: options.text || options.html.replace(/<[^>]*>/g, ''),
       html: options.html,
+      trackingSettings: {
+        clickTracking: { enable: false },
+        openTracking: { enable: false },
+      },
     };
 
     try {
