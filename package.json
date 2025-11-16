@@ -1,6 +1,6 @@
 {
   "name": "bersemuka-app",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.js",
   "scripts": {
     "dev": "dotenv -e .env.development.local -- nodemon --exec ts-node src/server.ts",
