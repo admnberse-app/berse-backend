@@ -11,7 +11,8 @@ import { PointExpiryCron } from './cron/expire-points.cron';
 
 // Enable cluster mode for production
 const setupCluster = () => {
-  const numWorkers = config.isProduction ? os.cpus().length : 1;
+  // Limit to 2 workers max to avoid exhausting database connections
+  const numWorkers = config.isProduction ? Math.min(2, os.cpus().length) : 1;
   
   if (cluster.isPrimary && config.isProduction) {
     logger.info(`Master ${process.pid} is running`);
