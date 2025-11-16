@@ -42,15 +42,16 @@ const startServer = async () => {
         await prisma.$connect();
         logger.info('✅ Database connected successfully');
         
-        // Skip membership check in development for faster startup
-        if (!config.isDevelopment) {
-          try {
-            await MembershipService.fixMissingMembershipIds();
-            logger.info('✅ Checked and fixed missing membership IDs');
-          } catch (error) {
-            logger.error('Failed to fix missing membership IDs:', error);
-          }
-        }
+        // Skip membership check - causes too many connections on startup
+        // Run manually if needed: MembershipService.fixMissingMembershipIds()
+        // if (!config.isDevelopment) {
+        //   try {
+        //     await MembershipService.fixMissingMembershipIds();
+        //     logger.info('✅ Checked and fixed missing membership IDs');
+        //   } catch (error) {
+        //     logger.error('Failed to fix missing membership IDs:', error);
+        //   }
+        // }
         
         break;
       } catch (dbError) {
