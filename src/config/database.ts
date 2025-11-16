@@ -14,10 +14,13 @@ export const prisma = global.prisma || new PrismaClient({
         (() => {
           const url = process.env.DATABASE_URL!;
           if (url.includes('connection_limit=')) {
+            console.log('✅ DATABASE_URL already has connection_limit parameter');
             return url; // Already has connection limit
           }
           const separator = url.includes('?') ? '&' : '?';
-          return `${url}${separator}connection_limit=10&pool_timeout=20`;
+          const modifiedUrl = `${url}${separator}connection_limit=5&pool_timeout=20`;
+          console.log('⚙️  Added connection_limit=5 to DATABASE_URL');
+          return modifiedUrl;
         })()
         : undefined,
     },
