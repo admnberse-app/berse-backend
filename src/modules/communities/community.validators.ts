@@ -11,7 +11,7 @@ export const createCommunityValidators = [
     .trim()
     .notEmpty().withMessage('Community name is required')
     .isLength({ min: 3, max: 100 }).withMessage('Name must be between 3 and 100 characters')
-    .matches(/^[a-zA-Z0-9\s\-&'']+$/).withMessage('Name contains invalid characters'),
+    .matches(/^[a-zA-Z0-9\s\-&'\u2019]+$/).withMessage('Name contains invalid characters'),
 
   body('description')
     .optional()
@@ -157,7 +157,7 @@ export const updateCommunityValidators = [
     .optional()
     .trim()
     .isLength({ min: 3, max: 100 }).withMessage('Name must be between 3 and 100 characters')
-    .matches(/^[a-zA-Z0-9\s\-&']+$/).withMessage('Name contains invalid characters'),
+    .matches(/^[a-zA-Z0-9\s\-&'\u2019]+$/).withMessage('Name contains invalid characters'),
 
   body('description')
     .optional()
