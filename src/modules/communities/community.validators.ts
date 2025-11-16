@@ -91,24 +91,12 @@ export const createCommunityValidators = [
   body('socialLinks.instagram')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      if (!/^https?:\/\/.+/.test(value)) {
-        throw new Error('Instagram must be a valid URL');
-      }
-      return true;
-    }),
+    .matches(/^https?:\/\/.+/).withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      if (!/^https?:\/\/.+/.test(value)) {
-        throw new Error('Facebook must be a valid URL');
-      }
-      return true;
-    }),
+    .matches(/^https?:\/\/.+/).withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
@@ -121,13 +109,7 @@ export const createCommunityValidators = [
   body('socialLinks.twitter')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      if (!/^https?:\/\/.+/.test(value)) {
-        throw new Error('Twitter must be a valid URL');
-      }
-      return true;
-    }),
+    .matches(/^https?:\/\/.+/).withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
@@ -246,24 +228,12 @@ export const updateCommunityValidators = [
   body('socialLinks.instagram')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      if (!/^https?:\/\/.+/.test(value)) {
-        throw new Error('Instagram must be a valid URL');
-      }
-      return true;
-    }),
+    .matches(/^https?:\/\/.+/).withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      if (!/^https?:\/\/.+/.test(value)) {
-        throw new Error('Facebook must be a valid URL');
-      }
-      return true;
-    }),
+    .matches(/^https?:\/\/.+/).withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
@@ -276,13 +246,7 @@ export const updateCommunityValidators = [
   body('socialLinks.twitter')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      if (!/^https?:\/\/.+/.test(value)) {
-        throw new Error('Twitter must be a valid URL');
-      }
-      return true;
-    }),
+    .matches(/^https?:\/\/.+/).withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
