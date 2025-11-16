@@ -2,7 +2,7 @@ import { prisma } from '../../config/database';
 import { AppError } from '../../middleware/error';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config';
-import { getProfilePictureUrl } from '../../utils/image.helpers';
+import { getProfilePictureUrl, getImageUrl } from '../../utils/image.helpers';
 import { 
   CreateEventRequest, 
   UpdateEventRequest, 
@@ -2074,7 +2074,7 @@ export class EventService {
       hostId: event.hostId,
       communityId: event.communityId,
       hostType: event.hostType,
-      images: event.images,
+      images: event.images?.map((img: string) => getImageUrl(img)) || [],
       isFree: event.isFree,
       currency: event.currency,
       priceRange,
