@@ -3,15 +3,22 @@
 const { PrismaClient } = require('@prisma/client');
 
 // Add connection pool limits to prevent exhausting database connections
+// Force override to 1 connection for health check only
 const databaseUrl = process.env.DATABASE_URL;
-const urlWithPoolLimit = databaseUrl && !databaseUrl.includes('connection_limit=')
-  ? `${databaseUrl}${databaseUrl.includes('?') ? '&' : '?'}connection_limit=2`
-  : databaseUrl;
+let urlWithPoolLimit = databaseUrl;
+
+if (databaseUrl) {
+  // Remove any existing connection_limit parameter
+  urlWithPoolLimit = databaseUrl.replace(/[&?]connection_limit=\d+/g, '');
+  // Add our strict limit of 1 connection for this health check
+  const separator = urlWithPoolLimit.includes('?') ? '&' : '?';
+  urlWithPoolLimit = `${urlWithPoolLimit}${separator}connection_limit=1`;
+}
 
 console.log('🔧 Database URL configuration:');
 console.log('   Original URL has params:', databaseUrl?.includes('?') ? 'Yes' : 'No');
-console.log('   Has connection_limit:', databaseUrl?.includes('connection_limit=') ? 'Yes' : 'No');
-console.log('   Modified URL has connection_limit:', urlWithPoolLimit?.includes('connection_limit=') ? 'Yes' : 'No');
+console.log('   Original connection_limit:', databaseUrl?.match(/connection_limit=(\d+)/)?.[1] || 'None');
+console.log('   Modified connection_limit: 1 (health check only)');
 
 const prisma = new PrismaClient({
   log: ['info', 'warn', 'error'],
