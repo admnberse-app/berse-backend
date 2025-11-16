@@ -902,6 +902,7 @@ export class AuthController {
           phone: true,
           role: true,
           totalPoints: true,
+          trustScore: true,
           createdAt: true,
           updatedAt: true,
           profile: {
