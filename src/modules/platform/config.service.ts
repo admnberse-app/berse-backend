@@ -13,8 +13,7 @@ import {
   ActivityWeightsConfig,
 } from './config.types';
 import { getDefaultConfigs } from './config.defaults';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 /**
  * In-memory cache for platform configurations

@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { TrustScoreService } from '../modules/connections/trust/trust-score.service';
 import { configService } from '../modules/platform/config.service';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 /**
  * Trust Decay Job

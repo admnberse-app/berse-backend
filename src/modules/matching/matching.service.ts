@@ -1,9 +1,8 @@
-import { PrismaClient, SwipeAction } from '@prisma/client';
+import { SwipeAction } from '@prisma/client';
 import { DiscoveryFilters, DiscoveryUser, SwipeRequest, SwipeResponse, DiscoveryResponse, SwipeStatsResponse } from './matching.types';
 import { AppError } from '../../middleware/error';
 import { mapLanguageCodesToObjects } from '../../utils/languageMapper';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 export class MatchingService {
   private readonly DEFAULT_DISTANCE = 50; // km

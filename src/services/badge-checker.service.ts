@@ -5,9 +5,8 @@
  * Supports the 8 new badges introduced in 2025
  */
 
-import { PrismaClient, BadgeType, User } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { BadgeType, User } from '@prisma/client';
+import prisma from '../lib/prisma';
 
 export class BadgeCheckerService {
   /**

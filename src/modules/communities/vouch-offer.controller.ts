@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 // Define status enum until Prisma regenerates
 enum VouchOfferStatus {

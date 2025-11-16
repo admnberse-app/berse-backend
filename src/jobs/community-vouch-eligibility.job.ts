@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { configService } from '../modules/platform/config.service';
+import prisma from '../lib/prisma';
 
 // Define status enum until Prisma regenerates
 enum VouchOfferStatus {
@@ -9,8 +9,6 @@ enum VouchOfferStatus {
   REJECTED = 'REJECTED',
   EXPIRED = 'EXPIRED',
 }
-
-const prisma = new PrismaClient();
 
 /**
  * Community Vouch Eligibility Job

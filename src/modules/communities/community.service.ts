@@ -22,8 +22,7 @@ import type {
   CommunityQRCodeResponse,
   PublicCommunityPreview,
 } from './community.types';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 export class CommunityService {
   // ============================================================================

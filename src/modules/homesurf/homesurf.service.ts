@@ -27,8 +27,7 @@ import type {
   CheckAvailabilityDTO,
   CheckAvailabilityResponse,
 } from './homesurf.types';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 // Trust score requirements from schema proposal
 const HOMESURF_REQUIREMENTS = {

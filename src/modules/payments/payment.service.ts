@@ -23,8 +23,7 @@ import type {
   WebhookEvent,
   WebhookVerificationResult,
 } from './payment.types';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 export class PaymentService {
   // ============================================================================

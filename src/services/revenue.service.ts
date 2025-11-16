@@ -1,8 +1,7 @@
-import { PrismaClient, PaymentStatus, PayoutStatus } from '@prisma/client';
+import { PaymentStatus, PayoutStatus } from '@prisma/client';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/error';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 /**
  * Revenue Service

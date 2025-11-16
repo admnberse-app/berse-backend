@@ -1,9 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
-import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 interface JwtPayload {
   userId: string;

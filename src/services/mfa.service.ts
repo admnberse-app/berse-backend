@@ -37,7 +37,12 @@ const cacheService = {
   },
 };
 
-const prisma = new PrismaClient();
+} from '@prisma/client';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
+import { logger } from '../utils/logger';
+import { config } from '../config/environment';
+import prisma from '../lib/prisma';
 
 interface MFASetupResult {
   secret: string;

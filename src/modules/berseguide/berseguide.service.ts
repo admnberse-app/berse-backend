@@ -31,8 +31,7 @@ import type {
   CheckAvailabilityDTO,
   CheckAvailabilityResponse,
 } from './berseguide.types';
-
-const prisma = new PrismaClient();
+import prisma from '../../lib/prisma';
 
 // Trust score requirements from schema proposal
 const BERSEGUIDE_REQUIREMENTS = {

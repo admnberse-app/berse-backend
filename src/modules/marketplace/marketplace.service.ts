@@ -32,8 +32,8 @@ import { emailService } from '../../services/email.service';
 import featureUsageService from '../../services/featureUsage.service';
 import { FeatureCode } from '../../types/subscription.types';
 import logger from '../../utils/logger';
+import prisma from '../../lib/prisma';
 
-const prisma = new PrismaClient();
 const paymentService = new PaymentService();
 
 export class MarketplaceService {

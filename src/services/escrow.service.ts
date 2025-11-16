@@ -1,8 +1,7 @@
-import { PrismaClient, PayoutStatus, TransactionType } from '@prisma/client';
+import { PayoutStatus, TransactionType } from '@prisma/client';
 import logger from '../utils/logger';
 import { AppError } from '../middleware/error';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 /**
  * Escrow Service

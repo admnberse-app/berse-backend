@@ -1,11 +1,9 @@
 import { AbstractPaymentGateway, ProviderConfig } from './AbstractPaymentGateway';
 import { XenditGateway } from './XenditGateway';
 import { StripeGateway } from './StripeGateway';
-import { PrismaClient } from '@prisma/client';
 import logger from '../../../utils/logger';
 import { AppError } from '../../../middleware/error';
-
-const prisma = new PrismaClient();
+import prisma from '../../../lib/prisma';
 
 /**
  * Payment Gateway Factory
