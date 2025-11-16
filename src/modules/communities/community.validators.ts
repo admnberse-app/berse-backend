@@ -11,7 +11,7 @@ export const createCommunityValidators = [
     .trim()
     .notEmpty().withMessage('Community name is required')
     .isLength({ min: 3, max: 100 }).withMessage('Name must be between 3 and 100 characters')
-    .matches(/^[a-zA-Z0-9\s\-&']+$/).withMessage('Name contains invalid characters'),
+    .matches(/^[a-zA-Z0-9\s\-&'']+$/).withMessage('Name contains invalid characters'),
 
   body('description')
     .optional()
@@ -91,32 +91,50 @@ export const createCommunityValidators = [
   body('socialLinks.instagram')
     .optional()
     .trim()
-    .isURL().withMessage('Instagram must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
-    .isURL().withMessage('Facebook must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
     .trim()
-    .isURL().withMessage('LinkedIn must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('LinkedIn must be a valid URL'),
 
   body('socialLinks.twitter')
     .optional()
     .trim()
-    .isURL().withMessage('Twitter must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
     .trim()
-    .isURL().withMessage('YouTube must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('YouTube must be a valid URL'),
 
   body('socialLinks.tiktok')
     .optional()
     .trim()
-    .isURL().withMessage('TikTok must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('TikTok must be a valid URL'),
 
   body('websiteUrl')
     .optional()
@@ -219,32 +237,50 @@ export const updateCommunityValidators = [
   body('socialLinks.instagram')
     .optional()
     .trim()
-    .isURL().withMessage('Instagram must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('Instagram must be a valid URL'),
 
   body('socialLinks.facebook')
     .optional()
     .trim()
-    .isURL().withMessage('Facebook must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('Facebook must be a valid URL'),
 
   body('socialLinks.linkedin')
     .optional()
     .trim()
-    .isURL().withMessage('LinkedIn must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('LinkedIn must be a valid URL'),
 
   body('socialLinks.twitter')
     .optional()
     .trim()
-    .isURL().withMessage('Twitter must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('Twitter must be a valid URL'),
 
   body('socialLinks.youtube')
     .optional()
     .trim()
-    .isURL().withMessage('YouTube must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('YouTube must be a valid URL'),
 
   body('socialLinks.tiktok')
     .optional()
     .trim()
-    .isURL().withMessage('TikTok must be a valid URL'),
+    .custom((value) => {
+      if (!value) return true;
+      return /^https?:\/\/.+/.test(value);
+    }).withMessage('TikTok must be a valid URL'),
 
   body('websiteUrl')
     .optional()
