@@ -1,9 +1,10 @@
-import * as speakeasy from 'speakeasy';
-import * as QRCode from 'qrcode';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import logger from '../utils/logger';
-import { PrismaClient } from '@prisma/client';
+import { config } from '../config/environment';
+import prisma from '../lib/prisma';
 
 // Simple in-memory cache for MFA operations (replace with Redis in production)
 const mfaCache = new Map<string, { data: any; expires: number }>();
@@ -36,13 +37,6 @@ const cacheService = {
     mfaCache.delete(key);
   },
 };
-
-} from '@prisma/client';
-import speakeasy from 'speakeasy';
-import QRCode from 'qrcode';
-import { logger } from '../utils/logger';
-import { config } from '../config/environment';
-import prisma from '../lib/prisma';
 
 interface MFASetupResult {
   secret: string;
