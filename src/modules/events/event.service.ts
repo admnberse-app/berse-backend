@@ -228,8 +228,11 @@ export class EventService {
    */
   static async getEventById(eventId: string, userId?: string): Promise<EventResponse> {
     try {
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
+      const event = await prisma.event.findFirst({
+        where: { 
+          id: eventId,
+          deletedAt: null,
+        },
         include: {
           user: {
             select: {
@@ -677,6 +680,10 @@ export class EventService {
         throw new AppError('Event not found', 404);
       }
 
+      if (event.deletedAt) {
+        throw new AppError('Event has already been deleted', 400);
+      }
+
       if (event.hostId !== userId) {
         throw new AppError('You do not have permission to delete this event', 403);
       }
@@ -693,9 +700,19 @@ export class EventService {
         throw new AppError('Cannot delete event with active tickets. Please cancel or refund all tickets first.', 400);
       }
 
-      await prisma.event.delete({
+      // Soft delete: Set deletedAt timestamp
+      await prisma.event.update({
         where: { id: eventId },
+        data: { deletedAt: new Date() },
       });
+
+      // Clear cache
+      await Promise.all([
+        cacheService.deletePattern('bersemuka:events:trending:*'),
+        cacheService.deletePattern('bersemuka:events:recommended:*'),
+        cacheService.deletePattern(`bersemuka:events:host:${userId}:*`),
+        event.communityId ? cacheService.deletePattern('bersemuka:events:community:*') : Promise.resolve(),
+      ]);
     } catch (error: any) {
       logger.error('Error deleting event:', error);
       throw error;
@@ -1537,7 +1554,10 @@ export class EventService {
       const now = new Date();
       
       // Build where clause for events as participant
-      const participantWhere: any = { userId };
+      const participantWhere: any = { 
+        userId,
+        events: { deletedAt: null },
+      };
       if (filters?.eventId) {
         participantWhere.eventId = filters.eventId;
       }
@@ -1545,7 +1565,7 @@ export class EventService {
         participantWhere.status = filters.status;
       }
       if (filters?.type) {
-        participantWhere.events = { type: filters.type };
+        participantWhere.events = { ...participantWhere.events, type: filters.type };
       }
       if (filters?.filter === 'upcoming') {
         participantWhere.events = { ...participantWhere.events, date: { gte: now } };
@@ -1554,7 +1574,10 @@ export class EventService {
       }
 
       // Build where clause for events as host
-      const hostWhere: any = { hostId: userId };
+      const hostWhere: any = { 
+        hostId: userId,
+        deletedAt: null,
+      };
       if (filters?.eventId) {
         hostWhere.id = filters.eventId;
       }
@@ -1583,6 +1606,8 @@ export class EventService {
                 images: true,
                 isFree: true,
                 status: true,
+                createdAt: true,
+                updatedAt: true,
               },
             },
             user: {
@@ -1629,6 +1654,7 @@ export class EventService {
             isFree: true,
             status: true,
             createdAt: true,
+            updatedAt: true,
           },
           orderBy: { date: 'desc' },
         }),
@@ -2088,7 +2114,11 @@ export class EventService {
           profilePicture: getProfilePictureUrl(event.user.profile.profilePicture),
         } : undefined,
       } : undefined,
-      community: event.communities,
+      community: event.communities ? {
+        ...event.communities,
+        logoUrl: getImageUrl(event.communities.logoUrl),
+        coverImageUrl: getImageUrl(event.communities.coverImageUrl),
+      } : undefined,
       ticketTiers: event.tier?.map((tier: any) => this.transformTicketTierResponse(tier)),
       _count: event._count,
     };

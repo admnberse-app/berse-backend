@@ -1116,7 +1116,7 @@ export class DashboardService {
         targetId: event.id,
         targetName: event.title,
         targetType: 'event',
-        actionUrl: `/events/${event.id}/participants`,
+        actionUrl: `/events/${event.id}`,
         metadata: {
           eventDate: event.date,
           participantCount: totalParticipants,

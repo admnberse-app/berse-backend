@@ -381,6 +381,7 @@ model Community {
   contactEmail     String? // Community contact email
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
+  deletedAt        DateTime?
   createdById      String
   user             User                  @relation(fields: [createdById], references: [id], onDelete: Cascade)
   communityMembers CommunityMember[]
@@ -393,6 +394,7 @@ model Community {
   @@index([city])
   @@index([country])
   @@index([latitude, longitude])
+  @@index([deletedAt])
   @@map("communities")
 }
 
@@ -653,6 +655,7 @@ model Event {
   notes             String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
   hostId            String
   communityId       String?
   currency          String             @default("MYR")
@@ -682,6 +685,7 @@ model Event {
   @@index([status])
   @@index([type, date])
   @@index([type])
+  @@index([deletedAt])
   @@map("events")
 }
 

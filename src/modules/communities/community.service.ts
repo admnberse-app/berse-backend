@@ -184,15 +184,20 @@ export class CommunityService {
         throw new AppError('Community not found', 404);
       }
 
+      if (community.deletedAt) {
+        throw new AppError('Community has already been deleted', 400);
+      }
+
       // Check admin permissions
       await this.checkPermission(userId, communityId, ['OWNER', 'ADMIN']);
 
-      // Delete community (cascading deletes handled by schema)
-      await prisma.community.delete({
+      // Soft delete community by setting deletedAt timestamp
+      await prisma.community.update({
         where: { id: communityId },
+        data: { deletedAt: new Date() },
       });
 
-      logger.info('Community deleted', { communityId, userId, memberCount: community._count.communityMembers });
+      logger.info('Community soft deleted', { communityId, userId, memberCount: community._count.communityMembers });
     } catch (error) {
       logger.error('Failed to delete community', { error, userId, communityId });
       throw error;
@@ -205,8 +210,11 @@ export class CommunityService {
   async getCommunity(communityId: string, userId?: string): Promise<CommunityResponse> {
     console.log('🚀 GET COMMUNITY CALLED:', { communityId, userId });
     try {
-      const community = await prisma.community.findUnique({
-        where: { id: communityId },
+      const community = await prisma.community.findFirst({
+        where: { 
+          id: communityId,
+          deletedAt: null,
+        },
         include: {
           user: {
             include: {
@@ -557,7 +565,9 @@ export class CommunityService {
       const skip = (page - 1) * limit;
 
       // Build where clause
-      const where: Prisma.CommunityWhereInput = {};
+      const where: Prisma.CommunityWhereInput = {
+        deletedAt: null, // Exclude soft-deleted communities
+      };
 
       // Filter by interests (preferred over category)
       if (interests && interests.length > 0) {
@@ -696,6 +706,7 @@ export class CommunityService {
         if (role === 'owner' || role === 'all') {
           const ownedWhere: Prisma.CommunityWhereInput = {
             createdById: userId,
+            deletedAt: null,
           };
 
           if (interests && interests.length > 0) {
@@ -750,6 +761,7 @@ export class CommunityService {
               },
             },
             createdById: { not: userId }, // Exclude owned communities
+            deletedAt: null,
           };
 
           if (interests && interests.length > 0) {
@@ -804,6 +816,7 @@ export class CommunityService {
       // Legacy behavior: return paginated response for all communities
       // Build where clause
       const where: Prisma.CommunityWhereInput = {
+        deletedAt: null,
         OR: [
           { createdById: userId },
           {
@@ -2111,6 +2124,7 @@ export class CommunityService {
       const communities = await prisma.community.findMany({
         where: {
           isVerified: true, // Only show verified communities in trending
+          deletedAt: null,
         },
         take: limit,
         orderBy: [
@@ -2166,6 +2180,7 @@ export class CommunityService {
           createdAt: {
             gte: thirtyDaysAgo,
           },
+          deletedAt: null,
         },
         take: limit,
         orderBy: {
@@ -2269,6 +2284,7 @@ export class CommunityService {
         id: {
           notIn: existingCommunityIds,
         },
+        deletedAt: null,
       };
 
       // If user has interests, prioritize communities with matching categories
@@ -2346,6 +2362,7 @@ export class CommunityService {
           interests: {
             has: interest, // Exact match for the interest value
           },
+          deletedAt: null,
         },
         take: limit,
         orderBy: [
@@ -2459,6 +2476,7 @@ export class CommunityService {
           id: {
             notIn: existingCommunityIds,
           },
+          deletedAt: null,
           communityMembers: {
             some: {
               userId: {
