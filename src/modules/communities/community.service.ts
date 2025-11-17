@@ -888,6 +888,65 @@ export class CommunityService {
     }
   }
 
+  /**
+   * Get user's pending community join requests
+   */
+  async getMyPendingRequests(userId: string): Promise<{
+    requests: any[];
+    total: number;
+  }> {
+    try {
+      const pendingMemberships = await prisma.communityMember.findMany({
+        where: {
+          userId,
+          isApproved: false,
+        },
+        include: {
+          communities: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              logoUrl: true,
+              coverImageUrl: true,
+              category: true,
+              _count: {
+                select: {
+                  communityMembers: {
+                    where: { isApproved: true }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          joinedAt: 'desc'
+        }
+      });
+
+      const requests = pendingMemberships.map(membership => ({
+        id: membership.communities.id,
+        name: membership.communities.name,
+        description: membership.communities.description,
+        logoUrl: membership.communities.logoUrl,
+        coverImageUrl: membership.communities.coverImageUrl,
+        category: membership.communities.category,
+        memberCount: membership.communities._count.communityMembers,
+        requestedAt: membership.joinedAt,
+        joinMessage: membership.joinMessage,
+      }));
+
+      return {
+        requests,
+        total: requests.length,
+      };
+    } catch (error) {
+      logger.error('Failed to get pending requests', { error, userId });
+      throw error;
+    }
+  }
+
   // ============================================================================
   // COMMUNITY MEMBERSHIP
   // ============================================================================
@@ -973,6 +1032,7 @@ export class CommunityService {
           communityId,
           role: 'MEMBER',
           isApproved: false,
+          joinMessage: input.message,
         },
         include: {
           user: {
@@ -2034,6 +2094,7 @@ export class CommunityService {
       role: member.role,
       joinedAt: member.joinedAt.toISOString(),
       isApproved: member.isApproved,
+      joinMessage: member.joinMessage || undefined,
       user: userBasic,
     };
   }

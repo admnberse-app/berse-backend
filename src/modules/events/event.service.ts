@@ -1165,7 +1165,7 @@ export class EventService {
         type: 'EVENT',
         title: 'New Event RSVP',
         message: `${userName} RSVP'd to your event: ${participant.events.title}`,
-        actionUrl: `/events/${eventId}/attendees`,
+        actionUrl: `/events/${eventId}/participants`,
         priority: 'normal',
         relatedEntityId: eventId,
         relatedEntityType: 'event_rsvp',

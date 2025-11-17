@@ -225,6 +225,7 @@ export interface CommunityMemberResponse {
   role: CommunityRole;
   joinedAt: string;
   isApproved: boolean;
+  joinMessage?: string;
   user: UserBasicInfo;
 }
 

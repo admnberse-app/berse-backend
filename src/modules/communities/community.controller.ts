@@ -115,6 +115,18 @@ export class CommunityController {
     sendSuccess(res, result);
   }
 
+  /**
+   * @route GET /v2/communities/my/pending
+   * @desc Get user's pending community join requests
+   * @access Private
+   */
+  async getMyPendingRequests(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.id;
+
+    const result = await communityService.getMyPendingRequests(userId);
+    sendSuccess(res, result, 'Pending requests retrieved successfully');
+  }
+
   // ============================================================================
   // COMMUNITY MEMBERSHIP
   // ============================================================================

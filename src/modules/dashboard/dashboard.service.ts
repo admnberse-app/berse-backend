@@ -1066,12 +1066,12 @@ export class DashboardService {
       }
     }
 
-    // 6. NEW EVENT PARTICIPANTS (Medium Priority) - For hosts
+    // 6. NEW EVENT PARTICIPANTS (Medium Priority) - For hosts (ONLY upcoming events)
     const recentParticipants = await prisma.eventParticipant.findMany({
       where: {
         events: {
           hostId: userId,
-          date: { gte: now },
+          date: { gte: now }, // Only upcoming events
         },
         userId: { not: userId },
         createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }, // Last 24 hours
@@ -1088,9 +1088,12 @@ export class DashboardService {
       },
     });
 
-    // Group by event
+    // Group by event and filter out past events
     const participantsByEvent = new Map<string, typeof recentParticipants>();
     for (const participant of recentParticipants) {
+      // Double-check event hasn't passed
+      if (participant.events.date < now) continue;
+      
       const existing = participantsByEvent.get(participant.eventId) || [];
       existing.push(participant);
       participantsByEvent.set(participant.eventId, existing);

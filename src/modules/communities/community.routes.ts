@@ -331,6 +331,63 @@ router.get(
   asyncHandler(communityController.getMyCommunities.bind(communityController))
 );
 
+/**
+ * @swagger
+ * /v2/communities/my/pending:
+ *   get:
+ *     summary: Get my pending community join requests
+ *     description: Get list of communities where user has requested to join but not yet approved
+ *     tags: [Communities]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pending join requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     requests:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           logoUrl:
+ *                             type: string
+ *                           coverImageUrl:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           memberCount:
+ *                             type: integer
+ *                           requestedAt:
+ *                             type: string
+ *                             format: date-time
+ *                           joinMessage:
+ *                             type: string
+ *                             nullable: true
+ *                             description: Message sent with the join request
+ *                     total:
+ *                       type: integer
+ */
+router.get(
+  '/my/pending',
+  authenticateToken,
+  asyncHandler(communityController.getMyPendingRequests.bind(communityController))
+);
+
 // ============================================================================
 // COMMUNITY DISCOVERY ROUTES (must come before /:communityId)
 // ============================================================================
@@ -617,6 +674,7 @@ router.delete(
  * /v2/communities/{communityId}/join:
  *   post:
  *     summary: Join a community
+ *     description: Send a request to join a community. For private communities, the request will be pending approval. Optional message can be included to introduce yourself to community admins.
  *     tags: [Communities]
  *     security:
  *       - bearerAuth: []
@@ -626,9 +684,26 @@ router.delete(
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: Optional message to introduce yourself (max 500 characters)
+ *                 example: "Hi! I'm really interested in joining this community. I've been passionate about travel for years and would love to connect with like-minded people."
  *     responses:
  *       201:
  *         description: Join request sent successfully
+ *       400:
+ *         description: Invalid request (message too long, etc.)
+ *       403:
+ *         description: Community limit reached
+ *       409:
+ *         description: Already a member or request pending
  */
 router.post(
   '/:communityId/join',

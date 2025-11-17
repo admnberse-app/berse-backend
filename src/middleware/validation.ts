@@ -45,9 +45,23 @@ export const xssProtection = (
     'avatar',
     'profilePicture',
     'coverImage',
+    'logoUrl',  // Community logo
+    'coverImageUrl',  // Community cover image
     'qrCode',
     'qrCodeUrl',
-    'website',  // User website URL should not be encoded
+    'website',  // User website URL
+    'websiteUrl',  // Community website URL
+    'description',  // Event/community/listing descriptions
+    'bio',  // User bio
+    'fullBio',  // User full bio
+    'shortBio',  // User short bio
+    'travelBio',  // User travel bio
+    'guidelines',  // Community guidelines (may contain markdown/links)
+    'message',  // Messages, comments, replies
+    'content',  // Generic content field
+    'text',  // Generic text field
+    'location',  // Location strings may contain slashes
+    'address',  // Addresses may contain slashes
   ]);
 
   // Sanitize common fields susceptible to XSS
