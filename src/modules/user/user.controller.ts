@@ -1584,8 +1584,8 @@ export class UserController {
         if (user.dialCode) {
           phoneData = {
             dialCode: user.dialCode,
-            number: user.phone.replace(user.dialCode, ''),
-            full: user.phone,
+            number: user.phone,
+            full: `${user.dialCode}${user.phone}`,
           };
         } else {
           // Parse from full phone number
@@ -1618,6 +1618,19 @@ export class UserController {
         }
       }
 
+      // Calculate age from birthdate
+      const calculateAge = (birthDate: Date | null | undefined): number | null => {
+        if (!birthDate) return null;
+        const today = new Date();
+        const birth = new Date(birthDate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age;
+      };
+
       const response = {
         profile: {
           id: user.id,
@@ -1638,7 +1651,7 @@ export class UserController {
             } : null,
           },
           birthDate: user.profile?.dateOfBirth || null,
-          age: user.profile?.age || null,
+          age: calculateAge(user.profile?.dateOfBirth),
           gender: user.profile?.gender || null,
           interests: user.profile?.interests || [],
           languages: user.profile?.languages || [],
@@ -2521,6 +2534,37 @@ export class UserController {
         },
       };
 
+      // Format phone number with dial code
+      let phoneData = null;
+      if (privacy.showPhone && user.phone) {
+        if (user.dialCode) {
+          phoneData = {
+            dialCode: user.dialCode,
+            number: user.phone,
+            full: `${user.dialCode}${user.phone}`,
+          };
+        } else {
+          phoneData = {
+            dialCode: null,
+            number: user.phone,
+            full: user.phone,
+          };
+        }
+      }
+
+      // Calculate age from birthdate
+      const calculateAge = (birthDate: Date | null | undefined): number | null => {
+        if (!birthDate) return null;
+        const today = new Date();
+        const birth = new Date(birthDate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age;
+      };
+
       const response = {
         // Relationship status (always included when viewing others)
         relationship: currentUserId ? relationship : undefined,
@@ -2532,7 +2576,7 @@ export class UserController {
         displayName: user.profile?.displayName || null,
         username: user.username,
         email: privacy.showEmail ? user.email : null,
-        phone: privacy.showPhone ? user.phone : null,
+        phone: phoneData,
         profilePicture: getProfilePictureUrl(user.profile?.profilePicture) || null,
         bio: user.profile?.bio || null,
         shortBio: user.profile?.shortBio || null,
@@ -2549,7 +2593,7 @@ export class UserController {
           };
         })(),
         birthDate: privacy.showBirthDate ? user.profile?.dateOfBirth : null,
-        age: user.profile?.age || null,
+        age: calculateAge(user.profile?.dateOfBirth),
         gender: user.profile?.gender || null,
         interests: user.profile?.interests || [],
         languages: user.profile?.languages || [],

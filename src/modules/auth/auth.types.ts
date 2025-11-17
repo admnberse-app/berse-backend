@@ -25,6 +25,7 @@ export interface RegisterRequest {
   nationality?: string;
   countryOfResidence?: string;
   city?: string;
+  currentCity?: string;  // Support both field names for backward compatibility
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   dateOfBirth?: string;
   referralCode?: string;

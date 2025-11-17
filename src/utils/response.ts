@@ -12,7 +12,11 @@ export const sendSuccess = <T>(
     data,
     message,
   };
-  return res.status(statusCode).json(response);
+  // Use custom JSON stringify to prevent HTML entity encoding
+  res.status(statusCode);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(response));
+  return res;
 };
 
 export const sendError = (
@@ -24,5 +28,9 @@ export const sendError = (
     success: false,
     error,
   };
-  return res.status(statusCode).json(response);
+  // Use custom JSON stringify to prevent HTML entity encoding
+  res.status(statusCode);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(response));
+  return res;
 };

@@ -22,6 +22,7 @@ import {
 } from './discover.types';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
+import { getImageUrl, getImageUrls } from '../../utils/image.helpers';
 
 const prisma = new PrismaClient();
 
@@ -1668,7 +1669,7 @@ export class DiscoverService {
       type: 'event',
       title: event.title,
       description: event.description,
-      imageUrl: event.images?.[0],
+      imageUrl: getImageUrl(event.images?.[0]),
       startTime: event.date.toISOString(),
       endTime: event.endDate?.toISOString(),
       location: event.location ? {
@@ -1704,8 +1705,8 @@ export class DiscoverService {
       type: 'community',
       name: community.name,
       description: community.description,
-      imageUrl: community.logoUrl,
-      bannerUrl: community.coverImageUrl,
+      imageUrl: getImageUrl(community.logoUrl),
+      bannerUrl: getImageUrl(community.coverImageUrl),
       memberCount: community._count?.communityMembers || 0,
       activeMembers: undefined, // TODO: Calculate active members
       category: community.category,
@@ -1743,8 +1744,8 @@ export class DiscoverService {
       type: 'marketplace_item',
       title: item.title,
       description: item.description,
-      imageUrl: item.images?.[0],
-      images: item.images || [],
+      imageUrl: getImageUrl(item.images?.[0]),
+      images: getImageUrls(item.images || []).filter((url): url is string => url !== null),
       price: {
         amount: item.price,
         currency: item.currency || 'MYR',
@@ -1800,8 +1801,8 @@ export class DiscoverService {
       type: 'homesurf',
       title: listing.title,
       description: listing.description,
-      imageUrl: listing.photos?.[0],
-      images: listing.photos || [],
+      imageUrl: getImageUrl(listing.photos?.[0]),
+      images: getImageUrls(listing.photos || []).filter((url): url is string => url !== null),
       accommodationType: listing.accommodationType,
       maxGuests: listing.maxGuests,
       amenities: listing.amenities || [],
@@ -1852,8 +1853,8 @@ export class DiscoverService {
       title: listing.title,
       description: listing.description,
       tagline: listing.tagline,
-      imageUrl: listing.photos?.[0],
-      images: listing.photos || [],
+      imageUrl: getImageUrl(listing.photos?.[0]),
+      images: getImageUrls(listing.photos || []).filter((url): url is string => url !== null),
       guideTypes: listing.guideTypes || [],
       languages: listing.languages || [],
       paymentOptions: listing.paymentOptions?.map((po: any) => ({

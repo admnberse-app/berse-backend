@@ -24,8 +24,10 @@ import healthRoutes from './routes/health.routes';
 
 const app: Application = express();
 
-// Disable JSON escaping to prevent HTML encoding of URLs
+// Disable JSON escaping to prevent HTML encoding of URLs and special characters
 app.set('json escape', false);
+app.set('json replacer', null);
+app.set('json spaces', config.isDevelopment ? 2 : 0);
 
 // Trust proxy for production
 if (config.isProduction) {
@@ -107,7 +109,10 @@ app.use(express.json({
     req.rawBody = buf.toString('utf8');
   }
 }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb'
+}));
 
 // Cookie parser
 app.use(cookieParser(config.security.cookieSecret));

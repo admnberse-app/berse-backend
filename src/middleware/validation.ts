@@ -47,6 +47,7 @@ export const xssProtection = (
     'coverImage',
     'qrCode',
     'qrCodeUrl',
+    'website',  // User website URL should not be encoded
   ]);
 
   // Sanitize common fields susceptible to XSS

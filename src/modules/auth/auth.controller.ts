@@ -90,9 +90,12 @@ export class AuthController {
     try {
       const { 
         email, phone, dialCode, password, fullName, username: providedUsername, 
-        nationality, countryOfResidence, city, gender, 
+        nationality, countryOfResidence, city, currentCity, gender, 
         dateOfBirth, referralCode, deviceInfo, locationInfo
       }: RegisterRequest = req.body;
+
+      // Support both city and currentCity (prefer currentCity for consistency with schema)
+      const userCity = currentCity || city;
 
       // Auto-generate username if not provided
       const username = providedUsername || await generateUsername(fullName);
@@ -177,7 +180,7 @@ export class AuthController {
             create: {
               nationality,
               countryOfResidence,
-              currentCity: city,
+              currentCity: userCity,
               updatedAt: new Date(),
             } as any,
           },
