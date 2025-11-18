@@ -1082,6 +1082,7 @@ model MarketplaceListing {
   // Timestamps
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
   publishedAt  DateTime?
   expiresAt    DateTime?
   lastBumpedAt DateTime?
@@ -1102,6 +1103,7 @@ model MarketplaceListing {
   @@index([publishedAt])
   @@index([isFeatured, isActive, publishedAt])
   @@index([hasActivePromotion, isActive])
+  @@index([deletedAt])
   @@map("marketplace_listings")
 }
 
@@ -2018,11 +2020,13 @@ model Reward {
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
   redemptions    Redemption[]
 
   @@unique([title, category])
   @@index([category])
   @@index([isActive])
+  @@index([deletedAt])
   @@map("rewards")
 }
 
@@ -2254,6 +2258,7 @@ model TravelTrip {
   tags              String[]          @default([])
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
   travelCompanions  TravelCompanion[]
   travel_highlights TravelHighlight[]
   travel_locations  TravelLocation[]
@@ -2263,6 +2268,7 @@ model TravelTrip {
   @@index([startDate])
   @@index([userId, isPublic])
   @@index([userId, startDate])
+  @@index([deletedAt])
   @@map("travel_trips")
 }
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { GamificationController } from './gamification.controller';
 import { authenticateToken } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
+import { uploadImage } from '../../middleware/upload';
 import { UserRole } from '@prisma/client';
 import {
   getBadgeByIdValidator,
@@ -548,6 +549,102 @@ router.get(
   idParamValidator,
   handleValidationErrors,
   GamificationController.getRewardById
+);
+
+/**
+ * @swagger
+ * /api/v2/gamification/rewards/upload-image:
+ *   post:
+ *     summary: Upload reward main image
+ *     description: Upload a main/display image for a reward. Returns the image URL.
+ *     tags: [Gamification - Rewards]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Reward image file (JPEG, PNG, GIF, WebP)
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       example: rewards/abc123.jpg
+ *       400:
+ *         description: No image provided
+ */
+router.post(
+  '/rewards/upload-image',
+  authenticateToken,
+  uploadImage.single('image'),
+  GamificationController.uploadRewardImage
+);
+
+/**
+ * @swagger
+ * /api/v2/gamification/rewards/upload-voucher-image:
+ *   post:
+ *     summary: Upload reward voucher/QR code image
+ *     description: Upload a voucher or QR code image for a reward. Returns the image URL.
+ *     tags: [Gamification - Rewards]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - voucherImage
+ *             properties:
+ *               voucherImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Voucher/QR code image file (JPEG, PNG, GIF, WebP)
+ *     responses:
+ *       200:
+ *         description: Voucher image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     voucherImageUrl:
+ *                       type: string
+ *                       example: rewards/vouchers/xyz789.jpg
+ *       400:
+ *         description: No image provided
+ */
+router.post(
+  '/rewards/upload-voucher-image',
+  authenticateToken,
+  uploadImage.single('voucherImage'),
+  GamificationController.uploadVoucherImage
 );
 
 /**

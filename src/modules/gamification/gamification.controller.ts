@@ -122,15 +122,15 @@ export class GamificationController {
     try {
       const userId = req.user?.id!;
       const [points, user, availablePoints, expiring30, expiring7, expiring1] = await Promise.all([
-        PointsService.getUserPoints(userId),
+        PointsService.getUserPoints(userId).catch(() => null),
         prisma.user.findUnique({
           where: { id: userId },
           select: { totalPoints: true, pointsExpired: true, pointsSpent: true },
-        }),
-        PointsService.getAvailablePoints(userId),
-        PointsService.getExpiringPoints(userId, 30),
-        PointsService.getExpiringPoints(userId, 7),
-        PointsService.getExpiringPoints(userId, 1),
+        }).catch(() => null), // Gracefully handle missing columns in production
+        PointsService.getAvailablePoints(userId).catch(() => 0),
+        PointsService.getExpiringPoints(userId, 30).catch(() => ({ totalExpiring: 0, nextExpiryDate: null, daysUntilNextExpiry: null })),
+        PointsService.getExpiringPoints(userId, 7).catch(() => ({ totalExpiring: 0, nextExpiryDate: null, daysUntilNextExpiry: null })),
+        PointsService.getExpiringPoints(userId, 1).catch(() => ({ totalExpiring: 0, nextExpiryDate: null, daysUntilNextExpiry: null })),
       ]);
       
       sendSuccess(res, {
@@ -360,6 +360,32 @@ export class GamificationController {
       }
       
       sendSuccess(res, reward);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async uploadRewardImage(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.file) {
+        throw new AppError('No image file provided', 400);
+      }
+
+      const imageUrl = req.file.key; // S3/Spaces key
+      sendSuccess(res, { imageUrl }, 'Reward image uploaded successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async uploadVoucherImage(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.file) {
+        throw new AppError('No voucher image file provided', 400);
+      }
+
+      const voucherImageUrl = req.file.key; // S3/Spaces key
+      sendSuccess(res, { voucherImageUrl }, 'Voucher image uploaded successfully');
     } catch (error) {
       next(error);
     }

@@ -1645,6 +1645,8 @@ export class UserController {
           location: {
             city: user.location?.currentCity || null,
             country: user.location?.countryOfResidence || null,
+            nationality: user.location?.nationality || null,
+            originallyFrom: user.location?.originallyFrom || null,
             coordinates: user.location?.latitude && user.location?.longitude ? {
               lat: user.location.latitude,
               lng: user.location.longitude,
@@ -2586,6 +2588,8 @@ export class UserController {
           return {
             city: filteredLocation.currentCity || null,
             country: filteredLocation.countryOfResidence || null,
+            nationality: filteredLocation.nationality || null,
+            originallyFrom: filteredLocation.originallyFrom || null,
             coordinates: filteredLocation.latitude && filteredLocation.longitude ? {
               lat: filteredLocation.latitude,
               lng: filteredLocation.longitude,
