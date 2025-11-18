@@ -32,6 +32,7 @@
     "prisma:seed:badges": "ts-node prisma/seeds/core/badges.seed.ts",
     "prisma:seed:new-badges": "ts-node prisma/seeds/new-badges-standalone.seed.ts",
     "prisma:seed:rewards": "ts-node prisma/seeds/core/rewards.seed.ts",
+    "seed:rewards:prod": "ts-node scripts/seed-rewards-prod.ts",
     "prisma:seed:users": "ts-node prisma/seeds/core/users.seed.ts",
     "prisma:seed:communities": "ts-node prisma/seeds/core/communities.seed.ts",
     "prisma:seed:events": "ts-node prisma/seeds/core/events.seed.ts",

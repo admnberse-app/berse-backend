@@ -1180,4 +1180,28 @@ router.post('/events/:eventId/publish', asyncHandler(AdminController.publishEven
  */
 router.get('/events/:eventId/participants', asyncHandler(AdminController.getEventParticipants));
 
+// ============================================================================
+// PAYMENT METHODS MANAGEMENT
+// ============================================================================
+/**
+ * @swagger
+ * /v2/admin/payment-methods:
+ *   get:
+ *     summary: Get all payment methods (Admin)
+ *     description: Retrieve all payment methods including inactive ones. Admin only.
+ *     tags: [Admin - Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payment methods retrieved successfully
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+import { adminPaymentRoutes } from './admin.payment-methods.routes';
+import { adminPaymentsRoutes } from './admin.payments.routes';
+
+router.use('/payment-methods', adminPaymentRoutes);
+router.use('/payments', adminPaymentsRoutes);
+
 export default router;

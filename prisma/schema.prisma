@@ -1646,10 +1646,47 @@ model PaymentProvider {
   updatedAt           DateTime                 @updatedAt
   routing             PaymentProviderRouting[]
   paymentTransactions PaymentTransaction[]
+  paymentMethodConfigs PaymentMethodConfig[]
 
   @@index([isActive, priorityOrder])
   @@index([providerCode])
   @@map("payment_providers")
+}
+
+model PaymentMethodConfig {
+  id                  String           @id @default(cuid())
+  methodType          String           // 'gateway', 'manual_bank', 'manual_ewallet', 'manual_cash'
+  methodCode          String           @unique // 'xendit', 'bank_maybank', 'bank_cimb', 'paypal', 'stripe'
+  methodName          String           // "Maybank", "CIMB Bank", "PayPal"
+  displayName         String           // "Bank Transfer - Maybank"
+  description         String?          // "Transfer to our Maybank account"
+  category            String           // 'bank_transfer', 'ewallet', 'credit_card', 'cash', 'online_gateway'
+  iconUrl             String?          // Icon/logo URL
+  displayOrder        Int              @default(0)
+  isActive            Boolean          @default(true)
+  isDefault           Boolean          @default(false)
+  availableCountries  String[]         @default([]) // ['MY', 'SG'] or empty for all
+  availableCurrencies String[]         @default(["MYR"])
+  providerId          String?          // Links to PaymentProvider if gateway
+  accountDetails      Json?            // Bank account info, e-wallet details, etc.
+  requiresProof       Boolean          @default(false) // Manual methods need proof
+  autoApprove         Boolean          @default(false) // Auto-approve (for gateways)
+  processingTime      String?          // "Instant", "1-2 hours", "1-3 business days"
+  feePercentage       Float?           @default(0)
+  feeFixed            Float?           @default(0)
+  minAmount           Float?
+  maxAmount           Float?
+  metadata            Json?            // Additional flexible data
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  createdBy           String?          // Admin user ID
+  provider            PaymentProvider? @relation(fields: [providerId], references: [id])
+
+  @@index([methodType, isActive])
+  @@index([category, isActive])
+  @@index([displayOrder, isActive])
+  @@index([methodCode])
+  @@map("payment_method_configs")
 }
 
 model PaymentTransaction {

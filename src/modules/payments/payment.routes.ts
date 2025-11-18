@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { PaymentController } from './payment.controller';
+import paymentMethodsController from './payment-methods.controller';
 import { authenticateToken, optionalAuth } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
@@ -348,6 +349,64 @@ router.post(
   '/calculate-fees',
   optionalAuth,
   asyncHandler(paymentController.calculateFees.bind(paymentController))
+);
+
+// ============================================================================
+// PAYMENT METHODS ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/payments/methods:
+ *   get:
+ *     summary: Get available payment methods
+ *     description: Returns list of active payment methods (Xendit, bank transfers, e-wallets, etc.)
+ *     tags: [Payment Methods]
+ *     parameters:
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *         description: Filter by country code
+ *       - in: query
+ *         name: currency
+ *         schema:
+ *           type: string
+ *         description: Filter by currency
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by category (bank_transfer, ewallet, online_gateway)
+ *     responses:
+ *       200:
+ *         description: Payment methods retrieved successfully
+ */
+router.get(
+  '/methods',
+  asyncHandler(paymentMethodsController.getAvailablePaymentMethods.bind(paymentMethodsController))
+);
+
+/**
+ * @swagger
+ * /v2/payments/methods/{methodCode}:
+ *   get:
+ *     summary: Get payment method details
+ *     description: Get full details including account information for manual payment methods
+ *     tags: [Payment Methods]
+ *     parameters:
+ *       - in: path
+ *         name: methodCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Payment method details retrieved
+ */
+router.get(
+  '/methods/:methodCode',
+  asyncHandler(paymentMethodsController.getPaymentMethodByCode.bind(paymentMethodsController))
 );
 
 export const paymentRoutes = router;
