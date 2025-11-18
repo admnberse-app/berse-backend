@@ -1679,8 +1679,14 @@ export class EventService {
         status: 'HOST' as any,
         createdAt: event.createdAt,
         updatedAt: event.createdAt,
-        events: event,
-        user: hostUser,
+        events: {
+          ...event,
+          images: event.images?.map((img: string) => getImageUrl(img)) || [],
+        },
+        user: {
+          ...hostUser,
+          profilePicture: hostUser?.profile?.profilePicture ? getProfilePictureUrl(hostUser.profile.profilePicture) : null,
+        },
         eventTickets: [],
         isHost: true,
       }));
@@ -1688,6 +1694,14 @@ export class EventService {
       // Add isHost flag to regular participants (they are not hosts)
       const participantsWithHostFlag = participants.map(p => ({
         ...p,
+        events: {
+          ...p.events,
+          images: p.events?.images?.map((img: string) => getImageUrl(img)) || [],
+        },
+        user: {
+          ...p.user,
+          profilePicture: p.user?.profile?.profilePicture ? getProfilePictureUrl(p.user.profile.profilePicture) : null,
+        },
         isHost: false,
       }));
 

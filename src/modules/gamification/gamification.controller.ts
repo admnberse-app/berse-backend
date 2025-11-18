@@ -385,7 +385,7 @@ export class GamificationController {
         entityId: rewardId,
       });
 
-      sendSuccess(res, { imageUrl: uploadResult.url }, 'Reward image uploaded successfully');
+      sendSuccess(res, { imageUrl: uploadResult.key }, 'Reward image uploaded successfully');
     } catch (error) {
       next(error);
     }

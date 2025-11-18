@@ -792,7 +792,7 @@ export class EventController {
         size: uploadResult.size,
       });
 
-      sendSuccess(res, { imageUrl: uploadResult.url }, 'Event image uploaded successfully');
+      sendSuccess(res, { imageUrl: uploadResult.key }, 'Event image uploaded successfully');
     } catch (error) {
       next(error);
     }

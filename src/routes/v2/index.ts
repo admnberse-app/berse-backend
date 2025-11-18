@@ -19,6 +19,7 @@ import { PaymentController } from '../../modules/payments/payment.controller';
 import discoverRoutes from '../../modules/discover/discover.routes';
 import matchingRoutes from '../../modules/matching/matching.routes';
 import adminRevenueRoutes from '../../modules/admin/revenue.routes';
+import adminRoutes from '../../modules/admin/admin.routes';
 import constantsRoutes from '../../modules/app-constants/constants.routes';
 import dashboardRoutes from '../../modules/dashboard/dashboard.routes';
 import { homeSurfRoutes } from '../../modules/homesurf';
@@ -185,6 +186,12 @@ router.use('/dashboard', dashboardRoutes);
  * Base path: /v2/app-constants
  */
 router.use('/app-constants', constantsRoutes);
+
+/**
+ * Admin Dashboard & Stats routes
+ * Base path: /v2/admin
+ */
+router.use('/admin', adminRoutes);
 
 /**
  * Admin Revenue routes
