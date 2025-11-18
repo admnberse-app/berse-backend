@@ -166,7 +166,7 @@ export class StorageService {
    */
   async uploadFile(
     file: Express.Multer.File,
-    folder: 'avatars' | 'events' | 'communities' | 'marketplace' | 'berseguide' | 'temp',
+    folder: 'avatars' | 'events' | 'communities' | 'marketplace' | 'berseguide' | 'rewards' | 'vouchers' | 'temp',
     options?: {
       optimize?: boolean;
       isPublic?: boolean;
@@ -348,7 +348,7 @@ export class StorageService {
    */
   async uploadFiles(
     files: Express.Multer.File[],
-    folder: 'avatars' | 'events' | 'communities' | 'marketplace' | 'temp',
+    folder: 'avatars' | 'events' | 'communities' | 'marketplace' | 'berseguide' | 'rewards' | 'vouchers' | 'temp',
     options?: {
       optimize?: boolean;
       isPublic?: boolean;

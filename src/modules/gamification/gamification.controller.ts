@@ -367,12 +367,25 @@ export class GamificationController {
 
   static async uploadRewardImage(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.file) {
+      const userId = req.user!.id;
+      const file = req.file;
+      const rewardId = req.body.rewardId || req.query.rewardId as string | undefined;
+
+      if (!file) {
         throw new AppError('No image file provided', 400);
       }
 
-      const imageUrl = req.file.key; // S3/Spaces key
-      sendSuccess(res, { imageUrl }, 'Reward image uploaded successfully');
+      // Upload to storage
+      const { storageService } = await import('../../services/storage.service');
+      
+      const uploadResult = await storageService.uploadFile(file, 'rewards', {
+        optimize: true,
+        isPublic: true,
+        userId,
+        entityId: rewardId,
+      });
+
+      sendSuccess(res, { imageUrl: uploadResult.url }, 'Reward image uploaded successfully');
     } catch (error) {
       next(error);
     }
@@ -380,12 +393,25 @@ export class GamificationController {
 
   static async uploadVoucherImage(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.file) {
+      const userId = req.user!.id;
+      const file = req.file;
+      const listingId = req.body.listingId || req.query.listingId as string | undefined;
+
+      if (!file) {
         throw new AppError('No voucher image file provided', 400);
       }
 
-      const voucherImageUrl = req.file.key; // S3/Spaces key
-      sendSuccess(res, { voucherImageUrl }, 'Voucher image uploaded successfully');
+      // Upload to storage
+      const { storageService } = await import('../../services/storage.service');
+      
+      const uploadResult = await storageService.uploadFile(file, 'vouchers', {
+        optimize: true,
+        isPublic: true,
+        userId,
+        entityId: listingId,
+      });
+
+      sendSuccess(res, { voucherImageUrl: uploadResult.url }, 'Voucher image uploaded successfully');
     } catch (error) {
       next(error);
     }
