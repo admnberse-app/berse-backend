@@ -410,16 +410,17 @@ export class BerseGuideService {
       }
 
       const paymentOptions = await prisma.berseGuidePaymentOption.findMany({
-        where: { berseGuideId: userId },
+        where: { 
+          berseGuideId: userId,
+          deletedAt: null,
+        },
         orderBy: [
           { isPreferred: 'desc' },
+          { createdAt: 'asc' },
         ],
       });
 
-      return paymentOptions.map(option => ({
-        ...option,
-        createdAt: new Date(), // Schema doesn't have createdAt, use current date
-      }));
+      return paymentOptions;
     } catch (error) {
       logger.error('Failed to get payment options', { error, userId });
       throw error;

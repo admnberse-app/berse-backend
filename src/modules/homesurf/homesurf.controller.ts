@@ -278,6 +278,25 @@ export class HomeSurfController {
   // ============================================================================
 
   /**
+   * Get payment options
+   * GET /api/v2/homesurf/payment-options
+   */
+  async getPaymentOptions(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const paymentOptions = await homeSurfService.getPaymentOptions(userId);
+
+      res.json({
+        success: true,
+        data: paymentOptions,
+      });
+    } catch (error) {
+      logger.error('Failed to get payment options', { error, userId: req.user?.id });
+      throw error;
+    }
+  }
+
+  /**
    * Add payment option
    * POST /api/v2/homesurf/payment-options
    */

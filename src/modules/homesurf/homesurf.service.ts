@@ -378,6 +378,37 @@ export class HomeSurfService {
   // ============================================================================
 
   /**
+   * Get all payment options for user's HomeSurf profile
+   */
+  async getPaymentOptions(userId: string): Promise<PaymentOptionResponse[]> {
+    try {
+      const profile = await prisma.userHomeSurf.findUnique({
+        where: { userId },
+      });
+
+      if (!profile) {
+        throw new AppError('HomeSurf profile not found', 404);
+      }
+
+      const paymentOptions = await prisma.homeSurfPaymentOption.findMany({
+        where: {
+          homeSurfId: userId,
+          deletedAt: null,
+        },
+        orderBy: [
+          { isPreferred: 'desc' },
+          { createdAt: 'asc' },
+        ],
+      });
+
+      return paymentOptions;
+    } catch (error) {
+      logger.error('Failed to get payment options', { error, userId });
+      throw error;
+    }
+  }
+
+  /**
    * Add payment option
    */
   async addPaymentOption(userId: string, data: CreatePaymentOptionDTO): Promise<PaymentOptionResponse> {

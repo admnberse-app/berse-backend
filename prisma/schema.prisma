@@ -3431,6 +3431,8 @@ model HomeSurfPaymentOption {
   description String? // "Help with gardening 2 hours", "Buy me lunch", "Groceries for the week"
   isPreferred Boolean     @default(false) // Host's preferred option
   deletedAt   DateTime? // Soft delete
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   homeSurf UserHomeSurf @relation(fields: [homeSurfId], references: [userId], onDelete: Cascade)
 
@@ -3600,6 +3602,8 @@ model BerseGuidePaymentOption {
   description  String? // "Buy me lunch at a local spot", "Teach me basic photography"
   isPreferred  Boolean     @default(false)
   deletedAt    DateTime? // Soft delete
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   berseGuide UserBerseGuide @relation(fields: [berseGuideId], references: [userId], onDelete: Cascade)
 

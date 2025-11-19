@@ -213,6 +213,24 @@ router.get(
 /**
  * @swagger
  * /v2/homesurf/payment-options:
+ *   get:
+ *     summary: Get all payment options for user's HomeSurf profile
+ *     tags: [HomeSurf]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payment options retrieved successfully
+ */
+router.get(
+  '/payment-options',
+  authenticateToken,
+  asyncHandler(homeSurfController.getPaymentOptions.bind(homeSurfController))
+);
+
+/**
+ * @swagger
+ * /v2/homesurf/payment-options:
  *   post:
  *     summary: Add payment option
  *     tags: [HomeSurf]
