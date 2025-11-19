@@ -5,6 +5,7 @@ import { BadgeService } from '../../services/badge.service';
 import { PointsService } from '../../services/points.service';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
+import { prisma } from '../../config/database';
 
 export class GamificationController {
   // ================== Dashboard ==================
