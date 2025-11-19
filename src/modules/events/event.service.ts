@@ -688,16 +688,32 @@ export class EventService {
         throw new AppError('You do not have permission to delete this event', 403);
       }
 
-      // Check if event has tickets sold
-      const ticketCount = await prisma.eventTicket.count({
-        where: { 
-          eventId, 
-          status: { in: [EventTicketStatus.CONFIRMED, EventTicketStatus.CHECKED_IN] }
-        },
-      });
+      // Prevent deletion of published paid events with ticket sales
+      if (event.status === 'PUBLISHED' && !event.isFree) {
+        const ticketCount = await prisma.eventTicket.count({
+          where: { 
+            eventId,
+            status: { in: [EventTicketStatus.CONFIRMED, EventTicketStatus.CHECKED_IN] }
+          },
+        });
 
-      if (ticketCount > 0) {
-        throw new AppError('Cannot delete event with active tickets. Please cancel or refund all tickets first.', 400);
+        if (ticketCount > 0) {
+          throw new AppError('Cannot delete published paid event with active ticket purchases. Please cancel the event instead.', 400);
+        }
+      }
+
+      // Check if event has any participants/RSVPs for free events
+      if (event.isFree) {
+        const participantCount = await prisma.eventParticipant.count({
+          where: { 
+            eventId,
+            status: { in: ['CONFIRMED', 'CHECKED_IN'] }
+          },
+        });
+
+        if (participantCount > 0 && event.status === 'PUBLISHED') {
+          throw new AppError('Cannot delete published event with confirmed participants. Please cancel the event instead.', 400);
+        }
       }
 
       // Soft delete: Set deletedAt timestamp

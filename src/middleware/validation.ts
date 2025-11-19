@@ -51,6 +51,7 @@ export const xssProtection = (
     'qrCodeUrl',
     'website',  // User website URL
     'websiteUrl',  // Community website URL
+    'mapLink',  // Event map link URLs
     'description',  // Event/community/listing descriptions
     'bio',  // User bio
     'fullBio',  // User full bio

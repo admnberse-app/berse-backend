@@ -188,9 +188,20 @@ export class GamificationService {
     const rewards = await prisma.reward.findMany({
       where,
       orderBy: { pointsRequired: 'asc' },
+      include: {
+        _count: {
+          select: { redemptions: true },
+        },
+      },
     });
 
-    const total = await prisma.reward.count({ where });
+    // Filter out rewards that are out of stock (have quantity set and all redeemed)
+    const availableRewards = rewards.filter(reward => {
+      if (reward.quantity === null) return true; // Unlimited stock
+      return reward.quantity > reward._count.redemptions; // Has stock remaining
+    });
+
+    const total = availableRewards.length;
 
     let userPoints: number | undefined;
     if (userId) {
@@ -201,7 +212,14 @@ export class GamificationService {
       userPoints = user?.totalPoints;
     }
 
-    return { rewards, total, userPoints };
+    // Map rewards to include stock availability info
+    const rewardsWithStock = availableRewards.map(reward => ({
+      ...reward,
+      availableStock: reward.quantity === null ? null : reward.quantity - reward._count.redemptions,
+      isUnlimited: reward.quantity === null,
+    }));
+
+    return { rewards: rewardsWithStock, total, userPoints };
   }
 
   static async getRewardById(rewardId: string): Promise<RewardInfo | null> {
@@ -268,8 +286,19 @@ export class GamificationService {
       throw new AppError('Reward not found', 404);
     }
 
-    if (!reward.isActive || reward.quantity <= 0) {
+    if (!reward.isActive) {
       throw new AppError('Reward not available', 400);
+    }
+
+    // Check if reward has stock (null = unlimited, otherwise check count)
+    if (reward.quantity !== null) {
+      const redemptionCount = await prisma.redemption.count({
+        where: { rewardId },
+      });
+      
+      if (redemptionCount >= reward.quantity) {
+        throw new AppError('Reward out of stock', 400);
+      }
     }
 
     const user = await prisma.user.findUnique({
@@ -298,15 +327,8 @@ export class GamificationService {
         },
       });
 
-      // Update reward quantity
-      await tx.reward.update({
-        where: { id: rewardId },
-        data: {
-          quantity: {
-            decrement: 1,
-          },
-        },
-      });
+      // Note: We don't decrement quantity anymore - we track via redemption count
+      // quantity field is just the limit (null = unlimited)
 
       return redemption;
     });

@@ -48,23 +48,14 @@ export const createEventValidators = [
     .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('End time must be in HH:mm format'),
   
   body('location')
+    .optional()
     .trim()
-    .notEmpty().withMessage('Location is required')
     .isLength({ min: 3, max: 500 }).withMessage('Location must be between 3 and 500 characters'),
   
   body('mapLink')
     .optional()
-    .trim()
-    .custom((value) => {
-      if (!value) return true;
-      // Allow Google Maps, Apple Maps, and standard URLs
-      const urlPattern = /^https?:\/\/.+/i;
-      if (!urlPattern.test(value)) {
-        throw new Error('Invalid map link URL');
-      }
-      return true;
-    })
-    .withMessage('Invalid map link URL'),
+    .customSanitizer((value) => value) // Pass through without escaping
+    .isString().withMessage('Map link must be a string'),
   
   body('maxAttendees')
     .optional()
@@ -92,7 +83,7 @@ export const createEventValidators = [
   
   body('images.*')
     .optional()
-    .isURL().withMessage('Each image must be a valid URL'),
+    .isString().withMessage('Each image must be a string'),
   
   body('isFree')
     .notEmpty().withMessage('isFree is required')
@@ -143,16 +134,7 @@ export const updateEventValidators = [
   body('mapLink')
     .optional()
     .trim()
-    .custom((value) => {
-      if (!value) return true;
-      // Allow Google Maps, Apple Maps, and standard URLs
-      const urlPattern = /^https?:\/\/.+/i;
-      if (!urlPattern.test(value)) {
-        throw new Error('Invalid map link URL');
-      }
-      return true;
-    })
-    .withMessage('Invalid map link URL'),
+    .isString().withMessage('Map link must be a string'),
   
   body('maxAttendees')
     .optional()

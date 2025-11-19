@@ -2043,7 +2043,7 @@ model Reward {
   pointsRequired Int
   category       String
   partner        String
-  quantity       Int          @default(0)
+  quantity       Int?         // null = unlimited stock, number = limited stock
   imageUrl       String?
   isActive       Boolean      @default(true)
   
