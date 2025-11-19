@@ -3430,6 +3430,7 @@ model HomeSurfPaymentOption {
   currency    String?     @default("USD")
   description String? // "Help with gardening 2 hours", "Buy me lunch", "Groceries for the week"
   isPreferred Boolean     @default(false) // Host's preferred option
+  deletedAt   DateTime? // Soft delete
 
   homeSurf UserHomeSurf @relation(fields: [homeSurfId], references: [userId], onDelete: Cascade)
 
@@ -3598,6 +3599,7 @@ model BerseGuidePaymentOption {
   currency     String?     @default("USD")
   description  String? // "Buy me lunch at a local spot", "Teach me basic photography"
   isPreferred  Boolean     @default(false)
+  deletedAt    DateTime? // Soft delete
 
   berseGuide UserBerseGuide @relation(fields: [berseGuideId], references: [userId], onDelete: Cascade)
 

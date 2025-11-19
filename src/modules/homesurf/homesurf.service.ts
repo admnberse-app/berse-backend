@@ -73,7 +73,11 @@ export class HomeSurfService {
       const profile = await prisma.userHomeSurf.findUnique({
         where: { userId },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -147,7 +151,11 @@ export class HomeSurfService {
           isEnabled: false, // Disabled by default, user must explicitly enable
         },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -197,16 +205,32 @@ export class HomeSurfService {
         throw new AppError('HomeSurf profile not found', 404);
       }
 
+      // Build update data, excluding latitude/longitude if present
+      const { latitude, longitude, ...updateData } = data as any;
+      
+      // Handle coordinates conversion from lat/lng if provided
+      if (latitude !== undefined && longitude !== undefined) {
+        updateData.coordinates = { lat: latitude, lng: longitude } as Prisma.InputJsonValue;
+      } else if (data.coordinates) {
+        updateData.coordinates = data.coordinates as Prisma.InputJsonValue;
+      }
+
+      if (data.address) {
+        updateData.address = data.address as Prisma.InputJsonValue;
+      }
+
       const profile = await prisma.userHomeSurf.update({
         where: { userId },
         data: {
-          ...data,
-          address: data.address as Prisma.InputJsonValue,
-          coordinates: data.coordinates as Prisma.InputJsonValue,
+          ...updateData,
           lastActiveAt: new Date(),
         },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -235,11 +259,52 @@ export class HomeSurfService {
    */
   async toggleProfile(userId: string, data: ToggleHomeSurfDTO): Promise<HomeSurfProfileResponse> {
     try {
-      // If enabling, check trust requirements
+      // If enabling, check requirements
       if (data.isEnabled) {
         const canEnable = await this.canEnableHomeSurf(userId);
         if (!canEnable) {
           throw new AppError('You do not meet the trust requirements to enable HomeSurf', 403);
+        }
+
+        // Check subscription requirements
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            subscriptions: {
+              select: {
+                status: true,
+                tiers: {
+                  select: {
+                    tierCode: true,
+                  }
+                }
+              },
+              where: {
+                status: 'ACTIVE'
+              },
+              take: 1
+            }
+          }
+        });
+
+        const activeSubscription = user?.subscriptions?.[0];
+        const currentTier = activeSubscription?.tiers?.tierCode || 'FREE';
+        const hasRequiredSubscription = activeSubscription?.status === 'ACTIVE' && (currentTier === 'BASIC' || currentTier === 'PREMIUM');
+
+        if (!hasRequiredSubscription) {
+          throw new AppError('You need a BASIC or PREMIUM subscription to enable HomeSurf hosting', 403);
+        }
+
+        // Check if profile has at least one payment option
+        const paymentOptionsCount = await prisma.homeSurfPaymentOption.count({
+          where: { 
+            homeSurfId: userId,
+            deletedAt: null,
+          }
+        });
+
+        if (paymentOptionsCount === 0) {
+          throw new AppError('You must add at least one payment option before enabling your profile', 400);
         }
       }
 
@@ -250,7 +315,11 @@ export class HomeSurfService {
           lastActiveAt: new Date(),
         },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -324,7 +393,10 @@ export class HomeSurfService {
       // If setting as preferred, unset other preferred options
       if (data.isPreferred) {
         await prisma.homeSurfPaymentOption.updateMany({
-          where: { homeSurfId: userId },
+          where: { 
+            homeSurfId: userId,
+            deletedAt: null,
+          },
           data: { isPreferred: false },
         });
       }
@@ -377,6 +449,7 @@ export class HomeSurfService {
           where: { 
             homeSurfId: userId,
             id: { not: optionId },
+            deletedAt: null,
           },
           data: { isPreferred: false },
         });
@@ -414,11 +487,12 @@ export class HomeSurfService {
         throw new AppError('Unauthorized to delete this payment option', 403);
       }
 
-      await prisma.homeSurfPaymentOption.delete({
+      await prisma.homeSurfPaymentOption.update({
         where: { id: optionId },
+        data: { deletedAt: new Date() },
       });
 
-      logger.info('Payment option deleted', { userId, optionId });
+      logger.info('Payment option soft deleted', { userId, optionId });
     } catch (error) {
       logger.error('Failed to delete payment option', { error, userId, optionId });
       throw error;
@@ -1414,7 +1488,11 @@ export class HomeSurfService {
         prisma.userHomeSurf.findMany({
           where,
           include: {
-            paymentOptions: true,
+            paymentOptions: {
+              where: {
+                deletedAt: null,
+              },
+            },
             user: {
               select: {
                 id: true,
@@ -1549,11 +1627,72 @@ export class HomeSurfService {
     role?: 'host' | 'guest' | 'all';
   }): Promise<{
     profile: HomeSurfProfileResponse | null;
-    asHost: HomeSurfBookingResponse[];
+    hostStats?: {
+      requests: number;
+      upcoming: number;
+      past: number;
+      rating: number;
+      totalGuests: number;
+      responseRate: number;
+    };
+    guestStats: {
+      upcoming: number;
+      past: number;
+      saved: number;
+    };
+    asHost?: HomeSurfBookingResponse[];
     asGuest: HomeSurfBookingResponse[];
+    eligibility?: {
+      canHost: boolean;
+      requirements: {
+        minTrustScore: number;
+        minTrustLevel: string;
+        subscriptionRequired: boolean;
+        minSubscriptionTier: string;
+      };
+      currentStatus: {
+        trustScore: number;
+        trustLevel: string;
+        meetsTrustRequirements: boolean;
+        subscriptionTier: string;
+        meetsSubscriptionRequirements: boolean;
+      };
+      message: string;
+    };
   }> {
     try {
       const { filter = 'all', status, role = 'all' } = filters || {};
+
+      // Check user eligibility for hosting
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+          trustScore: true, 
+          trustLevel: true,
+          subscriptions: {
+            select: {
+              status: true,
+              tiers: {
+                select: {
+                  tierCode: true,
+                  tierName: true,
+                }
+              }
+            },
+            where: {
+              status: 'ACTIVE'
+            },
+            take: 1
+          }
+        },
+      });
+
+      const canEnableHosting = await this.canEnableHomeSurf(userId);
+      const activeSubscription = user?.subscriptions?.[0];
+      const hasActiveSubscription = activeSubscription?.status === 'ACTIVE';
+      const currentTier = activeSubscription?.tiers?.tierCode || 'FREE';
+      const hasRequiredSubscription = hasActiveSubscription && (currentTier === 'BASIC' || currentTier === 'PREMIUM');
+      const canHost = canEnableHosting && hasRequiredSubscription;
 
       // Get user's HomeSurf profile
       const profile = await this.getProfile(userId, userId);
@@ -1610,22 +1749,8 @@ export class HomeSurfService {
 
       const orderBy = { requestedAt: 'desc' as const };
 
-      // Fetch bookings based on role
-      let asHost: any[] = [];
+      // Always fetch guest bookings (available to all users)
       let asGuest: any[] = [];
-
-      if (role === 'host' || role === 'all') {
-        asHost = await prisma.homeSurfBooking.findMany({
-          where: {
-            hostId: userId,
-            ...timeFilter,
-            ...statusFilter,
-          },
-          include: includeOptions,
-          orderBy,
-        });
-      }
-
       if (role === 'guest' || role === 'all') {
         asGuest = await prisma.homeSurfBooking.findMany({
           where: {
@@ -1638,11 +1763,136 @@ export class HomeSurfService {
         });
       }
 
-      return {
+      // Calculate guest stats (always available)
+      const [guestUpcoming, guestPast, guestSaved] = await Promise.all([
+        prisma.homeSurfBooking.count({
+          where: {
+            guestId: userId,
+            status: { in: ['APPROVED', 'CHECKED_IN'] },
+            checkInDate: { gte: new Date() },
+          },
+        }),
+        prisma.homeSurfBooking.count({
+          where: {
+            guestId: userId,
+            status: 'COMPLETED',
+            checkOutDate: { lt: new Date() },
+          },
+        }),
+        // Saved could be wishlist/favorites - for now using DISCUSSING status as saved interest
+        prisma.homeSurfBooking.count({
+          where: {
+            guestId: userId,
+            status: 'DISCUSSING',
+          },
+        }),
+      ]);
+
+      // Initialize host data (will be populated if user is eligible)
+      let asHost: any[] = [];
+      let hostStats;
+
+      if (canHost && profile && (role === 'host' || role === 'all')) {
+        asHost = await prisma.homeSurfBooking.findMany({
+          where: {
+            hostId: userId,
+            ...timeFilter,
+            ...statusFilter,
+          },
+          include: includeOptions,
+          orderBy,
+        });
+
+        // Calculate host stats
+        const [hostRequests, hostUpcoming, hostPast] = await Promise.all([
+          prisma.homeSurfBooking.count({
+            where: {
+              hostId: userId,
+              status: 'PENDING',
+            },
+          }),
+          prisma.homeSurfBooking.count({
+            where: {
+              hostId: userId,
+              status: { in: ['APPROVED', 'CHECKED_IN'] },
+              checkInDate: { gte: new Date() },
+            },
+          }),
+          prisma.homeSurfBooking.count({
+            where: {
+              hostId: userId,
+              status: 'COMPLETED',
+              checkOutDate: { lt: new Date() },
+            },
+          }),
+        ]);
+
+        hostStats = {
+          requests: hostRequests,
+          upcoming: hostUpcoming,
+          past: hostPast,
+          rating: profile?.rating || 0,
+          totalGuests: profile?.totalGuests || 0,
+          responseRate: profile?.responseRate || 0,
+        };
+      }
+
+      // Prepare eligibility message and encouragement
+      let eligibilityMessage = '';
+
+      if (!profile) {
+        // User has no profile yet
+        if (!canEnableHosting) {
+          eligibilityMessage = `You need a trust score of at least 70 and trust level "trusted" to become a host. Your current trust score: ${user?.trustScore || 0}.`;
+        } else if (!hasRequiredSubscription) {
+          eligibilityMessage = 'You need a BASIC or PREMIUM subscription to host on HomeSurf. Upgrade your plan to start hosting.';
+        } else {
+          // User is fully eligible - encourage them to create profile!
+          eligibilityMessage = 'You meet all requirements! Create your HomeSurf profile to start hosting and welcoming guests.';
+        }
+      } else {
+        // User has a profile
+        if (!canEnableHosting) {
+          eligibilityMessage = `Your trust score is below the required threshold. Maintain a trust score of at least 70 to continue hosting.`;
+        } else if (!hasRequiredSubscription) {
+          eligibilityMessage = 'You need to maintain a BASIC or PREMIUM subscription to continue hosting on HomeSurf.';
+        } else {
+          // User is fully eligible with profile
+          eligibilityMessage = profile.isEnabled ? 'Your HomeSurf profile is active and visible to guests.' : 'Your profile is complete but currently disabled. Enable it to start receiving booking requests.';
+        }
+      }
+
+      const response: any = {
         profile,
+        isEnabled: profile?.isEnabled || false,
+        hostStats: hostStats || undefined,
+        guestStats: {
+          upcoming: guestUpcoming,
+          past: guestPast,
+          saved: guestSaved,
+        },
         asHost: asHost.map((booking) => this.formatBookingResponse(booking)),
         asGuest: asGuest.map((booking) => this.formatBookingResponse(booking)),
+        eligibility: {
+          canHost: canHost,
+          requirements: {
+            minTrustScore: HOMESURF_REQUIREMENTS.minTrustScore,
+            minTrustLevel: HOMESURF_REQUIREMENTS.minTrustLevel,
+            subscriptionRequired: true,
+            minSubscriptionTier: 'BASIC',
+          },
+          currentStatus: {
+            trustScore: user?.trustScore || 0,
+            trustLevel: user?.trustLevel || 'starter',
+            meetsTrustRequirements: canEnableHosting,
+            subscriptionTier: currentTier,
+            meetsSubscriptionRequirements: hasRequiredSubscription,
+          },
+          message: eligibilityMessage,
+        },
       };
+
+      return response;
     } catch (error) {
       logger.error('Failed to get my HomeSurf', { error, userId, filters });
       throw error;

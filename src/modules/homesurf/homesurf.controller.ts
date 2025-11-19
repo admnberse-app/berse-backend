@@ -155,8 +155,8 @@ export class HomeSurfController {
         throw new AppError('Title, description, and accommodation type are required', 400);
       }
 
-      if (!data.city || !data.coordinates) {
-        throw new AppError('City and coordinates are required', 400);
+      if (!data.city) {
+        throw new AppError('City is required', 400);
       }
 
       if (data.maxGuests && data.maxGuests < 1) {

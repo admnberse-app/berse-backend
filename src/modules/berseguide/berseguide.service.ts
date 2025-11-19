@@ -77,7 +77,11 @@ export class BerseGuideService {
       const profile = await prisma.userBerseGuide.findUnique({
         where: { userId },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -170,7 +174,11 @@ export class BerseGuideService {
           isEnabled: false, // Disabled by default
         },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -237,7 +245,11 @@ export class BerseGuideService {
           lastActiveAt: new Date(),
         },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -266,11 +278,52 @@ export class BerseGuideService {
    */
   async toggleProfile(userId: string, data: ToggleBerseGuideDTO): Promise<BerseGuideProfileResponse> {
     try {
-      // If enabling, check trust requirements
+      // If enabling, check requirements
       if (data.isEnabled) {
         const canEnable = await this.canEnableBerseGuide(userId);
         if (!canEnable) {
           throw new AppError('You do not meet the trust requirements to enable BerseGuide', 403);
+        }
+
+        // Check subscription requirements
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            subscriptions: {
+              select: {
+                status: true,
+                tiers: {
+                  select: {
+                    tierCode: true,
+                  }
+                }
+              },
+              where: {
+                status: 'ACTIVE'
+              },
+              take: 1
+            }
+          }
+        });
+
+        const activeSubscription = user?.subscriptions?.[0];
+        const currentTier = activeSubscription?.tiers?.tierCode || 'FREE';
+        const hasRequiredSubscription = activeSubscription?.status === 'ACTIVE' && (currentTier === 'BASIC' || currentTier === 'PREMIUM');
+
+        if (!hasRequiredSubscription) {
+          throw new AppError('You need a BASIC or PREMIUM subscription to enable BerseGuide services', 403);
+        }
+
+        // Check if profile has at least one payment option
+        const paymentOptionsCount = await prisma.berseGuidePaymentOption.count({
+          where: { 
+            berseGuideId: userId,
+            deletedAt: null,
+          }
+        });
+
+        if (paymentOptionsCount === 0) {
+          throw new AppError('You must add at least one payment option before enabling your profile', 400);
         }
       }
 
@@ -281,7 +334,11 @@ export class BerseGuideService {
           lastActiveAt: new Date(),
         },
         include: {
-          paymentOptions: true,
+          paymentOptions: {
+            where: {
+              deletedAt: null,
+            },
+          },
           user: {
             select: {
               id: true,
@@ -385,7 +442,10 @@ export class BerseGuideService {
       // If setting as preferred, unset other preferred options
       if (data.isPreferred) {
         await prisma.berseGuidePaymentOption.updateMany({
-          where: { berseGuideId: userId },
+          where: { 
+            berseGuideId: userId,
+            deletedAt: null,
+          },
           data: { isPreferred: false },
         });
       }
@@ -441,6 +501,7 @@ export class BerseGuideService {
           where: { 
             berseGuideId: userId,
             id: { not: optionId },
+            deletedAt: null,
           },
           data: { isPreferred: false },
         });
@@ -481,11 +542,12 @@ export class BerseGuideService {
         throw new AppError('Unauthorized to delete this payment option', 403);
       }
 
-      await prisma.berseGuidePaymentOption.delete({
+      await prisma.berseGuidePaymentOption.update({
         where: { id: optionId },
+        data: { deletedAt: new Date() },
       });
 
-      logger.info('Payment option deleted', { userId, optionId });
+      logger.info('Payment option soft deleted', { userId, optionId });
     } catch (error) {
       logger.error('Failed to delete payment option', { error, userId, optionId });
       throw error;
@@ -1500,7 +1562,11 @@ export class BerseGuideService {
         prisma.userBerseGuide.findMany({
           where,
           include: {
-            paymentOptions: true,
+            paymentOptions: {
+              where: {
+                deletedAt: null,
+              },
+            },
             user: {
               select: {
                 id: true,
@@ -1632,11 +1698,72 @@ export class BerseGuideService {
     role?: 'guide' | 'tourist' | 'all';
   }): Promise<{
     profile: BerseGuideProfileResponse | null;
-    asGuide: BerseGuideBookingResponse[];
+    guideStats?: {
+      requests: number;
+      upcoming: number;
+      past: number;
+      rating: number;
+      totalTourists: number;
+      responseRate: number;
+    };
+    touristStats: {
+      upcoming: number;
+      past: number;
+      saved: number;
+    };
+    asGuide?: BerseGuideBookingResponse[];
     asTourist: BerseGuideBookingResponse[];
+    eligibility?: {
+      canGuide: boolean;
+      requirements: {
+        minTrustScore: number;
+        minTrustLevel: string;
+        subscriptionRequired: boolean;
+        minSubscriptionTier: string;
+      };
+      currentStatus: {
+        trustScore: number;
+        trustLevel: string;
+        meetsTrustRequirements: boolean;
+        subscriptionTier: string;
+        meetsSubscriptionRequirements: boolean;
+      };
+      message: string;
+    };
   }> {
     try {
       const { filter = 'all', status, role = 'all' } = filters || {};
+
+      // Check user eligibility for being a guide
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+          trustScore: true, 
+          trustLevel: true,
+          subscriptions: {
+            select: {
+              status: true,
+              tiers: {
+                select: {
+                  tierCode: true,
+                  tierName: true,
+                }
+              }
+            },
+            where: {
+              status: 'ACTIVE'
+            },
+            take: 1
+          }
+        },
+      });
+
+      const canEnableGuiding = await this.canEnableBerseGuide(userId);
+      const activeSubscription = user?.subscriptions?.[0];
+      const hasActiveSubscription = activeSubscription?.status === 'ACTIVE';
+      const currentTier = activeSubscription?.tiers?.tierCode || 'FREE';
+      const hasRequiredSubscription = hasActiveSubscription && (currentTier === 'BASIC' || currentTier === 'PREMIUM');
+      const canGuide = canEnableGuiding && hasRequiredSubscription;
 
       // Get user's BerseGuide profile
       const profile = await this.getProfile(userId, userId);
@@ -1687,22 +1814,8 @@ export class BerseGuideService {
 
       const orderBy = { requestedAt: 'desc' as const };
 
-      // Fetch bookings based on role
-      let asGuide: any[] = [];
+      // Always fetch tourist bookings (available to all users)
       let asTourist: any[] = [];
-
-      if (role === 'guide' || role === 'all') {
-        asGuide = await prisma.berseGuideBooking.findMany({
-          where: {
-            guideId: userId,
-            ...timeFilter,
-            ...statusFilter,
-          },
-          include: includeOptions,
-          orderBy,
-        });
-      }
-
       if (role === 'tourist' || role === 'all') {
         asTourist = await prisma.berseGuideBooking.findMany({
           where: {
@@ -1715,11 +1828,136 @@ export class BerseGuideService {
         });
       }
 
-      return {
+      // Calculate tourist stats (always available)
+      const [touristUpcoming, touristPast, touristSaved] = await Promise.all([
+        prisma.berseGuideBooking.count({
+          where: {
+            travelerId: userId,
+            status: { in: ['APPROVED', 'IN_PROGRESS'] },
+            agreedDate: { gte: new Date() },
+          },
+        }),
+        prisma.berseGuideBooking.count({
+          where: {
+            travelerId: userId,
+            status: 'COMPLETED',
+            agreedDate: { lt: new Date() },
+          },
+        }),
+        // Saved could be wishlist/favorites - for now using DISCUSSING status as saved interest
+        prisma.berseGuideBooking.count({
+          where: {
+            travelerId: userId,
+            status: 'DISCUSSING',
+          },
+        }),
+      ]);
+
+      // Initialize guide data (will be populated if user is eligible)
+      let asGuide: any[] = [];
+      let guideStats;
+
+      if (canGuide && profile && (role === 'guide' || role === 'all')) {
+        asGuide = await prisma.berseGuideBooking.findMany({
+          where: {
+            guideId: userId,
+            ...timeFilter,
+            ...statusFilter,
+          },
+          include: includeOptions,
+          orderBy,
+        });
+
+        // Calculate guide stats
+        const [guideRequests, guideUpcoming, guidePast] = await Promise.all([
+          prisma.berseGuideBooking.count({
+            where: {
+              guideId: userId,
+              status: 'PENDING',
+            },
+          }),
+          prisma.berseGuideBooking.count({
+            where: {
+              guideId: userId,
+              status: { in: ['APPROVED', 'IN_PROGRESS'] },
+              agreedDate: { gte: new Date() },
+            },
+          }),
+          prisma.berseGuideBooking.count({
+            where: {
+              guideId: userId,
+              status: 'COMPLETED',
+              agreedDate: { lt: new Date() },
+            },
+          }),
+        ]);
+
+        guideStats = {
+          requests: guideRequests,
+          upcoming: guideUpcoming,
+          past: guidePast,
+          rating: profile?.rating || 0,
+          totalTourists: profile?.totalSessions || 0,
+          responseRate: profile?.responseRate || 0,
+        };
+      }
+
+      // Prepare eligibility message and encouragement
+      let eligibilityMessage = '';
+
+      if (!profile) {
+        // User has no profile yet
+        if (!canEnableGuiding) {
+          eligibilityMessage = `You need a trust score of at least 65 and trust level "trusted" to become a guide. Your current trust score: ${user?.trustScore || 0}.`;
+        } else if (!hasRequiredSubscription) {
+          eligibilityMessage = 'You need a BASIC or PREMIUM subscription to guide on BerseGuide. Upgrade your plan to start guiding.';
+        } else {
+          // User is fully eligible - encourage them to create profile!
+          eligibilityMessage = 'You meet all requirements! Create your BerseGuide profile to start guiding and sharing experiences.';
+        }
+      } else {
+        // User has a profile
+        if (!canEnableGuiding) {
+          eligibilityMessage = `Your trust score is below the required threshold. Maintain a trust score of at least 65 to continue guiding.`;
+        } else if (!hasRequiredSubscription) {
+          eligibilityMessage = 'You need to maintain a BASIC or PREMIUM subscription to continue guiding on BerseGuide.';
+        } else {
+          // User is fully eligible with profile
+          eligibilityMessage = profile.isEnabled ? 'Your BerseGuide profile is active and visible to tourists.' : 'Your profile is complete but currently disabled. Enable it to start receiving booking requests.';
+        }
+      }
+
+      const response: any = {
         profile,
+        isEnabled: profile?.isEnabled || false,
+        guideStats: guideStats || undefined,
+        touristStats: {
+          upcoming: touristUpcoming,
+          past: touristPast,
+          saved: touristSaved,
+        },
         asGuide: asGuide.map(this.formatBookingResponse),
         asTourist: asTourist.map(this.formatBookingResponse),
+        eligibility: {
+          canGuide: canGuide,
+          requirements: {
+            minTrustScore: BERSEGUIDE_REQUIREMENTS.minTrustScore,
+            minTrustLevel: BERSEGUIDE_REQUIREMENTS.minTrustLevel,
+            subscriptionRequired: true,
+            minSubscriptionTier: 'BASIC',
+          },
+          currentStatus: {
+            trustScore: user?.trustScore || 0,
+            trustLevel: user?.trustLevel || 'starter',
+            meetsTrustRequirements: canEnableGuiding,
+            subscriptionTier: currentTier,
+            meetsSubscriptionRequirements: hasRequiredSubscription,
+          },
+          message: eligibilityMessage,
+        },
       };
+
+      return response;
     } catch (error) {
       logger.error('Failed to get my BerseGuide', { error, userId, filters });
       throw error;
