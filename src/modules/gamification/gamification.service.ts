@@ -169,7 +169,6 @@ export class GamificationService {
     } else {
       // Default to active rewards only
       where.isActive = true;
-      where.quantity = { gt: 0 };
     }
 
     // Filter by what user can afford
