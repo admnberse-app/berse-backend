@@ -324,6 +324,10 @@ export interface SearchBerseGuideResponse {
     total: number;
     totalPages: number;
   };
+  meta?: {
+    isFallback: boolean;
+    message: string;
+  };
 }
 
 // ============================================================================

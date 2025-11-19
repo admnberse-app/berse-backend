@@ -3,6 +3,7 @@ import { BerseGuideService } from './berseguide.service';
 import { AppError } from '../../middleware/error';
 import logger from '../../utils/logger';
 import { MetadataService } from '../../services/metadata.service';
+import { prisma } from '../../config/database';
 import type {
   CreateBerseGuideProfileDTO,
   UpdateBerseGuideProfileDTO,
@@ -36,6 +37,76 @@ export class BerseGuideController {
     try {
       const userId = req.user!.id;
       const profile = await berseGuideService.getProfile(userId, userId);
+
+      // If no profile exists, return requirements and feature gating info
+      if (!profile) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { 
+            trustScore: true, 
+            trustLevel: true,
+            subscriptions: {
+              select: {
+                status: true,
+                tiers: {
+                  select: {
+                    tierCode: true,
+                    tierName: true,
+                  }
+                }
+              },
+              where: {
+                status: 'ACTIVE'
+              },
+              take: 1
+            }
+          },
+        });
+
+        const canEnable = await berseGuideService.canEnableBerseGuide(userId);
+        const activeSubscription = user?.subscriptions?.[0];
+        const hasActiveSubscription = activeSubscription?.status === 'ACTIVE';
+        const currentTier = activeSubscription?.tiers?.tierCode || 'FREE';
+
+        // BerseGuide requires BASIC subscription + trusted trust level (65+ score)
+        const requiresSubscription = true;
+        const hasRequiredSubscription = hasActiveSubscription && (currentTier === 'BASIC' || currentTier === 'PREMIUM');
+        const meetsAllRequirements = canEnable && hasRequiredSubscription;
+
+        let message = '';
+        if (!canEnable) {
+          message = `You need a trust score of at least 65 and trust level "trusted" to enable BerseGuide. Your current trust score: ${user?.trustScore || 0}.`;
+        } else if (!hasRequiredSubscription) {
+          message = 'You need a BASIC or PREMIUM subscription to create a BerseGuide profile. Upgrade your plan to get started.';
+        } else {
+          message = 'You can create a BerseGuide profile. Click "Create Profile" to get started.';
+        }
+
+        res.json({
+          success: true,
+          data: {
+            hasProfile: false,
+            canEnable: meetsAllRequirements,
+            requirements: {
+              minTrustScore: 65,
+              minTrustLevel: 'trusted',
+              subscriptionRequired: requiresSubscription,
+              minSubscriptionTier: 'BASIC',
+            },
+            currentStatus: {
+              trustScore: user?.trustScore || 0,
+              trustLevel: user?.trustLevel || 'starter',
+              meetsTrustRequirements: canEnable,
+              subscriptionTier: currentTier,
+              subscriptionStatus: activeSubscription?.status || null,
+              meetsSubscriptionRequirements: hasRequiredSubscription,
+              meetsAllRequirements,
+            },
+            message,
+          },
+        });
+        return;
+      }
 
       res.json({
         success: true,
@@ -773,6 +844,7 @@ export class BerseGuideController {
         success: true,
         data: results.data,
         pagination: results.pagination,
+        ...(results.meta && { meta: results.meta }),
       });
     } catch (error) {
       logger.error('Failed to search profiles', { error, query: req.query });

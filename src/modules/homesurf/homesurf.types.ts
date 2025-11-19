@@ -269,6 +269,10 @@ export interface SearchHomeSurfResponse {
     total: number;
     totalPages: number;
   };
+  meta?: {
+    isFallback: boolean;
+    message: string;
+  };
 }
 
 // ==================== DASHBOARD TYPES ====================

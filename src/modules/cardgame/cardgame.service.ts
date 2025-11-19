@@ -1207,8 +1207,7 @@ export class CardGameService {
     const topics = await prisma.cardGameTopic.findMany({
       where: activeOnly ? { isActive: true } : undefined,
       orderBy: [
-        { displayOrder: 'asc' },
-        { createdAt: 'asc' },
+        { createdAt: 'desc' },
       ],
     });
 
@@ -2237,7 +2236,7 @@ export class CardGameService {
   private static async getTopicsWithProgress(userId: string) {
     const topics = await prisma.cardGameTopic.findMany({
       where: { isActive: true },
-      orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ createdAt: 'desc' }],
     });
 
     const topicsWithProgress = await Promise.all(
@@ -2275,6 +2274,8 @@ export class CardGameService {
           totalQuestions: 0, // TODO: Calculate from questions
           isActive: topic.isActive,
           displayOrder: topic.displayOrder,
+          createdAt: topic.createdAt,
+          updatedAt: topic.updatedAt,
           stats: {
             communitySessions: stats?.totalSessions || 0,
             averageRating: stats?.averageRating || 0,

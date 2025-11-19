@@ -37,7 +37,7 @@ import prisma from '../../lib/prisma';
 const BERSEGUIDE_REQUIREMENTS = {
   minTrustScore: 65,
   minTrustLevel: 'trusted',
-  allowedTrustLevels: ['trusted', 'verified', 'ambassador'],
+  allowedTrustLevels: ['trusted', 'verified', 'ambassador', 'leader'],
 };
 
 export class BerseGuideService {
@@ -1460,6 +1460,9 @@ export class BerseGuideService {
       } = query;
 
       const skip = (page - 1) * limit;
+      const hasFilters = !!(city || date || startTime || endTime || numberOfPeople || 
+                            guideTypes || languages || specialties || minRating || 
+                            maxHourlyRate || paymentTypes);
 
       const where: any = {
         isEnabled: true,
@@ -1524,9 +1527,53 @@ export class BerseGuideService {
         prisma.userBerseGuide.count({ where }),
       ]);
 
+      // If no results and filters were applied, fetch fallback results
+      let finalProfiles = profiles;
+      let finalTotal = total;
+      let isFallback = false;
+
+      if (profiles.length === 0 && hasFilters && page === 1) {
+        logger.info('No filtered results found, fetching fallback profiles', { query });
+        
+        // Fetch top-rated profiles as fallback (no filters except isEnabled)
+        const [fallbackProfiles, fallbackTotal] = await Promise.all([
+          prisma.userBerseGuide.findMany({
+            where: { isEnabled: true },
+            include: {
+              paymentOptions: true,
+              user: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  username: true,
+                  trustLevel: true,
+                  trustScore: true,
+                  createdAt: true,
+                  profile: {
+                    select: {
+                      profilePicture: true,
+                      displayName: true,
+                      shortBio: true,
+                      profession: true,
+                    },
+                  },
+                },
+              },
+            },
+            take: limit,
+            orderBy: { rating: 'desc' },
+          }),
+          prisma.userBerseGuide.count({ where: { isEnabled: true } }),
+        ]);
+
+        finalProfiles = fallbackProfiles;
+        finalTotal = fallbackTotal;
+        isFallback = true;
+      }
+
       // Enrich user profiles with comprehensive data
       const enrichedProfiles = await Promise.all(
-        profiles.map(async (profile) => {
+        finalProfiles.map(async (profile) => {
           try {
             const enrichedUser = await ProfileEnrichmentService.getEnrichedProfile(
               profile.userId,
@@ -1556,9 +1603,15 @@ export class BerseGuideService {
         pagination: {
           page,
           limit,
-          total,
-          totalPages: Math.ceil(total / limit),
+          total: finalTotal,
+          totalPages: Math.ceil(finalTotal / limit),
         },
+        ...(isFallback && {
+          meta: {
+            isFallback: true,
+            message: 'No results found for your filters. Showing popular guides instead.',
+          },
+        }),
       };
     } catch (error) {
       logger.error('Failed to search profiles', { error, query });

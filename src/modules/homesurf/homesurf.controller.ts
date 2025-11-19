@@ -755,6 +755,7 @@ export class HomeSurfController {
         success: true,
         data: results.data,
         pagination: results.pagination,
+        ...(results.meta && { meta: results.meta }),
       });
     } catch (error) {
       logger.error('Failed to search profiles', { error, query: req.query });
