@@ -59,6 +59,7 @@ export const xssProtection = (
     'travelBio',  // User travel bio
     'guidelines',  // Community guidelines (may contain markdown/links)
     'message',  // Messages, comments, replies
+    'comment',  // Card game feedback comments, post comments, etc.
     'content',  // Generic content field
     'text',  // Generic text field
     'location',  // Location strings may contain slashes
