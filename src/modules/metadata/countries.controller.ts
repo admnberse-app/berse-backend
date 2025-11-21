@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getCountries, getCountryByCode } from '@yusifaliyevpro/countries';
-import { City, Country as CSCCountry, State } from 'country-state-city';
+import { City, Country, State } from 'country-state-city';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../middleware/error';
 import { cache, CacheTTL } from '../../config/cache';
@@ -31,20 +30,16 @@ export class CountriesController {
         return;
       }
 
-      // Fetch all countries with required fields
-      const allCountries = await getCountries({
-        fields: ['name', 'cca2', 'cca3', 'capital', 'region', 'subregion', 'currencies', 'languages', 'flag', 'idd']
-      });
+      // Fetch all countries from local database
+      const allCountries = Country.getAllCountries();
       
-      if (!allCountries) {
+      if (!allCountries || allCountries.length === 0) {
         throw new AppError('Failed to fetch countries data', 500);
       }
 
       // Sort countries alphabetically by name
       const sortedCountries = allCountries.sort((a, b) => {
-        const nameA = a.name?.common || '';
-        const nameB = b.name?.common || '';
-        return nameA.localeCompare(nameB);
+        return a.name.localeCompare(b.name);
       });
 
       // Calculate total and apply pagination
@@ -54,18 +49,18 @@ export class CountriesController {
 
       // Transform data for frontend
       const transformedCountries = paginatedCountries.map(country => ({
-        code: country.cca2,
-        code3: country.cca3,
-        name: country.name?.common || '',
-        officialName: country.name?.official || '',
-        capital: Array.isArray(country.capital) ? country.capital[0] : country.capital,
-        region: country.region,
-        subregion: country.subregion,
-        currencies: country.currencies,
-        languages: country.languages,
+        code: country.isoCode,
+        code3: '', // country-state-city doesn't provide alpha-3 codes
+        name: country.name,
+        nativeName: country.name,
         flag: country.flag,
-        dialCode: country.idd?.root && country.idd?.suffixes ? 
-          `${country.idd.root}${country.idd.suffixes[0] || ''}` : '',
+        capital: '', // country-state-city doesn't provide capital
+        region: '', // country-state-city doesn't provide region
+        subregion: '', // country-state-city doesn't provide subregion
+        currency: country.currency,
+        dialCode: country.phonecode 
+          ? (country.phonecode.startsWith('+') ? country.phonecode : `+${country.phonecode}`)
+          : '',
       }));
 
       const responseData = {
@@ -106,32 +101,28 @@ export class CountriesController {
         return;
       }
 
-      const country = await getCountryByCode({
-        code: code.toUpperCase() as any,
-        fields: ['name', 'cca2', 'cca3', 'capital', 'region', 'subregion', 'currencies', 'languages', 'flag', 'idd', 'timezones', 'latlng', 'demonyms']
-      });
+      const country = Country.getCountryByCode(code.toUpperCase());
       
       if (!country) {
         throw new AppError(`Country with code '${code}' not found`, 404);
       }
 
       const transformedCountry = {
-        code: country.cca2,
-        code3: country.cca3,
-        name: country.name?.common || '',
-        officialName: country.name?.official || '',
-        nativeName: country.name?.nativeName,
-        capital: Array.isArray(country.capital) ? country.capital[0] : country.capital,
-        region: country.region,
-        subregion: country.subregion,
-        currencies: country.currencies,
-        languages: country.languages,
+        code: country.isoCode,
+        code3: country.isoCode,
+        name: country.name,
+        officialName: country.name,
+        nativeName: country.name,
+        capital: '', // country-state-city doesn't provide capital
+        region: '', // country-state-city doesn't provide region
+        subregion: '', // country-state-city doesn't provide subregion
+        currencies: country.currency ? [{ code: country.currency, name: country.currency }] : [],
+        languages: [],
         flag: country.flag,
-        dialCode: country.idd?.root && country.idd?.suffixes ? 
-          `${country.idd.root}${country.idd.suffixes[0] || ''}` : '',
-        timezones: country.timezones,
-        coordinates: country.latlng,
-        nationality: country.demonyms?.eng?.m || country.demonyms?.eng?.f || '',
+        dialCode: country.phonecode ? `+${country.phonecode}` : '',
+        timezones: country.timezones || [],
+        coordinates: country.latitude && country.longitude ? [parseFloat(country.latitude), parseFloat(country.longitude)] : [],
+        nationality: '',
       };
 
       // Cache for 1 day
@@ -165,12 +156,10 @@ export class CountriesController {
         return;
       }
 
-      // Fetch all countries first
-      let countries = await getCountries({
-        fields: ['name', 'cca2', 'cca3', 'capital', 'region', 'subregion', 'flag', 'idd']
-      });
+      // Fetch all countries from local database
+      let countries = Country.getAllCountries();
 
-      if (!countries) {
+      if (!countries || countries.length === 0) {
         throw new AppError('Failed to fetch countries data', 500);
       }
 
@@ -178,26 +167,16 @@ export class CountriesController {
       if (q && typeof q === 'string') {
         const searchLower = q.toLowerCase();
         countries = countries.filter(country => 
-          country.name?.common?.toLowerCase().includes(searchLower) ||
-          country.name?.official?.toLowerCase().includes(searchLower) ||
-          country.cca2?.toLowerCase().includes(searchLower) ||
-          country.cca3?.toLowerCase().includes(searchLower)
+          country.name.toLowerCase().includes(searchLower) ||
+          country.isoCode.toLowerCase().includes(searchLower)
         );
       }
 
-      // Filter by region
-      if (region && typeof region === 'string') {
-        countries = countries.filter(country => 
-          country.region?.toLowerCase() === region.toLowerCase()
-        );
-      }
+      // Filter by region - not supported by country-state-city
+      // Skipping region filter as the library doesn't provide this data
 
       // Sort countries alphabetically by name
-      countries.sort((a, b) => {
-        const nameA = a.name?.common || '';
-        const nameB = b.name?.common || '';
-        return nameA.localeCompare(nameB);
-      });
+      countries.sort((a, b) => a.name.localeCompare(b.name));
 
       // Calculate total and apply pagination
       const totalCountries = countries.length;
@@ -205,16 +184,15 @@ export class CountriesController {
       const totalPages = Math.ceil(totalCountries / limitNum);
 
       const transformedCountries = paginatedCountries.map(country => ({
-        code: country.cca2,
-        code3: country.cca3,
-        name: country.name?.common || '',
-        officialName: country.name?.official || '',
-        capital: Array.isArray(country.capital) ? country.capital[0] : country.capital,
-        region: country.region,
-        subregion: country.subregion,
+        code: country.isoCode,
+        code3: country.isoCode,
+        name: country.name,
+        officialName: country.name,
+        capital: '', // country-state-city doesn't provide capital
+        region: '', // country-state-city doesn't provide region
+        subregion: '', // country-state-city doesn't provide subregion
         flag: country.flag,
-        dialCode: country.idd?.root && country.idd?.suffixes ? 
-          `${country.idd.root}${country.idd.suffixes[0] || ''}` : '',
+        dialCode: country.phonecode ? `+${country.phonecode}` : '',
       }));
 
       const responseData = {
@@ -253,16 +231,8 @@ export class CountriesController {
         return;
       }
 
-      const countries = await getCountries({
-        fields: ['region']
-      });
-
-      if (!countries) {
-        throw new AppError('Failed to fetch countries data', 500);
-      }
-      
-      // Get unique regions
-      const regions = [...new Set(countries.map(c => c.region))].filter(Boolean).sort();
+      // country-state-city doesn't provide region data
+      const regions: string[] = [];
 
       const responseData = {
         regions,
@@ -284,11 +254,9 @@ export class CountriesController {
    */
   static async getTimezones(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const countries = await getCountries({
-        fields: ['timezones']
-      });
+      const countries = Country.getAllCountries();
 
-      if (!countries) {
+      if (!countries || countries.length === 0) {
         throw new AppError('Failed to fetch countries data', 500);
       }
       
@@ -318,28 +286,19 @@ export class CountriesController {
       const limitNum = Math.min(Math.max(1, parseInt(limit as string)), 250);
       const offset = (pageNum - 1) * limitNum;
       
-      const allCountries = await getCountries({
-        fields: ['name', 'cca2', 'capital', 'region', 'flag', 'idd']
-      });
+      // country-state-city doesn't provide region data, return all countries
+      const countries = Country.getAllCountries();
 
-      if (!allCountries) {
+      if (!countries || countries.length === 0) {
         throw new AppError('Failed to fetch countries data', 500);
       }
-
-      const countries = allCountries.filter(
-        c => c.region?.toLowerCase() === region.toLowerCase()
-      );
 
       if (countries.length === 0) {
         throw new AppError(`No countries found in region '${region}'`, 404);
       }
 
       // Sort countries alphabetically by name
-      countries.sort((a, b) => {
-        const nameA = a.name?.common || '';
-        const nameB = b.name?.common || '';
-        return nameA.localeCompare(nameB);
-      });
+      countries.sort((a, b) => a.name.localeCompare(b.name));
 
       // Calculate total and apply pagination
       const totalCountries = countries.length;
@@ -347,12 +306,11 @@ export class CountriesController {
       const totalPages = Math.ceil(totalCountries / limitNum);
 
       const transformedCountries = paginatedCountries.map(country => ({
-        code: country.cca2,
-        name: country.name?.common || '',
-        capital: Array.isArray(country.capital) ? country.capital[0] : country.capital,
+        code: country.isoCode,
+        name: country.name,
+        capital: '', // country-state-city doesn't provide capital
         flag: country.flag,
-        dialCode: country.idd?.root && country.idd?.suffixes ? 
-          `${country.idd.root}${country.idd.suffixes[0] || ''}` : '',
+        dialCode: country.phonecode ? `+${country.phonecode}` : '',
       }));
 
       sendSuccess(res, {
@@ -716,7 +674,7 @@ export class CountriesController {
 
       // Get country names for better UX
       const transformedCities = paginatedCities.map(city => {
-        const country = CSCCountry.getCountryByCode(city.countryCode);
+        const country = Country.getCountryByCode(city.countryCode);
         const state = city.stateCode ? State.getStateByCodeAndCountry(city.stateCode, city.countryCode) : null;
         
         return {

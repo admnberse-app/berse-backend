@@ -634,7 +634,18 @@ export class EventController {
 
       const events = await EventService.getTodayEvents(type, sortBy, sortOrder, timezone);
 
-      sendSuccess(res, { events, count: events.length }, 'Today events retrieved successfully');
+      // Calculate today's start and end times
+      const today = new Date();
+      const startDate = new Date(today.setHours(0, 0, 0, 0));
+      const endDate = new Date(today.setHours(23, 59, 59, 999));
+
+      sendSuccess(res, {
+        events,
+        count: events.length,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        date: startDate.toISOString().split('T')[0]
+      }, 'Today events retrieved successfully');
     } catch (error) {
       next(error);
     }
@@ -651,7 +662,23 @@ export class EventController {
 
       const schedule = await EventService.getWeekSchedule(type, timezone);
 
-      sendSuccess(res, schedule, 'Week schedule retrieved successfully');
+      // Calculate week range (tomorrow to 7 days from tomorrow)
+      const today = new Date();
+      const startOfTomorrow = new Date(today.setHours(0, 0, 0, 0));
+      startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+      const endOfWeek = new Date(startOfTomorrow);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      sendSuccess(res, {
+        ...schedule,
+        startDate: startOfTomorrow.toISOString(),
+        endDate: endOfWeek.toISOString(),
+        dateRange: {
+          start: startOfTomorrow.toISOString().split('T')[0],
+          end: endOfWeek.toISOString().split('T')[0]
+        }
+      }, 'Week schedule retrieved successfully');
     } catch (error) {
       next(error);
     }
