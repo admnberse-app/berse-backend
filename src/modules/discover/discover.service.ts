@@ -1241,7 +1241,23 @@ export class DiscoverService {
       where,
       take: limit || (params.limit || 10),
       orderBy: this.getEventOrderBy(params.sortBy || DiscoverSortBy.RELEVANCE),
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        images: true,
+        date: true,
+        startDate: true,
+        endDate: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        maxAttendees: true,
+        currency: true,
+        isFree: true,
+        type: true,
         user: {
           select: {
             id: true,
@@ -1290,7 +1306,23 @@ export class DiscoverService {
       orderBy: {
         date: 'asc'
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        images: true,
+        date: true,
+        startDate: true,
+        endDate: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        maxAttendees: true,
+        currency: true,
+        isFree: true,
+        type: true,
         user: {
           select: {
             id: true,
@@ -1473,7 +1505,23 @@ export class DiscoverService {
       orderBy: {
         createdAt: 'desc'
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        images: true,
+        date: true,
+        startDate: true,
+        endDate: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        maxAttendees: true,
+        currency: true,
+        isFree: true,
+        type: true,
         user: {
           select: {
             id: true,
@@ -1664,14 +1712,20 @@ export class DiscoverService {
       distance = this.formatDistance(distanceKm);
     }
 
+    // Use new date fields if available, fallback to legacy date field
+    const startDate = event.startDate || event.date;
+    const endDate = event.endDate;
+
     return {
       id: event.id,
       type: 'event',
       title: event.title,
       description: event.description,
       imageUrl: getImageUrl(event.images?.[0]),
-      startTime: event.date.toISOString(),
-      endTime: event.endDate?.toISOString(),
+      startTime: startDate?.toISOString(),
+      startTimeOnly: event.startTime,
+      endTime: endDate?.toISOString(),
+      endTimeOnly: event.endTime,
       location: event.location ? {
         name: event.location,
         city: event.location,
@@ -1680,9 +1734,9 @@ export class DiscoverService {
       attendeeCount: event._count?.eventParticipants || 0,
       maxAttendees: event.maxAttendees || undefined,
       price: {
-        amount: event.price || 0,
+        amount: 0, // Events use tier-based pricing, amount is 0 for base event
         currency: event.currency || 'MYR',
-        isFree: !event.price || event.price === 0
+        isFree: event.isFree || false
       },
       host: event.user ? {
         id: event.user.id,

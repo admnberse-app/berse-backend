@@ -64,7 +64,15 @@ export class EventService {
       }
 
       // Determine the event date - use startDate if provided, otherwise use legacy date field
-      const eventDate = data.startDate ? new Date(data.startDate) : (data.date ? new Date(data.date) : new Date());
+      // Parse dates as UTC to avoid timezone conversion issues
+      const parseDate = (dateInput: string | Date | undefined) => {
+        if (!dateInput) return undefined;
+        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        // Create UTC date with the same year/month/day to avoid timezone shifts
+        return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      };
+
+      const eventDate = data.startDate ? parseDate(data.startDate)! : (data.date ? new Date(data.date) : new Date());
 
       const event = await prisma.event.create({
         data: {
@@ -72,8 +80,8 @@ export class EventService {
           description: data.description,
           type: data.type,
           date: eventDate, // Use computed date for backward compatibility
-          startDate: data.startDate ? new Date(data.startDate) : undefined,
-          endDate: data.endDate ? new Date(data.endDate) : undefined,
+          startDate: parseDate(data.startDate),
+          endDate: parseDate(data.endDate),
           startTime: data.startTime,
           endTime: data.endTime,
           location: data.location,
@@ -579,6 +587,14 @@ export class EventService {
         }
       }
 
+      // Parse dates as UTC to avoid timezone conversion issues
+      const parseDate = (dateInput: string | Date | undefined) => {
+        if (!dateInput) return undefined;
+        const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        // Create UTC date with the same year/month/day to avoid timezone shifts
+        return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      };
+
       const updatedEvent = await prisma.event.update({
         where: { id: eventId },
         data: {
@@ -586,8 +602,8 @@ export class EventService {
           ...(data.description !== undefined && { description: data.description }),
           ...(data.type && { type: data.type }),
           ...(data.date && { date: new Date(data.date) }),
-          ...(data.startDate && { startDate: new Date(data.startDate) }),
-          ...(data.endDate && { endDate: new Date(data.endDate) }),
+          ...(data.startDate && { startDate: parseDate(data.startDate) }),
+          ...(data.endDate && { endDate: parseDate(data.endDate) }),
           ...(data.startTime !== undefined && { startTime: data.startTime }),
           ...(data.endTime !== undefined && { endTime: data.endTime }),
           ...(data.location && { location: data.location }),
@@ -1089,6 +1105,10 @@ export class EventService {
               id: true,
               title: true,
               date: true,
+              startDate: true,
+              endDate: true,
+              startTime: true,
+              endTime: true,
               location: true,
               images: true,
             },
@@ -1174,6 +1194,10 @@ export class EventService {
               id: true,
               title: true,
               date: true,
+              startDate: true,
+              endDate: true,
+              startTime: true,
+              endTime: true,
               location: true,
               type: true,
               hostId: true,
@@ -1311,6 +1335,10 @@ export class EventService {
             select: {
               id: true,
               date: true,
+              startDate: true,
+              endDate: true,
+              startTime: true,
+              endTime: true,
             },
           },
         },
@@ -1381,6 +1409,10 @@ export class EventService {
               title: true,
               description: true,
               date: true,
+              startDate: true,
+              endDate: true,
+              startTime: true,
+              endTime: true,
               location: true,
               mapLink: true,
               type: true,
@@ -1617,6 +1649,10 @@ export class EventService {
                 id: true,
                 title: true,
                 date: true,
+                startDate: true,
+                endDate: true,
+                startTime: true,
+                endTime: true,
                 location: true,
                 type: true,
                 images: true,
@@ -1664,6 +1700,10 @@ export class EventService {
             id: true,
             title: true,
             date: true,
+            startDate: true,
+            endDate: true,
+            startTime: true,
+            endTime: true,
             location: true,
             type: true,
             images: true,
@@ -1753,6 +1793,10 @@ export class EventService {
               id: true,
               title: true,
               date: true,
+              startDate: true,
+              endDate: true,
+              startTime: true,
+              endTime: true,
               location: true,
               type: true,
               images: true,
@@ -2690,6 +2734,10 @@ export class EventService {
           description: true,
           type: true,
           date: true,
+          startDate: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           mapLink: true,
           maxAttendees: true,
@@ -2796,6 +2844,10 @@ export class EventService {
           description: true,
           type: true,
           date: true,
+          startDate: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           mapLink: true,
           maxAttendees: true,
@@ -2903,10 +2955,23 @@ export class EventService {
 
       const where: Prisma.EventWhereInput = {
         status: EventStatus.PUBLISHED,
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
+        OR: [
+          // Match events using new startDate field
+          {
+            startDate: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+          // Fallback to legacy date field for old events
+          {
+            startDate: null,
+            date: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+        ],
       };
 
       if (type) {
@@ -2931,6 +2996,10 @@ export class EventService {
           description: true,
           type: true,
           date: true,
+          startDate: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           mapLink: true,
           maxAttendees: true,
@@ -3026,10 +3095,23 @@ export class EventService {
 
       const where: Prisma.EventWhereInput = {
         status: EventStatus.PUBLISHED,
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
+        OR: [
+          // Match events using new startDate field
+          {
+            startDate: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+          // Fallback to legacy date field for old events
+          {
+            startDate: null,
+            date: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+        ],
       };
 
       if (type) {
@@ -3054,6 +3136,10 @@ export class EventService {
           description: true,
           type: true,
           date: true,
+          startDate: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           mapLink: true,
           maxAttendees: true,
@@ -3156,10 +3242,23 @@ export class EventService {
 
       const where: Prisma.EventWhereInput = {
         status: EventStatus.PUBLISHED,
-        date: {
-          gte: startOfTomorrow,
-          lt: endOfWeek,
-        },
+        OR: [
+          // Match events using new startDate field
+          {
+            startDate: {
+              gte: startOfTomorrow,
+              lt: endOfWeek,
+            },
+          },
+          // Fallback to legacy date field for old events
+          {
+            startDate: null,
+            date: {
+              gte: startOfTomorrow,
+              lt: endOfWeek,
+            },
+          },
+        ],
       };
 
       if (type) {
@@ -3176,6 +3275,10 @@ export class EventService {
           description: true,
           type: true,
           date: true,
+          startDate: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           mapLink: true,
           maxAttendees: true,
@@ -3294,10 +3397,23 @@ export class EventService {
 
       const where: Prisma.EventWhereInput = {
         status: EventStatus.PUBLISHED,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
+        OR: [
+          // Match events using new startDate field
+          {
+            startDate: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          // Fallback to legacy date field for old events
+          {
+            startDate: null,
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        ],
       };
 
       if (type) {
@@ -3312,6 +3428,10 @@ export class EventService {
           description: true,
           type: true,
           date: true,
+          startDate: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
           location: true,
           mapLink: true,
           images: true,
@@ -3338,7 +3458,9 @@ export class EventService {
       const counts: { [date: string]: number } = {};
 
       events.forEach(event => {
-        const dateKey = new Date(event.date).toISOString().split('T')[0];
+        // Use startDate if available, fallback to legacy date field
+        const eventDate = event.startDate || event.date;
+        const dateKey = new Date(eventDate).toISOString().split('T')[0];
         if (!eventsByDate[dateKey]) {
           eventsByDate[dateKey] = [];
         }
@@ -3395,10 +3517,23 @@ export class EventService {
 
       const where: Prisma.EventWhereInput = {
         status: EventStatus.PUBLISHED,
-        date: {
-          gte: start,
-          lte: end,
-        },
+        OR: [
+          // Match events using new startDate field
+          {
+            startDate: {
+              gte: start,
+              lte: end,
+            },
+          },
+          // Fallback to legacy date field for old events
+          {
+            startDate: null,
+            date: {
+              gte: start,
+              lte: end,
+            },
+          },
+        ],
       };
 
       if (type) {
@@ -3410,6 +3545,7 @@ export class EventService {
         where,
         select: {
           date: true,
+          startDate: true,
         },
       });
 
@@ -3417,7 +3553,9 @@ export class EventService {
       const counts: { [date: string]: number } = {};
       
       events.forEach(event => {
-        const dateKey = new Date(event.date).toISOString().split('T')[0]; // YYYY-MM-DD
+        // Use startDate if available, fallback to legacy date field
+        const eventDate = event.startDate || event.date;
+        const dateKey = new Date(eventDate).toISOString().split('T')[0]; // YYYY-MM-DD
         counts[dateKey] = (counts[dateKey] || 0) + 1;
       });
 

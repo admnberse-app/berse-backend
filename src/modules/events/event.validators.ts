@@ -23,17 +23,42 @@ export const createEventValidators = [
   body('date')
     .optional()
     .isISO8601().withMessage('Invalid date format')
-    .custom((value) => {
+    .custom((value, { req }) => {
       const eventDate = new Date(value);
-      if (eventDate < new Date()) {
-        throw new Error('Event date must be in the future');
+      const now = new Date();
+      
+      // If event has startTime, combine date and time for accurate comparison
+      if (req.body.startTime) {
+        const [hours, minutes] = req.body.startTime.split(':').map(Number);
+        eventDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Allow if date+time hasn't passed yet (allows today's events)
+      if (eventDate < now) {
+        throw new Error('Event date and time must be in the future');
       }
       return true;
     }),
   
   body('startDate')
     .optional()
-    .isISO8601().withMessage('Invalid start date format'),
+    .isISO8601().withMessage('Invalid start date format')
+    .custom((value, { req }) => {
+      const startDate = new Date(value);
+      const now = new Date();
+      
+      // If event has startTime, combine date and time for accurate comparison
+      if (req.body.startTime) {
+        const [hours, minutes] = req.body.startTime.split(':').map(Number);
+        startDate.setHours(hours, minutes, 0, 0);
+      }
+      
+      // Allow if start date+time hasn't passed yet (allows today's events)
+      if (startDate < now) {
+        throw new Error('Event start date and time must be in the future');
+      }
+      return true;
+    }),
   
   body('endDate')
     .optional()

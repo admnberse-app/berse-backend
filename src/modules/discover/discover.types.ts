@@ -128,7 +128,9 @@ export interface EventItem extends BaseDiscoverItem {
   description?: string;
   imageUrl?: string;
   startTime: string;
+  startTimeOnly?: string; // HH:mm format
   endTime?: string;
+  endTimeOnly?: string; // HH:mm format
   location?: {
     name?: string;
     address?: string;

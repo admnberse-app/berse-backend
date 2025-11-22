@@ -823,7 +823,7 @@ export class DashboardService {
               targetId: community.id,
               targetName: community.name,
               targetType: 'community',
-              actionUrl: `/communities/${community.id}/members/pending`,
+              actionUrl: `/communities/${community.id}/pending`,
               metadata: {
                 communityId: community.id,
                 pendingMembers: pendingMembers.map(pm => ({
