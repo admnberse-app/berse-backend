@@ -823,7 +823,7 @@ export class DashboardService {
               targetId: community.id,
               targetName: community.name,
               targetType: 'community',
-              actionUrl: `/communities/${community.id}/pending`,
+              actionUrl: `/communities/my?pendingCount=${totalPending}&returnTo=/dashboard`,
               metadata: {
                 communityId: community.id,
                 pendingMembers: pendingMembers.map(pm => ({
@@ -867,7 +867,7 @@ export class DashboardService {
         priority: 'medium',
         message: `${totalPendingJoins} community join request${totalPendingJoins > 1 ? 's' : ''} pending approval`,
         targetType: 'community',
-        actionUrl: '/profile/communities',
+        actionUrl: '/communities/my/pending?returnTo=/dashboard',
         metadata: {
           pendingCommunities: userPendingJoins.map(pj => ({
             communityId: pj.communityId,
@@ -1201,44 +1201,142 @@ export class DashboardService {
   private async transformActivities(userActivities: any[]): Promise<Activity[]> {
     const activities: Activity[] = [];
 
-    for (const activity of userActivities) {
-      // Map activity types to dashboard format - only include meaningful user actions
-      const activityTypeMap: Record<string, { type: Activity['type'], icon: string, messageTemplate: string }> = {
-        // Events
-        'EVENT_RSVP': { type: 'event_rsvp', icon: '✅', messageTemplate: 'Registered for event' },
-        'EVENT_CHECKIN': { type: 'event_checkin', icon: '📍', messageTemplate: 'Checked in to event' },
-        'EVENT_TICKET_PURCHASE': { type: 'event_rsvp', icon: '🎫', messageTemplate: 'Purchased ticket for event' },
-        
-        // Marketplace
-        'LISTING_CREATE': { type: 'listing_comment', icon: '📝', messageTemplate: 'Created marketplace listing' },
-        'ORDER_PAYMENT_SUCCESS': { type: 'listing_sold', icon: '💰', messageTemplate: 'Completed purchase' },
-        'ORDER_SHIP': { type: 'listing_sold', icon: '📦', messageTemplate: 'Order shipped' },
-        'ORDER_DELIVER': { type: 'listing_sold', icon: '✅', messageTemplate: 'Order delivered' },
-        
-        // Connections & Community
-        'CONNECTION_REQUEST_ACCEPT': { type: 'connection_request', icon: '🤝', messageTemplate: 'Connection accepted' },
-        'CONNECTION_REQUEST_SEND': { type: 'connection_request', icon: '👋', messageTemplate: 'Connection request sent' },
-        
-        // Rewards
-        'POINTS_EARN': { type: 'badge_earned', icon: '⭐', messageTemplate: 'Earned points' },
-        'REWARD_REDEEM': { type: 'badge_earned', icon: '🎁', messageTemplate: 'Redeemed reward' },
-        
-        // Note: Excluding AUTH_LOGIN and other security/system events as they're not meaningful for dashboard
-      };
+    // Map activity types to dashboard format - only include meaningful user actions
+    const activityTypeMap: Record<string, { type: Activity['type'], icon: string, messageTemplate: string }> = {
+      // Events
+      'EVENT_RSVP': { type: 'event_rsvp', icon: '✅', messageTemplate: 'Registered for event' },
+      'EVENT_CHECKIN': { type: 'event_checkin', icon: '📍', messageTemplate: 'Checked in to event' },
+      'EVENT_TICKET_PURCHASE': { type: 'event_rsvp', icon: '🎫', messageTemplate: 'Purchased ticket for event' },
+      
+      // Marketplace
+      'LISTING_CREATE': { type: 'listing_comment', icon: '📝', messageTemplate: 'Created marketplace listing' },
+      'ORDER_PAYMENT_SUCCESS': { type: 'listing_sold', icon: '💰', messageTemplate: 'Completed purchase' },
+      'ORDER_SHIP': { type: 'listing_sold', icon: '📦', messageTemplate: 'Order shipped' },
+      'ORDER_DELIVER': { type: 'listing_sold', icon: '✅', messageTemplate: 'Order delivered' },
+      
+      // Connections & Community
+      'CONNECTION_REQUEST_ACCEPT': { type: 'connection_request', icon: '🤝', messageTemplate: 'Connection accepted' },
+      'CONNECTION_REQUEST_SEND': { type: 'connection_request', icon: '👋', messageTemplate: 'Connection request sent' },
+      
+      // Rewards
+      'POINTS_EARN': { type: 'badge_earned', icon: '⭐', messageTemplate: 'Earned points' },
+      'REWARD_REDEEM': { type: 'badge_earned', icon: '🎁', messageTemplate: 'Redeemed reward' },
+      
+      // Note: Excluding AUTH_LOGIN and other security/system events as they're not meaningful for dashboard
+    };
 
+    // Collect entity IDs by type to fetch in bulk
+    const eventIds = new Set<string>();
+    const listingIds = new Set<string>();
+    const communityIds = new Set<string>();
+    const connectionIds = new Set<string>();
+
+    for (const activity of userActivities) {
       const mapping = activityTypeMap[activity.activityType];
-      if (mapping) {
-        activities.push({
-          id: activity.id,
-          type: mapping.type,
-          icon: mapping.icon,
-          message: mapping.messageTemplate,
-          timestamp: activity.createdAt,
-          targetId: activity.entityId || undefined,
-          targetType: activity.entityType as any,
-          read: false,
-        });
+      if (!mapping || !activity.entityId) continue;
+
+      if (activity.entityType === 'event') {
+        eventIds.add(activity.entityId);
+      } else if (activity.entityType === 'listing') {
+        listingIds.add(activity.entityId);
+      } else if (activity.entityType === 'community') {
+        communityIds.add(activity.entityId);
+      } else if (activity.entityType === 'connection') {
+        connectionIds.add(activity.entityId);
       }
+    }
+
+    // Fetch all entities in parallel
+    const [events, listings, communities, connections] = await Promise.all([
+      eventIds.size > 0
+        ? prisma.event.findMany({
+            where: { id: { in: Array.from(eventIds) } },
+            select: { id: true, title: true },
+          })
+        : Promise.resolve([]),
+      listingIds.size > 0
+        ? prisma.marketplaceListing.findMany({
+            where: { id: { in: Array.from(listingIds) } },
+            select: { id: true, title: true },
+          })
+        : Promise.resolve([]),
+      communityIds.size > 0
+        ? prisma.community.findMany({
+            where: { id: { in: Array.from(communityIds) } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+      connectionIds.size > 0
+        ? prisma.userConnection.findMany({
+            where: { id: { in: Array.from(connectionIds) } },
+            select: { 
+              id: true, 
+              initiatorId: true, 
+              receiverId: true,
+              users_user_connections_initiatorIdTousers: { select: { id: true, fullName: true } },
+              users_user_connections_receiverIdTousers: { select: { id: true, fullName: true } },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Create maps for quick lookup
+    const eventMap = new Map(events.map(e => [e.id, e] as const));
+    const listingMap = new Map(listings.map(l => [l.id, l] as const));
+    const communityMap = new Map(communities.map(c => [c.id, c] as const));
+    const connectionMap = new Map(connections.map(c => [c.id, c] as const));
+
+    for (const activity of userActivities) {
+      const mapping = activityTypeMap[activity.activityType];
+      if (!mapping) continue;
+
+      let message = mapping.messageTemplate;
+      let targetName: string | undefined;
+
+      // Enhance message with entity details
+      if (activity.entityId) {
+        if (activity.entityType === 'event') {
+          const event = eventMap.get(activity.entityId);
+          if (event) {
+            message = `${mapping.messageTemplate}: ${event.title}`;
+            targetName = event.title;
+          }
+        } else if (activity.entityType === 'listing') {
+          const listing = listingMap.get(activity.entityId);
+          if (listing) {
+            message = `${mapping.messageTemplate}: ${listing.title}`;
+            targetName = listing.title;
+          }
+        } else if (activity.entityType === 'community') {
+          const community = communityMap.get(activity.entityId);
+          if (community) {
+            message = `${mapping.messageTemplate}: ${community.name}`;
+            targetName = community.name;
+          }
+        } else if (activity.entityType === 'connection') {
+          const connection = connectionMap.get(activity.entityId);
+          if (connection) {
+            // Determine which user is the "other" person in the connection
+            const otherUser = connection.initiatorId === activity.userId 
+              ? connection.users_user_connections_receiverIdTousers 
+              : connection.users_user_connections_initiatorIdTousers;
+            message = `${mapping.messageTemplate} with ${otherUser.fullName}`;
+            targetName = otherUser.fullName;
+          }
+        }
+      }
+
+      activities.push({
+        id: activity.id,
+        type: mapping.type,
+        icon: mapping.icon,
+        message,
+        targetName,
+        timestamp: activity.createdAt,
+        targetId: activity.entityId || undefined,
+        targetType: activity.entityType as any,
+        read: false,
+      });
     }
 
     // Return only the last 5 meaningful activities

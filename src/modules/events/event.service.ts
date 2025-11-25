@@ -2114,16 +2114,37 @@ export class EventService {
         status: p.status,
         qrCode: p.qrCode,
         registeredAt: p.createdAt,
-        checkedInAt: p.checkedInAt,
-        canceledAt: p.canceledAt,
+        updatedAt: p.updatedAt,
+        // Check-in information
+        checkIn: {
+          isCheckedIn: !!p.checkedInAt,
+          checkedInAt: p.checkedInAt,
+          checkedInTime: p.checkedInAt ? p.checkedInAt.toISOString() : null,
+        },
+        // Cancellation information
+        cancellation: {
+          isCanceled: !!p.canceledAt,
+          canceledAt: p.canceledAt,
+        },
+        // Ticket information
         hasTicket: p.eventTickets.length > 0,
+        ticketCount: p.eventTickets.length,
+        tickets: p.eventTickets.map(t => ({
+          id: t.id,
+          ticketNumber: t.ticketNumber,
+          ticketType: t.ticketType,
+          price: t.price,
+          currency: t.currency,
+          status: t.status,
+          paymentStatus: t.paymentStatus,
+        })),
+        // User information
         user: {
           id: p.user.id,
           fullName: p.user.fullName,
           username: p.user.username,
           profilePicture: getProfilePictureUrl(p.user.profile?.profilePicture),
         },
-        tickets: p.eventTickets,
       }));
     } catch (error: any) {
       logger.error('Error fetching participants:', error);
