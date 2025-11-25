@@ -1981,7 +1981,6 @@ export class UserController {
             currentUserLevel: currentUserTrustInfo.label,
             profileUserLevel: profileUserTrustInfo.label,
             difference,
-            canVouch: currentUserData.trustScore >= 50, // Minimum trust to vouch
           };
         }
 
