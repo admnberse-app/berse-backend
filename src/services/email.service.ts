@@ -708,6 +708,157 @@ export class EmailService {
   }
 
   /**
+   * Send admin password reset email (with temporary password)
+   */
+  async sendAdminPasswordResetEmail(to: string, userName: string, temporaryPassword: string): Promise<boolean> {
+    const template = renderEmailTemplate(EmailTemplate.PASSWORD_RESET, {
+      userName,
+      resetUrl: `${process.env.FRONTEND_URL || 'https://app.berse-app.com'}/login`,
+      expiresIn: '24 hours',
+    });
+
+    // Customize the HTML to include the temporary password
+    const customHtml = template.html.replace(
+      'Click the button below to reset your password:',
+      `<p>Your temporary password is: <strong>${temporaryPassword}</strong></p><p>Please log in and change your password immediately for security reasons.</p>`
+    );
+
+    return this.sendEmail({
+      to,
+      subject: 'Your Password Has Been Reset - Berse',
+      html: customHtml,
+      text: `Your password has been reset by an administrator. Your temporary password is: ${temporaryPassword}. Please log in at ${process.env.FRONTEND_URL || 'https://app.berse-app.com'}/login and change your password immediately.`,
+    });
+  }
+
+  /**
+   * Send account status change notification (banned, suspended, reactivated)
+   */
+  async sendAccountStatusChangeEmail(
+    to: string, 
+    userName: string, 
+    status: 'BANNED' | 'DEACTIVATED' | 'ACTIVE',
+    reason?: string
+  ): Promise<boolean> {
+    let subject: string;
+    let html: string;
+    let text: string;
+
+    switch (status) {
+      case 'BANNED':
+        subject = 'Your Account Has Been Banned - Berse';
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #d32f2f;">Account Banned</h2>
+            <p>Hello ${userName},</p>
+            <p>We regret to inform you that your Berse account has been permanently banned due to violations of our Terms of Service.</p>
+            ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+            <p>If you believe this was done in error, please contact our support team at <a href="mailto:support@berse-app.com">support@berse-app.com</a></p>
+            <p>Thank you for your understanding.</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">The Berse Team</p>
+          </div>
+        `;
+        text = `Account Banned\n\nHello ${userName},\n\nYour Berse account has been permanently banned due to violations of our Terms of Service.${reason ? `\n\nReason: ${reason}` : ''}\n\nIf you believe this was done in error, please contact support@berse-app.com`;
+        break;
+
+      case 'DEACTIVATED':
+        subject = 'Your Account Has Been Suspended - Berse';
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #f57c00;">Account Suspended</h2>
+            <p>Hello ${userName},</p>
+            <p>Your Berse account has been temporarily suspended.</p>
+            ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+            <p>Your account will be reviewed by our team. If you have questions or believe this was done in error, please contact our support team at <a href="mailto:support@berse-app.com">support@berse-app.com</a></p>
+            <p>Thank you for your understanding.</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">The Berse Team</p>
+          </div>
+        `;
+        text = `Account Suspended\n\nHello ${userName},\n\nYour Berse account has been temporarily suspended.${reason ? `\n\nReason: ${reason}` : ''}\n\nPlease contact support@berse-app.com for more information.`;
+        break;
+
+      case 'ACTIVE':
+        subject = 'Your Account Has Been Reactivated - Berse';
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4caf50;">Account Reactivated</h2>
+            <p>Hello ${userName},</p>
+            <p>Good news! Your Berse account has been reactivated and you can now access all features.</p>
+            <p>You can log in at <a href="${process.env.FRONTEND_URL || 'https://app.berse-app.com'}/login">Berse</a></p>
+            <p>Welcome back!</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">The Berse Team</p>
+          </div>
+        `;
+        text = `Account Reactivated\n\nHello ${userName},\n\nYour Berse account has been reactivated. You can now log in at ${process.env.FRONTEND_URL || 'https://app.berse-app.com'}/login\n\nWelcome back!`;
+        break;
+    }
+
+    return this.sendEmail({
+      to,
+      subject,
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Send admin warning email
+   */
+  async sendAdminWarningEmail(to: string, userName: string, reason: string, message: string): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #f57c00;">Important: Account Warning</h2>
+        <p>Hello ${userName},</p>
+        <p>This is an official warning regarding your Berse account.</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <div style="background-color: #fff3e0; padding: 15px; border-left: 4px solid #f57c00; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Message from Admin:</strong></p>
+          <p style="margin: 10px 0 0 0;">${message}</p>
+        </div>
+        <p>Please review our <a href="${process.env.FRONTEND_URL || 'https://app.berse-app.com'}/terms">Terms of Service</a> and <a href="${process.env.FRONTEND_URL || 'https://app.berse-app.com'}/community-guidelines">Community Guidelines</a>.</p>
+        <p>Continued violations may result in account suspension or permanent ban.</p>
+        <p>If you have questions, please contact our support team at <a href="mailto:support@berse-app.com">support@berse-app.com</a></p>
+        <p style="color: #666; font-size: 12px; margin-top: 30px;">The Berse Team</p>
+      </div>
+    `;
+
+    const text = `Account Warning\n\nHello ${userName},\n\nThis is an official warning regarding your Berse account.\n\nReason: ${reason}\n\nMessage from Admin:\n${message}\n\nPlease review our Terms of Service and Community Guidelines. Continued violations may result in account suspension.\n\nContact: support@berse-app.com`;
+
+    return this.sendEmail({
+      to,
+      subject: 'Important: Account Warning - Berse',
+      html,
+      text,
+    });
+  }
+
+  /**
+   * Send account deletion notification
+   */
+  async sendAccountDeletionEmail(to: string, userName: string, reason: string): Promise<boolean> {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #d32f2f;">Account Deleted</h2>
+        <p>Hello ${userName},</p>
+        <p>Your Berse account has been permanently deleted.</p>
+        ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+        <p>All your data has been removed from our system in accordance with our privacy policy.</p>
+        <p>If you believe this was done in error, please contact our support team immediately at <a href="mailto:support@berse-app.com">support@berse-app.com</a></p>
+        <p style="color: #666; font-size: 12px; margin-top: 30px;">The Berse Team</p>
+      </div>
+    `;
+
+    const text = `Account Deleted\n\nHello ${userName},\n\nYour Berse account has been permanently deleted.${reason ? `\n\nReason: ${reason}` : ''}\n\nContact: support@berse-app.com if you believe this was an error.`;
+
+    return this.sendEmail({
+      to,
+      subject: 'Account Deletion Confirmation - Berse',
+      html,
+      text,
+    });
+  }
+
+  /**
    * Generate calendar attachment for event emails
    */
   private generateEventCalendarAttachment(data: EventEmailData): EmailAttachment | null {

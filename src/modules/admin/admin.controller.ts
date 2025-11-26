@@ -67,6 +67,233 @@ export class AdminController {
   }
 
   /**
+   * GET /v2/admin/communities
+   * Get paginated list of communities with filters
+   */
+  static async getCommunities(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const search = req.query.search as string;
+      const category = req.query.category as string;
+      const city = req.query.city as string;
+      const country = req.query.country as string;
+      const isVerified = req.query.isVerified ? req.query.isVerified === 'true' : undefined;
+      const sortBy = (req.query.sortBy as string) || 'createdAt';
+      const sortOrder = (req.query.sortOrder as string) || 'desc';
+
+      const result = await AdminController.adminService.getCommunities({
+        page,
+        limit,
+        search,
+        category,
+        city,
+        country,
+        isVerified,
+        sortBy,
+        sortOrder,
+      });
+
+      sendSuccess(res, result, 'Communities retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /v2/admin/communities/:communityId
+   * Get detailed community information
+   */
+  static async getCommunityById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { communityId } = req.params;
+      const result = await AdminController.adminService.getCommunityById(communityId);
+      sendSuccess(res, result, 'Community details retrieved successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/communities/:communityId/verify
+   * Update community verification status
+   */
+  static async verifyCommunity(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { communityId } = req.params;
+      const { isVerified } = req.body;
+
+      if (typeof isVerified !== 'boolean') {
+        throw new AppError('isVerified must be a boolean', 400);
+      }
+
+      const result = await AdminController.adminService.verifyCommunity(communityId, isVerified, adminId);
+      sendSuccess(res, result, `Community ${isVerified ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /v2/admin/communities/:communityId
+   * Soft delete a community
+   */
+  static async deleteCommunity(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { communityId } = req.params;
+      const { reason } = req.body;
+
+      if (!reason) {
+        throw new AppError('Reason is required for community deletion', 400);
+      }
+
+      const result = await AdminController.adminService.deleteCommunity(communityId, reason, adminId);
+      sendSuccess(res, result, 'Community deleted successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/communities/members/:memberId/approve
+   * Approve or reject a community join request
+   */
+  static async approveCommunityJoinRequest(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { memberId } = req.params;
+      const { isApproved } = req.body;
+
+      if (typeof isApproved !== 'boolean') {
+        throw new AppError('isApproved must be a boolean', 400);
+      }
+
+      const result = await AdminController.adminService.approveCommunityJoinRequest(memberId, isApproved, adminId);
+      sendSuccess(res, result, `Community join request ${isApproved ? 'approved' : 'rejected'} successfully`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/communities/:communityId/notes
+   * Add admin notes to a community
+   */
+  static async addCommunityNote(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { communityId } = req.params;
+      const { note } = req.body;
+
+      if (!note || typeof note !== 'string') {
+        throw new AppError('Note is required', 400);
+      }
+
+      const result = await AdminController.adminService.addCommunityNote(communityId, note, adminId);
+      sendSuccess(res, result, 'Community note added successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/communities/:communityId/featured
+   * Update community featured status
+   */
+  static async updateCommunityFeatured(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { communityId } = req.params;
+      const { isFeatured } = req.body;
+
+      if (typeof isFeatured !== 'boolean') {
+        throw new AppError('isFeatured must be a boolean', 400);
+      }
+
+      const result = await AdminController.adminService.updateCommunityFeatured(communityId, isFeatured, adminId);
+      sendSuccess(res, result, `Community ${isFeatured ? 'featured' : 'unfeatured'} successfully`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/communities/:communityId/send-warning
+   * Send warning to community creator
+   */
+  static async sendCommunityWarning(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { communityId } = req.params;
+      const { reason, message } = req.body;
+
+      if (!reason || !message) {
+        throw new AppError('Reason and message are required', 400);
+      }
+
+      const result = await AdminController.adminService.sendCommunityWarning(
+        communityId,
+        reason,
+        message,
+        adminId
+      );
+      sendSuccess(res, result, 'Community warning sent successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /v2/admin/events/stats
    * Get detailed event statistics
    */
@@ -145,10 +372,10 @@ export class AdminController {
   }
 
   /**
-   * PATCH /v2/admin/users/:userId
-   * Update user information (role, status, verification)
+   * POST /v2/admin/users/:userId/status
+   * Update user status (activate, suspend, ban)
    */
-  static async updateUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async updateUserStatus(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userRole = req.user!.role;
 
@@ -157,10 +384,91 @@ export class AdminController {
       }
 
       const { userId } = req.params;
-      const updates = req.body;
+      const { status, reason } = req.body;
+      const adminId = req.user!.id;
 
-      const updatedUser = await AdminController.adminService.updateUser(userId, updates);
-      sendSuccess(res, updatedUser, 'User updated successfully');
+      if (!status || !['ACTIVE', 'DEACTIVATED', 'BANNED'].includes(status)) {
+        throw new AppError('Invalid status. Must be ACTIVE, DEACTIVATED, or BANNED', 400);
+      }
+
+      const updatedUser = await AdminController.adminService.updateUserStatus(userId, status, reason, adminId);
+      sendSuccess(res, updatedUser, `User status updated to ${status} successfully`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/users/:userId/verify
+   * Verify user identity and update trust level
+   */
+  static async verifyUserIdentity(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { userId } = req.params;
+      const { trustLevel } = req.body;
+      const adminId = req.user!.id;
+
+      if (!trustLevel) {
+        throw new AppError('Trust level is required', 400);
+      }
+
+      const verifiedUser = await AdminController.adminService.verifyUser(userId, trustLevel, adminId);
+      sendSuccess(res, verifiedUser, 'User verified successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/users/:userId/notes
+   * Add admin note to user
+   */
+  static async addUserNote(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { userId } = req.params;
+      const { note } = req.body;
+      const adminId = req.user!.id;
+
+      if (!note) {
+        throw new AppError('Note is required', 400);
+      }
+
+      const activity = await AdminController.adminService.addAdminNote(userId, note, adminId);
+      sendSuccess(res, activity, 'Admin note added successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/users/:userId/verify-email
+   * Manually verify user email (emergency override)
+   */
+  static async verifyUserEmail(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { userId } = req.params;
+      const adminId = req.user!.id;
+
+      const result = await AdminController.adminService.verifyUserEmail(userId, adminId);
+      sendSuccess(res, result, result.alreadyVerified ? 'Email was already verified' : 'Email verified successfully');
     } catch (error) {
       next(error);
     }
@@ -168,7 +476,7 @@ export class AdminController {
 
   /**
    * DELETE /v2/admin/users/:userId
-   * Soft delete a user
+   * Permanently delete a user
    */
   static async deleteUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -179,41 +487,25 @@ export class AdminController {
       }
 
       const { userId } = req.params;
-      await AdminController.adminService.deleteUser(userId);
-
-      sendSuccess(res, null, 'User deleted successfully');
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /v2/admin/users/:userId/suspend
-   * Suspend a user account
-   */
-  static async suspendUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userRole = req.user!.role;
-
-      if (userRole !== 'ADMIN') {
-        throw new AppError('Unauthorized: Admin access required', 403);
-      }
-
-      const { userId } = req.params;
       const { reason } = req.body;
+      const adminId = req.user!.id;
 
-      const suspendedUser = await AdminController.adminService.suspendUser(userId, reason);
-      sendSuccess(res, suspendedUser, 'User suspended successfully');
+      if (!reason) {
+        throw new AppError('Reason for deletion is required', 400);
+      }
+
+      const deletedUser = await AdminController.adminService.deleteUser(userId, reason, adminId);
+      sendSuccess(res, deletedUser, 'User deleted successfully');
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * POST /v2/admin/users/:userId/activate
-   * Activate a suspended user account
+   * POST /v2/admin/users/:userId/reset-password
+   * Reset user password - generates random password and sends email
    */
-  static async activateUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  static async resetUserPassword(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userRole = req.user!.role;
 
@@ -222,9 +514,37 @@ export class AdminController {
       }
 
       const { userId } = req.params;
-      const activatedUser = await AdminController.adminService.activateUser(userId);
+      const adminId = req.user!.id;
 
-      sendSuccess(res, activatedUser, 'User activated successfully');
+      const result = await AdminController.adminService.resetUserPassword(userId, adminId);
+      sendSuccess(res, result, 'Password reset successfully. User will receive an email with temporary password.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/users/:userId/role
+   * Update user role
+   */
+  static async updateUserRole(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { userId } = req.params;
+      const { role } = req.body;
+      const adminId = req.user!.id;
+
+      if (!role || !['GENERAL_USER', 'GUIDE', 'MODERATOR', 'ADMIN'].includes(role)) {
+        throw new AppError('Invalid role. Must be GENERAL_USER, GUIDE, MODERATOR, or ADMIN', 400);
+      }
+
+      const updatedUser = await AdminController.adminService.updateUserRole(userId, role, adminId);
+      sendSuccess(res, updatedUser, `User role updated to ${role} successfully`);
     } catch (error) {
       next(error);
     }
@@ -232,7 +552,7 @@ export class AdminController {
 
   /**
    * GET /v2/admin/users/export
-   * Export users data as CSV
+   * Export users data as Excel
    */
   static async exportUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -244,12 +564,25 @@ export class AdminController {
 
       const role = req.query.role as string;
       const status = req.query.status as string;
+      const trustLevel = req.query.trustLevel as string;
+      const registrationDateFrom = req.query.registrationDateFrom as string;
+      const registrationDateTo = req.query.registrationDateTo as string;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const search = req.query.search as string;
 
-      const csvData = await AdminController.adminService.exportUsers({ role, status });
+      const excelBuffer = await AdminController.adminService.exportUsers({
+        role,
+        status,
+        trustLevel,
+        registrationDateFrom,
+        registrationDateTo,
+        limit,
+        search,
+      });
       
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="users-export-${Date.now()}.csv"`);
-      res.send(csvData);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="users-export-${Date.now()}.xlsx"`);
+      res.send(excelBuffer);
     } catch (error) {
       next(error);
     }
@@ -275,8 +608,8 @@ export class AdminController {
   }
 
   /**
-   * POST /v2/admin/users/:userId/verify
-   * Manually verify a user
+   * POST /v2/admin/users/:userId/verify (legacy - kept for backward compatibility)
+   * Manually verify a user's email - assigns 'verified' trust level
    */
   static async verifyUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -287,7 +620,8 @@ export class AdminController {
       }
 
       const { userId } = req.params;
-      const verifiedUser = await AdminController.adminService.verifyUser(userId);
+      const adminId = req.user!.id;
+      const verifiedUser = await AdminController.adminService.verifyUser(userId, 'verified', adminId);
 
       sendSuccess(res, verifiedUser, 'User verified successfully');
     } catch (error) {
@@ -574,6 +908,33 @@ export class AdminController {
   }
 
   /**
+   * GET /v2/admin/events/:eventId/export-participants
+   * Export event participants to Excel
+   */
+  static async exportEventParticipants(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { eventId } = req.params;
+      const { status } = req.query;
+
+      const result = await AdminController.adminService.exportEventParticipants(eventId, {
+        status: status as string,
+      });
+
+      res.setHeader('Content-Type', result.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.buffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * PATCH /v2/admin/events/:eventId
    * Update event information
    */
@@ -654,6 +1015,92 @@ export class AdminController {
       const publishedEvent = await AdminController.adminService.publishEvent(eventId);
 
       sendSuccess(res, publishedEvent, 'Event published successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/events/:eventId/notes
+   * Add admin notes to an event
+   */
+  static async addEventNote(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { eventId } = req.params;
+      const { note } = req.body;
+
+      if (!note || typeof note !== 'string') {
+        throw new AppError('Note is required', 400);
+      }
+
+      const result = await AdminController.adminService.addEventNote(eventId, note, adminId);
+      sendSuccess(res, result, 'Event note added successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/events/:eventId/featured
+   * Update event featured status
+   */
+  static async updateEventFeatured(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { eventId } = req.params;
+      const { isFeatured } = req.body;
+
+      if (typeof isFeatured !== 'boolean') {
+        throw new AppError('isFeatured must be a boolean', 400);
+      }
+
+      const result = await AdminController.adminService.updateEventFeatured(eventId, isFeatured, adminId);
+      sendSuccess(res, result, `Event ${isFeatured ? 'featured' : 'unfeatured'} successfully`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /v2/admin/events/:eventId/send-warning
+   * Send warning to event host
+   */
+  static async sendEventWarning(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userRole = req.user!.role;
+      const adminId = req.user!.id;
+
+      if (userRole !== 'ADMIN') {
+        throw new AppError('Unauthorized: Admin access required', 403);
+      }
+
+      const { eventId } = req.params;
+      const { reason, message } = req.body;
+
+      if (!reason || !message) {
+        throw new AppError('Reason and message are required', 400);
+      }
+
+      const result = await AdminController.adminService.sendEventWarning(
+        eventId,
+        reason,
+        message,
+        adminId
+      );
+      sendSuccess(res, result, 'Event warning sent successfully');
     } catch (error) {
       next(error);
     }

@@ -193,6 +193,384 @@ router.get('/communities/stats', asyncHandler(AdminController.getCommunityStats)
 
 /**
  * @swagger
+ * /v2/admin/communities:
+ *   get:
+ *     summary: Get paginated list of communities
+ *     description: Get a paginated list of communities with search and filter capabilities
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: city
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: isVerified
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Communities retrieved successfully
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.get('/communities', asyncHandler(AdminController.getCommunities));
+
+/**
+ * @swagger
+ * /v2/admin/communities/{communityId}:
+ *   get:
+ *     summary: Get community details by ID
+ *     description: Get detailed community information organized in tabs
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Community details retrieved successfully
+ *       404:
+ *         description: Community not found
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.get('/communities/:communityId', asyncHandler(AdminController.getCommunityById));
+
+/**
+ * @swagger
+ * /v2/admin/communities/{communityId}/verify:
+ *   post:
+ *     summary: Verify or unverify a community
+ *     description: Update community verification status
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isVerified
+ *             properties:
+ *               isVerified:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Community verification status updated successfully
+ *       400:
+ *         description: Invalid request body
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/communities/:communityId/verify', asyncHandler(AdminController.verifyCommunity));
+
+/**
+ * @swagger
+ * /v2/admin/communities/{communityId}:
+ *   delete:
+ *     summary: Delete a community (soft delete)
+ *     description: Soft delete a community with reason
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Community deleted successfully
+ *       400:
+ *         description: Reason is required
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.delete('/communities/:communityId', asyncHandler(AdminController.deleteCommunity));
+
+/**
+ * @swagger
+ * /v2/admin/communities/members/{memberId}/approve:
+ *   post:
+ *     summary: Approve or reject community join request
+ *     description: Approve or reject a pending community join request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isApproved
+ *             properties:
+ *               isApproved:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Community join request processed successfully
+ *       400:
+ *         description: Invalid request body
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/communities/members/:memberId/approve', asyncHandler(AdminController.approveCommunityJoinRequest));
+
+/**
+ * @swagger
+ * /v2/admin/communities/{communityId}/notes:
+ *   post:
+ *     summary: Add admin notes to a community
+ *     description: Add administrative notes to a community for internal tracking
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - note
+ *             properties:
+ *               note:
+ *                 type: string
+ *                 description: Admin note to add to the community
+ *                 example: "Flagged for review due to user reports"
+ *     responses:
+ *       200:
+ *         description: Community note added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Community note added successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communityId:
+ *                       type: string
+ *                     note:
+ *                       type: string
+ *                     addedBy:
+ *                       type: string
+ *                     addedAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Note is required
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/communities/:communityId/notes', asyncHandler(AdminController.addCommunityNote));
+
+/**
+ * @swagger
+ * /v2/admin/communities/{communityId}/featured:
+ *   post:
+ *     summary: Feature or unfeature a community
+ *     description: Update community featured status to highlight it on the platform
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isFeatured
+ *             properties:
+ *               isFeatured:
+ *                 type: boolean
+ *                 description: Whether the community should be featured
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Community featured status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Community featured successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communityId:
+ *                       type: string
+ *                     isFeatured:
+ *                       type: boolean
+ *                     updatedBy:
+ *                       type: string
+ *       400:
+ *         description: isFeatured must be a boolean
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/communities/:communityId/featured', asyncHandler(AdminController.updateCommunityFeatured));
+
+/**
+ * @swagger
+ * /v2/admin/communities/{communityId}/send-warning:
+ *   post:
+ *     summary: Send warning to community creator
+ *     description: Send a formal warning email to the community creator with specified reason and message
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: communityId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *               - message
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Short reason for the warning
+ *                 example: "Inappropriate content"
+ *               message:
+ *                 type: string
+ *                 description: Detailed warning message
+ *                 example: "Your community has been flagged for containing content that violates our community guidelines. Please review and remove the inappropriate posts within 48 hours."
+ *     responses:
+ *       200:
+ *         description: Community warning sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Community warning sent successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     communityId:
+ *                       type: string
+ *                     creatorId:
+ *                       type: string
+ *                     reason:
+ *                       type: string
+ *                     sentAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Reason and message are required
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/communities/:communityId/send-warning', asyncHandler(AdminController.sendCommunityWarning));
+
+/**
+ * @swagger
  * /v2/admin/events/stats:
  *   get:
  *     summary: Get detailed event statistics
@@ -281,8 +659,8 @@ router.get('/users', asyncHandler(AdminController.getUsers));
  * @swagger
  * /v2/admin/users/export:
  *   get:
- *     summary: Export users as CSV
- *     description: Export filtered users data as a CSV file
+ *     summary: Export users as Excel
+ *     description: Export filtered users data as an Excel (.xlsx) file with comprehensive user information
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -291,19 +669,51 @@ router.get('/users', asyncHandler(AdminController.getUsers));
  *         name: role
  *         schema:
  *           type: string
- *         description: Filter by role
+ *           enum: [GENERAL_USER, ADMIN, MODERATOR, GUIDE]
+ *         description: Filter by user role
  *       - in: query
  *         name: status
  *         schema:
  *           type: string
- *         description: Filter by status
+ *           enum: [ACTIVE, DEACTIVATED, BANNED, PENDING]
+ *         description: Filter by account status
+ *       - in: query
+ *         name: trustLevel
+ *         schema:
+ *           type: string
+ *           enum: [starter, trusted, leader]
+ *         description: Filter by trust level
+ *       - in: query
+ *         name: registrationDateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter users registered from this date (ISO 8601 format)
+ *       - in: query
+ *         name: registrationDateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter users registered until this date (ISO 8601 format)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10000
+ *         description: Maximum number of records to export
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name, email, or username
  *     responses:
  *       200:
- *         description: CSV file generated
+ *         description: Excel file generated successfully
  *         content:
- *           text/csv:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
  *             schema:
  *               type: string
+ *               format: binary
  *       403:
  *         description: Unauthorized - Admin access required
  */
@@ -331,7 +741,7 @@ router.get('/users/pending-verification', asyncHandler(AdminController.getPendin
  * /v2/admin/users/{userId}:
  *   get:
  *     summary: Get user details
- *     description: Get detailed information about a specific user
+ *     description: Get detailed information about a specific user organized in tabs
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -349,9 +759,9 @@ router.get('/users/pending-verification', asyncHandler(AdminController.getPendin
  *         description: Unauthorized - Admin access required
  *       404:
  *         description: User not found
- *   patch:
- *     summary: Update user
- *     description: Update user information (role, status, trust level)
+ *   delete:
+ *     summary: Delete user
+ *     description: Permanently delete a user account
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -368,27 +778,146 @@ router.get('/users/pending-verification', asyncHandler(AdminController.getPendin
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - reason
  *             properties:
- *               role:
+ *               reason:
  *                 type: string
- *                 enum: [ADMIN, MODERATOR, GUIDE, GENERAL_USER]
- *               status:
- *                 type: string
- *                 enum: [ACTIVE, SUSPENDED, DELETED, PENDING]
- *               trustLevel:
- *                 type: string
- *               trustScore:
- *                 type: number
+ *                 description: Reason for deletion
  *     responses:
  *       200:
- *         description: User updated successfully
+ *         description: User deleted successfully
  *       403:
  *         description: Unauthorized - Admin access required
  *       404:
  *         description: User not found
- *   delete:
- *     summary: Delete user
- *     description: Soft delete a user account
+ */
+router.get('/users/:userId', asyncHandler(AdminController.getUserById));
+router.delete('/users/:userId', asyncHandler(AdminController.deleteUser));
+
+/**
+ * @swagger
+ * /v2/admin/users/{userId}/status:
+ *   post:
+ *     summary: Update user status
+ *     description: Update user status to ACTIVE, DEACTIVATED, or BANNED
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [ACTIVE, DEACTIVATED, BANNED]
+ *                 description: New user status
+ *               reason:
+ *                 type: string
+ *                 description: Reason for status change
+ *     responses:
+ *       200:
+ *         description: User status updated successfully
+ *       400:
+ *         description: Invalid status
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/users/:userId/status', asyncHandler(AdminController.updateUserStatus));
+
+/**
+ * @swagger
+ * /v2/admin/users/{userId}/verify:
+ *   post:
+ *     summary: Verify user identity
+ *     description: Verify user and update trust level
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - trustLevel
+ *             properties:
+ *               trustLevel:
+ *                 type: string
+ *                 description: Trust level to assign (e.g., verified, trusted)
+ *     responses:
+ *       200:
+ *         description: User verified successfully
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/users/:userId/verify', asyncHandler(AdminController.verifyUserIdentity));
+
+/**
+ * @swagger
+ * /v2/admin/users/{userId}/notes:
+ *   post:
+ *     summary: Add admin note
+ *     description: Add an admin note to user account
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - note
+ *             properties:
+ *               note:
+ *                 type: string
+ *                 description: Admin note content
+ *     responses:
+ *       200:
+ *         description: Note added successfully
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/users/:userId/notes', asyncHandler(AdminController.addUserNote));
+
+/**
+ * @swagger
+ * /v2/admin/users/{userId}/verify-email:
+ *   post:
+ *     summary: Manually verify user email (emergency override)
+ *     description: |
+ *       Admin can manually verify a user's email address in emergency situations.
+ *       This bypasses the normal email verification flow and immediately marks the email as verified.
+ *       Use cases: User lost access to email, email service issues, support requests, account recovery.
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -401,22 +930,49 @@ router.get('/users/pending-verification', asyncHandler(AdminController.getPendin
  *         description: User ID
  *     responses:
  *       200:
- *         description: User deleted successfully
+ *         description: Email verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Email verified successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     verifiedAt:
+ *                       type: string
+ *                       format: date-time
+ *                     verifiedBy:
+ *                       type: string
+ *                       description: Admin ID who verified the email
+ *                     alreadyVerified:
+ *                       type: boolean
+ *                       description: True if email was already verified
+ *                     message:
+ *                       type: string
  *       403:
  *         description: Unauthorized - Admin access required
  *       404:
  *         description: User not found
  */
-router.get('/users/:userId', asyncHandler(AdminController.getUserById));
-router.patch('/users/:userId', asyncHandler(AdminController.updateUser));
-router.delete('/users/:userId', asyncHandler(AdminController.deleteUser));
+router.post('/users/:userId/verify-email', asyncHandler(AdminController.verifyUserEmail));
 
 /**
  * @swagger
- * /v2/admin/users/{userId}/suspend:
+ * /v2/admin/users/{userId}/reset-password:
  *   post:
- *     summary: Suspend user
- *     description: Suspend a user account
+ *     summary: Reset user password
+ *     description: Reset user password to a new value
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -433,23 +989,25 @@ router.delete('/users/:userId', asyncHandler(AdminController.deleteUser));
  *           schema:
  *             type: object
  *             properties:
- *               reason:
+ *               note:
  *                 type: string
- *                 description: Reason for suspension
+ *                 description: Optional note about password reset reason
  *     responses:
  *       200:
- *         description: User suspended successfully
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid password
  *       403:
  *         description: Unauthorized - Admin access required
  */
-router.post('/users/:userId/suspend', asyncHandler(AdminController.suspendUser));
+router.post('/users/:userId/reset-password', asyncHandler(AdminController.resetUserPassword));
 
 /**
  * @swagger
- * /v2/admin/users/{userId}/activate:
+ * /v2/admin/users/{userId}/role:
  *   post:
- *     summary: Activate user
- *     description: Activate a suspended user account
+ *     summary: Update user role
+ *     description: Update user role to USER, GUIDE, MODERATOR, or ADMIN
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -460,37 +1018,28 @@ router.post('/users/:userId/suspend', asyncHandler(AdminController.suspendUser))
  *         schema:
  *           type: string
  *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - role
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [USER, GUIDE, MODERATOR, ADMIN]
+ *                 description: New user role
  *     responses:
  *       200:
- *         description: User activated successfully
+ *         description: Role updated successfully
+ *       400:
+ *         description: Invalid role
  *       403:
  *         description: Unauthorized - Admin access required
  */
-router.post('/users/:userId/activate', asyncHandler(AdminController.activateUser));
-
-/**
- * @swagger
- * /v2/admin/users/{userId}/verify:
- *   post:
- *     summary: Verify user
- *     description: Manually verify a user's email and phone
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: User verified successfully
- *       403:
- *         description: Unauthorized - Admin access required
- */
-router.post('/users/:userId/verify', asyncHandler(AdminController.verifyUser));
+router.post('/users/:userId/role', asyncHandler(AdminController.updateUserRole));
 
 /**
  * @swagger
@@ -1090,6 +1639,43 @@ router.delete('/events/:eventId', asyncHandler(AdminController.deleteEvent));
 
 /**
  * @swagger
+ * /v2/admin/events/{eventId}/export-participants:
+ *   get:
+ *     summary: Export event participants to Excel
+ *     description: Export detailed participant information for an event with optional status filtering
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Event ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [REGISTERED, CONFIRMED, CHECKED_IN, CANCELED, NO_SHOW]
+ *         description: Filter by participant status
+ *     responses:
+ *       200:
+ *         description: Excel file with participant data
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Unauthorized - Admin access required
+ *       404:
+ *         description: Event not found
+ */
+router.get('/events/:eventId/export-participants', asyncHandler(AdminController.exportEventParticipants));
+
+/**
+ * @swagger
  * /v2/admin/events/{eventId}/cancel:
  *   post:
  *     summary: Cancel event
@@ -1141,6 +1727,120 @@ router.post('/events/:eventId/cancel', asyncHandler(AdminController.cancelEvent)
  *         description: Unauthorized - Admin access required
  */
 router.post('/events/:eventId/publish', asyncHandler(AdminController.publishEvent));
+
+/**
+ * @swagger
+ * /v2/admin/events/{eventId}/notes:
+ *   post:
+ *     summary: Add admin notes to an event
+ *     description: Add administrative notes to an event for internal tracking
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - note
+ *             properties:
+ *               note:
+ *                 type: string
+ *                 description: Admin note to add to the event
+ *     responses:
+ *       200:
+ *         description: Event note added successfully
+ *       400:
+ *         description: Note is required
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/events/:eventId/notes', asyncHandler(AdminController.addEventNote));
+
+/**
+ * @swagger
+ * /v2/admin/events/{eventId}/featured:
+ *   post:
+ *     summary: Feature or unfeature an event
+ *     description: Update event featured status to highlight it on the platform
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isFeatured
+ *             properties:
+ *               isFeatured:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Event featured status updated successfully
+ *       400:
+ *         description: isFeatured must be a boolean
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/events/:eventId/featured', asyncHandler(AdminController.updateEventFeatured));
+
+/**
+ * @swagger
+ * /v2/admin/events/{eventId}/send-warning:
+ *   post:
+ *     summary: Send warning to event host
+ *     description: Send a formal warning email to the event host
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *               - message
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Short reason for the warning
+ *               message:
+ *                 type: string
+ *                 description: Detailed warning message
+ *     responses:
+ *       200:
+ *         description: Event warning sent successfully
+ *       400:
+ *         description: Reason and message are required
+ *       403:
+ *         description: Unauthorized - Admin access required
+ */
+router.post('/events/:eventId/send-warning', asyncHandler(AdminController.sendEventWarning));
 
 /**
  * @swagger
