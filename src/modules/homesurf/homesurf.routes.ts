@@ -383,6 +383,29 @@ router.post(
 
 /**
  * @swagger
+ * /v2/homesurf/bookings/host:
+ *   get:
+ *     summary: Get bookings as host
+ *     tags: [HomeSurf]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of bookings
+ */
+router.get(
+  '/bookings/host',
+  authenticateToken,
+  asyncHandler(homeSurfController.getBookingsAsHost.bind(homeSurfController))
+);
+
+/**
+ * @swagger
  * /v2/homesurf/bookings/{bookingId}:
  *   get:
  *     summary: Get booking by ID
@@ -407,29 +430,6 @@ router.get(
   '/bookings/:bookingId',
   authenticateToken,
   asyncHandler(homeSurfController.getBooking.bind(homeSurfController))
-);
-
-/**
- * @swagger
- * /v2/homesurf/bookings/host:
- *   get:
- *     summary: Get bookings as host
- *     tags: [HomeSurf]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: List of bookings
- */
-router.get(
-  '/bookings/host',
-  authenticateToken,
-  asyncHandler(homeSurfController.getBookingsAsHost.bind(homeSurfController))
 );
 
 /**

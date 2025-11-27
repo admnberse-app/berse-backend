@@ -4445,11 +4445,43 @@ export class AdminService {
       throw new Error(`Invalid trust level. Must be one of: ${validTrustLevels.join(', ')}`);
     }
 
-    // Update trust level
+    // Get minimum trust score for the trust level
+    const trustScoreMap: { [key: string]: number } = {
+      starter: 0,
+      trusted: 31,
+      leader: 61,
+    };
+    const newTrustScore = trustScoreMap[trustLevel];
+
+    // Only update trust score if new score is higher than current
+    const trustScore = Math.max(user.trustScore, newTrustScore);
+
+    // Update trust level and trust score
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { trustLevel },
+      data: { 
+        trustLevel,
+        trustScore,
+      },
     });
+
+    // Record trust score change in history if score changed
+    if (trustScore !== user.trustScore) {
+      await prisma.trustScoreHistory.create({
+        data: {
+          userId,
+          score: trustScore,
+          previousScore: user.trustScore,
+          change: trustScore - user.trustScore,
+          reason: 'Admin verification - trust level set',
+          metadata: {
+            trustLevel,
+            adminId: adminId || 'system',
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    }
 
     // Log the verification
     if (adminId) {

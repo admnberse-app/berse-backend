@@ -74,11 +74,33 @@ const corsOptions = config.isDevelopment
           return callback(null, true);
         }
         
-        // Check for wildcard patterns (e.g., *.berse-app.com)
-        const wildcardPatterns = allowedOrigins.filter(pattern => pattern.startsWith('*.'));
+        // Check for wildcard patterns (e.g., *.berse-app.com or https://*.berse-app.com)
+        const wildcardPatterns = allowedOrigins.filter(pattern => pattern.includes('*'));
         for (const pattern of wildcardPatterns) {
-          const domain = pattern.substring(2); // Remove '*.' prefix
-          if (origin.endsWith(`.${domain}`) || origin === domain) {
+          // Extract protocol and domain
+          let protocol = '';
+          let domain = pattern;
+          
+          if (pattern.startsWith('https://') || pattern.startsWith('http://')) {
+            const parts = pattern.split('://');
+            protocol = parts[0] + '://';
+            domain = parts[1];
+          }
+          
+          // Remove wildcard prefix
+          if (domain.startsWith('*.')) {
+            domain = domain.substring(2);
+          }
+          
+          // Check if origin matches the pattern
+          const fullPattern = protocol ? `${protocol}*.${domain}` : `*.${domain}`;
+          const originWithoutProtocol = origin.replace(/^https?:\/\//, '');
+          const domainToMatch = domain;
+          
+          // Match: subdomain.domain.com or domain.com
+          if (originWithoutProtocol.endsWith(`.${domainToMatch}`) || 
+              originWithoutProtocol === domainToMatch ||
+              origin === `${protocol}${domainToMatch}`) {
             return callback(null, true);
           }
         }

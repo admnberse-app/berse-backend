@@ -93,6 +93,23 @@ export interface HomeSurfProfileResponse {
     fullName: string;
     profilePicture?: string;
   };
+  reviews?: {
+    id: string;
+    rating: number;
+    review?: string;
+    cleanliness?: number;
+    communication?: number;
+    location?: number;
+    hospitality?: number;
+    respect?: number;
+    wouldHostAgain?: boolean;
+    createdAt: Date;
+    reviewer: {
+      id: string;
+      fullName: string;
+      profilePicture?: string;
+    };
+  }[];
 }
 
 // ==================== PAYMENT OPTION TYPES ====================

@@ -11,6 +11,7 @@ export interface CreatePaymentIntentInput {
   referenceType: string;
   referenceId: string;
   providerId?: string;
+  paymentMethod?: string; // Method code like 'xendit', 'bank_maybank', etc.
   description?: string;
   metadata?: Record<string, any>;
 }
@@ -112,8 +113,14 @@ export interface PaymentIntentResponse {
   amount: number;
   currency: string;
   status: PaymentStatus;
-  providerId: string;
+  providerId?: string;
   expiresAt?: string;
+  // Manual payment fields
+  requiresProof?: boolean;
+  paymentMethod?: string;
+  paymentInstructions?: Record<string, any>;
+  uploadDeadline?: string;
+  processingTime?: string;
 }
 
 export interface PaymentMethodResponse {
@@ -143,10 +150,12 @@ export interface PayoutResponse {
 
 export interface PaginatedTransactionsResponse {
   transactions: PaymentTransactionResponse[];
-  totalCount: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
   summary?: {
     totalAmount: number;
     totalFees: number;

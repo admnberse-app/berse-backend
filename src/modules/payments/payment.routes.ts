@@ -4,6 +4,7 @@ import paymentMethodsController from './payment-methods.controller';
 import { authenticateToken, optionalAuth } from '../../middleware/auth';
 import { handleValidationErrors } from '../../middleware/validation';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { upload } from '../../middleware/upload';
 import {
   createPaymentIntentValidators,
   confirmPaymentValidators,
@@ -407,6 +408,144 @@ router.get(
 router.get(
   '/methods/:methodCode',
   asyncHandler(paymentMethodsController.getPaymentMethodByCode.bind(paymentMethodsController))
+);
+
+// ============================================================================
+// MANUAL PAYMENT ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /v2/payments/{transactionId}/proof:
+ *   post:
+ *     summary: Upload proof of payment (for manual payments)
+ *     description: Upload proof image/PDF for manual bank transfer or e-wallet payments
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: transactionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - proof
+ *             properties:
+ *               proof:
+ *                 type: string
+ *                 format: binary
+ *                 description: Payment proof image (JPG, PNG, WEBP, PDF - max 5MB)
+ *               paymentDetails:
+ *                 type: string
+ *                 description: JSON string with payment details (reference number, bank name, etc.)
+ *     responses:
+ *       200:
+ *         description: Proof uploaded successfully, awaiting verification
+ *       400:
+ *         description: Invalid file or transaction
+ *       404:
+ *         description: Transaction not found
+ */
+router.post(
+  '/:transactionId/proof',
+  authenticateToken,
+  upload.single('proof'),
+  asyncHandler(paymentController.uploadPaymentProof.bind(paymentController))
+);
+
+/**
+ * @swagger
+ * /v2/payments/admin/pending-verifications:
+ *   get:
+ *     summary: Get pending manual payment verifications (Admin only)
+ *     description: Returns list of manual payments awaiting admin verification
+ *     tags: [Payments, Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: currency
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: minAmount
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: maxAmount
+ *         schema:
+ *           type: number
+ *     responses:
+ *       200:
+ *         description: Pending verifications retrieved successfully
+ *       403:
+ *         description: Insufficient permissions
+ */
+router.get(
+  '/admin/pending-verifications',
+  authenticateToken,
+  asyncHandler(paymentController.getPendingVerifications.bind(paymentController))
+);
+
+/**
+ * @swagger
+ * /v2/payments/admin/{transactionId}/verify:
+ *   post:
+ *     summary: Verify manual payment (Admin only)
+ *     description: Approve or reject a manual payment after reviewing proof
+ *     tags: [Payments, Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: transactionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [approve, reject]
+ *               notes:
+ *                 type: string
+ *                 description: Admin notes or rejection reason
+ *     responses:
+ *       200:
+ *         description: Payment verified successfully
+ *       400:
+ *         description: Invalid action or transaction
+ *       403:
+ *         description: Insufficient permissions
+ *       404:
+ *         description: Transaction not found
+ */
+router.post(
+  '/admin/:transactionId/verify',
+  authenticateToken,
+  asyncHandler(paymentController.verifyManualPayment.bind(paymentController))
 );
 
 export const paymentRoutes = router;

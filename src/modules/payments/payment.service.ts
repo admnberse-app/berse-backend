@@ -52,9 +52,44 @@ export class PaymentService {
         throw new AppError('User not found', 404);
       }
 
-      // 2. Calculate fees
+      // 2. Determine provider ID from payment method or use default
       const currency = input.currency || 'MYR';
-      const providerId = input.providerId || (await this.selectProvider(input));
+      let providerId = input.providerId;
+      let paymentMethodCode: string | undefined;
+      let isManualPayment = false;
+
+      // If paymentMethod is specified, lookup the provider
+      if (input.paymentMethod) {
+        const paymentMethodConfig = await prisma.paymentMethodConfig.findUnique({
+          where: { methodCode: input.paymentMethod },
+          select: { 
+            id: true, 
+            providerId: true, 
+            methodCode: true, 
+            methodType: true,
+            requiresProof: true 
+          },
+        });
+
+        if (!paymentMethodConfig) {
+          throw new AppError(`Payment method not found: ${input.paymentMethod}`, 404);
+        }
+
+        if (!paymentMethodConfig.providerId) {
+          throw new AppError(`Payment method ${input.paymentMethod} is not configured with a provider`, 500);
+        }
+
+        providerId = paymentMethodConfig.providerId;
+        paymentMethodCode = paymentMethodConfig.methodCode;
+        isManualPayment = paymentMethodConfig.methodType?.startsWith('manual_') || false;
+        
+        logger.info(`[PaymentService] Using payment method: ${paymentMethodCode}, provider: ${providerId}, manual: ${isManualPayment}`);
+      }
+
+      // Fallback to provider selection if not specified
+      if (!providerId) {
+        providerId = await this.selectProvider(input);
+      }
       
       const feeCalculation = await this.calculateFees({
         amount: input.amount,
@@ -62,8 +97,11 @@ export class PaymentService {
         providerId,
       });
 
-      // 3. Get payment gateway
-      const gateway = await PaymentGatewayFactory.getGatewayByProviderId(providerId);
+      // 3. Get payment gateway (only for automatic payments)
+      let gateway = null;
+      if (!isManualPayment) {
+        gateway = await PaymentGatewayFactory.getGatewayByProviderId(providerId);
+      }
 
       // 4. Check for existing PENDING transaction (retry scenario)
       let transaction = await prisma.paymentTransaction.findFirst({
@@ -108,6 +146,7 @@ export class PaymentService {
             gatewayFee: feeCalculation.gatewayFee,
             netAmount: feeCalculation.netAmount,
             provider: { connect: { id: providerId } },
+            paymentMethod: paymentMethodCode, // Store the payment method code
             gatewayTransactionId: '', // Will be updated after gateway call
             status: PaymentStatus.PENDING,
             description: input.description,
@@ -150,32 +189,82 @@ export class PaymentService {
         }
       }
       
-      // 6. Create payment intent through gateway
-      const paymentIntent = await gateway.createPaymentIntent({
-        amount: input.amount,
-        currency,
-        customerId: userId,
-        description,
-        metadata: {
-          transactionId: transaction.id,
-          userId,
-          referenceType: input.referenceType,
-          referenceId: input.referenceId,
-          customerEmail: user.email,
-          customerName: user.fullName || user.email,
-          ...(input.metadata || {}),
-        },
-      });
+      // 6. Handle manual vs automatic payments differently
+      let updatedTransaction;
+      
+      if (isManualPayment) {
+        // Manual payment: Return payment instructions, no gateway call
+        logger.info(`[PaymentService] Creating manual payment intent for ${paymentMethodCode}`);
+        
+        // Get payment method details for instructions
+        const methodConfig = await prisma.paymentMethodConfig.findUnique({
+          where: { methodCode: paymentMethodCode },
+          select: { accountDetails: true, displayName: true, processingTime: true },
+        });
 
-      // 7. Update transaction with gateway details and description
-      const updatedTransaction = await prisma.paymentTransaction.update({
-        where: { id: transaction.id },
-        data: {
-          gatewayTransactionId: paymentIntent.intentId,
-          gatewayMetadata: paymentIntent.metadata as any,
+        // Update transaction with description only
+        updatedTransaction = await prisma.paymentTransaction.update({
+          where: { id: transaction.id },
+          data: {
+            description,
+            gatewayTransactionId: `MANUAL-${transaction.id}`,
+          },
+        });
+
+        // Return manual payment response with instructions
+        const response: PaymentIntentResponse = {
+          transactionId: transaction.id,
+          amount: input.amount,
+          currency,
+          status: PaymentStatus.PENDING,
+          requiresProof: true,
+          paymentMethod: paymentMethodCode,
+          paymentInstructions: {
+            ...(methodConfig?.accountDetails as any),
+            referenceCode: `REF-${transaction.id.substring(0, 12).toUpperCase()}`,
+            amount: input.amount,
+            currency,
+          },
+          uploadDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48 hours
+          processingTime: methodConfig?.processingTime || 'Manual verification required',
+        };
+
+        logger.info(`[PaymentService] Manual payment intent created`, {
+          transactionId: transaction.id,
+          paymentMethod: paymentMethodCode,
+        });
+
+        return response;
+      } else if (gateway) {
+        // Automatic payment: Create gateway payment intent
+        const paymentIntent = await gateway.createPaymentIntent({
+          amount: input.amount,
+          currency,
+          customerId: userId,
           description,
-        },
-      });
+          metadata: {
+            transactionId: transaction.id,
+            userId,
+            referenceType: input.referenceType,
+            referenceId: input.referenceId,
+            customerEmail: user.email,
+            customerName: user.fullName || user.email,
+            ...(input.metadata || {}),
+          },
+        });
+
+        // 7. Update transaction with gateway details and description
+        updatedTransaction = await prisma.paymentTransaction.update({
+          where: { id: transaction.id },
+          data: {
+            gatewayTransactionId: paymentIntent.intentId,
+            gatewayMetadata: paymentIntent.metadata as any,
+            description,
+          },
+        });
+      } else {
+        throw new AppError('Payment gateway not available for this payment method', 500);
+      }
 
       // 7b. Link transaction to EventTicket if applicable
       const refType = input.referenceType?.toUpperCase();
@@ -193,41 +282,44 @@ export class PaymentService {
         }
       }
 
-      logger.info(`[PaymentService] Payment intent created successfully`, {
-        transactionId: transaction.id,
-        gatewayTransactionId: paymentIntent.intentId,
-        invoiceUrl: paymentIntent.paymentUrl,
-        description,
-      });
-
-      // 8. Send notification to user
-      await NotificationService.createNotification({
-        userId,
-        type: 'PAYMENT',
-        title: 'Payment Initiated',
-        message: `Your payment of ${currency} ${input.amount} has been initiated. Complete the checkout to proceed.`,
-        actionUrl: `/payments/${transaction.id}`,
-        priority: 'high',
-        relatedEntityId: transaction.id,
-        relatedEntityType: 'payment_transaction',
-        metadata: {
+      // For automatic payments only
+      if (!isManualPayment) {
+        logger.info(`[PaymentService] Payment intent created successfully`, {
           transactionId: transaction.id,
+          gatewayTransactionId: updatedTransaction.gatewayTransactionId,
+          description,
+        });
+
+        // 8. Send notification to user
+        await NotificationService.createNotification({
+          userId,
+          type: 'PAYMENT',
+          title: 'Payment Initiated',
+          message: `Your payment of ${currency} ${input.amount} has been initiated. Complete the checkout to proceed.`,
+          actionUrl: `/payments/${transaction.id}`,
+          priority: 'high',
+          relatedEntityId: transaction.id,
+          relatedEntityType: 'payment_transaction',
+          metadata: {
+            transactionId: transaction.id,
+            amount: input.amount,
+            currency,
+          },
+        });
+
+        // 9. Return automatic payment response with gateway details
+        const gatewayMetadata = updatedTransaction.gatewayMetadata as any;
+        return {
+          transactionId: updatedTransaction.id,
+          clientSecret: gatewayMetadata?.paymentUrl || gatewayMetadata?.invoice_url,
+          paymentUrl: gatewayMetadata?.paymentUrl || gatewayMetadata?.invoice_url,
           amount: input.amount,
           currency,
-        },
-      });
-
-      // 9. Return response
-      return {
-        transactionId: updatedTransaction.id,
-        clientSecret: paymentIntent.paymentUrl, // For Xendit, this is the checkout URL
-        paymentUrl: paymentIntent.paymentUrl, // Payment URL for user to complete checkout
-        amount: input.amount,
-        currency,
-        status: PaymentStatus.PENDING,
-        providerId,
-        expiresAt: paymentIntent.expiresAt?.toISOString(),
-      };
+          status: PaymentStatus.PENDING,
+          providerId,
+          expiresAt: gatewayMetadata?.expiresAt || gatewayMetadata?.expiry_date,
+        };
+      }
     } catch (error) {
       logger.error('[PaymentService] Failed to create payment intent:', error);
       throw error instanceof AppError ? error : new AppError('Failed to create payment intent', 500);
@@ -685,10 +777,12 @@ export class PaymentService {
 
       return {
         transactions: transactions.map((t) => this.formatTransactionResponse(t)),
-        totalCount,
-        page,
-        limit,
-        totalPages: Math.ceil(totalCount / limit),
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+        },
         summary: {
           totalAmount: summary._sum.amount || 0,
           totalFees: (summary._sum.platformFee || 0) + (summary._sum.gatewayFee || 0),
@@ -1077,33 +1171,48 @@ export class PaymentService {
         }
       }
 
-      // 2. Get gateway fees
+      // 2. Get gateway fees (check if provider is manual first)
       const providerId = input.providerId || (await this.selectProvider({ transactionType: input.transactionType, amount: input.amount } as any));
-      const gateway = await PaymentGatewayFactory.getGatewayByProviderId(providerId);
-      const gatewayFees = await gateway.calculateFees(input.amount, 'MYR'); // TODO: Use proper currency
+      
+      // Check if this is a manual provider
+      const provider = await prisma.paymentProvider.findUnique({
+        where: { id: providerId },
+        select: { providerCode: true },
+      });
+      
+      let gatewayFee = 0;
+      
+      // Only calculate gateway fees for automatic providers
+      if (provider && provider.providerCode !== 'manual') {
+        const gateway = await PaymentGatewayFactory.getGatewayByProviderId(providerId);
+        const gatewayFees = await gateway.calculateFees(input.amount, 'MYR'); // TODO: Use proper currency
+        gatewayFee = gatewayFees.gatewayFee;
+      } else {
+        logger.info('[PaymentService] Manual payment provider - no gateway fees');
+      }
 
       // 3. Calculate totals
-      const totalFees = platformFee + gatewayFees.gatewayFee;
+      const totalFees = platformFee + gatewayFee;
       const netAmount = input.amount - totalFees;
 
       logger.info('[PaymentService] Fees calculated', {
         amount: input.amount,
         platformFee,
-        gatewayFee: gatewayFees.gatewayFee,
+        gatewayFee,
         totalFees,
         netAmount,
       });
 
       return {
         platformFee,
-        gatewayFee: gatewayFees.gatewayFee,
+        gatewayFee,
         totalFees,
         netAmount,
         feeBreakdown: {
           platformFeePercentage,
           platformFeeFixed,
-          gatewayFeePercentage: 2.9, // From Xendit: 2.9%
-          gatewayFeeFixed: 1.50, // From Xendit: MYR 1.50
+          gatewayFeePercentage: provider?.providerCode === 'manual' ? 0 : 2.9,
+          gatewayFeeFixed: provider?.providerCode === 'manual' ? 0 : 1.50,
         },
       };
     } catch (error) {
@@ -1873,6 +1982,486 @@ export class PaymentService {
     } catch (error) {
       logger.error('[PaymentService] Failed to distribute payout:', error);
       throw error;
+    }
+  }
+
+  // ============================================================================
+  // MANUAL PAYMENT METHODS
+  // ============================================================================
+
+  /**
+   * Upload proof of payment for manual payment methods
+   */
+  async uploadPaymentProof(
+    userId: string,
+    transactionId: string,
+    file: Express.Multer.File,
+    paymentDetails?: Record<string, any>
+  ): Promise<PaymentTransactionResponse> {
+    try {
+      logger.info(`[PaymentService] Uploading payment proof for transaction ${transactionId}`);
+
+      // 1. Validate transaction exists and belongs to user
+      const transaction = await prisma.paymentTransaction.findFirst({
+        where: {
+          id: transactionId,
+          userId,
+        },
+      });
+
+      if (!transaction) {
+        throw new AppError('Transaction not found', 404);
+      }
+
+      // 2. Validate transaction requires proof (manual payment)
+      // Check if the payment method is a manual one by querying PaymentMethodConfig
+      const paymentMethodConfig = await prisma.paymentMethodConfig.findUnique({
+        where: { methodCode: transaction.paymentMethod || '' },
+        select: { requiresProof: true, methodType: true },
+      });
+
+      if (!paymentMethodConfig?.requiresProof) {
+        throw new AppError('Cannot upload proof for automatic payment', 400);
+      }
+
+      // 3. Validate transaction status (only PENDING can upload proof)
+      if (transaction.status !== PaymentStatus.PENDING) {
+        throw new AppError('Cannot upload proof for non-pending transaction', 400);
+      }
+
+      // 4. Check upload limit (max 3 uploads per transaction)
+      if (transaction.proofUploadedAt) {
+        const uploadCount = await prisma.paymentTransaction.count({
+          where: {
+            id: transactionId,
+            proofUploadedAt: { not: null },
+          },
+        });
+
+        if (uploadCount >= 3) {
+          throw new AppError('Maximum proof upload attempts reached', 400);
+        }
+      }
+
+      // 5. Upload file to storage
+      const { StorageService } = await import('../../services/storage.service');
+      const storageService = new StorageService();
+      
+      const { url: fileUrl, key } = await storageService.uploadFile(
+        file,
+        'temp',
+        {
+          optimize: false,
+          isPublic: false,
+          userId,
+          entityId: transactionId,
+        }
+      );
+
+      // 6. Update transaction with proof and change status to PROCESSING
+      const updated = await prisma.paymentTransaction.update({
+        where: { id: transactionId },
+        data: {
+          proofOfPaymentUrl: fileUrl,
+          proofUploadedAt: new Date(),
+          manualPaymentDetails: paymentDetails as any,
+          status: PaymentStatus.PROCESSING,
+        },
+        include: {
+          provider: true,
+        },
+      });
+
+      // Get user details separately
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, fullName: true },
+      });
+
+      // 7. Notify admins of pending verification
+      await this.notifyAdminsOfPendingVerification(updated);
+
+      // 8. Notify user of successful upload
+      if (user?.email) {
+        await NotificationService.createNotification({
+          userId: user.id,
+          type: 'PAYMENT_UPDATE' as any,
+          title: 'Payment Proof Received',
+          message: `We've received your payment proof for ${updated.currency} ${updated.amount.toFixed(2)}. We'll verify it within 24 hours.`,
+          actionUrl: `/payments/${transactionId}`,
+          metadata: {
+            transactionId: updated.id,
+            amount: updated.amount,
+            currency: updated.currency,
+          },
+        });
+      }
+
+      logger.info(`[PaymentService] Payment proof uploaded successfully for transaction ${transactionId}`);
+
+      return this.formatTransactionResponse(updated);
+    } catch (error) {
+      logger.error('[PaymentService] Failed to upload payment proof:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin: Verify manual payment (approve or reject)
+   */
+  async verifyManualPayment(
+    adminId: string,
+    transactionId: string,
+    action: 'approve' | 'reject',
+    notes?: string
+  ): Promise<PaymentTransactionResponse> {
+    try {
+      logger.info(`[PaymentService] Admin ${adminId} verifying transaction ${transactionId}: ${action}`);
+
+      // 1. Validate admin permissions
+      const admin = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, role: true, email: true, fullName: true },
+      });
+
+      if (!admin || (admin.role !== 'ADMIN' && admin.role !== 'MODERATOR')) {
+        throw new AppError('Insufficient permissions', 403);
+      }
+
+      // 2. Validate transaction exists and is manual payment
+      const transaction = await prisma.paymentTransaction.findUnique({
+        where: { id: transactionId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+            },
+          },
+          provider: true,
+        },
+      });
+
+      if (!transaction) {
+        throw new AppError('Transaction not found', 404);
+      }
+
+      // Check if transaction uses a manual payment method
+      const methodConfig = await prisma.paymentMethodConfig.findUnique({
+        where: { methodCode: transaction.paymentMethod || '' },
+        select: { requiresProof: true, methodType: true },
+      });
+
+      if (!methodConfig?.requiresProof) {
+        throw new AppError('Cannot verify automatic payment', 400);
+      }
+
+      if (transaction.status !== PaymentStatus.PROCESSING) {
+        throw new AppError('Transaction is not awaiting verification', 400);
+      }
+
+      if (!transaction.proofOfPaymentUrl) {
+        throw new AppError('No payment proof uploaded', 400);
+      }
+
+      // 3. Process verification
+      let updated;
+
+      if (action === 'approve') {
+        // Approve payment
+        updated = await prisma.paymentTransaction.update({
+          where: { id: transactionId },
+          data: {
+            status: PaymentStatus.SUCCEEDED,
+            verifiedBy: adminId,
+            verifiedAt: new Date(),
+            verificationNotes: notes,
+            processedAt: new Date(),
+            paidAt: new Date(),
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+              },
+            },
+            provider: true,
+          },
+        });
+
+        // Trigger payout distribution
+        await this.distributePayout(transactionId);
+
+        // Update related records (EventTicket, MarketplaceOrder, etc.)
+        await this.updateRelatedRecords(transaction);
+
+        // Log activity
+        await ActivityLoggerService.logActivity({
+          userId: adminId,
+          activityType: 'PAYMENT_COMPLETED' as any,
+          entityType: 'payment_transaction',
+          entityId: transactionId,
+        });
+
+        // Send approval notification
+        if (updated.user) {
+          await NotificationService.createNotification({
+            userId: updated.user.id,
+            type: 'PAYMENT_UPDATE' as any,
+            title: '✅ Payment Verified',
+            message: `Your payment of ${updated.currency} ${updated.amount.toFixed(2)} has been verified and approved.`,
+            actionUrl: `/payments/${transactionId}`,
+          });
+        }
+
+        logger.info(`[PaymentService] Payment approved by admin ${adminId}`);
+      } else {
+        // Reject payment
+        updated = await prisma.paymentTransaction.update({
+          where: { id: transactionId },
+          data: {
+            status: PaymentStatus.FAILED,
+            verifiedBy: adminId,
+            verifiedAt: new Date(),
+            rejectionReason: notes || 'Payment proof rejected',
+            failureReason: notes || 'Payment proof rejected',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+              },
+            },
+            provider: true,
+          },
+        });
+
+        // Log activity
+        await ActivityLoggerService.logActivity({
+          userId: adminId,
+          activityType: 'PAYMENT_FAILED' as any,
+          entityType: 'payment_transaction',
+          entityId: transactionId,
+        });
+
+        // Send rejection notification
+        if (updated.user) {
+          await NotificationService.createNotification({
+            userId: updated.user.id,
+            type: 'PAYMENT_UPDATE' as any,
+            title: '❌ Payment Verification Failed',
+            message: `Your payment proof was rejected: ${notes || 'Payment proof did not match our records'}. You can upload a new proof.`,
+            actionUrl: `/payments/${transactionId}/proof`,
+          });
+        }
+
+        logger.info(`[PaymentService] Payment rejected by admin ${adminId}`);
+      }
+
+      return this.formatTransactionResponse(updated);
+    } catch (error) {
+      logger.error('[PaymentService] Failed to verify manual payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin: Get pending manual payment verifications
+   */
+  async getPendingManualVerifications(query?: {
+    page?: number;
+    limit?: number;
+    providerType?: string;
+    currency?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  }): Promise<PaginatedTransactionsResponse> {
+    try {
+      const page = query?.page || 1;
+      const limit = query?.limit || 20;
+      const offset = (page - 1) * limit;
+
+      // Get all manual payment method codes
+      const manualMethods = await prisma.paymentMethodConfig.findMany({
+        where: { methodType: { startsWith: 'manual_' } },
+        select: { methodCode: true },
+      });
+      const manualMethodCodes = manualMethods.map(m => m.methodCode);
+
+      const where: any = {
+        paymentMethod: { in: manualMethodCodes },
+        status: PaymentStatus.PROCESSING,
+        proofOfPaymentUrl: { not: null },
+      };
+
+      if (query?.providerType) {
+        where.paymentMethod = { contains: query.providerType };
+      }
+
+      if (query?.currency) {
+        where.currency = query.currency;
+      }
+
+      if (query?.minAmount || query?.maxAmount) {
+        where.amount = {};
+        if (query.minAmount) where.amount.gte = query.minAmount;
+        if (query.maxAmount) where.amount.lte = query.maxAmount;
+      }
+
+      const [transactions, total] = await Promise.all([
+        prisma.paymentTransaction.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                fullName: true,
+              },
+            },
+            provider: true,
+          },
+          orderBy: { proofUploadedAt: 'asc' }, // Oldest first for priority
+          take: limit,
+          skip: offset,
+        }),
+        prisma.paymentTransaction.count({ where }),
+      ]);
+
+      // Generate signed URLs for proof images
+      const { StorageService } = await import('../../services/storage.service');
+      const storageService = new StorageService();
+
+      const formattedTransactions = await Promise.all(
+        transactions.map(async (txn) => {
+          const formatted = this.formatTransactionResponse(txn);
+
+          // Add signed URL for proof image (expires in 1 hour)
+          if (txn.proofOfPaymentUrl) {
+            try {
+              const signedUrl = await storageService.getSignedUrl(txn.proofOfPaymentUrl, 3600);
+              (formatted as any).proofOfPaymentSignedUrl = signedUrl;
+            } catch (error) {
+              logger.error('Failed to generate signed URL for proof:', error);
+            }
+          }
+
+          // Add user details for admin
+          (formatted as any).userName = txn.user.fullName;
+          (formatted as any).userEmail = txn.user.email;
+
+          return formatted;
+        })
+      );
+
+      return {
+        transactions: formattedTransactions,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      logger.error('[PaymentService] Failed to get pending verifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Notify admins of pending verification
+   */
+  private async notifyAdminsOfPendingVerification(transaction: any): Promise<void> {
+    try {
+      // Get all admin users
+      const admins = await prisma.user.findMany({
+        where: {
+          role: { in: ['ADMIN', 'MODERATOR'] },
+          status: 'ACTIVE',
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+        },
+      });
+
+      // Send notification to each admin
+      for (const admin of admins) {
+        await NotificationService.createNotification({
+          userId: admin.id,
+          type: 'PAYMENT_UPDATE' as any,
+          title: '🔔 New Payment Verification Required',
+          message: `New payment proof requires verification: ${transaction.currency} ${transaction.amount.toFixed(2)}`,
+          actionUrl: `/admin/payments/verify/${transaction.id}`,
+        });
+      }
+
+      logger.info(`[PaymentService] Notified ${admins.length} admins of pending verification`);
+    } catch (error) {
+      logger.error('[PaymentService] Failed to notify admins:', error);
+      // Don't throw - notification failure shouldn't break the main flow
+    }
+  }
+
+  /**
+   * Update related records after payment verification
+   */
+  private async updateRelatedRecords(transaction: any): Promise<void> {
+    try {
+      const refType = transaction.referenceType.toUpperCase();
+      const refId = transaction.referenceId;
+
+      switch (refType) {
+        case 'EVENT_TICKET':
+          // Update EventTicket status to CONFIRMED
+          await prisma.eventTicket.updateMany({
+            where: {
+              paymentTransactionId: transaction.id,
+            },
+            data: {
+              paymentStatus: PaymentStatus.SUCCEEDED,
+            },
+          });
+          break;
+
+        case 'MARKETPLACE_ORDER':
+          // Update MarketplaceOrder status
+          await prisma.marketplaceOrder.updateMany({
+            where: {
+              paymentTransactionId: transaction.id,
+            },
+            data: {
+              paymentStatus: PaymentStatus.SUCCEEDED,
+            },
+          });
+          break;
+
+        case 'HOMESURF_BOOKING':
+          // HomeSurfBooking doesn't have paymentStatus field
+          // Status is managed through agreedPaymentType and booking status
+          logger.info(`[PaymentService] HomeSurfBooking ${refId} payment verified`);
+          break;
+
+        case 'BERSEGUIDE_BOOKING':
+          // BerseGuideBooking doesn't have paymentStatus field
+          // Status is managed through agreedPaymentType and booking status
+          logger.info(`[PaymentService] BerseGuideBooking ${refId} payment verified`);
+          break;
+
+        default:
+          logger.info(`[PaymentService] No related records to update for ${refType}`);
+      }
+    } catch (error) {
+      logger.error('[PaymentService] Failed to update related records:', error);
+      // Don't throw - this is non-critical
     }
   }
 }

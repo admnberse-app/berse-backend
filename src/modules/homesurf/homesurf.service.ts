@@ -96,10 +96,33 @@ export class HomeSurfService {
         return null;
       }
 
+      // Get reviews for this host (most recent 20)
+      const reviews = await prisma.homeSurfReview.findMany({
+        where: {
+          revieweeId: userId,
+          isPublic: true,
+        },
+        include: {
+          reviewer: {
+            select: {
+              id: true,
+              fullName: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+
       // Hide sensitive data if viewing someone else's profile
       const isOwner = viewerId === userId;
       
-      return this.formatProfileResponse(profile, isOwner);
+      return this.formatProfileResponse(profile, isOwner, reviews);
     } catch (error) {
       logger.error('Failed to get HomeSurf profile', { error, userId });
       throw error;
@@ -598,7 +621,7 @@ export class HomeSurfService {
           throw new AppError('Payment option does not belong to this host', 400);
         }
 
-        if (!selectedPaymentOption.isActive) {
+        if (selectedPaymentOption.deletedAt !== null) {
           throw new AppError('Selected payment option is not available', 400);
         }
       }
@@ -836,7 +859,7 @@ export class HomeSurfService {
         },
       });
 
-      return bookings.map(this.formatBookingResponse);
+      return bookings.map((booking) => this.formatBookingResponse(booking));
     } catch (error) {
       logger.error('Failed to get bookings as host', { error, hostId, status });
       throw error;
@@ -901,7 +924,7 @@ export class HomeSurfService {
         },
       });
 
-      return bookings.map(this.formatBookingResponse);
+      return bookings.map((booking) => this.formatBookingResponse(booking));
     } catch (error) {
       logger.error('Failed to get stays as guest', { error, guestId, status });
       throw error;
@@ -2027,7 +2050,7 @@ export class HomeSurfService {
   /**
    * Format profile response
    */
-  private formatProfileResponse(profile: any, isOwner: boolean): HomeSurfProfileResponse {
+  private formatProfileResponse(profile: any, isOwner: boolean, reviews?: any[]): HomeSurfProfileResponse {
     return {
       userId: profile.userId,
       isEnabled: profile.isEnabled,
@@ -2062,6 +2085,23 @@ export class HomeSurfService {
             profilePicture: profile.user.profile?.profilePicture,
           }
         : undefined,
+      reviews: reviews?.map(r => ({
+        id: r.id,
+        rating: r.rating,
+        review: r.review,
+        cleanliness: r.cleanliness,
+        communication: r.communication,
+        location: r.location,
+        hospitality: r.hospitality,
+        respect: r.respect,
+        wouldHostAgain: r.wouldHostAgain,
+        createdAt: r.createdAt,
+        reviewer: {
+          id: r.reviewer.id,
+          fullName: r.reviewer.fullName,
+          profilePicture: r.reviewer.profile?.profilePicture,
+        },
+      })) || [],
     };
   }
 
@@ -2106,7 +2146,7 @@ export class HomeSurfService {
             profilePicture: booking.guest.profile?.profilePicture,
           }
         : undefined,
-      homeSurf: booking.homeSurf ? this.formatProfileResponse(booking.homeSurf, false) : undefined,
+      homeSurf: booking.homeSurf ? this.formatProfileResponse(booking.homeSurf, false, []) : undefined,
     };
   }
 

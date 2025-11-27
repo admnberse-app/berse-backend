@@ -1721,10 +1721,19 @@ model PaymentTransaction {
   xenditInvoiceId        String? // Xendit specific invoice ID
   xenditInvoiceUrl       String? // Xendit invoice URL for retry payment
   paidAt                 DateTime? // When payment was completed
+  // Manual payment fields
+  proofOfPaymentUrl      String? // S3 URL to uploaded proof image/PDF
+  proofUploadedAt        DateTime? // When user uploaded proof
+  verifiedBy             String? // Admin user ID who verified
+  verifiedAt             DateTime? // When admin verified
+  verificationNotes      String? // Admin notes during verification
+  rejectionReason        String? // Why payment was rejected
+  manualPaymentDetails   Json? // User-submitted payment details (reference number, etc.)
   eventTickets           EventTicket[]
   marketplace_orders     MarketplaceOrder[]
   provider               PaymentProvider       @relation(fields: [providerId], references: [id])
   user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifier               User?                 @relation("PaymentVerifier", fields: [verifiedBy], references: [id], onDelete: SetNull)
   payoutDistributions    PayoutDistribution[]
   subscriptionPayments   SubscriptionPayment[]
   fees                   TransactionFee[]
@@ -1739,6 +1748,8 @@ model PaymentTransaction {
   @@index([userId, status])
   @@index([xenditInvoiceId])
   @@index([status, paidAt])
+  @@index([proofUploadedAt, status])
+  @@index([verifiedBy])
   @@map("payment_transactions")
 }
 
@@ -2673,6 +2684,7 @@ model User {
   notifications               Notification[]
   passwordResetTokens         PasswordResetToken[]
   paymentTransactions         PaymentTransaction[]
+  verifiedPayments            PaymentTransaction[]     @relation("PaymentVerifier")
   payoutDistributions         PayoutDistribution[]
   pointHistories              PointHistory[]
   profileCompletionStatus     ProfileCompletionStatus?

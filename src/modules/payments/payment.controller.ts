@@ -761,4 +761,128 @@ export class PaymentController {
     await paymentService.handleWebhook(event);
     sendSuccess(res, null, 'Webhook processed');
   }
+
+  // ============================================================================
+  // MANUAL PAYMENT METHODS
+  // ============================================================================
+
+  /**
+   * Upload proof of payment for manual payment methods
+   * @route POST /v2/payments/:transactionId/proof
+   * @access Private
+   */
+  async uploadPaymentProof(req: AuthRequest, res: Response): Promise<void> {
+    const userId = req.user!.id;
+    const { transactionId } = req.params;
+
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        error: 'No file uploaded',
+        message: 'Please upload a payment proof image or PDF',
+      });
+      return;
+    }
+
+    // Parse payment details from form data
+    let paymentDetails;
+    if (req.body.paymentDetails) {
+      try {
+        paymentDetails = JSON.parse(req.body.paymentDetails);
+      } catch (e) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid payment details',
+          message: 'Payment details must be valid JSON',
+        });
+        return;
+      }
+    }
+
+    const result = await paymentService.uploadPaymentProof(
+      userId,
+      transactionId,
+      req.file,
+      paymentDetails
+    );
+
+    sendSuccess(res, result, 'Payment proof uploaded successfully. Your payment is being verified.');
+  }
+
+  /**
+   * Get pending manual payment verifications (Admin only)
+   * @route GET /v2/payments/admin/pending-verifications
+   * @access Admin
+   */
+  async getPendingVerifications(req: AuthRequest, res: Response): Promise<void> {
+    // Handle auth check
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: 'Unauthorized - please login',
+      });
+      return;
+    }
+
+    const userId = req.user.id;
+
+    // Check admin permissions
+    const user = await paymentService['prisma'].user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'MODERATOR')) {
+      res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions',
+      });
+      return;
+    }
+
+    const query = {
+      page: req.query.page ? parseInt(req.query.page as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      providerType: req.query.providerType as string,
+      currency: req.query.currency as string,
+      minAmount: req.query.minAmount ? parseFloat(req.query.minAmount as string) : undefined,
+      maxAmount: req.query.maxAmount ? parseFloat(req.query.maxAmount as string) : undefined,
+    };
+
+    const result = await paymentService.getPendingManualVerifications(query);
+    sendSuccess(res, { transactions: result.transactions, pagination: result.pagination });
+  }
+
+  /**
+   * Verify manual payment - approve or reject (Admin only)
+   * @route POST /v2/payments/admin/:transactionId/verify
+   * @access Admin
+   */
+  async verifyManualPayment(req: AuthRequest, res: Response): Promise<void> {
+    const adminId = req.user!.id;
+    const { transactionId } = req.params;
+    const { action, notes } = req.body;
+
+    if (!action || !['approve', 'reject'].includes(action)) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid action',
+        message: 'Action must be either "approve" or "reject"',
+      });
+      return;
+    }
+
+    const result = await paymentService.verifyManualPayment(
+      adminId,
+      transactionId,
+      action,
+      notes
+    );
+
+    const message = action === 'approve' 
+      ? 'Payment approved successfully'
+      : 'Payment rejected';
+
+    sendSuccess(res, result, message);
+  }
 }
