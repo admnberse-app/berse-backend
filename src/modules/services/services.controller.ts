@@ -13,6 +13,7 @@ export class ServicesController {
     try {
       const {
         type,
+        query,
         city,
         lat,
         lng,
@@ -41,6 +42,7 @@ export class ServicesController {
       // Build search query
       const searchQuery: SearchServicesDTO = {
         type: (type as any) || 'all',
+        ...(query && { query: query as string }),
         ...(city && { city: city as string }),
         ...(lat && lng && {
           lat: parseFloat(lat as string),

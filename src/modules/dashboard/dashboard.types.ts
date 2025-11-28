@@ -28,16 +28,27 @@ export interface DashboardSummary {
   homeSurf: {
     isEnabled: boolean;
     hasProfile: boolean;
+    canHost: boolean;
     totalBookings: number;
     pendingRequests: number;
     averageRating: number | null;
     city: string | null;
     accommodationType: string | null;
+    trustScore: number;
+    subscriptionTier: string;
+    eligibilityMessage?: string;
+    nextAction?: {
+      type: 'create_profile' | 'improve_trust' | 'upgrade_subscription' | 'manage_requests' | 'none';
+      title: string;
+      description: string;
+      actionUrl?: string;
+    };
   };
   // BerseGuide - Tour guide feature
   berseGuide: {
     isEnabled: boolean;
     hasProfile: boolean;
+    canGuide: boolean;
     totalBookings: number;
     totalSessions: number;
     upcomingTours: number;
@@ -45,6 +56,35 @@ export interface DashboardSummary {
     city: string | null;
     guideTypes: string[];
     highlights: string[];
+    trustScore: number;
+    subscriptionTier: string;
+    eligibilityMessage?: string;
+    nextAction?: {
+      type: 'create_profile' | 'improve_trust' | 'upgrade_subscription' | 'manage_tours' | 'none';
+      title: string;
+      description: string;
+      actionUrl?: string;
+    };
+  };
+  // Marketplace - Item listings and sales
+  marketplace: {
+    canSell: boolean;
+    totalListings: number;
+    activeListings: number;
+    soldListings: number;
+    totalSales: number;
+    totalPurchases: number;
+    sellerRating: number | null;
+    buyerRating: number | null;
+    trustScore: number;
+    subscriptionTier: string;
+    eligibilityMessage?: string;
+    nextAction?: {
+      type: 'create_listing' | 'improve_trust' | 'complete_profile' | 'none';
+      title: string;
+      description: string;
+      actionUrl?: string;
+    };
   };
   alerts: Alert[];
   communitySummary: {

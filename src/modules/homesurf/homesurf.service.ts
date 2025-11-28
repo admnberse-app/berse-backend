@@ -1484,6 +1484,7 @@ export class HomeSurfService {
   async searchProfiles(query: SearchHomeSurfDTO): Promise<SearchHomeSurfResponse> {
     try {
       const {
+        query: searchQuery,
         city,
         checkInDate,
         checkOutDate,
@@ -1499,7 +1500,7 @@ export class HomeSurfService {
       } = query;
 
       const skip = (page - 1) * limit;
-      const hasFilters = !!(city || checkInDate || checkOutDate || numberOfGuests || 
+      const hasFilters = !!(searchQuery || city || checkInDate || checkOutDate || numberOfGuests || 
                             accommodationType || amenities || minRating || paymentTypes);
 
       const where: Prisma.UserHomeSurfWhereInput = {
@@ -1510,6 +1511,16 @@ export class HomeSurfService {
         ...(amenities && { amenities: { hasEvery: amenities } }),
         ...(minRating && { rating: { gte: minRating } }),
       };
+
+      // Add name/title search if query provided
+      if (searchQuery) {
+        where.OR = [
+          { title: { contains: searchQuery, mode: 'insensitive' } },
+          { user: { fullName: { contains: searchQuery, mode: 'insensitive' } } },
+          { user: { username: { contains: searchQuery, mode: 'insensitive' } } },
+          { user: { profile: { displayName: { contains: searchQuery, mode: 'insensitive' } } } },
+        ];
+      }
 
       // If payment types specified, filter by payment options
       if (paymentTypes && paymentTypes.length > 0) {
@@ -1574,11 +1585,12 @@ export class HomeSurfService {
       ]);
 
       // If no results and filters were applied, fetch fallback results
+      // BUT: Don't show fallback if user is doing a name/title search
       let finalProfiles = profiles;
       let finalTotal = total;
       let isFallback = false;
 
-      if (profiles.length === 0 && hasFilters && page === 1) {
+      if (profiles.length === 0 && hasFilters && page === 1 && !searchQuery) {
         logger.info('No filtered results found, fetching fallback profiles', { query });
         
         // Fetch top-rated profiles as fallback (no filters except isEnabled)
@@ -1773,9 +1785,19 @@ export class HomeSurfService {
           select: {
             id: true,
             fullName: true,
+            email: true,
+            phone: true,
+            trustLevel: true,
+            trustScore: true,
             profile: {
               select: {
                 profilePicture: true,
+                bio: true,
+                shortBio: true,
+                languages: true,
+                interests: true,
+                age: true,
+                gender: true,
               },
             },
           },
@@ -1784,9 +1806,19 @@ export class HomeSurfService {
           select: {
             id: true,
             fullName: true,
+            email: true,
+            phone: true,
+            trustLevel: true,
+            trustScore: true,
             profile: {
               select: {
                 profilePicture: true,
+                bio: true,
+                shortBio: true,
+                languages: true,
+                interests: true,
+                age: true,
+                gender: true,
               },
             },
           },
@@ -2136,14 +2168,34 @@ export class HomeSurfService {
         ? {
             id: booking.host.id,
             fullName: booking.host.fullName,
+            email: booking.host.email,
+            phone: booking.host.phone,
+            trustLevel: booking.host.trustLevel,
+            trustScore: booking.host.trustScore,
             profilePicture: booking.host.profile?.profilePicture,
+            bio: booking.host.profile?.bio,
+            shortBio: booking.host.profile?.shortBio,
+            languages: booking.host.profile?.languages,
+            interests: booking.host.profile?.interests,
+            age: booking.host.profile?.age,
+            gender: booking.host.profile?.gender,
           }
         : undefined,
       guest: booking.guest
         ? {
             id: booking.guest.id,
             fullName: booking.guest.fullName,
+            email: booking.guest.email,
+            phone: booking.guest.phone,
+            trustLevel: booking.guest.trustLevel,
+            trustScore: booking.guest.trustScore,
             profilePicture: booking.guest.profile?.profilePicture,
+            bio: booking.guest.profile?.bio,
+            shortBio: booking.guest.profile?.shortBio,
+            languages: booking.guest.profile?.languages,
+            interests: booking.guest.profile?.interests,
+            age: booking.guest.profile?.age,
+            gender: booking.guest.profile?.gender,
           }
         : undefined,
       homeSurf: booking.homeSurf ? this.formatProfileResponse(booking.homeSurf, false, []) : undefined,

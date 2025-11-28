@@ -104,6 +104,7 @@ export class DashboardService {
       },
       homeSurf: servicesData.homeSurf,
       berseGuide: servicesData.berseGuide,
+      marketplace: servicesData.marketplace,
       alerts,
       communitySummary: {
         total: communitiesData.total,
@@ -651,6 +652,44 @@ export class DashboardService {
   }
 
   private async getServicesSummary(userId: string) {
+    // Check user eligibility for services
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        trustScore: true,
+        trustLevel: true,
+        subscriptions: {
+          select: {
+            status: true,
+            tiers: {
+              select: {
+                tierCode: true,
+              }
+            }
+          },
+          where: {
+            status: 'ACTIVE'
+          },
+          take: 1
+        }
+      }
+    });
+
+    const trustScore = user?.trustScore || 0;
+    const trustLevel = user?.trustLevel || 'starter';
+    const activeSubscription = user?.subscriptions?.[0];
+    const subscriptionTier = activeSubscription?.tiers?.tierCode || 'FREE';
+    const hasRequiredSubscription = subscriptionTier === 'BASIC' || subscriptionTier === 'PREMIUM';
+
+    // HomeSurf eligibility: Trust 70+, trusted level, BASIC/PREMIUM
+    const canHost = trustScore >= 70 && ['trusted', 'verified', 'ambassador', 'leader'].includes(trustLevel) && hasRequiredSubscription;
+
+    // BerseGuide eligibility: Trust 65+, trusted level, BASIC/PREMIUM
+    const canGuide = trustScore >= 65 && ['trusted', 'verified', 'ambassador', 'leader'].includes(trustLevel) && hasRequiredSubscription;
+
+    // Marketplace eligibility: Trust 60+, trusted level, BASIC/PREMIUM
+    const canSell = trustScore >= 60 && ['trusted', 'verified', 'ambassador', 'leader'].includes(trustLevel) && hasRequiredSubscription;
+
     const [homeSurf, berseGuide] = await Promise.all([
       prisma.userHomeSurf.findUnique({
         where: { userId },
@@ -679,6 +718,11 @@ export class DashboardService {
       berseGuideBookings,
       berseGuideSessions,
       berseGuideUpcoming,
+      marketplaceListings,
+      marketplaceActiveListings,
+      marketplaceSoldListings,
+      marketplaceSales,
+      marketplacePurchases,
     ] = await Promise.all([
       homeSurf ? prisma.homeSurfBooking.count({
         where: {
@@ -712,10 +756,39 @@ export class DashboardService {
           },
         },
       }) : 0,
+      // Marketplace seller data (only if eligible)
+      canSell ? prisma.marketplaceListing.count({
+        where: {
+          userId,
+        },
+      }) : 0,
+      canSell ? prisma.marketplaceListing.count({
+        where: {
+          userId,
+          status: 'ACTIVE',
+        },
+      }) : 0,
+      canSell ? prisma.marketplaceListing.count({
+        where: {
+          userId,
+          status: 'SOLD',
+        },
+      }) : 0,
+      canSell ? prisma.marketplaceOrder.count({
+        where: {
+          sellerId: userId,
+        },
+      }) : 0,
+      // Marketplace buyer data (always available)
+      prisma.marketplaceOrder.count({
+        where: {
+          buyerId: userId,
+        },
+      }),
     ]);
 
     // Get average ratings
-    const [homeSurfRating, berseGuideRating] = await Promise.all([
+    const [homeSurfRating, berseGuideRating, marketplaceSellerRating, marketplaceBuyerRating] = await Promise.all([
       homeSurf ? prisma.homeSurfReview.aggregate({
         where: {
           revieweeId: userId,
@@ -732,21 +805,93 @@ export class DashboardService {
           rating: true,
         },
       }) : null,
+      canSell ? prisma.marketplaceReview.aggregate({
+        where: {
+          revieweeId: userId,
+        },
+        _avg: {
+          rating: true,
+        },
+      }) : null,
+      prisma.marketplaceReview.aggregate({
+        where: {
+          revieweeId: userId,
+        },
+        _avg: {
+          rating: true,
+        },
+      }),
     ]);
 
     return {
       homeSurf: {
         isEnabled: homeSurf?.isEnabled || false,
         hasProfile: !!homeSurf,
+        canHost,
         totalBookings: homeSurfBookings,
         pendingRequests: homeSurfPending,
         averageRating: homeSurfRating?._avg.rating || null,
         city: homeSurf?.city || null,
         accommodationType: homeSurf?.accommodationType || null,
+        trustScore,
+        subscriptionTier,
+        eligibilityMessage: canHost
+          ? homeSurf?.isEnabled
+            ? homeSurfPending > 0
+              ? `You have ${homeSurfPending} pending booking requests to review.`
+              : homeSurfBookings > 0
+                ? `Great job hosting! You've completed ${homeSurfBookings} bookings with ${(homeSurfRating?._avg.rating || 0).toFixed(1)}⭐ rating.`
+                : 'Your HomeSurf profile is live and ready for guests!'
+            : 'Profile ready! Enable hosting to start receiving booking requests.'
+          : trustScore < 70
+            ? `Need ${(70 - trustScore).toFixed(1)} more trust score points to become a host. Build trust through community participation.`
+            : !hasRequiredSubscription
+              ? 'Upgrade to BASIC or PREMIUM to unlock HomeSurf hosting.'
+              : 'Meet requirements! Create your host profile to start welcoming guests.',
+        nextAction: canHost
+          ? !homeSurf
+            ? {
+                type: 'create_profile' as const,
+                title: 'Create Host Profile',
+                description: 'Set up your space and start hosting travelers',
+                actionUrl: '/homesurf/create-profile'
+              }
+            : !homeSurf.isEnabled
+              ? {
+                  type: 'none' as const,
+                  title: 'Enable Hosting',
+                  description: 'Turn on your profile to receive booking requests'
+                }
+              : homeSurfPending > 0
+                ? {
+                    type: 'manage_requests' as const,
+                    title: 'Review Requests',
+                    description: `${homeSurfPending} guests want to book your space`,
+                    actionUrl: '/homesurf/requests'
+                  }
+                : {
+                    type: 'none' as const,
+                    title: 'Keep Hosting!',
+                    description: 'Your profile is active and ready for bookings'
+                  }
+          : trustScore < 70
+            ? {
+                type: 'improve_trust' as const,
+                title: 'Build Trust Score',
+                description: `Get ${(70 - trustScore).toFixed(1)} more points to unlock hosting`,
+                actionUrl: '/trust-score/improvement-tips'
+              }
+            : {
+                type: 'upgrade_subscription' as const,
+                title: 'Upgrade Plan',
+                description: 'Get BASIC or PREMIUM to start hosting',
+                actionUrl: '/subscription/upgrade'
+              }
       },
       berseGuide: {
         isEnabled: berseGuide?.isEnabled || false,
         hasProfile: !!berseGuide,
+        canGuide,
         totalBookings: berseGuideBookings,
         totalSessions: berseGuideSessions,
         upcomingTours: berseGuideUpcoming,
@@ -754,6 +899,105 @@ export class DashboardService {
         city: berseGuide?.city || null,
         guideTypes: berseGuide?.guideTypes || [],
         highlights: berseGuide?.highlights || [],
+        trustScore,
+        subscriptionTier,
+        eligibilityMessage: canGuide
+          ? berseGuide?.isEnabled
+            ? berseGuideUpcoming > 0
+              ? `You have ${berseGuideUpcoming} upcoming tours scheduled. Check your itinerary!`
+              : berseGuideSessions > 0
+                ? `Excellent guiding! You've completed ${berseGuideSessions} sessions with ${(berseGuideRating?._avg.rating || 0).toFixed(1)}⭐ rating.`
+                : 'Your BerseGuide profile is live and ready for tourists!'
+            : 'Profile complete! Enable guiding to start receiving tour requests.'
+          : trustScore < 65
+            ? `Need ${(65 - trustScore).toFixed(1)} more trust score points to become a guide. Build your reputation in communities.`
+            : !hasRequiredSubscription
+              ? 'Upgrade to BASIC or PREMIUM to unlock BerseGuide features.'
+              : 'Ready to guide! Create your profile and share your local expertise.',
+        nextAction: canGuide
+          ? !berseGuide
+            ? {
+                type: 'create_profile' as const,
+                title: 'Become a Guide',
+                description: 'Share your city knowledge and earn as a local guide',
+                actionUrl: '/berseguide/create-profile'
+              }
+            : !berseGuide.isEnabled
+              ? {
+                  type: 'none' as const,
+                  title: 'Enable Guiding',
+                  description: 'Turn on your profile to receive tour requests'
+                }
+              : berseGuideUpcoming > 0
+                ? {
+                    type: 'manage_tours' as const,
+                    title: 'Manage Tours',
+                    description: `${berseGuideUpcoming} upcoming tours need your attention`,
+                    actionUrl: '/berseguide/tours'
+                  }
+                : {
+                    type: 'none' as const,
+                    title: 'Great Guiding!',
+                    description: 'Your profile is active and ready for bookings'
+                  }
+          : trustScore < 65
+            ? {
+                type: 'improve_trust' as const,
+                title: 'Build Trust Score',
+                description: `Get ${(65 - trustScore).toFixed(1)} more points to become a guide`,
+                actionUrl: '/trust-score/improvement-tips'
+              }
+            : {
+                type: 'upgrade_subscription' as const,
+                title: 'Upgrade Plan',
+                description: 'Get BASIC or PREMIUM to start guiding',
+                actionUrl: '/subscription/upgrade'
+              }
+      },
+      marketplace: {
+        canSell,
+        totalListings: marketplaceListings,
+        activeListings: marketplaceActiveListings,
+        soldListings: marketplaceSoldListings,
+        totalSales: marketplaceSales,
+        totalPurchases: marketplacePurchases,
+        sellerRating: marketplaceSellerRating?._avg.rating || null,
+        buyerRating: marketplaceBuyerRating?._avg.rating || null,
+        trustScore,
+        subscriptionTier,
+        eligibilityMessage: canSell 
+          ? marketplaceListings > 0 
+            ? `You have ${marketplaceActiveListings} active listings. Keep providing great service to maintain your seller reputation!`
+            : 'Ready to sell! Create your first listing to start reaching buyers.'
+          : trustScore < 60 
+            ? `Need ${(60 - trustScore).toFixed(1)} more trust score points to start selling. Get vouches and join communities to build trust.`
+            : 'Complete your profile to unlock marketplace selling.',
+        nextAction: canSell
+          ? marketplaceListings === 0
+            ? {
+                type: 'create_listing' as const,
+                title: 'Create Your First Listing',
+                description: 'Start selling by creating a listing with photos and description',
+                actionUrl: '/marketplace/create-listing'
+              }
+            : {
+                type: 'none' as const,
+                title: 'Keep It Up!',
+                description: `Manage your ${marketplaceActiveListings} active listings`
+              }
+          : trustScore < 60
+            ? {
+                type: 'improve_trust' as const,
+                title: 'Improve Trust Score',
+                description: `Get ${(60 - trustScore).toFixed(1)} more points to unlock selling`,
+                actionUrl: '/trust-score/improvement-tips'
+              }
+            : {
+                type: 'complete_profile' as const,
+                title: 'Complete Profile',
+                description: 'Finish your profile to start selling items',
+                actionUrl: '/profile/edit'
+              }
       },
     };
   }

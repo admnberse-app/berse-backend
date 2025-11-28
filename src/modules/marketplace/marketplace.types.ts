@@ -263,6 +263,57 @@ export interface MarketplaceStats {
   }>;
 }
 
+// ============= ELIGIBILITY TYPES =============
+
+export interface SellerEligibilityRequirements {
+  minTrustScore: number;
+  minTrustLevel: string;
+  subscriptionRequired: boolean;
+  minSubscriptionTier: string;
+}
+
+export interface SellerEligibilityCurrentStatus {
+  trustScore: number;
+  trustLevel: string;
+  meetsTrustRequirements: boolean;
+  subscriptionTier: string;
+  meetsSubscriptionRequirements: boolean;
+}
+
+export interface SellerEligibility {
+  canSell: boolean;
+  requirements: SellerEligibilityRequirements;
+  currentStatus: SellerEligibilityCurrentStatus;
+  message: string;
+  explanation?: {
+    reasons: string[];
+    nextSteps: string[];
+    benefits?: string[];
+    helpLinks?: Array<{
+      title: string;
+      url: string;
+      description: string;
+    }>;
+  };
+  trustScoreGap?: {
+    current: number;
+    required: number;
+    difference: number;
+    improvementTips: string[];
+  };
+}
+
+// ============= MY MARKETPLACE RESPONSE =============
+
+export interface MyMarketplaceResponse {
+  listings: any[] | null;
+  sellerStats?: SellerStats;
+  buyerStats: BuyerStats;
+  asSeller?: any[];
+  asBuyer: any[];
+  eligibility: SellerEligibility;
+}
+
 // ============= PAGINATION =============
 
 export interface PaginationParams {

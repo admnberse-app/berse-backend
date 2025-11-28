@@ -117,6 +117,7 @@ export class ServicesService {
   ): Promise<ServiceResults<HomeSurfProfileResponse>> {
     try {
       const homesurfQuery: SearchHomeSurfDTO = {
+        query: query.query,
         city: query.city,
         checkInDate: query.checkInDate,
         checkOutDate: query.checkOutDate,
@@ -158,6 +159,7 @@ export class ServicesService {
   ): Promise<ServiceResults<BerseGuideProfileResponse>> {
     try {
       const berseguideQuery: SearchBerseGuideDTO = {
+        query: query.query,
         city: query.city,
         date: query.date,
         startTime: query.startTime,

@@ -42,6 +42,7 @@ export interface BaseServiceItem {
 export interface SearchServicesDTO {
   // Filter parameters
   type?: ServiceType;
+  query?: string; // Search by host name, profile name, or title
   city?: string;
   lat?: number;
   lng?: number;

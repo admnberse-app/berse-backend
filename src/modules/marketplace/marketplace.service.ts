@@ -22,7 +22,9 @@ import {
   PaginationParams,
   PaginatedResponse,
   SearchListingsParams,
-  MARKETPLACE_CONSTANTS
+  MARKETPLACE_CONSTANTS,
+  MyMarketplaceResponse,
+  SellerEligibility
 } from './marketplace.types';
 import { AppError } from '../../middleware/error';
 import { ActivityLoggerService } from '../../services/activityLogger.service';
@@ -36,7 +38,408 @@ import prisma from '../../lib/prisma';
 
 const paymentService = new PaymentService();
 
+const MARKETPLACE_SELLER_REQUIREMENTS = {
+  minTrustScore: 60,
+  minTrustLevel: 'trusted',
+  allowedTrustLevels: ['trusted', 'verified', 'ambassador', 'leader'],
+};
+
 export class MarketplaceService {
+  // ============= PROFILE & ELIGIBILITY METHODS =============
+
+  async checkEligibility(userId: string): Promise<SellerEligibility> {
+    try {
+      // Get user's current profile and trust info
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          trustScore: true,
+          trustLevel: true,
+          profileCompletionStatus: {
+            select: {
+              reachedBasic: true,
+              completionScore: true
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      const requirements = {
+        minTrustScore: MARKETPLACE_SELLER_REQUIREMENTS.minTrustScore,
+        minTrustLevel: MARKETPLACE_SELLER_REQUIREMENTS.minTrustLevel,
+        subscriptionRequired: false, // Marketplace doesn't require subscription
+        minSubscriptionTier: 'free'
+      };
+
+      const currentTrustScore = user.trustScore || 0;
+      const trustLevel = user.trustLevel || 'newcomer';
+      const meetsTrustRequirements = currentTrustScore >= requirements.minTrustScore && 
+        MARKETPLACE_SELLER_REQUIREMENTS.allowedTrustLevels.includes(trustLevel);
+
+      // Note: For now using 'free' as default since subscription logic needs implementation
+      const subscriptionTier = 'free';
+      const meetsSubscriptionRequirements = true; // No subscription required for marketplace
+
+      const currentStatus = {
+        trustScore: currentTrustScore,
+        trustLevel,
+        meetsTrustRequirements,
+        subscriptionTier,
+        meetsSubscriptionRequirements
+      };
+
+      const canSell = meetsTrustRequirements && 
+        meetsSubscriptionRequirements && 
+        (user.profileCompletionStatus?.reachedBasic || false);
+
+      let message = '';
+      let explanation: any = {};
+      let trustScoreGap: any = undefined;
+
+      if (canSell) {
+        message = 'You can start selling on Marketplace!';
+        explanation = {
+          reasons: ['✅ Trust requirements met', '✅ Profile completed', '✅ Account in good standing'],
+          nextSteps: [
+            '📦 Create your first listing with clear photos and descriptions',
+            '💰 Set competitive pricing based on market research',
+            '📱 Enable push notifications to respond quickly to buyers',
+            '⭐ Provide excellent service to build your seller reputation'
+          ],
+          benefits: [
+            'Reach thousands of potential buyers in your area',
+            'Set your own prices and availability',
+            'Build a seller reputation with ratings and reviews',
+            'Secure payments handled automatically'
+          ],
+          helpLinks: [
+            {
+              title: 'Seller Best Practices Guide',
+              url: '/help/marketplace/seller-guide',
+              description: 'Tips for successful selling and great photos'
+            },
+            {
+              title: 'Pricing Your Items',
+              url: '/help/marketplace/pricing',
+              description: 'How to set competitive prices that sell'
+            }
+          ]
+        };
+      } else if (!meetsTrustRequirements) {
+        const trustGap = requirements.minTrustScore - currentTrustScore;
+        message = `You need a trust score of ${requirements.minTrustScore}+ and "${requirements.minTrustLevel}" level to sell. Current: ${currentTrustScore} (${trustLevel})`;
+        
+        trustScoreGap = {
+          current: currentTrustScore,
+          required: requirements.minTrustScore,
+          difference: trustGap,
+          improvementTips: [
+            'Get vouches from friends and connections who can vouch for your character',
+            'Join communities and attend events to build your network',
+            'Participate actively in the platform and help others',
+            'Ask for trust moments (ratings) after positive interactions'
+          ]
+        };
+        
+        explanation = {
+          reasons: [
+            `❌ Trust score too low: ${currentTrustScore}/${requirements.minTrustScore} required`,
+            `❌ Trust level insufficient: "${trustLevel}" (need "${requirements.minTrustLevel}")`
+          ],
+          nextSteps: [
+            `🎯 Increase trust score by ${trustGap.toFixed(1)} points to reach ${requirements.minTrustScore}`,
+            '🤝 Ask 2-3 friends or connections to vouch for you',
+            '🏘️ Join active communities and attend their events',
+            '⭐ Collect trust moments from positive interactions'
+          ],
+          helpLinks: [
+            {
+              title: 'How to Improve Trust Score',
+              url: '/help/trust/improvement',
+              description: 'Step-by-step guide to building trust on Berse'
+            },
+            {
+              title: 'Getting Your First Vouches',
+              url: '/help/trust/vouches',
+              description: 'How to ask friends and connections to vouch for you'
+            }
+          ]
+        };
+      } else if (!user.profileCompletionStatus?.reachedBasic) {
+        message = 'Please complete your profile before selling on Marketplace';
+        explanation = {
+          reasons: ['❌ Basic profile completion required for seller verification'],
+          nextSteps: [
+            '📝 Add a profile picture and bio to build buyer trust',
+            '📍 Add your location for local pickup options',
+            '🎯 Add your interests to connect with like-minded buyers',
+            '✅ Complete all required profile sections'
+          ],
+          helpLinks: [
+            {
+              title: 'Complete Your Profile',
+              url: '/profile/edit',
+              description: 'Finish setting up your profile in just a few minutes'
+            }
+          ]
+        };
+      } else {
+        message = 'You do not meet the requirements to sell on Marketplace';
+        explanation = {
+          reasons: ['❌ Multiple requirements not met - check trust score and profile'],
+          nextSteps: [
+            '🔍 Review the requirements above',
+            '📞 Contact support if you need help: support@berseapp.com'
+          ]
+        };
+      }
+
+      return {
+        canSell,
+        requirements,
+        currentStatus,
+        message,
+        explanation,
+        trustScoreGap
+      };
+    } catch (error) {
+      logger.error('Error checking marketplace eligibility:', error);
+      throw error;
+    }
+  }
+
+  async getDashboard(userId: string) {
+    try {
+      // Get user's basic info
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          trustScore: true,
+          trustLevel: true
+        }
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check eligibility
+      const eligibility = await this.checkEligibility(userId);
+
+      // Get listings stats
+      const listingsStats = await prisma.marketplaceListing.aggregate({
+        where: { userId },
+        _count: true
+      });
+
+      const activeListings = await prisma.marketplaceListing.count({
+        where: {
+          userId,
+          status: 'ACTIVE'
+        }
+      });
+
+      // Get sales stats (orders where user is seller)
+      const salesStats = await prisma.marketplaceOrder.aggregate({
+        where: {
+          sellerId: userId // User is the seller
+        },
+        _count: true,
+        _sum: {
+          totalAmount: true
+        }
+      });
+
+      const completedSales = await prisma.marketplaceOrder.count({
+        where: {
+          sellerId: userId,
+          status: 'DELIVERED'
+        }
+      });
+
+      // Get purchase stats (orders where user is buyer)
+      const purchaseStats = await prisma.marketplaceOrder.aggregate({
+        where: {
+          buyerId: userId
+        },
+        _count: true,
+        _sum: {
+          totalAmount: true
+        }
+      });
+
+      const completedPurchases = await prisma.marketplaceOrder.count({
+        where: {
+          buyerId: userId,
+          status: 'DELIVERED'
+        }
+      });
+
+      // Get pending orders
+      const pendingOrders = await prisma.marketplaceOrder.count({
+        where: {
+          OR: [
+            { buyerId: userId },
+            { sellerId: userId }
+          ],
+          status: {
+            in: ['PENDING', 'CONFIRMED', 'SHIPPED']
+          }
+        }
+      });
+
+      // Get recent activity (last 10 items)
+      const recentOrders = await prisma.marketplaceOrder.findMany({
+        where: {
+          OR: [
+            { buyerId: userId },
+            { sellerId: userId }
+          ]
+        },
+        include: {
+          marketplaceListings: {
+            select: {
+              title: true,
+              userId: true
+            }
+          },
+          users_marketplace_orders_buyerIdTousers: {
+            select: {
+              fullName: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 10
+      });
+
+      // Transform recent activity
+      const recentActivity = recentOrders.map(order => {
+        const isSeller = order.sellerId === userId;
+        return {
+          type: isSeller ? 'order_received' : 'order_placed',
+          message: isSeller 
+            ? `New order for ${order.marketplaceListings.title}`
+            : `Order placed for ${order.marketplaceListings.title}`,
+          orderId: order.id,
+          timestamp: order.createdAt
+        };
+      });
+
+      // Get pending actions
+      const pendingActions = [];
+      
+      // Orders needing confirmation (seller view)
+      const ordersNeedingConfirmation = await prisma.marketplaceOrder.count({
+        where: {
+          sellerId: userId,
+          status: 'PENDING'
+        }
+      });
+
+      if (ordersNeedingConfirmation > 0) {
+        pendingActions.push({
+          type: 'order_confirmation_needed',
+          message: `${ordersNeedingConfirmation} order(s) awaiting confirmation`,
+          count: ordersNeedingConfirmation,
+          priority: 'high'
+        });
+      }
+
+      // Reviews needed
+      const reviewsNeeded = await prisma.marketplaceOrder.count({
+        where: {
+          buyerId: userId,
+          status: 'DELIVERED'
+          // Note: Review relation needs to be implemented
+        }
+      });
+
+      if (reviewsNeeded > 0) {
+        pendingActions.push({
+          type: 'review_reminder',
+          message: `${reviewsNeeded} purchase(s) ready for review`,
+          count: reviewsNeeded,
+          priority: 'medium'
+        });
+      }
+
+      // Get recent listings
+      const recentListings = await prisma.marketplaceListing.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          viewCount: true,
+          pricingOptions: {
+            select: {
+              price: true,
+              currency: true
+            },
+            take: 1
+          },
+          _count: {
+            select: {
+              orders: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 5
+      });
+
+      // Calculate ratings (simplified - would need proper review aggregation)
+      const buyerRating = 4.8; // TODO: Calculate from actual reviews
+      const sellerRating = eligibility.canSell ? 4.7 : null; // TODO: Calculate from actual reviews
+
+      return {
+        profile: {
+          canSell: eligibility.canSell,
+          hasListings: (listingsStats._count || 0) > 0,
+          totalPurchases: purchaseStats._count || 0,
+          totalSales: salesStats._count || 0,
+          buyerRating,
+          sellerRating,
+          trustScore: user.trustScore || 0
+        },
+        stats: {
+          activeListings,
+          pendingOrders,
+          completedSales,
+          completedPurchases,
+          totalEarnings: salesStats._sum.totalAmount || 0,
+          totalSpent: purchaseStats._sum.totalAmount || 0,
+          currency: 'MYR' // Default currency
+        },
+        recentActivity,
+        pendingActions,
+        recentListings: recentListings.map(listing => ({
+          id: listing.id,
+          title: listing.title,
+          status: listing.status,
+          price: listing.pricingOptions[0]?.price || 0,
+          currency: listing.pricingOptions[0]?.currency || 'MYR',
+          views: listing.viewCount || 0,
+          orders: listing._count.orders
+        }))
+      };
+    } catch (error) {
+      logger.error('Error getting marketplace dashboard:', error);
+      throw error;
+    }
+  }
+
   // ============= LISTING METHODS =============
 
   async createListing(userId: string, data: CreateListingRequest): Promise<ListingResponse> {
@@ -797,33 +1200,97 @@ export class MarketplaceService {
     filters?: {
       filter?: 'active' | 'past' | 'all';
       status?: any;
-      type?: 'purchases' | 'sales' | 'listings' | 'all';
+      listingStatus?: ListingStatus;
     }
-  ): Promise<{
-    listings: any[];
-    purchases: any[];
-    sales: any[];
-  }> {
+  ): Promise<MyMarketplaceResponse> {
     try {
-      const { filter = 'all', status, type = 'all' } = filters || {};
+      const { filter = 'all', status, listingStatus } = filters || {};
 
-      let listings: any[] = [];
-      let purchases: any[] = [];
-      let sales: any[] = [];
+      // Get user data with subscription
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          trustScore: true,
+          trustLevel: true,
+          subscriptions: {
+            select: {
+              status: true,
+              tiers: {
+                select: {
+                  tierCode: true,
+                  tierName: true,
+                }
+              }
+            },
+            where: {
+              status: 'ACTIVE'
+            },
+            take: 1
+          }
+        }
+      });
 
-      // Fetch listings if requested
-      if (type === 'listings' || type === 'all') {
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check eligibility for selling
+      const canEnableSelling = 
+        user.trustScore >= MARKETPLACE_SELLER_REQUIREMENTS.minTrustScore &&
+        MARKETPLACE_SELLER_REQUIREMENTS.allowedTrustLevels.includes(user.trustLevel);
+      
+      const activeSubscription = user.subscriptions?.[0];
+      const hasActiveSubscription = activeSubscription?.status === 'ACTIVE';
+      const currentTier = activeSubscription?.tiers?.tierCode || 'FREE';
+      const hasRequiredSubscription = hasActiveSubscription && (currentTier === 'BASIC' || currentTier === 'PREMIUM');
+      
+      const canSell = canEnableSelling && hasRequiredSubscription;
+
+      // Generate eligibility message
+      let eligibilityMessage = '';
+      if (canSell) {
+        eligibilityMessage = 'You meet all requirements to sell on Marketplace! Start creating listings to reach buyers.';
+      } else if (!canEnableSelling && !hasRequiredSubscription) {
+        eligibilityMessage = `You need a trust score of at least ${MARKETPLACE_SELLER_REQUIREMENTS.minTrustScore} and trust level "${MARKETPLACE_SELLER_REQUIREMENTS.minTrustLevel}", plus a BASIC or PREMIUM subscription to sell. Your current trust score: ${user.trustScore}.`;
+      } else if (!canEnableSelling) {
+        eligibilityMessage = `You need a trust score of at least ${MARKETPLACE_SELLER_REQUIREMENTS.minTrustScore} and trust level "${MARKETPLACE_SELLER_REQUIREMENTS.minTrustLevel}" to sell. Your current trust score: ${user.trustScore}.`;
+      } else if (!hasRequiredSubscription) {
+        eligibilityMessage = `You need a BASIC or PREMIUM subscription to sell. Your current subscription: ${currentTier}.`;
+      }
+
+      // Build eligibility object
+      const eligibility: SellerEligibility = {
+        canSell,
+        requirements: {
+          minTrustScore: MARKETPLACE_SELLER_REQUIREMENTS.minTrustScore,
+          minTrustLevel: MARKETPLACE_SELLER_REQUIREMENTS.minTrustLevel,
+          subscriptionRequired: true,
+          minSubscriptionTier: 'BASIC'
+        },
+        currentStatus: {
+          trustScore: user.trustScore,
+          trustLevel: user.trustLevel,
+          meetsTrustRequirements: canEnableSelling,
+          subscriptionTier: currentTier,
+          meetsSubscriptionRequirements: hasRequiredSubscription
+        },
+        message: eligibilityMessage
+      };
+
+      // Fetch user's listings if they can sell
+      let listings: any[] | null = null;
+      if (canSell) {
         const listingWhere: any = { userId: userId };
         
-        if (status) {
-          listingWhere.status = status;
+        if (listingStatus) {
+          listingWhere.status = listingStatus;
         } else if (filter === 'active') {
           listingWhere.status = 'ACTIVE';
         } else if (filter === 'past') {
           listingWhere.status = { in: ['SOLD', 'DELETED'] };
         }
 
-        listings = await prisma.marketplaceListing.findMany({
+        const fetchedListings = await prisma.marketplaceListing.findMany({
           where: listingWhere,
           include: {
             user: {
@@ -844,49 +1311,22 @@ export class MarketplaceService {
           },
           orderBy: { createdAt: 'desc' },
         });
+
+        listings = fetchedListings.map(this.formatListingResponse);
       }
 
-      // Fetch purchases if requested
-      if (type === 'purchases' || type === 'all') {
-        const purchaseWhere: any = { buyerId: userId };
-        
-        if (status) {
-          purchaseWhere.status = status;
-        } else if (filter === 'active') {
-          purchaseWhere.status = { in: ['PENDING', 'CONFIRMED', 'SHIPPED'] };
-        } else if (filter === 'past') {
-          purchaseWhere.status = { in: ['DELIVERED', 'CANCELED', 'REFUNDED'] };
-        }
-
-        purchases = await prisma.marketplaceOrder.findMany({
-          where: purchaseWhere,
-          include: {
-            marketplaceListings: {
-              select: {
-                id: true,
-                title: true,
-                images: true,
-              },
-            },
-            users_marketplace_orders_sellerIdTousers: {
-              select: {
-                id: true,
-                fullName: true,
-                username: true,
-                profile: {
-                  select: {
-                    profilePicture: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        });
+      // Get seller stats if eligible and has listings
+      let sellerStats: SellerStats | undefined = undefined;
+      if (canSell && listings && listings.length > 0) {
+        sellerStats = await this.getSellerStats(userId);
       }
 
-      // Fetch sales if requested
-      if (type === 'sales' || type === 'all') {
+      // Get buyer stats (always available)
+      const buyerStats = await this.getBuyerStats(userId);
+
+      // Fetch orders as seller (only if eligible)
+      let asSeller: any[] | undefined = undefined;
+      if (canSell) {
         const salesWhere: any = { sellerId: userId };
         
         if (status) {
@@ -897,7 +1337,7 @@ export class MarketplaceService {
           salesWhere.status = { in: ['DELIVERED', 'CANCELED', 'REFUNDED'] };
         }
 
-        sales = await prisma.marketplaceOrder.findMany({
+        const sales = await prisma.marketplaceOrder.findMany({
           where: salesWhere,
           include: {
             marketplaceListings: {
@@ -921,13 +1361,59 @@ export class MarketplaceService {
             },
           },
           orderBy: { createdAt: 'desc' },
+          take: 10 // Limit to 10 most recent
         });
+
+        asSeller = sales.map(this.formatOrderResponse);
       }
 
+      // Fetch orders as buyer (always available)
+      const purchaseWhere: any = { buyerId: userId };
+      
+      if (status) {
+        purchaseWhere.status = status;
+      } else if (filter === 'active') {
+        purchaseWhere.status = { in: ['PENDING', 'CONFIRMED', 'SHIPPED'] };
+      } else if (filter === 'past') {
+        purchaseWhere.status = { in: ['DELIVERED', 'CANCELED', 'REFUNDED'] };
+      }
+
+      const purchases = await prisma.marketplaceOrder.findMany({
+        where: purchaseWhere,
+        include: {
+          marketplaceListings: {
+            select: {
+              id: true,
+              title: true,
+              images: true,
+            },
+          },
+          users_marketplace_orders_sellerIdTousers: {
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              profile: {
+                select: {
+                  profilePicture: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10 // Limit to 10 most recent
+      });
+
+      const asBuyer = purchases.map(this.formatOrderResponse);
+
       return {
-        listings: listings.map(this.formatListingResponse),
-        purchases: purchases.map(this.formatOrderResponse),
-        sales: sales.map(this.formatOrderResponse),
+        listings,
+        sellerStats,
+        buyerStats,
+        asSeller,
+        asBuyer,
+        eligibility
       };
     } catch (error) {
       logger.error('Failed to get my Marketplace', { error, userId, filters });

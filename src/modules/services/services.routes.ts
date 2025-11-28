@@ -27,6 +27,11 @@ const router = Router();
  *           default: all
  *         description: Type of service to search
  *       - in: query
+ *         name: query
+ *         schema:
+ *           type: string
+ *         description: Search by host name, profile name, or title
+ *       - in: query
  *         name: city
  *         schema:
  *           type: string

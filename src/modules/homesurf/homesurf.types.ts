@@ -201,12 +201,32 @@ export interface HomeSurfBookingResponse {
   host?: {
     id: string;
     fullName: string;
+    email?: string;
+    phone?: string;
+    trustLevel: string;
+    trustScore: number;
     profilePicture?: string;
+    bio?: string;
+    shortBio?: string;
+    languages?: string[];
+    interests?: string[];
+    age?: number;
+    gender?: string;
   };
   guest?: {
     id: string;
     fullName: string;
+    email?: string;
+    phone?: string;
+    trustLevel: string;
+    trustScore: number;
     profilePicture?: string;
+    bio?: string;
+    shortBio?: string;
+    languages?: string[];
+    interests?: string[];
+    age?: number;
+    gender?: string;
   };
   homeSurf?: HomeSurfProfileResponse;
 }
@@ -263,6 +283,7 @@ export interface HomeSurfReviewResponse {
 // ==================== SEARCH TYPES ====================
 
 export interface SearchHomeSurfDTO {
+  query?: string; // Search by host name or profile title
   city?: string;
   checkInDate?: Date | string;
   checkOutDate?: Date | string;

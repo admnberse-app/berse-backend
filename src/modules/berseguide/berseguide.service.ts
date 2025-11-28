@@ -1505,6 +1505,7 @@ export class BerseGuideService {
   async searchProfiles(query: SearchBerseGuideDTO): Promise<SearchBerseGuideResponse> {
     try {
       const {
+        query: searchQuery,
         city,
         date,
         startTime,
@@ -1523,7 +1524,7 @@ export class BerseGuideService {
       } = query;
 
       const skip = (page - 1) * limit;
-      const hasFilters = !!(city || date || startTime || endTime || numberOfPeople || 
+      const hasFilters = !!(searchQuery || city || date || startTime || endTime || numberOfPeople || 
                             guideTypes || languages || specialties || minRating || 
                             maxHourlyRate || paymentTypes);
 
@@ -1537,6 +1538,17 @@ export class BerseGuideService {
         ...(minRating && { rating: { gte: minRating } }),
         ...(maxHourlyRate && { hourlyRate: { lte: maxHourlyRate } }),
       };
+
+      // Add name/title search if query provided
+      if (searchQuery) {
+        where.OR = [
+          { title: { contains: searchQuery, mode: 'insensitive' } },
+          { bio: { contains: searchQuery, mode: 'insensitive' } },
+          { user: { fullName: { contains: searchQuery, mode: 'insensitive' } } },
+          { user: { username: { contains: searchQuery, mode: 'insensitive' } } },
+          { user: { profile: { displayName: { contains: searchQuery, mode: 'insensitive' } } } },
+        ];
+      }
 
       // If payment types specified, filter by payment options
       if (paymentTypes && paymentTypes.length > 0) {
@@ -1595,11 +1607,12 @@ export class BerseGuideService {
       ]);
 
       // If no results and filters were applied, fetch fallback results
+      // BUT: Don't show fallback if user is doing a name/title search
       let finalProfiles = profiles;
       let finalTotal = total;
       let isFallback = false;
 
-      if (profiles.length === 0 && hasFilters && page === 1) {
+      if (profiles.length === 0 && hasFilters && page === 1 && !searchQuery) {
         logger.info('No filtered results found, fetching fallback profiles', { query });
         
         // Fetch top-rated profiles as fallback (no filters except isEnabled)

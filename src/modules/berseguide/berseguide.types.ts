@@ -298,6 +298,7 @@ export interface BerseGuideReviewResponse {
 // ============================================================================
 
 export interface SearchBerseGuideDTO {
+  query?: string; // Search by guide name or profile title
   city?: string;
   date?: string;
   startTime?: string;

@@ -431,34 +431,6 @@ router.post(
 
 /**
  * @swagger
- * /v2/berseguide/bookings/{bookingId}:
- *   get:
- *     summary: Get booking by ID
- *     tags: [BerseGuide]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: bookingId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Booking details
- *       403:
- *         description: Unauthorized
- *       404:
- *         description: Booking not found
- */
-router.get(
-  '/bookings/:bookingId',
-  authenticateToken,
-  asyncHandler(berseGuideController.getBooking.bind(berseGuideController))
-);
-
-/**
- * @swagger
  * /v2/berseguide/bookings/guide:
  *   get:
  *     summary: Get bookings as guide
@@ -501,6 +473,34 @@ router.get(
   '/bookings/tourist',
   authenticateToken,
   asyncHandler(berseGuideController.getBookingsAsTourist.bind(berseGuideController))
+);
+
+/**
+ * @swagger
+ * /v2/berseguide/bookings/{bookingId}:
+ *   get:
+ *     summary: Get booking by ID
+ *     tags: [BerseGuide]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bookingId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Booking details
+ *       403:
+ *         description: Unauthorized
+ *       404:
+ *         description: Booking not found
+ */
+router.get(
+  '/bookings/:bookingId',
+  authenticateToken,
+  asyncHandler(berseGuideController.getBooking.bind(berseGuideController))
 );
 
 /**

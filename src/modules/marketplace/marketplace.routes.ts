@@ -25,6 +25,50 @@ import {
 
 const router = Router();
 
+// ============= PROFILE & ELIGIBILITY ROUTES =============
+
+/**
+ * @swagger
+ * /v2/marketplace/eligibility:
+ *   get:
+ *     summary: Check marketplace selling eligibility
+ *     description: Check if user meets requirements to create marketplace listings (trust score 51+)
+ *     tags: [Marketplace]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Eligibility status and requirements
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/eligibility',
+  authenticateToken,
+  marketplaceController.checkEligibility.bind(marketplaceController)
+);
+
+/**
+ * @swagger
+ * /v2/marketplace/dashboard:
+ *   get:
+ *     summary: Get marketplace dashboard
+ *     description: Get personalized marketplace dashboard with user stats, recent activity, and pending actions
+ *     tags: [Marketplace]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard data with profile info, stats, and activity
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  '/dashboard',
+  authenticateToken,
+  marketplaceController.getDashboard.bind(marketplaceController)
+);
+
 // ============= IMAGE UPLOAD ROUTE (must be before listing routes) =============
 
 /**
@@ -167,7 +211,7 @@ router.get(
 router.post(
   '/listings',
   authenticateToken,
-  requireTrustLevel(51, 'create marketplace listings'),
+  requireTrustLevel(60, 'create marketplace listings'),
   createListingValidator,
   handleValidationErrors,
   marketplaceController.createListing.bind(marketplaceController)

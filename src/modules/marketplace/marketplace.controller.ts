@@ -16,6 +16,195 @@ import {
 } from './marketplace.types';
 
 export class MarketplaceController {
+  // ============= PROFILE & ELIGIBILITY ENDPOINTS =============
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/eligibility:
+   *   get:
+   *     summary: Check user eligibility for marketplace selling
+   *     description: |
+   *       Check if the current user meets the requirements to create marketplace listings.
+   *       Requires minimum trust score of 51 ("Trusted" level) to sell items.
+   *     tags: [Marketplace - Profile]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Eligibility status with requirements
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     canSell:
+   *                       type: boolean
+   *                       example: true
+   *                     reason:
+   *                       type: string
+   *                       example: "TRUST_SCORE_SUFFICIENT"
+   *                     message:
+   *                       type: string
+   *                       example: "You can start selling on Marketplace!"
+   *                     requirements:
+   *                       type: object
+   *                       properties:
+   *                         minimumTrustScore:
+   *                           type: number
+   *                           example: 51
+   *                         currentTrustScore:
+   *                           type: number
+   *                           example: 75
+   *                         trustLevel:
+   *                           type: string
+   *                           example: "Trusted"
+   *       401:
+   *         description: Unauthorized
+   */
+  async checkEligibility(req: Request, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const eligibility = await marketplaceService.checkEligibility(userId);
+
+      res.json({
+        success: true,
+        data: eligibility
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/v2/marketplace/dashboard:
+   *   get:
+   *     summary: Get marketplace dashboard data
+   *     description: |
+   *       Get personalized marketplace dashboard with user's activity, statistics, and recent transactions.
+   *       Includes both buyer and seller perspectives in one consolidated view.
+   *     tags: [Marketplace - Dashboard]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Dashboard data with profile stats and recent activity
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     profile:
+   *                       type: object
+   *                       properties:
+   *                         canSell:
+   *                           type: boolean
+   *                           example: true
+   *                         hasListings:
+   *                           type: boolean
+   *                           example: true
+   *                         totalPurchases:
+   *                           type: number
+   *                           example: 5
+   *                         totalSales:
+   *                           type: number
+   *                           example: 12
+   *                         buyerRating:
+   *                           type: number
+   *                           example: 4.9
+   *                         sellerRating:
+   *                           type: number
+   *                           example: 4.8
+   *                         trustScore:
+   *                           type: number
+   *                           example: 75
+   *                     stats:
+   *                       type: object
+   *                       properties:
+   *                         activeListings:
+   *                           type: number
+   *                           example: 8
+   *                         pendingOrders:
+   *                           type: number
+   *                           example: 3
+   *                         completedSales:
+   *                           type: number
+   *                           example: 12
+   *                         completedPurchases:
+   *                           type: number
+   *                           example: 5
+   *                         totalEarnings:
+   *                           type: number
+   *                           example: 45600
+   *                         totalSpent:
+   *                           type: number
+   *                           example: 18500
+   *                         currency:
+   *                           type: string
+   *                           example: "MYR"
+   *                     recentActivity:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           type:
+   *                             type: string
+   *                             example: "order_received"
+   *                           message:
+   *                             type: string
+   *                             example: "New order for iPhone 13 Pro Max"
+   *                           orderId:
+   *                             type: string
+   *                             example: "order_abc123"
+   *                           timestamp:
+   *                             type: string
+   *                             format: date-time
+   *                     pendingActions:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           type:
+   *                             type: string
+   *                             example: "order_confirmation_needed"
+   *                           orderId:
+   *                             type: string
+   *                             example: "order_abc123"
+   *                           message:
+   *                             type: string
+   *                             example: "Order awaiting confirmation"
+   *                           priority:
+   *                             type: string
+   *                             example: "high"
+   *       401:
+   *         description: Unauthorized
+   */
+  async getDashboard(req: Request, res: Response) {
+    try {
+      const userId = req.user!.id;
+      const dashboard = await marketplaceService.getDashboard(userId);
+
+      res.json({
+        success: true,
+        data: dashboard
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   // ============= LISTING ENDPOINTS =============
 
   /**
@@ -420,12 +609,12 @@ export class MarketplaceController {
   async getMyMarketplace(req: Request, res: Response) {
     try {
       const userId = req.user!.id;
-      const { filter, status, type } = req.query;
+      const { filter, status, listingStatus } = req.query;
 
       const data = await marketplaceService.getMyMarketplace(userId, {
         filter: filter as any,
         status: status as any,
-        type: type as any,
+        listingStatus: listingStatus as any,
       });
 
       res.json({
